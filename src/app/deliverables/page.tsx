@@ -10,9 +10,10 @@ import { useOrder } from "@/context/OrderContext";
 import { useRouter } from "next/navigation";
 import { productCatalog } from '@/lib/product-data';
 import type { ConfiguredProduct, Product } from '@/lib/types';
-import { Search, Package, Edit } from 'lucide-react';
+import { Search, Package, Edit, AlertTriangle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { ProductConfigurator } from '@/components/flow2/ProductConfigurator';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 export default function DeliverablesPage() {
     const router = useRouter();
@@ -42,6 +43,11 @@ export default function DeliverablesPage() {
         if (editingProduct) {
             updateDeliverable(configuredProduct.id, configuredProduct);
         } else {
+             // Handle duplicate naming for new products
+            const existingItems = order.deliverables.filter(item => item.productId === configuredProduct.productId).length;
+            if (existingItems > 0) {
+                configuredProduct.productName = `${configuredProduct.productName} #${existingItems + 1}`;
+            }
             addDeliverable(configuredProduct);
         }
     };
@@ -49,6 +55,10 @@ export default function DeliverablesPage() {
     const filteredProducts = productCatalog.filter(p => 
         p.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
+
+    const isProductInCart = (productId: number) => {
+        return order.deliverables.some(item => item.productId === productId);
+    }
 
     return (
         <>
@@ -79,7 +89,7 @@ export default function DeliverablesPage() {
                                 </CardHeader>
                                 <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[calc(100vh-250px)] overflow-y-auto p-4">
                                     {filteredProducts.map(product => (
-                                        <Card key={product.id} className="flex flex-col">
+                                        <Card key={product.id} className={`flex flex-col ${isProductInCart(product.id) ? 'bg-primary/5' : ''}`}>
                                             <CardHeader>
                                                 <CardTitle className="text-base">{product.name}</CardTitle>
                                             </CardHeader>
@@ -107,20 +117,34 @@ export default function DeliverablesPage() {
                                             <p className="text-sm">Select products from the catalog.</p>
                                         </div>
                                     ) : (
-                                        <ul className="space-y-4">
-                                            {order.deliverables.map(item => (
-                                                <li key={item.id} className="flex justify-between items-center p-3 border rounded-lg bg-card-foreground/5">
-                                                    <div>
-                                                        <p className="font-semibold">{item.productName}</p>
-                                                        <p className="text-sm text-muted-foreground">Qty: {item.quantity}{item.variant && ` • ${item.variant}`}</p>
-                                                    </div>
-                                                    <div className='flex items-center gap-1'>
-                                                        <Button variant="ghost" size="icon" onClick={() => handleEditProductClick(item)}><Edit className="h-4 w-4" /></Button>
-                                                        <Button variant="ghost" size="sm" onClick={() => removeDeliverable(item.id)}>Remove</Button>
-                                                    </div>
-                                                </li>
-                                            ))}
-                                        </ul>
+                                        <TooltipProvider>
+                                            <ul className="space-y-4">
+                                                {order.deliverables.map(item => (
+                                                    <li key={item.id} className="flex justify-between items-center p-3 border rounded-lg bg-card-foreground/5">
+                                                        <div className="flex items-center gap-2">
+                                                            {item.warning && (
+                                                                <Tooltip>
+                                                                    <TooltipTrigger>
+                                                                        <AlertTriangle className="h-5 w-5 text-accent" />
+                                                                    </TooltipTrigger>
+                                                                    <TooltipContent>
+                                                                        <p>{item.warning}</p>
+                                                                    </TooltipContent>
+                                                                </Tooltip>
+                                                            )}
+                                                            <div>
+                                                                <p className="font-semibold">{item.productName}</p>
+                                                                <p className="text-sm text-muted-foreground">{item.variant || 'Standard'}</p>
+                                                            </div>
+                                                        </div>
+                                                        <div className='flex items-center gap-1'>
+                                                            <Button variant="ghost" size="icon" onClick={() => handleEditProductClick(item)}><Edit className="h-4 w-4" /></Button>
+                                                            <Button variant="ghost" size="sm" onClick={() => removeDeliverable(item.id)}>Remove</Button>
+                                                        </div>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </TooltipProvider>
                                     )}
                                 </CardContent>
                             </Card>

@@ -7,7 +7,7 @@ export type DateStatus = 'Tentative' | 'Fixed';
 
 export type EventDetails = z.infer<typeof eventDetailsSchema>;
 
-export type AddonConstraint = {
+export type SoftConstraint = {
   type: 'min' | 'max';
   value: number;
   message: string;
@@ -16,34 +16,42 @@ export type AddonConstraint = {
 export type Addon = {
   id: string;
   name: string;
-  type: 'checkbox' | 'numeric' | 'conditional_numeric';
-  constraints?: AddonConstraint[];
-  dependsOn?: string; // ID of parent addon
+  type: 'checkbox' | 'physical_quantity' | 'numeric';
   rateKey?: string;
+  softConstraints?: SoftConstraint[];
+  dependsOn?: string; // ID of parent addon
+  visibleIfVariant?: string; // Only show if product variant matches
 };
 
 export type ProductSize = {
   name: string;
-  constraints?: AddonConstraint[];
+  rateKey: string;
+  softConstraints?: SoftConstraint[];
+};
+
+export type CustomField = {
+  id: string;
+  name: string;
+  type: 'numeric';
   rateKey?: string;
 };
 
 export type Product = {
   id: number;
   name: string;
-  basePrice: number;
   configType: 'A' | 'B' | 'C' | 'D' | 'E';
+  basePrice: number;
   variants?: string[];
-  softConstraints?: AddonConstraint[];
+  softConstraints?: SoftConstraint[];
   addons?: Addon[];
-  customFields?: { id: string; name: string; type: 'numeric' }[];
+  customFields?: CustomField[];
   sizes?: ProductSize[];
   specialLogic?: 'RitualCardBlossom' | 'MenuCardCustom' | 'BadgesCustom' | 'WaxSealCustomQty';
 };
 
 export type ConfiguredProductAddon = {
   id: string;
-  name:string;
+  name: string;
   value: boolean | number;
 };
 
