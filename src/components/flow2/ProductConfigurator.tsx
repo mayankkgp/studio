@@ -259,12 +259,34 @@ export function ProductConfigurator({ product, configuredProduct, isOpen, onClos
                                                         </div>
                                                     )}
                                                     {addonDef.type === 'physical_quantity' && (
-                                                        <Controller name={`addons.${index}.value`} control={control} render={({ field: numField }) => (
-                                                            <div className="flex items-center justify-between">
-                                                                <Label htmlFor={`addons.${index}.value`}>{addonDef.name}</Label>
-                                                                <Input id={`addons.${index}.value`} type="number" className="w-24" value={numField.value || ''} onChange={e => numField.onChange(parseInt(e.target.value) || 0)} />
-                                                            </div>
-                                                        )}/>
+                                                        <Controller
+                                                            name={`addons.${index}.value`}
+                                                            control={control}
+                                                            render={({ field: physicalField }) => (
+                                                                <div className="flex items-center justify-between">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <Checkbox
+                                                                            id={`addons.${index}.checkbox`}
+                                                                            checked={!!physicalField.value}
+                                                                            onCheckedChange={(checked) => {
+                                                                                physicalField.onChange(checked ? 1 : false);
+                                                                            }}
+                                                                        />
+                                                                        <Label htmlFor={`addons.${index}.checkbox`} className="font-normal">{addonDef.name}</Label>
+                                                                    </div>
+                                                                    {!!physicalField.value && (
+                                                                        <Input
+                                                                            id={`addons.${index}.value`}
+                                                                            type="number"
+                                                                            className="w-24"
+                                                                            value={typeof physicalField.value === 'number' ? physicalField.value : 1}
+                                                                            onChange={e => physicalField.onChange(parseInt(e.target.value) || 0)}
+                                                                            min={1}
+                                                                        />
+                                                                    )}
+                                                                </div>
+                                                            )}
+                                                        />
                                                     )}
                                                 </div>
                                             );
