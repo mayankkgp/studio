@@ -43,12 +43,12 @@ export default function CommercialsPage() {
             return <Badge variant="secondary">No Items</Badge>;
         }
         if (balance > 0) {
-            return <Badge variant="destructive" className="bg-red-500">Balance: {formatCurrency(balance)}</Badge>;
+            return <Badge variant="destructive">Balance: {formatCurrency(balance)}</Badge>;
         }
         if (balance < 0) {
-            return <Badge className="bg-orange-500">Excess: {formatCurrency(Math.abs(balance))}</Badge>;
+            return <Badge variant="secondary">Excess: {formatCurrency(Math.abs(balance))}</Badge>;
         }
-        return <Badge className="bg-green-500">Fully Paid</Badge>;
+        return <Badge variant="default">Fully Paid</Badge>;
     }, [totalValue, payment, balance]);
 
     return (
@@ -91,7 +91,7 @@ export default function CommercialsPage() {
                                     <p className="text-sm">Go back to add products to the order.</p>
                                 </div>
                              ) : (
-                                <Accordion type="single" collapsible className="w-full">
+                                <Accordion type="single" collapsible className="w-full" defaultValue={billableItems[0]?.configuredProductId}>
                                     {billableItems.map(item => {
                                         const itemTotal = item.components.reduce((acc, comp) => acc + comp.total, 0);
                                         return (
@@ -137,8 +137,8 @@ export default function CommercialsPage() {
                      <Button variant="outline" onClick={() => router.back()}>Back</Button>
                     <div className="flex items-center gap-4">
                         <Button variant="secondary" onClick={saveAsDraft}>Save as Draft</Button>
-                        <Button 
-                            style={{ backgroundColor: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' }}
+                        <Button
+                            className="bg-accent text-accent-foreground hover:bg-accent/90"
                             onClick={() => alert("Order Activated!")}
                         >
                             Activate Order

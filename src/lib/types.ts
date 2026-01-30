@@ -31,6 +31,7 @@ export type ProductSize = {
 export type Product = {
   id: number;
   name: string;
+  basePrice: number;
   configType: 'A' | 'B' | 'C' | 'D' | 'E';
   variants?: string[];
   softConstraints?: AddonConstraint[];
