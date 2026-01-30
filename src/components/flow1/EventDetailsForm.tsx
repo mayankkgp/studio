@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
-import { CalendarIcon, User, Users, PartyPopper, Cake, Star, Building, Ship, Milestone } from 'lucide-react';
+import { CalendarIcon, Users, Star, PartyPopper, Cake, Milestone } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,8 +22,9 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { eventDetailsSchema } from '@/lib/schemas';
 import type { EventDetails, EventType } from '@/lib/types';
 import { useOrder } from '@/context/OrderContext';
-import { cn, getOrdinal } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { MobileNav } from '../layout/MobileNav';
+import { useHeaderSummary } from '@/hooks/use-header-summary';
 
 const eventTypeOptions: { value: EventType; label: string; icon: React.ElementType }[] = [
   { value: 'Wedding', label: 'Wedding', icon: Users },
@@ -52,46 +53,12 @@ export function EventDetailsForm() {
   }, [isLoaded, order.eventDetails, reset]);
   
   const watchedFields = watch();
+  const headerSummary = useHeaderSummary(watchedFields);
 
-  const headerSummary = useMemo(() => {
-    let eventTypeDisplay = watchedFields.eventType || 'New Order';
-    let namesDisplay = '';
-    let dateDisplay = '';
-
-    if (watchedFields.eventType === 'Anniversary' && watchedFields.milestoneYears) {
-      eventTypeDisplay = `${getOrdinal(watchedFields.milestoneYears)} Anniversary`;
-      if (watchedFields.husbandName && watchedFields.wifeName) {
-        namesDisplay = `${watchedFields.wifeName} & ${watchedFields.husbandName}`;
-      }
-    } else if (watchedFields.eventType === 'Birthday' && watchedFields.ageMilestone) {
-      eventTypeDisplay = `${getOrdinal(watchedFields.ageMilestone)} Birthday`;
-      namesDisplay = watchedFields.honoreeNameBirthday || '';
-    } else if (watchedFields.eventType === 'Wedding') {
-      if (watchedFields.brideName && watchedFields.groomName) {
-        namesDisplay = `${watchedFields.brideName} & ${watchedFields.groomName}`;
-      }
-    } else if (watchedFields.eventType === 'Engagement') {
-      if (watchedFields.engagementBrideName && watchedFields.engagementGroomName) {
-        namesDisplay = `${watchedFields.engagementBrideName} & ${watchedFields.engagementGroomName}`;
-      }
-    } else if (watchedFields.eventType === 'Others') {
-        eventTypeDisplay = watchedFields.eventName || 'Other Event';
-        namesDisplay = watchedFields.honoreeNameOther || '';
-    }
-
-    if (watchedFields.eventDate) {
-      dateDisplay = format(new Date(watchedFields.eventDate), 'dd MMM yyyy');
-    }
-
-    return [eventTypeDisplay, namesDisplay, dateDisplay].filter(Boolean).join(' • ');
-  }, [watchedFields]);
-
-  const dueDateWarning = useMemo(() => {
-    if (watchedFields.orderDueDate && watchedFields.eventDate) {
-      return watchedFields.orderDueDate > watchedFields.eventDate;
-    }
-    return false;
-  }, [watchedFields.orderDueDate, watchedFields.eventDate]);
+  const dueDateWarning = (
+    watchedFields.orderDueDate && watchedFields.eventDate &&
+    watchedFields.orderDueDate > watchedFields.eventDate
+  );
 
   const onSubmit = (data: EventDetails) => {
     setEventDetails(data);
@@ -104,12 +71,13 @@ export function EventDetailsForm() {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col h-screen">
-      <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background/80 backdrop-blur-sm px-4 md:px-6">
+      <header className="sticky top-0 z-10 flex h-20 items-center gap-4 border-b bg-background/80 backdrop-blur-sm px-4 md:px-6">
         <MobileNav />
         <div className="flex-1">
           <h1 className="font-semibold text-lg md:text-xl font-headline truncate" title={headerSummary}>
             {headerSummary}
           </h1>
+           <p className="text-sm text-muted-foreground">Event Details</p>
         </div>
         <div className="hidden lg:block font-mono text-sm">
             {order.orderId}

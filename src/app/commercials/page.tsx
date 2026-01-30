@@ -11,18 +11,40 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useOrder } from "@/context/OrderContext";
 import { useRouter } from "next/navigation";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { calculateBillableItems } from "@/lib/pricing";
-import type { BillableItem } from "@/lib/types";
+import type { BillableItem, BillableComponent } from "@/lib/types";
 import { DollarSign } from "lucide-react";
+import { useHeaderSummary } from "@/hooks/use-header-summary";
 
 export default function CommercialsPage() {
     const router = useRouter();
     const { order, setPaymentReceived, saveAsDraft } = useOrder();
+    const headerSummary = useHeaderSummary(order.eventDetails);
+    
+    const [billableItems, setBillableItems] = useState<BillableItem[]>([]);
 
-    const billableItems: BillableItem[] = useMemo(() => {
-        return calculateBillableItems(order.deliverables);
+    useEffect(() => {
+        setBillableItems(calculateBillableItems(order.deliverables));
     }, [order.deliverables]);
+
+    const handleComponentChange = (itemIndex: number, compIndex: number, field: 'rate' | 'multiplier', value: number) => {
+        const newBillableItems = [...billableItems];
+        const item = newBillableItems[itemIndex];
+        const component = item.components[compIndex];
+        
+        if (field === 'rate') {
+            component.rate = value;
+        } else if (field === 'multiplier') {
+            component.multiplier = value;
+        }
+
+        component.total = component.rate * component.multiplier;
+        item.components[compIndex] = component;
+        newBillableItems[itemIndex] = item;
+
+        setBillableItems(newBillableItems);
+    };
 
     const totalValue = useMemo(() => {
         return billableItems.reduce((acc, item) => {
@@ -54,12 +76,23 @@ export default function CommercialsPage() {
     return (
         <AppLayout>
             <div className="flex flex-col h-screen">
-                <header className="sticky top-0 z-10 flex h-24 items-center gap-4 border-b bg-background/80 backdrop-blur-sm px-4 md:px-6">
-                    <MobileNav />
-                    <div className="flex-1 grid grid-cols-2 gap-4">
+                 <header className="sticky top-0 z-10 flex flex-col items-stretch gap-2 border-b bg-background/80 backdrop-blur-sm px-4 md:px-6 py-3">
+                    <div className="flex items-center gap-4">
+                        <MobileNav />
+                        <div className="flex-1">
+                            <h1 className="font-semibold text-lg md:text-xl font-headline truncate" title={headerSummary}>
+                              {headerSummary}
+                            </h1>
+                            <p className="text-sm text-muted-foreground">Commercials</p>
+                        </div>
+                        <div className="hidden lg:block font-mono text-sm">
+                            {order.orderId}
+                        </div>
+                    </div>
+                    <div className="flex-1 grid grid-cols-2 gap-4 items-center pl-0 lg:pl-12">
                         <div>
                             <div className="text-sm text-muted-foreground">Total Value</div>
-                            <div className="text-3xl font-bold font-headline">{formatCurrency(totalValue)}</div>
+                            <div className="text-2xl font-bold font-headline">{formatCurrency(totalValue)}</div>
                         </div>
                         <div className="flex items-center gap-4">
                              <div className="w-48">
@@ -92,7 +125,7 @@ export default function CommercialsPage() {
                                 </div>
                              ) : (
                                 <Accordion type="single" collapsible className="w-full" defaultValue={billableItems[0]?.configuredProductId}>
-                                    {billableItems.map(item => {
+                                    {billableItems.map((item, itemIndex) => {
                                         const itemTotal = item.components.reduce((acc, comp) => acc + comp.total, 0);
                                         return (
                                             <AccordionItem value={item.configuredProductId} key={item.configuredProductId}>
@@ -113,11 +146,26 @@ export default function CommercialsPage() {
                                                             </TableRow>
                                                         </TableHeader>
                                                         <TableBody>
-                                                            {item.components.map((comp, index) => (
-                                                                <TableRow key={index}>
-                                                                    <TableCell>{comp.label}</TableCell>
-                                                                    <TableCell>{comp.multiplier}</TableCell>
-                                                                    <TableCell>{formatCurrency(comp.rate)}</TableCell>
+                                                            {item.components.map((comp, compIndex) => (
+                                                                <TableRow key={compIndex}>
+                                                                    <TableCell className="font-medium">{comp.label}</TableCell>
+                                                                    <TableCell>
+                                                                        <Input
+                                                                            type="number"
+                                                                            value={comp.multiplier}
+                                                                            onChange={(e) => handleComponentChange(itemIndex, compIndex, 'multiplier', Number(e.target.value))}
+                                                                            className="w-20"
+                                                                            disabled={comp.isFixed}
+                                                                        />
+                                                                    </TableCell>
+                                                                    <TableCell>
+                                                                        <Input
+                                                                            type="number"
+                                                                            value={comp.rate}
+                                                                            onChange={(e) => handleComponentChange(itemIndex, compIndex, 'rate', Number(e.target.value))}
+                                                                            className="w-24"
+                                                                        />
+                                                                    </TableCell>
                                                                     <TableCell className="text-right">{formatCurrency(comp.total)}</TableCell>
                                                                 </TableRow>
                                                             ))}

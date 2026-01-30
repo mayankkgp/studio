@@ -14,10 +14,12 @@ import { Search, Package, Edit, AlertTriangle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { ProductConfigurator } from '@/components/flow2/ProductConfigurator';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useHeaderSummary } from '@/hooks/use-header-summary';
 
 export default function DeliverablesPage() {
     const router = useRouter();
     const { order, addDeliverable, updateDeliverable, removeDeliverable, saveAsDraft } = useOrder();
+    const headerSummary = useHeaderSummary(order.eventDetails);
     const [searchTerm, setSearchTerm] = useState('');
     
     const [isConfiguratorOpen, setIsConfiguratorOpen] = useState(false);
@@ -64,20 +66,28 @@ export default function DeliverablesPage() {
         <>
             <AppLayout>
                 <div className="flex flex-col h-screen">
-                    <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background/80 backdrop-blur-sm px-4 md:px-6">
+                    <header className="sticky top-0 z-10 flex h-20 items-center gap-4 border-b bg-background/80 backdrop-blur-sm px-4 md:px-6">
                         <MobileNav />
                         <div className="flex-1">
-                            <h1 className="font-semibold text-lg md:text-xl font-headline">Deliverables</h1>
+                            <h1 className="font-semibold text-lg md:text-xl font-headline truncate" title={headerSummary}>
+                                {headerSummary}
+                            </h1>
+                            <p className="text-sm text-muted-foreground">Deliverables</p>
                         </div>
-                        <div className="relative flex-1 md:grow-0">
-                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                            <Input
-                                type="search"
-                                placeholder="Search products..."
-                                className="w-full rounded-lg bg-background pl-8 md:w-[200px] lg:w-[320px]"
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
+                        <div className="flex items-center gap-4">
+                             <div className="hidden lg:block font-mono text-sm">
+                                {order.orderId}
+                            </div>
+                            <div className="relative flex-1 md:grow-0">
+                                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                    type="search"
+                                    placeholder="Search products..."
+                                    className="w-full rounded-lg bg-background pl-8 md:w-[200px] lg:w-[320px]"
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                />
+                            </div>
                         </div>
                     </header>
 
