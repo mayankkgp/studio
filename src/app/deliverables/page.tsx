@@ -1,20 +1,38 @@
-// This is a placeholder for Flow 2: Deliverables.
-// The full implementation would be complex and is not included in this response.
-// The structure would involve fetching product data, displaying a searchable catalog,
-// and allowing users to configure and add products to the order.
-
 'use client';
 
+import { useState } from 'react';
 import { AppLayout } from "@/components/layout/AppLayout";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { useOrder } from "@/context/OrderContext";
 import { useRouter } from "next/navigation";
+import { productCatalog } from '@/lib/product-data';
+import type { ConfiguredProduct, Product } from '@/lib/types';
+import { Search, Package } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 export default function DeliverablesPage() {
     const router = useRouter();
-    const { order, saveAsDraft } = useOrder();
+    const { order, addDeliverable, removeDeliverable, saveAsDraft } = useOrder();
+    const [searchTerm, setSearchTerm] = useState('');
+
+    const handleAddProduct = (product: Product) => {
+        const newDeliverable: ConfiguredProduct = {
+            id: `${product.id}-${Date.now()}`, // simple unique id
+            productId: product.id,
+            productName: product.name,
+            quantity: 1,
+            addons: [],
+            ...(product.variants && { variant: product.variants[0] }),
+        };
+        addDeliverable(newDeliverable);
+    };
+
+    const filteredProducts = productCatalog.filter(p => 
+        p.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
     return (
         <AppLayout>
@@ -22,35 +40,71 @@ export default function DeliverablesPage() {
                 <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background/80 backdrop-blur-sm px-4 md:px-6">
                     <MobileNav />
                     <div className="flex-1">
-                    <h1 className="font-semibold text-lg md:text-xl font-headline">Deliverables</h1>
+                        <h1 className="font-semibold text-lg md:text-xl font-headline">Deliverables</h1>
+                    </div>
+                    <div className="relative flex-1 md:grow-0">
+                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            type="search"
+                            placeholder="Search products..."
+                            className="w-full rounded-lg bg-background pl-8 md:w-[200px] lg:w-[320px]"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
                     </div>
                 </header>
 
-                <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Product Catalog</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <p>Product selection and configuration UI will be implemented here.</p>
-                            <p className="text-muted-foreground text-sm mt-2">This is a placeholder for the full feature.</p>
-                        </CardContent>
-                    </Card>
+                <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 grid md:grid-cols-2 gap-8">
+                    <div className="md:col-span-1 flex flex-col gap-8">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Product Catalog</CardTitle>
+                            </CardHeader>
+                            <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[calc(100vh-250px)] overflow-y-auto p-4">
+                                {filteredProducts.map(product => (
+                                    <Card key={product.id} className="flex flex-col">
+                                        <CardHeader>
+                                            <CardTitle className="text-base">{product.name}</CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="flex-grow flex flex-col justify-end">
+                                            <Button size="sm" onClick={() => handleAddProduct(product)}>Add to Order</Button>
+                                        </CardContent>
+                                    </Card>
+                                ))}
+                                {filteredProducts.length === 0 && <p className="text-muted-foreground p-4">No products found.</p>}
+                            </CardContent>
+                        </Card>
+                    </div>
 
-                    <Card className="mt-8">
-                        <CardHeader>
-                            <CardTitle>Selected Deliverables</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            {order.deliverables.length === 0 ? (
-                                <p className="text-muted-foreground">No items added yet.</p>
-                            ) : (
-                                <ul>
-                                    {order.deliverables.map(item => <li key={item.id}>{item.productName}</li>)}
-                                </ul>
-                            )}
-                        </CardContent>
-                    </Card>
+                    <div className="md:col-span-1 flex flex-col gap-8">
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between">
+                                <CardTitle>Selected Deliverables</CardTitle>
+                                <Badge variant="secondary">{order.deliverables.length} items</Badge>
+                            </CardHeader>
+                            <CardContent className="max-h-[calc(100vh-250px)] overflow-y-auto p-4">
+                                {order.deliverables.length === 0 ? (
+                                    <div className="text-center text-muted-foreground py-12">
+                                        <Package className="mx-auto h-12 w-12" />
+                                        <p className="mt-4">No items added yet.</p>
+                                        <p className="text-sm">Select products from the catalog.</p>
+                                    </div>
+                                ) : (
+                                    <ul className="space-y-4">
+                                        {order.deliverables.map(item => (
+                                            <li key={item.id} className="flex justify-between items-center p-3 border rounded-lg bg-card-foreground/5">
+                                                <div>
+                                                    <p className="font-semibold">{item.productName}</p>
+                                                    {item.variant && <p className="text-sm text-muted-foreground">{item.variant}</p>}
+                                                </div>
+                                                <Button variant="ghost" size="sm" onClick={() => removeDeliverable(item.id)}>Remove</Button>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </div>
                 </main>
 
                 <footer className="sticky bottom-0 z-10 flex items-center justify-between gap-4 border-t bg-background px-4 md:px-6 h-20">

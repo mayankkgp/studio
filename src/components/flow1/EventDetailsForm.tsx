@@ -390,7 +390,6 @@ export function EventDetailsForm() {
       <footer className="sticky bottom-0 z-10 flex items-center justify-end gap-4 border-t bg-background px-4 md:px-6 h-20">
         <Button variant="outline" type="button" onClick={() => {
             resetOrder();
-            reset(initialOrderState.eventDetails);
         }}>Cancel</Button>
         <Button variant="secondary" type="button" onClick={saveAsDraft}>Save as Draft</Button>
         <Button type="submit" disabled={!isValid} style={{ backgroundColor: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' }}>Next Step</Button>
