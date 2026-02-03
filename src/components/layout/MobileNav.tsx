@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { Home, Package, DollarSign, PanelLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Logo } from '@/components/icons/Logo';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { useOrder } from '@/context/OrderContext';
 
@@ -28,6 +28,12 @@ export function MobileNav() {
         </Button>
       </SheetTrigger>
       <SheetContent side="left" className="sm:max-w-xs">
+        <SheetHeader className="sr-only">
+          <SheetTitle>SrishFlow Navigation Menu</SheetTitle>
+          <SheetDescription>
+            Access and navigate through different sections of the order management system.
+          </SheetDescription>
+        </SheetHeader>
         <nav className="grid gap-6 text-lg font-medium">
           <Link href="/" className="group flex h-10 w-10 shrink-0 items-center justify-center gap-2 rounded-full bg-primary text-lg font-semibold text-primary-foreground md:text-base">
             <Logo className="h-6 w-auto" />
