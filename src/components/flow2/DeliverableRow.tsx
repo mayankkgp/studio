@@ -95,6 +95,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
 }: DeliverableRowProps) {
     const product = productCatalog.find(p => p.id === item.productId) || null;
     const { toast } = useToast();
+    const hasValidated = React.useRef(false);
     
     const qtyInputRef = React.useRef<HTMLInputElement>(null);
     const variantTriggerRef = React.useRef<HTMLButtonElement>(null);
@@ -129,12 +130,17 @@ export const DeliverableRow = React.memo(function DeliverableRow({
 
     // Proactive validation on mount to prevent "False Invalid" on remounts
     React.useEffect(() => {
-        trigger();
-    }, [trigger]);
+        trigger().then((result) => {
+            hasValidated.current = true;
+            onValidityChange(item.id, result);
+        });
+    }, [trigger, item.id, onValidityChange]);
 
     // Report validity to parent
     React.useEffect(() => {
-        onValidityChange(item.id, isValid);
+        if (hasValidated.current) {
+            onValidityChange(item.id, isValid);
+        }
     }, [isValid, item.id, onValidityChange]);
 
     // Smart Autofocus: Focus relevant fields only on invalid expanded items
