@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import type { Order, EventDetails, ConfiguredProduct } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 
@@ -27,17 +27,20 @@ const initialOrderState: Order = {
 
 const STORAGE_KEY = 'srishbish-order';
 
-export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const OrderProvider: React.FC<{ children: React.NewNode }> = ({ children }: { children: React.ReactNode }) => {
   const [order, setOrder] = useState<Order>(initialOrderState);
   const [isLoaded, setIsLoaded] = useState(false);
   const { toast } = useToast();
+  
+  // Use a ref to track if we need to save to avoid infinite loops or unnecessary writes
+  const lastSavedRef = useRef<string>('');
 
+  // Initial load
   useEffect(() => {
     try {
       const savedOrder = localStorage.getItem(STORAGE_KEY);
       if (savedOrder) {
         const parsedOrder = JSON.parse(savedOrder);
-        // Dates are stored as strings, need to convert them back to Date objects
         if (parsedOrder.eventDetails?.eventDate) {
             parsedOrder.eventDetails.eventDate = new Date(parsedOrder.eventDetails.eventDate);
         }
@@ -48,6 +51,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             parsedOrder.eventDetails.weddingDate = new Date(parsedOrder.eventDetails.weddingDate);
         }
         setOrder(parsedOrder);
+        lastSavedRef.current = savedOrder;
       } else {
         const newOrderId = `#ORD-${Math.floor(1000 + Math.random() * 9000)}`;
         setOrder((prev) => ({ ...prev, orderId: newOrderId }));
@@ -60,75 +64,74 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setIsLoaded(true);
   }, []);
 
-  const saveToLocalStorage = useCallback((currentOrder: Order) => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(currentOrder));
-    } catch (error) {
-      console.error("Failed to save order to localStorage", error);
-    }
-  }, []);
-  
+  // DEBOUNCED PERSISTENCE: Save to localStorage only after changes stop for 500ms
+  useEffect(() => {
+    if (!isLoaded) return;
+
+    const timer = setTimeout(() => {
+      try {
+        const orderString = JSON.stringify(order);
+        if (orderString !== lastSavedRef.current) {
+          localStorage.setItem(STORAGE_KEY, orderString);
+          lastSavedRef.current = orderString;
+        }
+      } catch (error) {
+        console.error("Failed to save order to localStorage", error);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [order, isLoaded]);
+
   const saveAsDraft = useCallback(() => {
-    saveToLocalStorage(order);
-    toast({
-      title: 'Draft Saved',
-      description: `Your order ${order.orderId} has been saved.`,
-    });
-  }, [order, saveToLocalStorage, toast]);
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(order));
+      toast({
+        title: 'Draft Saved',
+        description: `Your order ${order.orderId} has been saved manually.`,
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  }, [order, toast]);
 
 
   const setEventDetails = useCallback((details: EventDetails) => {
-    setOrder((prev) => {
-      const newOrder = { ...prev, eventDetails: details };
-      saveToLocalStorage(newOrder);
-      return newOrder;
-    });
-  }, [saveToLocalStorage]);
+    setOrder((prev) => ({ ...prev, eventDetails: details }));
+  }, []);
   
   const addDeliverable = useCallback((deliverable: ConfiguredProduct) => {
-    setOrder((prev) => {
-      const newOrder = { ...prev, deliverables: [...prev.deliverables, deliverable] };
-      saveToLocalStorage(newOrder);
-      return newOrder;
-    });
-  }, [saveToLocalStorage]);
+    setOrder((prev) => ({ ...prev, deliverables: [...prev.deliverables, deliverable] }));
+  }, []);
 
   const updateDeliverable = useCallback((id: string, updates: Partial<ConfiguredProduct>) => {
     setOrder((prev) => {
       const newDeliverables = prev.deliverables.map((d) => (d.id === id ? { ...d, ...updates } : d));
-      const newOrder = { ...prev, deliverables: newDeliverables };
-      saveToLocalStorage(newOrder);
-      return newOrder;
+      return { ...prev, deliverables: newDeliverables };
     });
-  }, [saveToLocalStorage]);
+  }, []);
 
   const removeDeliverable = useCallback((id: string) => {
     setOrder((prev) => {
       const newDeliverables = prev.deliverables.filter((d) => d.id !== id);
-      const newOrder = { ...prev, deliverables: newDeliverables };
-      saveToLocalStorage(newOrder);
-      return newOrder;
+      return { ...prev, deliverables: newDeliverables };
     });
-  }, [saveToLocalStorage]);
+  }, []);
   
   const setPaymentReceived = useCallback((amount: number) => {
-    setOrder((prev) => {
-        const newOrder = { ...prev, paymentReceived: amount };
-        saveToLocalStorage(newOrder);
-        return newOrder;
-    });
-  }, [saveToLocalStorage]);
+    setOrder((prev) => ({ ...prev, paymentReceived: amount }));
+  }, []);
 
   const resetOrder = useCallback(() => {
     const newOrderId = `#ORD-${Math.floor(1000 + Math.random() * 9000)}`;
     const newOrder = { ...initialOrderState, orderId: newOrderId };
     setOrder(newOrder);
-    saveToLocalStorage(newOrder);
+    localStorage.removeItem(STORAGE_KEY);
     toast({
         title: 'Order Cancelled',
         description: 'The form has been reset.',
     });
-  }, [saveToLocalStorage, toast]);
+  }, [toast]);
 
 
   return (

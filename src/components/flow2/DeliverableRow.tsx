@@ -123,14 +123,17 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         mode: 'onChange'
     });
 
-    const { register, control, watch, formState: { errors, isValid }, handleSubmit, trigger } = form;
+    const { register, control, watch, formState: { errors, isValid }, trigger, getValues } = form;
+    
+    // Watch all values to trigger summary updates and debounced context sync
     const watchedValues = watch();
 
-    // Trigger validation on mount to ensure parent knows initial validity
+    // Initial validation on mount
     React.useEffect(() => {
         trigger();
     }, [trigger]);
 
+    // Reporting validity to parent - only when it actually changes
     React.useEffect(() => {
         onValidityChange(item.id, isValid);
     }, [isValid, item.id, onValidityChange]);
@@ -149,18 +152,22 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         }
     }, [isExpanded, isValid, product]);
 
+    // DEBOUNCED GLOBAL SYNC: Only update global context after typing stops for 400ms
     React.useEffect(() => {
-        const subscription = watch((value) => {
-            const warning = checkWarnings(value, product);
+        const timer = setTimeout(() => {
+            const currentValues = getValues();
+            const warning = checkWarnings(currentValues, product);
+            
             onUpdate(item.id, {
-                ...value,
+                ...currentValues,
                 warning,
-                addons: value.addons?.filter((a: any) => a.value !== false && a.value !== 0) as any,
-                sizes: value.sizes?.filter((s: any) => s.quantity > 0) as any
+                addons: currentValues.addons?.filter((a: any) => a.value !== false && a.value !== 0) as any,
+                sizes: currentValues.sizes?.filter((s: any) => s.quantity > 0) as any
             });
-        });
-        return () => subscription.unsubscribe();
-    }, [watch, onUpdate, item.id, product]);
+        }, 400);
+
+        return () => clearTimeout(timer);
+    }, [watchedValues, onUpdate, item.id, product, getValues]);
 
     const checkWarnings = (data: any, product: Product | null): string | undefined => {
         if (!product) return undefined;
