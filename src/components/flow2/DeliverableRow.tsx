@@ -123,7 +123,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         mode: 'onChange'
     });
 
-    const { register, control, watch, formState: { errors, isValid }, trigger, getValues } = form;
+    const { register, control, watch, formState: { errors, isValid }, trigger, getValues, setValue } = form;
     
     const watchedValues = watch();
 
@@ -150,23 +150,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             return () => clearTimeout(timer);
         }
     }, [isExpanded, isValid, product]);
-
-    // Debounced context sync for performance
-    React.useEffect(() => {
-        const timer = setTimeout(() => {
-            const currentValues = getValues();
-            const warning = checkWarnings(currentValues, product);
-            
-            onUpdate(item.id, {
-                ...currentValues,
-                warning,
-                addons: currentValues.addons?.filter((a: any) => a.value !== false && a.value !== 0) as any,
-                sizes: currentValues.sizes?.filter((s: any) => s.quantity > 0) as any
-            });
-        }, 400);
-
-        return () => clearTimeout(timer);
-    }, [watchedValues, onUpdate, item.id, product, getValues]);
 
     const checkWarnings = (data: any, product: Product | null): string | undefined => {
         if (!product) return undefined;
@@ -208,6 +191,38 @@ export const DeliverableRow = React.memo(function DeliverableRow({
 
         return warnings.join(' ');
     };
+
+    // Immediate sync for variant to prevent "jump-revert"
+    const handleVariantChange = (val: string) => {
+        setValue('variant', val, { shouldValidate: true, shouldDirty: true });
+        const currentValues = getValues();
+        const warning = checkWarnings(currentValues, product);
+        
+        onUpdate(item.id, {
+            ...currentValues,
+            variant: val,
+            warning,
+            addons: currentValues.addons?.filter((a: any) => a.value !== false && a.value !== 0) as any,
+            sizes: currentValues.sizes?.filter((s: any) => s.quantity > 0) as any
+        });
+    };
+
+    // Debounced context sync for performance (for text/numbers)
+    React.useEffect(() => {
+        const timer = setTimeout(() => {
+            const currentValues = getValues();
+            const warning = checkWarnings(currentValues, product);
+            
+            onUpdate(item.id, {
+                ...currentValues,
+                warning,
+                addons: currentValues.addons?.filter((a: any) => a.value !== false && a.value !== 0) as any,
+                sizes: currentValues.sizes?.filter((s: any) => s.quantity > 0) as any
+            });
+        }, 400);
+
+        return () => clearTimeout(timer);
+    }, [watchedValues.quantity, watchedValues.pages, watchedValues.specialRequest, watchedValues.customFieldValues, watchedValues.addons, watchedValues.sizes, onUpdate, item.id, product, getValues]);
 
     const handleDoneClick = async (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -413,7 +428,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                         control={control}
                                         render={({ field }) => (
                                             <Select 
-                                                onValueChange={field.onChange} 
+                                                onValueChange={handleVariantChange} 
                                                 value={field.value || ""}
                                             >
                                                 <SelectTrigger 

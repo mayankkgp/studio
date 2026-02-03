@@ -65,13 +65,11 @@ export default function DeliverablesPage() {
     }, [openItems, rowValidity]);
 
     // Split items into Active and Completed
-    // NEW LOGIC: Active Queue strictly contains INVALID items.
     const { activeItems, completedItems } = useMemo(() => {
         const active = order.deliverables.filter(item => rowValidity[item.id] === false);
         const completed = order.deliverables.filter(item => rowValidity[item.id] === true);
         
         // Items that haven't reported validity yet (on mount) are briefly "unclassified"
-        // We put them in Active to avoid flicker and ensure "Action Required" check
         const unclassified = order.deliverables.filter(item => rowValidity[item.id] === undefined);
 
         return { 
@@ -130,13 +128,13 @@ export default function DeliverablesPage() {
 
                 <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
                     <div className="mx-auto max-w-4xl space-y-8">
-                        {/* Sticky Command Bar Section - Flush with top, no gaps */}
+                        {/* Sticky Command Bar Section */}
                         <section className="sticky top-[-16px] md:top-[-24px] lg:top-[-32px] z-30 bg-background pt-4 pb-4 -mx-4 px-4 shadow-sm border-b md:border-none md:rounded-b-xl">
                             <CommandBar />
                         </section>
 
                         <div className="space-y-12 pb-12">
-                            {/* Active Queue Section - ONLY Invalid items */}
+                            {/* Active Queue Section */}
                             <section className="space-y-4">
                                 <div className="flex items-center justify-between">
                                     <h2 className="text-xs font-bold uppercase tracking-widest text-primary flex items-center gap-2">
@@ -178,7 +176,7 @@ export default function DeliverablesPage() {
                                 )}
                             </section>
 
-                            {/* Completed Items Section - Valid items (whether expanded or collapsed) */}
+                            {/* Completed Items Section */}
                             {completedItems.length > 0 && (
                                 <section className="space-y-4 opacity-80">
                                     <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
