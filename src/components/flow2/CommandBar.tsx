@@ -96,17 +96,27 @@ export function CommandBar() {
                             <CommandList>
                                 <CommandEmpty>No product found.</CommandEmpty>
                                 <CommandGroup heading="Product Catalog">
-                                    {productCatalog.map((product) => (
-                                        <CommandItem
-                                            key={product.id}
-                                            value={product.name}
-                                            onSelect={() => handleAddProduct(product)}
-                                            className="h-11"
-                                        >
-                                            <Zap className="mr-2 h-4 w-4 text-primary" />
-                                            {product.name}
-                                        </CommandItem>
-                                    ))}
+                                    {productCatalog.map((product) => {
+                                        const isAlreadyAdded = order.deliverables.some(d => d.productId === product.id);
+                                        return (
+                                            <CommandItem
+                                                key={product.id}
+                                                value={product.name}
+                                                onSelect={() => handleAddProduct(product)}
+                                                className="h-11 flex justify-between items-center"
+                                            >
+                                                <div className="flex items-center">
+                                                    <Zap className="mr-2 h-4 w-4 text-primary" />
+                                                    {product.name}
+                                                </div>
+                                                {isAlreadyAdded && (
+                                                    <span className="text-[10px] font-medium text-muted-foreground uppercase bg-muted px-1.5 py-0.5 rounded">
+                                                        Added
+                                                    </span>
+                                                )}
+                                            </CommandItem>
+                                        );
+                                    })}
                                 </CommandGroup>
                             </CommandList>
                         </Command>

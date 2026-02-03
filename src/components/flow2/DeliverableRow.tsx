@@ -84,7 +84,7 @@ const getValidationSchema = (product: Product | null) => {
     return z.object(schemaObject);
 };
 
-export function DeliverableRow({ item, isExpanded, onDone, onValidityChange }: DeliverableRowProps) {
+export const DeliverableRow = React.memo(function DeliverableRow({ item, isExpanded, onDone, onValidityChange }: DeliverableRowProps) {
     const { updateDeliverable, removeDeliverable } = useOrder();
     const product = productCatalog.find(p => p.id === item.productId) || null;
     
@@ -118,12 +118,10 @@ export function DeliverableRow({ item, isExpanded, onDone, onValidityChange }: D
     const { register, control, watch, formState: { errors, isValid }, handleSubmit, trigger, setValue } = form;
     const watchedValues = watch();
 
-    // Notify parent of validity changes
     React.useEffect(() => {
         onValidityChange(item.id, isValid);
     }, [isValid, item.id, onValidityChange]);
 
-    // Auto-focus logic when expanded
     React.useEffect(() => {
         if (isExpanded) {
             const timer = setTimeout(() => {
@@ -137,7 +135,6 @@ export function DeliverableRow({ item, isExpanded, onDone, onValidityChange }: D
         }
     }, [isExpanded, product]);
 
-    // Auto-update context when form changes
     React.useEffect(() => {
         const subscription = watch((value) => {
             const warning = checkWarnings(value, product);
@@ -211,7 +208,7 @@ export function DeliverableRow({ item, isExpanded, onDone, onValidityChange }: D
         if (!product) return '';
         
         if (product.variants && !watchedValues.variant) {
-            return <Badge variant="destructive" className="bg-destructive text-destructive-foreground animate-pulse">Setup Required</Badge>;
+            return <Badge variant="destructive" className="bg-destructive text-destructive-foreground animate-pulse text-[10px] h-4 py-0">Setup Required</Badge>;
         }
 
         const parts: string[] = [];
@@ -248,18 +245,25 @@ export function DeliverableRow({ item, isExpanded, onDone, onValidityChange }: D
                     !isValid && !isExpanded && "border-destructive border-l-4 bg-destructive/5"
                 )}
             >
-                <div className="flex items-center px-4 h-16">
+                <div className={cn("flex items-center px-4 transition-all", isExpanded ? "h-16" : "h-12")}>
                     <AccordionTrigger className="flex-1 hover:no-underline py-0">
-                        <div className="flex items-center gap-4 text-left">
-                            <div className={cn(
-                                "h-10 w-10 rounded-lg flex items-center justify-center transition-colors",
-                                isExpanded ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary"
-                            )}>
-                                <Package className="h-5 w-5" />
-                            </div>
-                            <div>
-                                <h3 className="font-semibold text-base leading-none">{item.productName}</h3>
-                                <div className="text-sm mt-1">{getSummary()}</div>
+                        <div className="flex items-center gap-3 text-left w-full overflow-hidden">
+                            {!isExpanded ? (
+                                <Package className="h-4 w-4 text-primary/60 shrink-0" />
+                            ) : (
+                                <div className="h-10 w-10 rounded-lg flex items-center justify-center bg-primary text-primary-foreground shrink-0">
+                                    <Package className="h-5 w-5" />
+                                </div>
+                            )}
+                            <div className={cn("flex items-baseline gap-3", !isExpanded && "flex-1")}>
+                                <h3 className={cn("font-semibold leading-none shrink-0", isExpanded ? "text-base" : "text-sm")}>
+                                    {item.productName}
+                                </h3>
+                                {!isExpanded && (
+                                    <div className="text-xs text-muted-foreground truncate flex-1">
+                                        {getSummary()}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </AccordionTrigger>
@@ -286,21 +290,21 @@ export function DeliverableRow({ item, isExpanded, onDone, onValidityChange }: D
                                 <Input
                                     id={`qty-h-${item.id}`}
                                     type="number"
-                                    className="w-20 h-9 bg-background/50"
+                                    className="w-16 h-8 bg-background/50 text-xs"
                                     {...register('quantity', { valueAsNumber: true })}
                                 />
                             </div>
                         )}
 
                         {isExpanded ? (
-                             <Button size="sm" onClick={handleDoneClick} className="gap-2">
+                             <Button size="sm" onClick={handleDoneClick} className="gap-2 h-8">
                                 <Check className="h-4 w-4" />
                                 Done
                              </Button>
                         ) : (
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-9 w-9">
+                                    <Button variant="ghost" size="icon" className="h-8 w-8">
                                         <MoreHorizontal className="h-4 w-4" />
                                     </Button>
                                 </DropdownMenuTrigger>
@@ -318,19 +322,19 @@ export function DeliverableRow({ item, isExpanded, onDone, onValidityChange }: D
                 <AccordionContent className="px-4 pb-4 border-t bg-muted/5 relative">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
                         <div className="space-y-4">
-                            {/* Quantity for Type A */}
+                            {/* Quantity for Type A in Expanded View */}
                             {product?.configType === 'A' && (
-                                <div className="space-y-1.5">
+                                <div className="space-y-1.5 p-3 rounded-lg border bg-primary/5">
                                     <Label className={cn(
-                                        "text-xs font-semibold uppercase tracking-wider",
-                                        errors.quantity ? "text-destructive" : "text-muted-foreground"
+                                        "text-xs font-bold uppercase tracking-wider",
+                                        errors.quantity ? "text-destructive" : "text-primary"
                                     )}>
                                         Quantity {errors.quantity && " (Required)"}
                                     </Label>
                                     <Input 
                                         type="number" 
                                         {...register('quantity', { valueAsNumber: true })} 
-                                        className={cn("h-9", errors.quantity && "border-destructive")} 
+                                        className={cn("h-10 text-lg font-semibold", errors.quantity && "border-destructive")} 
                                         ref={(e) => {
                                             register('quantity').ref(e);
                                             // @ts-ignore
@@ -480,4 +484,4 @@ export function DeliverableRow({ item, isExpanded, onDone, onValidityChange }: D
             </AccordionItem>
         </div>
     );
-}
+});

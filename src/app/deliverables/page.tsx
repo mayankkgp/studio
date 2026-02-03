@@ -11,10 +11,12 @@ import { DeliverableRow } from "@/components/flow2/DeliverableRow";
 import { Package } from "lucide-react";
 import { Accordion } from "@/components/ui/accordion";
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 export default function DeliverablesPage() {
     const router = useRouter();
     const { order, saveAsDraft } = useOrder();
+    const { toast } = useToast();
     const headerSummary = useHeaderSummary(order.eventDetails);
     
     const [openItems, setOpenItems] = useState<string[]>([]);
@@ -53,6 +55,7 @@ export default function DeliverablesPage() {
         const invalidClosedItems = closedItems.filter(id => rowValidity[id] === false);
 
         if (invalidClosedItems.length > 0) {
+            // Re-open invalid items that the user tried to close
             setOpenItems(Array.from(new Set([...newValues, ...invalidClosedItems])));
             return;
         }
@@ -60,11 +63,17 @@ export default function DeliverablesPage() {
         setOpenItems(newValues);
     }, [openItems, rowValidity]);
 
-    const handleNextStep = () => {
+    const handleNextStep = useCallback(() => {
         // Find first invalid item ID
         const firstInvalidId = Object.entries(rowValidity).find(([_, valid]) => !valid)?.[0];
         
         if (firstInvalidId) {
+            toast({
+                variant: "destructive",
+                title: "Incomplete Items",
+                description: "Please complete all required fields before moving to commercials."
+            });
+
             // Expand it if it isn't already
             if (!openItems.includes(firstInvalidId)) {
                 setOpenItems(prev => [...prev, firstInvalidId]);
@@ -77,8 +86,17 @@ export default function DeliverablesPage() {
             return;
         }
 
+        if (order.deliverables.length === 0) {
+            toast({
+                variant: "destructive",
+                title: "No Items",
+                description: "Add at least one product to continue."
+            });
+            return;
+        }
+
         router.push('/commercials');
-    };
+    }, [rowValidity, openItems, order.deliverables.length, router, toast]);
 
     return (
         <AppLayout>
@@ -149,7 +167,6 @@ export default function DeliverablesPage() {
                         <Button variant="secondary" onClick={saveAsDraft}>Save as Draft</Button>
                         <Button
                             onClick={handleNextStep}
-                            disabled={order.deliverables.length === 0}
                         >
                             Next Step (Commercials)
                         </Button>
