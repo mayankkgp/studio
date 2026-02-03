@@ -28,6 +28,19 @@ export function CommandBar() {
     const [open, setOpen] = React.useState(false);
     const { addDeliverable, order } = useOrder();
 
+    // Global keyboard shortcut (Cmd+K / Ctrl+K)
+    React.useEffect(() => {
+        const down = (e: KeyboardEvent) => {
+            if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
+                e.preventDefault();
+                setOpen((open) => !open);
+            }
+        };
+
+        document.addEventListener('keydown', down);
+        return () => document.removeEventListener('keydown', down);
+    }, []);
+
     const handleAddProduct = (product: Product) => {
         const existingItems = order.deliverables.filter(item => item.productId === product.id).length;
         const productName = existingItems > 0 ? `${product.name} #${existingItems + 1}` : product.name;
@@ -69,7 +82,12 @@ export function CommandBar() {
                                 <Search className="h-5 w-5" />
                                 <span>Search products to add...</span>
                             </div>
-                            <ChevronsUpDown className="ml-2 h-5 w-5 shrink-0 opacity-50" />
+                            <div className="flex items-center gap-2">
+                                <kbd className="pointer-events-none hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100 sm:flex">
+                                    <span className="text-xs">⌘</span>K
+                                </kbd>
+                                <ChevronsUpDown className="ml-2 h-5 w-5 shrink-0 opacity-50" />
+                            </div>
                         </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
