@@ -13,7 +13,7 @@ import { useOrder } from "@/context/OrderContext";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { calculateBillableItems } from "@/lib/pricing";
-import type { BillableItem, BillableComponent } from "@/lib/types";
+import type { BillableItem } from "@/lib/types";
 import { DollarSign } from "lucide-react";
 import { useHeaderSummary } from "@/hooks/use-header-summary";
 
@@ -185,10 +185,7 @@ export default function CommercialsPage() {
                      <Button variant="outline" onClick={() => router.back()}>Back</Button>
                     <div className="flex items-center gap-4">
                         <Button variant="secondary" onClick={saveAsDraft}>Save as Draft</Button>
-                        <Button
-                            className="bg-primary text-primary-foreground hover:bg-primary/90"
-                            onClick={() => alert("Order Activated!")}
-                        >
+                        <Button onClick={() => alert("Order Activated!")}>
                             Activate Order
                         </Button>
                     </div>

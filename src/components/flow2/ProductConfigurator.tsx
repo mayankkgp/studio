@@ -1,20 +1,18 @@
 'use client';
 
 import * as React from 'react';
-import { useForm, Controller, useFieldArray, useWatch } from 'react-hook-form';
+import { useForm, Controller, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import type { Product, ConfiguredProduct, SoftConstraint } from '@/lib/types';
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '../ui/scroll-area';
-import { Alert, AlertDescription } from '../ui/alert';
-import { cn } from '@/lib/utils';
 
 interface ProductConfiguratorProps {
   product: Product | null;
@@ -92,7 +90,6 @@ export function ProductConfigurator({ product, configuredProduct, isOpen, onClos
 
     const { fields: addonFields } = useFieldArray({ control, name: "addons" });
     const { fields: sizeFields } = useFieldArray({ control, name: "sizes" });
-    const { fields: customFields } = useFieldArray({ control, name: "customFieldValues" });
 
     const checkWarnings = (data: any): string | undefined => {
         if (!product) return undefined;
@@ -164,17 +161,6 @@ export function ProductConfigurator({ product, configuredProduct, isOpen, onClos
     if (!product) return null;
     
     const findAddonValue = (id: string) => watchedAddons?.find((a: any) => a.id === id)?.value;
-    
-    const renderField = (field: any, index: number) => {
-        if (!product.customFields) return null;
-        const fieldDef = product.customFields[index];
-        return (
-            <div key={field.id} className="flex items-center justify-between">
-                <Label htmlFor={`customFieldValues.${fieldDef.id}`}>{fieldDef.name}</Label>
-                <Input type="number" id={`customFieldValues.${fieldDef.id}`} className="w-24" {...register(`customFieldValues.${fieldDef.id}`, { valueAsNumber: true })} />
-            </div>
-        )
-    };
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
@@ -218,7 +204,7 @@ export function ProductConfigurator({ product, configuredProduct, isOpen, onClos
                             {product.configType === 'D' && product.customFields && (
                                 <div className="space-y-2 rounded-md border p-4">
                                     <Label>Quantities</Label>
-                                    {product.customFields.map((field, index) => (
+                                    {product.customFields.map((field) => (
                                        <div key={field.id} className="flex items-center justify-between">
                                             <Label htmlFor={`customFieldValues.${field.id}`}>{field.name}</Label>
                                             <Input type="number" id={`customFieldValues.${field.id}`} className="w-24" {...register(`customFieldValues.${field.id}`, { valueAsNumber: true })} />
@@ -317,7 +303,7 @@ export function ProductConfigurator({ product, configuredProduct, isOpen, onClos
                         </div>
                     </ScrollArea>
                     <DialogFooter className='mt-4 p-4 border-t'>
-                        <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
+                        <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
                         <Button type="submit">{isEditing ? 'Update Item' : 'Add to Order'}</Button>
                     </DialogFooter>
                 </form>

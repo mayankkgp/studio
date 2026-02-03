@@ -364,12 +364,12 @@ export function EventDetailsForm() {
         </div>
       </main>
 
-      <footer className="sticky bottom-0 z-10 flex items-center justify-end gap-4 border-t bg-background px-4 md:px-6 h-20">
-        <Button variant="outline" type="button" onClick={() => {
-            resetOrder();
-        }}>Cancel</Button>
-        <Button variant="secondary" type="button" onClick={saveAsDraft}>Save as Draft</Button>
-        <Button type="submit" disabled={!isValid} className="bg-primary text-primary-foreground hover:bg-primary/90">Next Step</Button>
+      <footer className="sticky bottom-0 z-10 flex items-center justify-between gap-4 border-t bg-background px-4 md:px-6 h-20">
+        <Button variant="outline" type="button" onClick={() => resetOrder()}>Cancel</Button>
+        <div className="flex items-center gap-4">
+          <Button variant="secondary" type="button" onClick={saveAsDraft}>Save as Draft</Button>
+          <Button type="submit" disabled={!isValid}>Next Step</Button>
+        </div>
       </footer>
     </form>
   );
