@@ -14,7 +14,7 @@ import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch as SwitchUI } from '@/components/ui/switch';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -254,15 +254,24 @@ export function EventDetailsForm() {
                             />
                             {errors.weddingDate && <p className="text-sm font-medium text-destructive">{errors.weddingDate.message}</p>}
                         </div>
-                        <div className="flex items-center space-x-2 pb-2">
+                        <div className="space-y-2">
+                           <Label>Wedding Date Status</Label>
                            <Controller
                               name="dateStatus"
                               control={control}
                               render={({ field }) => (
-                                <SwitchUI id="dateStatus" checked={field.value} onCheckedChange={field.onChange} />
+                                <Tabs 
+                                  value={field.value ? 'fixed' : 'tentative'} 
+                                  onValueChange={(val) => field.onChange(val === 'fixed')}
+                                  className="w-full"
+                                >
+                                  <TabsList className="grid w-full grid-cols-2 h-10">
+                                    <TabsTrigger value="tentative">Tentative</TabsTrigger>
+                                    <TabsTrigger value="fixed">Fixed</TabsTrigger>
+                                  </TabsList>
+                                </Tabs>
                               )}
                             />
-                          <Label htmlFor="dateStatus">{watchedFields.dateStatus ? 'Fixed' : 'Tentative'}</Label>
                         </div>
                     </div>
                   </>
