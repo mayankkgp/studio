@@ -6,7 +6,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { 
     AlertTriangle, 
-    MoreHorizontal, 
     Trash2, 
     Package,
     Check
@@ -33,12 +32,6 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 interface DeliverableRowProps {
     item: ConfiguredProduct;
@@ -242,7 +235,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({ item, isExpan
                     isExpanded 
                         ? "border-l-4 border-primary shadow-md bg-background ring-2 ring-primary/10" 
                         : "bg-card hover:bg-muted/50",
-                    !isValid && !isExpanded && "border-destructive border-l-4 bg-destructive/5"
+                    !isValid && !isExpanded && "border-destructive border-2 bg-destructive/5"
                 )}
             >
                 <div className={cn("flex items-center px-4 transition-all", isExpanded ? "h-16" : "h-12")}>
@@ -268,7 +261,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({ item, isExpan
                         </div>
                     </AccordionTrigger>
 
-                    <div className="flex items-center gap-3 ml-4" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center gap-2 ml-4" onClick={(e) => e.stopPropagation()}>
                         {item.warning && (
                             <TooltipProvider>
                                 <Tooltip>
@@ -296,52 +289,50 @@ export const DeliverableRow = React.memo(function DeliverableRow({ item, isExpan
                             </div>
                         )}
 
-                        {isExpanded ? (
-                             <Button size="sm" onClick={handleDoneClick} className="gap-2 h-8">
-                                <Check className="h-4 w-4" />
-                                Done
-                             </Button>
-                        ) : (
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                                        <MoreHorizontal className="h-4 w-4" />
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                    <DropdownMenuItem className="text-destructive" onClick={handleDelete}>
-                                        <Trash2 className="mr-2 h-4 w-4" />
-                                        Remove Item
-                                    </DropdownMenuItem>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                        )}
+                        <div className="flex items-center gap-2">
+                             <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-8 w-8 text-muted-foreground hover:text-destructive transition-colors"
+                                onClick={handleDelete}
+                                title="Remove Item"
+                            >
+                                <Trash2 className="h-4 w-4" />
+                            </Button>
+                            
+                            {isExpanded && (
+                                <Button size="sm" onClick={handleDoneClick} className="gap-2 h-8">
+                                    <Check className="h-4 w-4" />
+                                    Done
+                                </Button>
+                            )}
+                        </div>
                     </div>
                 </div>
 
                 <AccordionContent className="px-4 pb-4 border-t bg-muted/5 relative">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
                         <div className="space-y-4">
-                            {/* Quantity for Type A in Expanded View */}
+                            {/* Prominent Quantity for Type A in Expanded View (At the very top) */}
                             {product?.configType === 'A' && (
-                                <div className="space-y-1.5 p-3 rounded-lg border bg-primary/5">
+                                <div className="space-y-1.5 p-4 rounded-lg border-2 border-primary/20 bg-primary/5 shadow-sm">
                                     <Label className={cn(
                                         "text-xs font-bold uppercase tracking-wider",
                                         errors.quantity ? "text-destructive" : "text-primary"
                                     )}>
-                                        Quantity {errors.quantity && " (Required)"}
+                                        Base Quantity {errors.quantity && " (Required)"}
                                     </Label>
                                     <Input 
                                         type="number" 
                                         {...register('quantity', { valueAsNumber: true })} 
-                                        className={cn("h-10 text-lg font-semibold", errors.quantity && "border-destructive")} 
+                                        className={cn("h-12 text-xl font-bold bg-background", errors.quantity && "border-destructive")} 
                                         ref={(e) => {
                                             register('quantity').ref(e);
                                             // @ts-ignore
                                             qtyInputRef.current = e;
                                         }}
                                     />
-                                    {errors.quantity && <p className="text-xs text-destructive">{errors.quantity.message}</p>}
+                                    {errors.quantity && <p className="text-xs text-destructive font-medium">{errors.quantity.message}</p>}
                                 </div>
                             )}
 
