@@ -74,7 +74,7 @@ export default function DeliverablesPage() {
         );
         // Completed items sorted newest first (reverse order of addition)
         return { 
-            active, 
+            activeItems: active, 
             completedItems: [...completed].reverse() 
         };
     }, [order.deliverables, openItems, rowValidity]);
