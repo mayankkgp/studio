@@ -25,8 +25,8 @@ export const productCatalog: Product[] = [
   // Type B
   { id: 4, name: 'Save The Date', configType: 'B', basePrice: 1500, variants: ['Catalogue', 'Custom'], addons: [
       { id: 'name_swap', name: 'Name Swap', type: 'checkbox', rateKey: 'name_swap_rate' },
-      { id: 'video_main', name: 'Video', type: 'physical_quantity', rateKey: 'video_main_rate', softConstraints: [{ type: 'min', value: 1, message: 'Min 1' }] },
-      { id: 'video_extra', name: 'Video Extra Edits', type: 'numeric', rateKey: 'video_extra_rate', dependsOn: 'video_main' },
+      { id: 'video_main', name: 'Video Main', type: 'physical_quantity', rateKey: 'video_main_rate', softConstraints: [{ type: 'min', value: 1, message: 'Min 1' }] },
+      { id: 'video_extra', name: 'Video Extra', type: 'numeric', rateKey: 'video_extra_rate', dependsOn: 'video_main' },
       { id: 'voiceover', name: 'Voiceover', type: 'checkbox', rateKey: 'voiceover_rate', dependsOn: 'video_main' },
     ],
   },
@@ -91,8 +91,8 @@ export const productCatalog: Product[] = [
       { id: 'name_swap', name: 'Name Swap', type: 'checkbox', rateKey: 'name_swap_rate' },
       { id: 'parent_page_cat', name: 'Parent Page (Catalogue)', type: 'checkbox', rateKey: 'parent_page_cat_rate' },
       { id: 'parent_page_custom', name: 'Parent Page (Custom)', type: 'checkbox', rateKey: 'parent_page_custom_rate' },
-      { id: 'video_main', name: 'Video', type: 'physical_quantity', rateKey: 'video_main_rate', softConstraints: [{ type: 'min', value: 1, message: 'Min 1' }] },
-      { id: 'video_extra', name: 'Video Extra Edits', type: 'numeric', rateKey: 'video_extra_rate', dependsOn: 'video_main' },
+      { id: 'video_main', name: 'Video Main', type: 'physical_quantity', rateKey: 'video_main_rate', softConstraints: [{ type: 'min', value: 1, message: 'Min 1' }] },
+      { id: 'video_extra', name: 'Video Extra', type: 'numeric', rateKey: 'video_extra_rate', dependsOn: 'video_main' },
       { id: 'voiceover', name: 'Voiceover', type: 'checkbox', rateKey: 'voiceover_rate', dependsOn: 'video_main' },
     ]
   },
