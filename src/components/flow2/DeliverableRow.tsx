@@ -13,7 +13,8 @@ import {
     MailOpen,
     Frame,
     Package,
-    Check
+    Check,
+    Lock
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { productCatalog } from '@/lib/product-data';
@@ -125,12 +126,18 @@ export const DeliverableRow = React.memo(function DeliverableRow({
     const { register, control, watch, formState: { errors, isValid }, handleSubmit, trigger } = form;
     const watchedValues = watch();
 
+    // Trigger validation on mount to ensure parent knows initial validity
+    React.useEffect(() => {
+        trigger();
+    }, [trigger]);
+
     React.useEffect(() => {
         onValidityChange(item.id, isValid);
     }, [isValid, item.id, onValidityChange]);
 
+    // SMART AUTOFOCUS: Only if expanded AND INVALID
     React.useEffect(() => {
-        if (isExpanded) {
+        if (isExpanded && !isValid) {
             const timer = setTimeout(() => {
                 if (product?.variants) {
                     variantTriggerRef.current?.focus();
@@ -140,7 +147,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             }, 100);
             return () => clearTimeout(timer);
         }
-    }, [isExpanded, product]);
+    }, [isExpanded, isValid, product]);
 
     React.useEffect(() => {
         const subscription = watch((value) => {
@@ -215,7 +222,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         if (!product) return '';
         
         if (product.variants && !watchedValues.variant) {
-            return <Badge variant="destructive" className="bg-destructive text-destructive-foreground animate-pulse text-[10px] h-4 py-0">Setup Required</Badge>;
+            return <Badge variant="destructive" className="bg-destructive text-destructive-foreground text-[10px] h-4 py-0">Setup Required</Badge>;
         }
 
         const parts: string[] = [];
@@ -257,6 +264,8 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             ? "text-green-600 bg-green-100" 
             : "text-destructive bg-destructive/10";
 
+    const isLocked = isExpanded && !isValid;
+
     return (
         <div className="group relative">
             <AccordionItem 
@@ -272,7 +281,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             >
                 <div className={cn("flex items-center px-4 transition-all", isExpanded ? "h-16" : "h-10")}>
                     <AccordionTrigger 
-                        className="flex-1 hover:no-underline py-0"
+                        className={cn("flex-1 hover:no-underline py-0", isLocked && "[&>svg]:hidden")}
                         onClick={(e) => {
                             if (isExpanded && !isValid) {
                                 e.preventDefault();
@@ -303,6 +312,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                 )}
                             </div>
                         </div>
+                        {isLocked && <Lock className="h-4 w-4 text-destructive shrink-0 ml-2" />}
                     </AccordionTrigger>
 
                     <div className="flex items-center gap-2 ml-4" onClick={(e) => e.stopPropagation()}>
