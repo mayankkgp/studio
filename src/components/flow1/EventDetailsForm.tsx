@@ -15,6 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { Switch as SwitchUI } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -259,7 +260,7 @@ export function EventDetailsForm() {
                               name="dateStatus"
                               control={control}
                               render={({ field }) => (
-                                <Switch id="dateStatus" checked={field.value} onCheckedChange={field.onChange} />
+                                <SwitchUI id="dateStatus" checked={field.value} onCheckedChange={field.onChange} />
                               )}
                             />
                           <Label htmlFor="dateStatus">{watchedFields.dateStatus ? 'Fixed' : 'Tentative'}</Label>
@@ -360,7 +361,7 @@ export function EventDetailsForm() {
             resetOrder();
         }}>Cancel</Button>
         <Button variant="secondary" type="button" onClick={saveAsDraft}>Save as Draft</Button>
-        <Button type="submit" disabled={!isValid} style={{ backgroundColor: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' }}>Next Step</Button>
+        <Button type="submit" disabled={!isValid} className="bg-primary text-primary-foreground hover:bg-primary/90">Next Step</Button>
       </footer>
     </form>
   );

@@ -168,7 +168,7 @@ export default function DeliverablesPage() {
                             <Button
                                 onClick={() => router.push('/commercials')}
                                 disabled={order.deliverables.length === 0}
-                                className="bg-accent text-accent-foreground hover:bg-accent/90"
+                                className="bg-primary text-primary-foreground hover:bg-primary/90"
                             >
                                 Next Step (Commercials)
                             </Button>

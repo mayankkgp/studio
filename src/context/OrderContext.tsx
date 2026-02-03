@@ -25,6 +25,8 @@ const initialOrderState: Order = {
   paymentReceived: 0,
 };
 
+const STORAGE_KEY = 'srishbish-order';
+
 export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [order, setOrder] = useState<Order>(initialOrderState);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -32,7 +34,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   useEffect(() => {
     try {
-      const savedOrder = localStorage.getItem('srishflow-order');
+      const savedOrder = localStorage.getItem(STORAGE_KEY);
       if (savedOrder) {
         const parsedOrder = JSON.parse(savedOrder);
         // Dates are stored as strings, need to convert them back to Date objects
@@ -60,7 +62,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const saveToLocalStorage = useCallback((currentOrder: Order) => {
     try {
-      localStorage.setItem('srishflow-order', JSON.stringify(currentOrder));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(currentOrder));
     } catch (error) {
       console.error("Failed to save order to localStorage", error);
     }

@@ -186,7 +186,7 @@ export default function CommercialsPage() {
                     <div className="flex items-center gap-4">
                         <Button variant="secondary" onClick={saveAsDraft}>Save as Draft</Button>
                         <Button
-                            className="bg-accent text-accent-foreground hover:bg-accent/90"
+                            className="bg-primary text-primary-foreground hover:bg-primary/90"
                             onClick={() => alert("Order Activated!")}
                         >
                             Activate Order
