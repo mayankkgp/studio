@@ -127,7 +127,7 @@ export function DeliverableRow({ item, isExpanded, onDone, onValidityChange }: D
             updateDeliverable(item.id, {
                 ...value,
                 warning,
-                addons: value.addons?.filter((a: any) => a.value) as any,
+                addons: value.addons?.filter((a: any) => a.value !== false && a.value !== 0) as any,
                 sizes: value.sizes?.filter((s: any) => s.quantity > 0) as any
             });
         });
@@ -160,8 +160,8 @@ export function DeliverableRow({ item, isExpanded, onDone, onValidityChange }: D
 
         product.addons?.forEach((addon, index) => {
             const addonValue = data.addons?.[index]?.value;
-            if (addon.softConstraints && addonValue) {
-                check(typeof addonValue === 'number' ? addonValue : 1, addon.softConstraints);
+            if (addon.softConstraints && (typeof addonValue === 'number' && addonValue > 0)) {
+                check(addonValue, addon.softConstraints);
             }
         });
         
@@ -206,7 +206,7 @@ export function DeliverableRow({ item, isExpanded, onDone, onValidityChange }: D
             if (total > 0) parts.push(`${total} Units`);
         }
 
-        const activeAddons = watchedValues.addons?.filter((a: any) => !!a.value).length || 0;
+        const activeAddons = watchedValues.addons?.filter((a: any) => typeof a.value === 'number' ? a.value > 0 : !!a.value).length || 0;
         if (activeAddons > 0) parts.push(`${activeAddons} Add-ons`);
 
         return parts.join(' • ');
@@ -366,10 +366,18 @@ export function DeliverableRow({ item, isExpanded, onDone, onValidityChange }: D
                                     <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Add-ons</Label>
                                     <div className="space-y-2 rounded-lg border bg-background/50 p-4">
                                         {product.addons.map((addon, index) => {
-                                            const isVisible = (!addon.dependsOn || watchedValues.addons?.[product.addons!.findIndex(a => a.id === addon.dependsOn)]?.value) && 
+                                            const parentIndex = addon.dependsOn ? product.addons!.findIndex(a => a.id === addon.dependsOn) : -1;
+                                            const parentValue = parentIndex !== -1 ? watchedValues.addons?.[parentIndex]?.value : undefined;
+                                            const isParentActive = parentValue !== undefined ? (typeof parentValue === 'number' ? parentValue > 0 : !!parentValue) : true;
+
+                                            const isVisible = (!addon.dependsOn || isParentActive) && 
                                                               (!addon.visibleIfVariant || watchedValues.variant === addon.visibleIfVariant);
                                             
                                             if (!isVisible) return null;
+
+                                            const isChecked = typeof watchedValues.addons?.[index]?.value === 'number' 
+                                                ? watchedValues.addons?.[index]?.value > 0 
+                                                : !!watchedValues.addons?.[index]?.value;
 
                                             return (
                                                 <div key={addon.id} className="flex items-center justify-between py-1 animate-in fade-in slide-in-from-top-1">
@@ -385,8 +393,16 @@ export function DeliverableRow({ item, isExpanded, onDone, onValidityChange }: D
                                                                     />
                                                                 ) : (
                                                                     <Checkbox 
-                                                                        checked={!!field.value} 
-                                                                        onCheckedChange={(checked) => field.onChange(checked ? (typeof field.value === 'number' ? field.value : 1) : false)} 
+                                                                        checked={isChecked} 
+                                                                        onCheckedChange={(checked) => {
+                                                                            if (checked) {
+                                                                                // Ensure it sets to at least 1 when selected
+                                                                                const val = (typeof field.value === 'number' && field.value > 0) ? field.value : 1;
+                                                                                field.onChange(val);
+                                                                            } else {
+                                                                                field.onChange(false);
+                                                                            }
+                                                                        }} 
                                                                     />
                                                                 )
                                                             )}
@@ -394,7 +410,7 @@ export function DeliverableRow({ item, isExpanded, onDone, onValidityChange }: D
                                                         <span className="text-sm">{addon.name}</span>
                                                     </div>
                                                     
-                                                    {addon.type !== 'checkbox' && !!watchedValues.addons?.[index]?.value && (
+                                                    {addon.type !== 'checkbox' && isChecked && (
                                                         <Input
                                                             type="number"
                                                             className="w-20 h-8"
