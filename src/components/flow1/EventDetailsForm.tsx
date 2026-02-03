@@ -38,6 +38,19 @@ const eventTypeOptions: { value: EventType; label: string; icon: React.ElementTy
   { value: 'Others', label: 'Others', icon: Milestone },
 ];
 
+function FormError({ message }: { message?: string }) {
+  return (
+    <div className={cn(
+      "overflow-hidden transition-all duration-300 ease-in-out",
+      message ? "max-h-10 opacity-100 mt-1.5" : "max-h-0 opacity-0"
+    )}>
+      <p className="text-xs font-medium text-destructive animate-in fade-in slide-in-from-top-1">
+        {message}
+      </p>
+    </div>
+  );
+}
+
 function ComboboxCity({ 
   value, 
   onSelect, 
@@ -62,7 +75,7 @@ function ComboboxCity({
           className={cn(
             "w-full justify-between font-normal text-left h-10 px-3",
             !value && "text-muted-foreground",
-            error && "border-destructive"
+            error && "border-destructive ring-1 ring-destructive"
           )}
         >
           <span className="truncate">{value || placeholder}</span>
@@ -192,7 +205,8 @@ export function EventDetailsForm() {
                           htmlFor={option.value}
                           className={cn(
                             "flex flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent/20 hover:text-accent-foreground cursor-pointer transition-all",
-                            field.value === option.value && "border-primary ring-2 ring-primary bg-primary/5"
+                            field.value === option.value && "border-primary ring-2 ring-primary bg-primary/5",
+                            errors.eventType && "border-destructive/50"
                           )}
                         >
                           <option.icon className="mb-3 h-6 w-6" />
@@ -203,7 +217,7 @@ export function EventDetailsForm() {
                   </RadioGroup>
                 )}
               />
-              {errors.eventType && <p className="text-sm font-medium text-destructive mt-2">{errors.eventType.message}</p>}
+              <FormError message={errors.eventType?.message} />
             </CardContent>
           </Card>
 
@@ -227,7 +241,7 @@ export function EventDetailsForm() {
                       />
                     )}
                   />
-                  {errors.venueName && <p className="text-sm font-medium text-destructive">{errors.venueName.message}</p>}
+                  <FormError message={errors.venueName?.message} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="shipToCity">Ship to City</Label>
@@ -242,6 +256,7 @@ export function EventDetailsForm() {
                       />
                     )}
                   />
+                  <FormError message={errors.shipToCity?.message} />
                 </div>
               </div>
               <div className="grid md:grid-cols-2 gap-6">
@@ -255,7 +270,11 @@ export function EventDetailsForm() {
                           <PopoverTrigger asChild>
                             <Button
                               variant={"outline"}
-                              className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}
+                              className={cn(
+                                "w-full justify-start text-left font-normal", 
+                                !field.value && "text-muted-foreground",
+                                errors.eventDate && "border-destructive ring-1 ring-destructive"
+                              )}
                             >
                               <CalendarIcon className="mr-2 h-4 w-4" />
                               {field.value ? format(new Date(field.value), 'dd MMM yyyy') : <span>Pick a date</span>}
@@ -267,7 +286,7 @@ export function EventDetailsForm() {
                         </Popover>
                       )}
                     />
-                  {errors.eventDate && <p className="text-sm font-medium text-destructive">{errors.eventDate.message}</p>}
+                  <FormError message={errors.eventDate?.message} />
                 </div>
                  <div className="space-y-2">
                   <Label htmlFor="orderDueDate">Order Due Date</Label>
@@ -279,7 +298,11 @@ export function EventDetailsForm() {
                           <PopoverTrigger asChild>
                             <Button
                               variant={"outline"}
-                              className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}
+                              className={cn(
+                                "w-full justify-start text-left font-normal", 
+                                !field.value && "text-muted-foreground",
+                                errors.orderDueDate && "border-destructive ring-1 ring-destructive"
+                              )}
                             >
                               <CalendarIcon className="mr-2 h-4 w-4" />
                               {field.value ? format(new Date(field.value), 'dd MMM yyyy') : <span>Pick a date</span>}
@@ -291,8 +314,12 @@ export function EventDetailsForm() {
                         </Popover>
                       )}
                     />
-                  {errors.orderDueDate && <p className="text-sm font-medium text-destructive">{errors.orderDueDate.message}</p>}
-                  {dueDateWarning && <Alert variant="destructive" className="mt-2 bg-orange-100 border-orange-300 text-orange-800"><AlertDescription>Due date is past the event.</AlertDescription></Alert>}
+                  <FormError message={errors.orderDueDate?.message} />
+                  {dueDateWarning && (
+                    <Alert variant="destructive" className="mt-2 bg-orange-100 border-orange-300 text-orange-800 animate-in fade-in slide-in-from-top-1">
+                      <AlertDescription>Due date is past the event.</AlertDescription>
+                    </Alert>
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -309,13 +336,13 @@ export function EventDetailsForm() {
                   <div className="grid md:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <Label htmlFor="brideName">Bride's Name</Label>
-                      <Input id="brideName" {...register('brideName')} />
-                      {errors.brideName && <p className="text-sm font-medium text-destructive">{errors.brideName.message}</p>}
+                      <Input id="brideName" {...register('brideName')} className={cn(errors.brideName && "border-destructive")} />
+                      <FormError message={errors.brideName?.message} />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="groomName">Groom's Name</Label>
-                      <Input id="groomName" {...register('groomName')} />
-                      {errors.groomName && <p className="text-sm font-medium text-destructive">{errors.groomName.message}</p>}
+                      <Input id="groomName" {...register('groomName')} className={cn(errors.groomName && "border-destructive")} />
+                      <FormError message={errors.groomName?.message} />
                     </div>
                   </div>
                 )}
@@ -326,16 +353,16 @@ export function EventDetailsForm() {
                     <div className="grid md:grid-cols-2 gap-6">
                         <div className="space-y-2">
                             <Label htmlFor="engagementBrideName">Bride's Name</Label>
-                            <Input id="engagementBrideName" {...register('engagementBrideName')} />
-                            {errors.engagementBrideName && <p className="text-sm font-medium text-destructive">{errors.engagementBrideName.message}</p>}
+                            <Input id="engagementBrideName" {...register('engagementBrideName')} className={cn(errors.engagementBrideName && "border-destructive")} />
+                            <FormError message={errors.engagementBrideName?.message} />
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="engagementGroomName">Groom's Name</Label>
-                            <Input id="engagementGroomName" {...register('engagementGroomName')} />
-                            {errors.engagementGroomName && <p className="text-sm font-medium text-destructive">{errors.engagementGroomName.message}</p>}
+                            <Input id="engagementGroomName" {...register('engagementGroomName')} className={cn(errors.engagementGroomName && "border-destructive")} />
+                            <FormError message={errors.engagementGroomName?.message} />
                         </div>
                     </div>
-                     <div className="grid md:grid-cols-2 gap-6 items-end">
+                     <div className="grid md:grid-cols-2 gap-6 items-start">
                         <div className="space-y-2">
                             <Label htmlFor="weddingDate">Wedding Date</Label>
                             <Controller
@@ -346,7 +373,11 @@ export function EventDetailsForm() {
                                     <PopoverTrigger asChild>
                                         <Button
                                         variant={"outline"}
-                                        className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}
+                                        className={cn(
+                                          "w-full justify-start text-left font-normal", 
+                                          !field.value && "text-muted-foreground",
+                                          errors.weddingDate && "border-destructive ring-1 ring-destructive"
+                                        )}
                                         >
                                         <CalendarIcon className="mr-2 h-4 w-4" />
                                         {field.value ? format(new Date(field.value), 'dd MMM yyyy') : <span>Pick a date</span>}
@@ -358,7 +389,7 @@ export function EventDetailsForm() {
                                     </Popover>
                                 )}
                             />
-                            {errors.weddingDate && <p className="text-sm font-medium text-destructive">{errors.weddingDate.message}</p>}
+                            <FormError message={errors.weddingDate?.message} />
                         </div>
                         <div className="space-y-2">
                            <Label>Wedding Date Status</Label>
@@ -378,6 +409,7 @@ export function EventDetailsForm() {
                                 </Tabs>
                               )}
                             />
+                            <div className="h-5" /> {/* Spacer for symmetry */}
                         </div>
                     </div>
                   </>
@@ -388,18 +420,18 @@ export function EventDetailsForm() {
                   <div className="grid md:grid-cols-3 gap-6">
                     <div className="space-y-2">
                       <Label htmlFor="wifeName">Wife's Name</Label>
-                      <Input id="wifeName" {...register('wifeName')} />
-                       {errors.wifeName && <p className="text-sm font-medium text-destructive">{errors.wifeName.message}</p>}
+                      <Input id="wifeName" {...register('wifeName')} className={cn(errors.wifeName && "border-destructive")} />
+                      <FormError message={errors.wifeName?.message} />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="husbandName">Husband's Name</Label>
-                      <Input id="husbandName" {...register('husbandName')} />
-                       {errors.husbandName && <p className="text-sm font-medium text-destructive">{errors.husbandName.message}</p>}
+                      <Input id="husbandName" {...register('husbandName')} className={cn(errors.husbandName && "border-destructive")} />
+                      <FormError message={errors.husbandName?.message} />
                     </div>
                      <div className="space-y-2">
                       <Label htmlFor="milestoneYears">Milestone Years</Label>
-                      <Input id="milestoneYears" type="number" {...register('milestoneYears', { valueAsNumber: true })} />
-                       {errors.milestoneYears && <p className="text-sm font-medium text-destructive">{errors.milestoneYears.message}</p>}
+                      <Input id="milestoneYears" type="number" {...register('milestoneYears', { valueAsNumber: true })} className={cn(errors.milestoneYears && "border-destructive")} />
+                      <FormError message={errors.milestoneYears?.message} />
                     </div>
                   </div>
                 )}
@@ -409,8 +441,8 @@ export function EventDetailsForm() {
                   <div className="grid md:grid-cols-3 gap-6">
                     <div className="space-y-2">
                       <Label htmlFor="honoreeNameBirthday">Honoree Name</Label>
-                      <Input id="honoreeNameBirthday" {...register('honoreeNameBirthday')} />
-                       {errors.honoreeNameBirthday && <p className="text-sm font-medium text-destructive">{errors.honoreeNameBirthday.message}</p>}
+                      <Input id="honoreeNameBirthday" {...register('honoreeNameBirthday')} className={cn(errors.honoreeNameBirthday && "border-destructive")} />
+                      <FormError message={errors.honoreeNameBirthday?.message} />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="gender">Gender</Label>
@@ -419,7 +451,7 @@ export function EventDetailsForm() {
                           control={control}
                           render={({ field }) => (
                             <Select onValueChange={field.onChange} defaultValue={field.value}>
-                              <SelectTrigger>
+                              <SelectTrigger className={cn(errors.gender && "border-destructive")}>
                                 <SelectValue placeholder="Select gender" />
                               </SelectTrigger>
                               <SelectContent>
@@ -430,12 +462,12 @@ export function EventDetailsForm() {
                             </Select>
                           )}
                         />
-                      {errors.gender && <p className="text-sm font-medium text-destructive">{errors.gender.message}</p>}
+                      <FormError message={errors.gender?.message} />
                     </div>
                      <div className="space-y-2">
                       <Label htmlFor="ageMilestone">Age / Milestone</Label>
-                      <Input id="ageMilestone" type="number" {...register('ageMilestone', { valueAsNumber: true })} />
-                       {errors.ageMilestone && <p className="text-sm font-medium text-destructive">{errors.ageMilestone.message}</p>}
+                      <Input id="ageMilestone" type="number" {...register('ageMilestone', { valueAsNumber: true })} className={cn(errors.ageMilestone && "border-destructive")} />
+                      <FormError message={errors.ageMilestone?.message} />
                     </div>
                   </div>
                 )}
@@ -445,13 +477,13 @@ export function EventDetailsForm() {
                   <div className="grid md:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <Label htmlFor="eventName">Event Name</Label>
-                      <Input id="eventName" {...register('eventName')} />
-                      {errors.eventName && <p className="text-sm font-medium text-destructive">{errors.eventName.message}</p>}
+                      <Input id="eventName" {...register('eventName')} className={cn(errors.eventName && "border-destructive")} />
+                      <FormError message={errors.eventName?.message} />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="honoreeNameOther">Honoree Name</Label>
-                      <Input id="honoreeNameOther" {...register('honoreeNameOther')} />
-                      {errors.honoreeNameOther && <p className="text-sm font-medium text-destructive">{errors.honoreeNameOther.message}</p>}
+                      <Input id="honoreeNameOther" {...register('honoreeNameOther')} className={cn(errors.honoreeNameOther && "border-destructive")} />
+                      <FormError message={errors.honoreeNameOther?.message} />
                     </div>
                   </div>
                 )}

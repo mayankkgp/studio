@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -6,13 +7,14 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import type { Product, ConfiguredProduct, SoftConstraint } from '@/lib/types';
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '../ui/scroll-area';
+import { cn } from '@/lib/utils';
 
 interface ProductConfiguratorProps {
   product: Product | null;
@@ -20,6 +22,19 @@ interface ProductConfiguratorProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (data: ConfiguredProduct) => void;
+}
+
+function FormError({ message }: { message?: string }) {
+  return (
+    <div className={cn(
+      "overflow-hidden transition-all duration-300 ease-in-out",
+      message ? "max-h-10 opacity-100 mt-1" : "max-h-0 opacity-0"
+    )}>
+      <p className="text-[10px] font-medium text-destructive animate-in fade-in slide-in-from-top-0.5">
+        {message}
+      </p>
+    </div>
+  );
 }
 
 const getValidationSchema = (product: Product | null) => {
@@ -30,8 +45,8 @@ const getValidationSchema = (product: Product | null) => {
         specialRequest: z.string().optional(),
     };
 
-    if (product.configType === 'A') schemaObject.quantity = z.number().min(0).default(1);
-    if (product.configType === 'B') schemaObject.pages = z.number().min(0).default(1);
+    if (product.configType === 'A') schemaObject.quantity = z.number().min(1, "Quantity required").default(1);
+    if (product.configType === 'B') schemaObject.pages = z.number().min(1, "Pages required").default(1);
     
     if (product.customFields) {
         schemaObject.customFieldValues = z.object(
@@ -60,7 +75,7 @@ const getValidationSchema = (product: Product | null) => {
 export function ProductConfigurator({ product, configuredProduct, isOpen, onClose, onSave }: ProductConfiguratorProps) {
     const isEditing = !!configuredProduct;
     
-    const { register, control, handleSubmit, reset, watch } = useForm({
+    const { register, control, handleSubmit, reset, watch, formState: { errors } } = useForm({
         resolver: zodResolver(getValidationSchema(product)),
     });
     
@@ -71,8 +86,8 @@ export function ProductConfigurator({ product, configuredProduct, isOpen, onClos
         if (product && isOpen) {
             const defaultValues: any = {
                 variant: configuredProduct?.variant || (product.variants ? product.variants[0] : undefined),
-                quantity: configuredProduct?.quantity,
-                pages: configuredProduct?.pages,
+                quantity: configuredProduct?.quantity || (product.configType === 'A' ? 1 : undefined),
+                pages: configuredProduct?.pages || (product.configType === 'B' ? 1 : undefined),
                 specialRequest: configuredProduct?.specialRequest || '',
                 customFieldValues: configuredProduct?.customFieldValues || {},
                 addons: product.addons?.map(addon => {
@@ -174,29 +189,34 @@ export function ProductConfigurator({ product, configuredProduct, isOpen, onClos
                             {/* Variants */}
                             {product.variants && (
                                 <div className="space-y-2">
-                                    <Label>Variant</Label>
+                                    <Label className={cn(errors.variant && "text-destructive")}>Variant</Label>
                                     <Controller name="variant" control={control} render={({ field }) => (
                                         <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                            <SelectTrigger><SelectValue placeholder="Select a variant" /></SelectTrigger>
+                                            <SelectTrigger className={cn(errors.variant && "border-destructive")}>
+                                              <SelectValue placeholder="Select a variant" />
+                                            </SelectTrigger>
                                             <SelectContent>{product.variants?.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent>
                                         </Select>
                                     )}/>
+                                    <FormError message={errors.variant?.message as string} />
                                 </div>
                             )}
 
                             {/* Config Type A */}
                             {product.configType === 'A' && (
                                 <div className="space-y-2">
-                                    <Label htmlFor="quantity">Quantity</Label>
-                                    <Input id="quantity" type="number" {...register('quantity', { valueAsNumber: true })} />
+                                    <Label htmlFor="quantity" className={cn(errors.quantity && "text-destructive")}>Quantity</Label>
+                                    <Input id="quantity" type="number" {...register('quantity', { valueAsNumber: true })} className={cn(errors.quantity && "border-destructive")} />
+                                    <FormError message={errors.quantity?.message as string} />
                                 </div>
                             )}
 
                              {/* Config Type B */}
                             {product.configType === 'B' && (
                                 <div className="space-y-2">
-                                    <Label htmlFor="pages">Pages</Label>
-                                    <Input id="pages" type="number" {...register('pages', { valueAsNumber: true })} />
+                                    <Label htmlFor="pages" className={cn(errors.pages && "text-destructive")}>Pages</Label>
+                                    <Input id="pages" type="number" {...register('pages', { valueAsNumber: true })} className={cn(errors.pages && "border-destructive")} />
+                                    <FormError message={errors.pages?.message as string} />
                                 </div>
                             )}
 
@@ -205,11 +225,14 @@ export function ProductConfigurator({ product, configuredProduct, isOpen, onClos
                                 <div className="space-y-2 rounded-md border p-4">
                                     <Label>Quantities</Label>
                                     {product.customFields.map((field) => (
-                                       <div key={field.id} className="flex items-center justify-between">
-                                            <Label htmlFor={`customFieldValues.${field.id}`}>{field.name}</Label>
-                                            <Input type="number" id={`customFieldValues.${field.id}`} className="w-24" {...register(`customFieldValues.${field.id}`, { valueAsNumber: true })} />
+                                       <div key={field.id} className="mt-2">
+                                            <div className="flex items-center justify-between">
+                                                <Label htmlFor={`customFieldValues.${field.id}`} className="text-xs">{field.name}</Label>
+                                                <Input type="number" id={`customFieldValues.${field.id}`} className="w-20 h-8 text-xs" {...register(`customFieldValues.${field.id}`, { valueAsNumber: true })} />
+                                            </div>
                                         </div>
                                     ))}
+                                    {errors.customFieldValues && <FormError message="At least one quantity is required" />}
                                 </div>
                             )}
                             
@@ -218,6 +241,7 @@ export function ProductConfigurator({ product, configuredProduct, isOpen, onClos
                                 <div className="space-y-2">
                                     <Label htmlFor={`customFieldValues.${product.customFields[0].id}`}>Petals</Label>
                                     <Input type="number" id={`customFieldValues.${product.customFields[0].id}`} {...register(`customFieldValues.${product.customFields[0].id}`, { valueAsNumber: true })} />
+                                    <FormError message={errors.customFieldValues?.petals?.message as string} />
                                 </div>
                             )}
 
@@ -232,16 +256,19 @@ export function ProductConfigurator({ product, configuredProduct, isOpen, onClos
                                             if (!isVisible) return null;
 
                                             return (
-                                                <div key={field.id}>
+                                                <div key={field.id} className="animate-in fade-in slide-in-from-top-1 duration-200">
                                                     {addonDef.type === 'checkbox' && (
                                                         <Controller name={`addons.${index}.value`} control={control} render={({ field: checkboxField }) => (
-                                                            <div className='flex items-center gap-2'><Checkbox id={`addons.${index}.value`} checked={!!checkboxField.value} onCheckedChange={checkboxField.onChange} /><Label htmlFor={`addons.${index}.value`} className='font-normal'>{addonDef.name}</Label></div>
+                                                            <div className='flex items-center gap-2'>
+                                                              <Checkbox id={`addons.${index}.value`} checked={!!checkboxField.value} onCheckedChange={checkboxField.onChange} />
+                                                              <Label htmlFor={`addons.${index}.value`} className='font-normal text-sm'>{addonDef.name}</Label>
+                                                            </div>
                                                         )}/>
                                                     )}
                                                     {addonDef.type === 'numeric' && (
                                                         <div className="flex items-center justify-between">
-                                                            <Label htmlFor={`addons.${index}.value`}>{addonDef.name}</Label>
-                                                            <Input id={`addons.${index}.value`} type="number" className="w-24" {...register(`addons.${index}.value`, { valueAsNumber: true })} />
+                                                            <Label htmlFor={`addons.${index}.value`} className="text-sm">{addonDef.name}</Label>
+                                                            <Input id={`addons.${index}.value`} type="number" className="w-20 h-8" {...register(`addons.${index}.value`, { valueAsNumber: true })} />
                                                         </div>
                                                     )}
                                                     {addonDef.type === 'physical_quantity' && (
@@ -249,27 +276,29 @@ export function ProductConfigurator({ product, configuredProduct, isOpen, onClos
                                                             name={`addons.${index}.value`}
                                                             control={control}
                                                             render={({ field: physicalField }) => (
-                                                                <div className="flex items-center justify-between">
-                                                                    <div className="flex items-center gap-2">
-                                                                        <Checkbox
-                                                                            id={`addons.${index}.checkbox`}
-                                                                            checked={!!physicalField.value}
-                                                                            onCheckedChange={(checked) => {
-                                                                                physicalField.onChange(checked ? 1 : false);
-                                                                            }}
-                                                                        />
-                                                                        <Label htmlFor={`addons.${index}.checkbox`} className="font-normal">{addonDef.name}</Label>
+                                                                <div className="space-y-2">
+                                                                    <div className="flex items-center justify-between">
+                                                                        <div className="flex items-center gap-2">
+                                                                            <Checkbox
+                                                                                id={`addons.${index}.checkbox`}
+                                                                                checked={!!physicalField.value}
+                                                                                onCheckedChange={(checked) => {
+                                                                                    physicalField.onChange(checked ? 1 : false);
+                                                                                }}
+                                                                            />
+                                                                            <Label htmlFor={`addons.${index}.checkbox`} className="font-normal text-sm">{addonDef.name}</Label>
+                                                                        </div>
+                                                                        {!!physicalField.value && (
+                                                                            <Input
+                                                                                id={`addons.${index}.value`}
+                                                                                type="number"
+                                                                                className="w-20 h-8 animate-in zoom-in-95 duration-150"
+                                                                                value={typeof physicalField.value === 'number' ? physicalField.value : 1}
+                                                                                onChange={e => physicalField.onChange(parseInt(e.target.value) || 0)}
+                                                                                min={1}
+                                                                            />
+                                                                        )}
                                                                     </div>
-                                                                    {!!physicalField.value && (
-                                                                        <Input
-                                                                            id={`addons.${index}.value`}
-                                                                            type="number"
-                                                                            className="w-24"
-                                                                            value={typeof physicalField.value === 'number' ? physicalField.value : 1}
-                                                                            onChange={e => physicalField.onChange(parseInt(e.target.value) || 0)}
-                                                                            min={1}
-                                                                        />
-                                                                    )}
                                                                 </div>
                                                             )}
                                                         />
@@ -288,8 +317,8 @@ export function ProductConfigurator({ product, configuredProduct, isOpen, onClos
                                     <div className="space-y-2 rounded-md border p-4">
                                         {sizeFields.map((field, index) => (
                                             <div key={field.id} className="flex items-center justify-between">
-                                                <Label htmlFor={`sizes.${index}.quantity`}>{product.sizes![index].name}</Label>
-                                                <Input id={`sizes.${index}.quantity`} type="number" className="w-24" {...register(`sizes.${index}.quantity`, { valueAsNumber: true })} />
+                                                <Label htmlFor={`sizes.${index}.quantity`} className="text-sm">{product.sizes![index].name}</Label>
+                                                <Input id={`sizes.${index}.quantity`} type="number" className="w-20 h-8" {...register(`sizes.${index}.quantity`, { valueAsNumber: true })} />
                                             </div>
                                         ))}
                                     </div>
@@ -298,7 +327,7 @@ export function ProductConfigurator({ product, configuredProduct, isOpen, onClos
                             
                             <div className="space-y-2">
                                 <Label htmlFor="specialRequest">Special Request</Label>
-                                <Textarea id="specialRequest" {...register('specialRequest')} />
+                                <Textarea id="specialRequest" {...register('specialRequest')} className="min-h-[60px]" />
                             </div>
                         </div>
                     </ScrollArea>
