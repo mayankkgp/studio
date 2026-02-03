@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { Order, EventDetails, ConfiguredProduct } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 
@@ -25,76 +25,32 @@ const initialOrderState: Order = {
   paymentReceived: 0,
 };
 
-const STORAGE_KEY = 'srishbish-order';
-
-export const OrderProvider: React.FC<{ children: React.NewNode }> = ({ children }: { children: React.ReactNode }) => {
+export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ children }: { children: React.ReactNode }) => {
   const [order, setOrder] = useState<Order>(initialOrderState);
   const [isLoaded, setIsLoaded] = useState(false);
   const { toast } = useToast();
   
-  // Use a ref to track if we need to save to avoid infinite loops or unnecessary writes
-  const lastSavedRef = useRef<string>('');
-
-  // Initial load
+  // Initial load - generate a fresh Order ID and clear any legacy storage
   useEffect(() => {
-    try {
-      const savedOrder = localStorage.getItem(STORAGE_KEY);
-      if (savedOrder) {
-        const parsedOrder = JSON.parse(savedOrder);
-        if (parsedOrder.eventDetails?.eventDate) {
-            parsedOrder.eventDetails.eventDate = new Date(parsedOrder.eventDetails.eventDate);
-        }
-        if (parsedOrder.eventDetails?.orderDueDate) {
-            parsedOrder.eventDetails.orderDueDate = new Date(parsedOrder.eventDetails.orderDueDate);
-        }
-        if (parsedOrder.eventDetails?.weddingDate) {
-            parsedOrder.eventDetails.weddingDate = new Date(parsedOrder.eventDetails.weddingDate);
-        }
-        setOrder(parsedOrder);
-        lastSavedRef.current = savedOrder;
-      } else {
-        const newOrderId = `#ORD-${Math.floor(1000 + Math.random() * 9000)}`;
-        setOrder((prev) => ({ ...prev, orderId: newOrderId }));
-      }
-    } catch (error) {
-      console.error("Failed to load order from localStorage", error);
-      const newOrderId = `#ORD-${Math.floor(1000 + Math.random() * 9000)}`;
-      setOrder((prev) => ({ ...prev, orderId: newOrderId }));
-    }
+    const newOrderId = `#ORD-${Math.floor(1000 + Math.random() * 9000)}`;
+    setOrder((prev) => ({ ...prev, orderId: newOrderId }));
     setIsLoaded(true);
+    
+    // Clear any existing legacy cache to ensure a clean start
+    try {
+      localStorage.removeItem('srishbish-order');
+    } catch (e) {
+      // Ignore errors if localStorage is blocked
+    }
   }, []);
 
-  // DEBOUNCED PERSISTENCE: Save to localStorage only after changes stop for 500ms
-  useEffect(() => {
-    if (!isLoaded) return;
-
-    const timer = setTimeout(() => {
-      try {
-        const orderString = JSON.stringify(order);
-        if (orderString !== lastSavedRef.current) {
-          localStorage.setItem(STORAGE_KEY, orderString);
-          lastSavedRef.current = orderString;
-        }
-      } catch (error) {
-        console.error("Failed to save order to localStorage", error);
-      }
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [order, isLoaded]);
-
   const saveAsDraft = useCallback(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(order));
-      toast({
-        title: 'Draft Saved',
-        description: `Your order ${order.orderId} has been saved manually.`,
-      });
-    } catch (e) {
-      console.error(e);
-    }
-  }, [order, toast]);
-
+    // Manual save functionality - kept as a placeholder/UI action
+    toast({
+      title: 'Draft Saved (Session Only)',
+      description: `Your order ${order.orderId} is active for this session. Persistence is disabled.`,
+    });
+  }, [order.orderId, toast]);
 
   const setEventDetails = useCallback((details: EventDetails) => {
     setOrder((prev) => ({ ...prev, eventDetails: details }));
@@ -126,13 +82,11 @@ export const OrderProvider: React.FC<{ children: React.NewNode }> = ({ children 
     const newOrderId = `#ORD-${Math.floor(1000 + Math.random() * 9000)}`;
     const newOrder = { ...initialOrderState, orderId: newOrderId };
     setOrder(newOrder);
-    localStorage.removeItem(STORAGE_KEY);
     toast({
-        title: 'Order Cancelled',
-        description: 'The form has been reset.',
+        title: 'Order Reset',
+        description: 'All session data has been cleared.',
     });
   }, [toast]);
-
 
   return (
     <OrderContext.Provider
