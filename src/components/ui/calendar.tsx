@@ -24,6 +24,7 @@ function Calendar({
         month: "space-y-4",
         caption: "flex justify-center pt-1 relative items-center",
         caption_label: "text-sm font-medium",
+        caption_dropdowns: "flex justify-center gap-1",
         nav: "space-x-1 flex items-center",
         nav_button: cn(
           buttonVariants({ variant: "outline" }),
@@ -51,6 +52,11 @@ function Calendar({
         day_range_middle:
           "aria-selected:bg-accent aria-selected:text-accent-foreground",
         day_hidden: "invisible",
+        vhidden: "sr-only",
+        dropdown: "bg-background border rounded px-1 text-sm outline-none",
+        dropdown_month: "flex-1",
+        dropdown_year: "flex-1",
+        dropdown_root: "flex gap-1",
         ...classNames,
       }}
       components={{
@@ -61,6 +67,9 @@ function Calendar({
           <ChevronRight className={cn("h-4 w-4", className)} {...props} />
         ),
       }}
+      captionLayout="dropdown"
+      fromYear={1900}
+      toYear={2100}
       {...props}
     />
   )

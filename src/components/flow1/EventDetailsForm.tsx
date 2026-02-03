@@ -14,7 +14,6 @@ import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
 import { Switch as SwitchUI } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
@@ -107,8 +106,8 @@ export function EventDetailsForm() {
                         <Label
                           htmlFor={option.value}
                           className={cn(
-                            "flex flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent/20 hover:text-accent-foreground cursor-pointer",
-                            field.value === option.value && "border-primary ring-2 ring-primary"
+                            "flex flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent/20 hover:text-accent-foreground cursor-pointer transition-all",
+                            field.value === option.value && "border-primary ring-2 ring-primary bg-primary/5"
                           )}
                         >
                           <option.icon className="mb-3 h-6 w-6" />
@@ -153,10 +152,10 @@ export function EventDetailsForm() {
                               className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}
                             >
                               <CalendarIcon className="mr-2 h-4 w-4" />
-                              {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
+                              {field.value ? format(field.value, 'dd MMM yyyy') : <span>Pick a date</span>}
                             </Button>
                           </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0">
+                          <PopoverContent className="w-auto p-0" align="start">
                             <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
                           </PopoverContent>
                         </Popover>
@@ -177,10 +176,10 @@ export function EventDetailsForm() {
                               className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}
                             >
                               <CalendarIcon className="mr-2 h-4 w-4" />
-                              {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
+                              {field.value ? format(field.value, 'dd MMM yyyy') : <span>Pick a date</span>}
                             </Button>
                           </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0">
+                          <PopoverContent className="w-auto p-0" align="start">
                             <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
                           </PopoverContent>
                         </Popover>
@@ -244,10 +243,10 @@ export function EventDetailsForm() {
                                         className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}
                                         >
                                         <CalendarIcon className="mr-2 h-4 w-4" />
-                                        {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
+                                        {field.value ? format(field.value, 'dd MMM yyyy') : <span>Pick a date</span>}
                                         </Button>
                                     </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0">
+                                    <PopoverContent className="w-auto p-0" align="start">
                                         <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
                                     </PopoverContent>
                                     </Popover>
