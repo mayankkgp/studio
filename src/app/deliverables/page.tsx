@@ -12,7 +12,6 @@ import { Package, CheckCircle2, AlertCircle } from "lucide-react";
 import { Accordion } from "@/components/ui/accordion";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { cn } from "@/lib/utils";
 
 export default function DeliverablesPage() {
     const router = useRouter();
@@ -21,17 +20,16 @@ export default function DeliverablesPage() {
     const headerSummary = useHeaderSummary(order.eventDetails);
     
     const [openItems, setOpenItems] = useState<string[]>([]);
-    const [rowValidity, setRowValidity] = useState<Record<string, boolean>>({});
+    const [rowStatus, setRowStatus] = useState<Record<string, { isValid: boolean, isInteracting: boolean }>>({});
     const prevCount = useRef(order.deliverables.length);
 
-    // Auto-scroll to newly added items
+    // Track previously active items to handle "Sticky" movement logic
+    const activeIdsRef = useRef<Set<string>>(new Set());
+
     useEffect(() => {
         if (order.deliverables.length > prevCount.current) {
             const newItem = order.deliverables[order.deliverables.length - 1];
-            // Auto-expand
             setOpenItems(prev => Array.from(new Set([...prev, newItem.id])));
-            
-            // Scroll to it
             setTimeout(() => {
                 const el = document.getElementById(`deliverable-${newItem.id}`);
                 if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -40,10 +38,11 @@ export default function DeliverablesPage() {
         prevCount.current = order.deliverables.length;
     }, [order.deliverables]);
 
-    const handleValidityChange = useCallback((id: string, isValid: boolean) => {
-        setRowValidity(prev => {
-            if (prev[id] === isValid) return prev;
-            return { ...prev, [id]: isValid };
+    const handleValidityChange = useCallback((id: string, isValid: boolean, isInteracting: boolean) => {
+        setRowStatus(prev => {
+            const current = prev[id];
+            if (current?.isValid === isValid && current?.isInteracting === isInteracting) return prev;
+            return { ...prev, [id]: { isValid, isInteracting } };
         });
     }, []);
 
@@ -52,45 +51,53 @@ export default function DeliverablesPage() {
     }, []);
 
     const handleValueChange = useCallback((newValues: string[]) => {
-        const closedItems = openItems.filter(id => !newValues.includes(id));
-        const invalidClosedItems = closedItems.filter(id => rowValidity[id] === false);
+        const closingIds = openItems.filter(id => !newValues.includes(id));
+        const invalidClosingIds = closingIds.filter(id => rowStatus[id]?.isValid === false);
 
-        if (invalidClosedItems.length > 0) {
-            // Re-open invalid items that the user tried to close
-            setOpenItems(Array.from(new Set([...newValues, ...invalidClosedItems])));
+        if (invalidClosingIds.length > 0) {
+            // Re-open invalid items (Locked State)
+            setOpenItems(Array.from(new Set([...newValues, ...invalidClosingIds])));
             return;
         }
 
         setOpenItems(newValues);
-    }, [openItems, rowValidity]);
+    }, [openItems, rowStatus]);
 
-    // Split items into Active Queue and Completed
-    // Logic: Active Queue = Invalid items OR items that are currently open/expanded
-    // Completed = Valid items that are closed
-    const { activeItems, completedItems } = useMemo(() => {
-        const active = order.deliverables.filter(item => {
-            const isValid = rowValidity[item.id] === true;
+    // Split items into Action Required and Order List
+    const { activeItems, orderListItems } = useMemo(() => {
+        const active: any[] = [];
+        const list: any[] = [];
+
+        order.deliverables.forEach(item => {
+            const status = rowStatus[item.id];
             const isExpanded = openItems.includes(item.id);
-            // If it hasn't reported validity yet, treat as active
-            const validityReported = rowValidity[item.id] !== undefined;
             
-            return !validityReported || !isValid || isExpanded;
+            // Movement Trigger Logic:
+            // 1. Move to Action Required if Invalid AND (Closed OR Not Interacting)
+            // 2. Stay in current section if Interacting (Typing)
+            
+            const shouldBeActive = status 
+                ? (!status.isValid && (!status.isInteracting || activeIdsRef.current.has(item.id))) || isExpanded
+                : true;
+
+            if (shouldBeActive) {
+                active.push(item);
+            } else {
+                list.push(item);
+            }
         });
 
-        const completed = order.deliverables.filter(item => {
-            const isValid = rowValidity[item.id] === true;
-            const isExpanded = openItems.includes(item.id);
-            return isValid && !isExpanded;
-        });
+        // Update tracking ref for next render
+        activeIdsRef.current = new Set(active.map(i => i.id));
 
         return { 
             activeItems: active, 
-            completedItems: [...completed].reverse() 
+            orderListItems: [...list].reverse() 
         };
-    }, [order.deliverables, rowValidity, openItems]);
+    }, [order.deliverables, rowStatus, openItems]);
 
     const handleNextStep = useCallback(() => {
-        const firstInvalidId = Object.entries(rowValidity).find(([_, valid]) => !valid)?.[0];
+        const firstInvalidId = order.deliverables.find(item => rowStatus[item.id]?.isValid === false)?.id;
         
         if (firstInvalidId) {
             toast({
@@ -98,7 +105,6 @@ export default function DeliverablesPage() {
                 title: "Incomplete Items",
                 description: "Please complete all required fields before moving to commercials."
             });
-
             if (!openItems.includes(firstInvalidId)) {
                 setOpenItems(prev => [...prev, firstInvalidId]);
             }
@@ -110,16 +116,12 @@ export default function DeliverablesPage() {
         }
 
         if (order.deliverables.length === 0) {
-            toast({
-                variant: "destructive",
-                title: "No Items",
-                description: "Add at least one product to continue."
-            });
+            toast({ variant: "destructive", title: "No Items", description: "Add a product to continue." });
             return;
         }
 
         router.push('/commercials');
-    }, [rowValidity, openItems, order.deliverables.length, router, toast]);
+    }, [rowStatus, openItems, order.deliverables, router, toast]);
 
     return (
         <AppLayout>
@@ -132,46 +134,37 @@ export default function DeliverablesPage() {
                         </h1>
                         <p className="text-sm text-muted-foreground">Deliverables</p>
                     </div>
-                    <div className="hidden lg:block font-mono text-sm">
-                        {order.orderId}
-                    </div>
+                    <div className="hidden lg:block font-mono text-sm">{order.orderId}</div>
                 </header>
 
                 <main className="flex-1 overflow-y-auto bg-background">
-                    <div className="mx-auto max-w-4xl space-y-8 p-4 md:p-6 lg:p-8">
-                        {/* Sticky Command Bar Section - Flush to top with zero gaps */}
-                        <section className="sticky top-0 z-30 bg-background/95 backdrop-blur pt-4 md:pt-6 -mx-4 md:-mx-6 px-4 md:px-6 shadow-sm border-b md:border-none md:rounded-b-xl">
+                    <div className="mx-auto max-w-4xl space-y-8">
+                        {/* Flush Sticky Command Bar */}
+                        <section className="sticky top-0 z-30 bg-background/95 backdrop-blur pt-4 md:pt-6 px-4 md:px-6 shadow-sm border-b md:border-none">
                             <CommandBar />
                         </section>
 
-                        <div className="space-y-12 pb-12">
+                        <div className="space-y-12 pb-12 px-4 md:px-6">
                             {/* Active Queue Section */}
                             <section className="space-y-4">
-                                <div className="flex items-center justify-between">
-                                    <h2 className="text-xs font-bold uppercase tracking-widest text-primary flex items-center gap-2">
-                                        <AlertCircle className="h-4 w-4" />
-                                        Action Required ({activeItems.length})
-                                    </h2>
-                                </div>
+                                <h2 className="text-xs font-bold uppercase tracking-widest text-primary flex items-center gap-2">
+                                    <AlertCircle className="h-4 w-4" />
+                                    Action Required ({activeItems.length})
+                                </h2>
                                 
-                                {activeItems.length === 0 && completedItems.length === 0 ? (
+                                {activeItems.length === 0 && orderListItems.length === 0 ? (
                                     <div className="flex flex-col items-center justify-center py-20 border-2 border-dashed rounded-xl bg-card/50">
                                         <Package className="h-12 w-12 text-muted-foreground/50 mb-4" />
                                         <p className="text-muted-foreground font-medium">Your queue is empty</p>
-                                        <p className="text-sm text-muted-foreground">Search above or press ⌘K to start building your quote</p>
+                                        <p className="text-sm text-muted-foreground">Search above or press ⌘K to start</p>
                                     </div>
                                 ) : activeItems.length === 0 ? (
                                     <div className="py-8 text-center border rounded-xl bg-muted/20 border-dashed">
                                         <CheckCircle2 className="h-8 w-8 text-green-500 mx-auto mb-2" />
-                                        <p className="text-sm text-muted-foreground font-medium">No items require immediate attention</p>
+                                        <p className="text-sm text-muted-foreground font-medium">No items require attention</p>
                                     </div>
                                 ) : (
-                                    <Accordion 
-                                        type="multiple" 
-                                        value={openItems} 
-                                        onValueChange={handleValueChange} 
-                                        className="space-y-4"
-                                    >
+                                    <Accordion type="multiple" value={openItems} onValueChange={handleValueChange} className="space-y-4">
                                         {activeItems.map((item) => (
                                             <DeliverableRow 
                                                 key={item.id} 
@@ -187,20 +180,15 @@ export default function DeliverablesPage() {
                                 )}
                             </section>
 
-                            {/* Completed Items Section */}
-                            {completedItems.length > 0 && (
+                            {/* Order List Section */}
+                            {orderListItems.length > 0 && (
                                 <section className="space-y-4 opacity-80">
                                     <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
                                         <CheckCircle2 className="h-4 w-4" />
-                                        Completed ({completedItems.length})
+                                        Order List ({orderListItems.length})
                                     </h2>
-                                    <Accordion 
-                                        type="multiple" 
-                                        value={openItems} 
-                                        onValueChange={handleValueChange} 
-                                        className="space-y-2"
-                                    >
-                                        {completedItems.map((item) => (
+                                    <Accordion type="multiple" value={openItems} onValueChange={handleValueChange} className="space-y-2">
+                                        {orderListItems.map((item) => (
                                             <DeliverableRow 
                                                 key={item.id} 
                                                 item={item} 
@@ -222,9 +210,7 @@ export default function DeliverablesPage() {
                     <Button variant="outline" onClick={() => router.back()}>Back</Button>
                     <div className="flex items-center gap-4">
                         <Button variant="secondary" onClick={saveAsDraft}>Save as Draft</Button>
-                        <Button onClick={handleNextStep}>
-                            Next Step (Commercials)
-                        </Button>
+                        <Button onClick={handleNextStep}>Next Step (Commercials)</Button>
                     </div>
                 </footer>
             </div>

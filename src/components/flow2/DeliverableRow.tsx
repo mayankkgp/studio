@@ -37,13 +37,12 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useToast } from "@/hooks/use-toast";
 
 interface DeliverableRowProps {
     item: ConfiguredProduct;
     isExpanded: boolean;
     onDone: (id: string) => void;
-    onValidityChange: (id: string, isValid: boolean) => void;
+    onValidityChange: (id: string, isValid: boolean, isInteracting: boolean) => void;
     onUpdate: (id: string, updates: Partial<ConfiguredProduct>) => void;
     onRemove: (id: string) => void;
 }
@@ -94,8 +93,8 @@ export const DeliverableRow = React.memo(function DeliverableRow({
     onRemove
 }: DeliverableRowProps) {
     const product = productCatalog.find(p => p.id === item.productId) || null;
-    const { toast } = useToast();
     const hasValidated = React.useRef(false);
+    const [isInteracting, setIsInteracting] = React.useState(false);
     
     const qtyInputRef = React.useRef<HTMLInputElement>(null);
     const variantTriggerRef = React.useRef<HTMLButtonElement>(null);
@@ -128,22 +127,22 @@ export const DeliverableRow = React.memo(function DeliverableRow({
     
     const watchedValues = watch();
 
-    // Proactive validation on mount to prevent "False Invalid" on remounts
+    // Proactive validation on mount
     React.useEffect(() => {
         trigger().then((result) => {
             hasValidated.current = true;
-            onValidityChange(item.id, result);
+            onValidityChange(item.id, result, isInteracting);
         });
     }, [trigger, item.id, onValidityChange]);
 
-    // Report validity to parent
+    // Report validity and interaction status to parent
     React.useEffect(() => {
         if (hasValidated.current) {
-            onValidityChange(item.id, isValid);
+            onValidityChange(item.id, isValid, isInteracting);
         }
-    }, [isValid, item.id, onValidityChange]);
+    }, [isValid, isInteracting, item.id, onValidityChange]);
 
-    // Smart Autofocus: Focus relevant fields only on invalid expanded items
+    // Smart Autofocus: Only if invalid and expanded
     React.useEffect(() => {
         if (isExpanded && !isValid) {
             const timer = setTimeout(() => {
@@ -160,14 +159,12 @@ export const DeliverableRow = React.memo(function DeliverableRow({
     const checkWarnings = (data: any, product: Product | null): string | undefined => {
         if (!product) return undefined;
         const warnings: string[] = [];
-
         const check = (value: number, constraints: SoftConstraint[]) => {
             constraints.forEach(c => {
                 if (c.type === 'min' && value > 0 && value < c.value) warnings.push(c.message);
                 if (c.type === 'max' && value > c.value) warnings.push(c.message);
             });
         };
-
         if (product.configType === 'A' && product.softConstraints) {
             let value = data.quantity;
             if (product.specialLogic === 'WaxSealCustomQty' && data.variant === 'Custom') {
@@ -176,34 +173,14 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                  check(value, product.softConstraints);
             }
         }
-        if (product.configType === 'D') {
-            const total = Object.values(data.customFieldValues || {}).reduce((a: any, b: any) => a + (b as number), 0) as number;
-            if (total === 0) warnings.push('Please enter at least one quantity.');
-        }
-
-        product.addons?.forEach((addon, index) => {
-            const addonValue = data.addons?.[index]?.value;
-            if (addon.softConstraints && (typeof addonValue === 'number' && addonValue > 0)) {
-                check(addonValue, addon.softConstraints);
-            }
-        });
-        
-        product.sizes?.forEach((size, index) => {
-            const sizeQty = data.sizes?.[index]?.quantity;
-            if (size.softConstraints && sizeQty) {
-                check(sizeQty, size.softConstraints);
-            }
-        });
-
         return warnings.join(' ');
     };
 
-    // Immediate sync for variant selection to prevent "Jump-Revert"
+    // Immediate sync for variant selection
     const handleVariantChange = (val: string) => {
         setValue('variant', val, { shouldValidate: true, shouldDirty: true });
         const currentValues = getValues();
         const warning = checkWarnings(currentValues, product);
-        
         onUpdate(item.id, {
             ...currentValues,
             variant: val,
@@ -213,12 +190,11 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         });
     };
 
-    // Debounced context sync for performance (for typing) - 300ms wait
+    // Debounced context sync for other fields
     React.useEffect(() => {
         const timer = setTimeout(() => {
             const currentValues = getValues();
             const warning = checkWarnings(currentValues, product);
-            
             onUpdate(item.id, {
                 ...currentValues,
                 warning,
@@ -226,21 +202,18 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                 sizes: currentValues.sizes?.filter((s: any) => s.quantity > 0) as any
             });
         }, 300);
-
         return () => clearTimeout(timer);
     }, [watchedValues.quantity, watchedValues.pages, watchedValues.specialRequest, watchedValues.customFieldValues, watchedValues.addons, watchedValues.sizes, onUpdate, item.id, product, getValues]);
 
     const handleDoneClick = async (e: React.MouseEvent) => {
         e.stopPropagation();
         const result = await trigger();
-        if (result) {
-            onDone(item.id);
-        }
+        if (result) onDone(item.id);
     };
 
     const handleDelete = (e: React.MouseEvent) => {
         e.stopPropagation();
-        if (window.confirm("Are you sure you want to remove this item? All configurations for this deliverable will be lost.")) {
+        if (window.confirm("Are you sure you want to remove this item?")) {
             onRemove(item.id);
         }
     }
@@ -249,22 +222,8 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         if (!product) return '';
         const parts: string[] = [];
         if (watchedValues.variant) parts.push(watchedValues.variant);
-        
-        if (product.configType === 'A' && watchedValues.quantity) {
-            parts.push(`Qty: ${watchedValues.quantity}`);
-        } else if (product.configType === 'B' && watchedValues.pages) {
-            parts.push(`${watchedValues.pages} Pages`);
-        } else if (product.configType === 'D' && watchedValues.customFieldValues) {
-            const total = Object.values(watchedValues.customFieldValues).reduce((a: any, b: any) => (a as number) + (b as number), 0);
-            if (total > 0) parts.push(`${total} Units`);
-        } else if (product.configType === 'E' && watchedValues.sizes) {
-            const total = watchedValues.sizes.reduce((a: any, b: any) => (a as number) + (b.quantity as number), 0);
-            if (total > 0) parts.push(`${total} Units`);
-        }
-
-        const activeAddons = watchedValues.addons?.filter((a: any) => typeof a.value === 'number' ? a.value > 0 : !!a.value).length || 0;
-        if (activeAddons > 0) parts.push(`${activeAddons} Add-ons`);
-
+        if (product.configType === 'A' && watchedValues.quantity) parts.push(`Qty: ${watchedValues.quantity}`);
+        else if (product.configType === 'B' && watchedValues.pages) parts.push(`${watchedValues.pages} Pages`);
         return parts.join(' • ');
     };
 
@@ -281,7 +240,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
     const IconComponent = getIcon();
 
     const iconStatusClasses = isExpanded 
-        ? "text-primary bg-primary/10" 
+        ? "text-blue-600 bg-blue-50" 
         : isValid 
             ? "text-green-600 bg-green-100" 
             : "text-destructive bg-destructive/10";
@@ -305,13 +264,9 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                     <AccordionTrigger 
                         className={cn("flex-1 hover:no-underline py-0", isLocked && "[&>svg]:hidden")}
                         onClick={(e) => {
-                            if (isExpanded && !isValid) {
+                            if (isLocked) {
                                 e.preventDefault();
-                                toast({
-                                    variant: "destructive",
-                                    title: "Incomplete Item",
-                                    description: "Please complete all required fields before closing."
-                                });
+                                // Silent Interaction for locked items
                             }
                         }}
                     >
@@ -339,11 +294,10 @@ export const DeliverableRow = React.memo(function DeliverableRow({
 
                     <div className="flex items-center gap-2 ml-4" onClick={(e) => e.stopPropagation()}>
                         {!isExpanded && (
-                             <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded">
+                             <span className="text-xs font-medium text-muted-foreground">
                                 Qty: {item.quantity || item.pages || 0}
                              </span>
                         )}
-
                         {item.warning && (
                             <TooltipProvider>
                                 <Tooltip>
@@ -352,31 +306,21 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                             <AlertTriangle className="h-4 w-4" />
                                         </div>
                                     </TooltipTrigger>
-                                    <TooltipContent>
-                                        <p>{item.warning}</p>
-                                    </TooltipContent>
+                                    <TooltipContent><p>{item.warning}</p></TooltipContent>
                                 </Tooltip>
                             </TooltipProvider>
                         )}
-
                         <div className="flex items-center gap-2">
                              <Button 
                                 variant="ghost" 
                                 size="icon" 
                                 className="h-8 w-8 text-muted-foreground hover:text-destructive transition-colors"
                                 onClick={handleDelete}
-                                title="Remove Item"
                             >
                                 <Trash2 className="h-4 w-4" />
                             </Button>
-                            
                             {isExpanded && (
-                                <Button 
-                                    size="sm" 
-                                    onClick={handleDoneClick} 
-                                    className="gap-2 h-8"
-                                    disabled={!isValid}
-                                >
+                                <Button size="sm" onClick={handleDoneClick} className="gap-2 h-8" disabled={!isValid}>
                                     <Check className="h-4 w-4" />
                                     Done
                                 </Button>
@@ -388,19 +332,18 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                 <AccordionContent className="px-4 pb-4 border-t bg-muted/5 relative">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
                         <div className="space-y-4">
-                            {/* Quantity Input - Prominent for Type A/B */}
                             {(product?.configType === 'A' || product?.configType === 'B') && (
                                 <div className="space-y-1.5 p-4 rounded-lg border-2 border-primary/20 bg-primary/5 shadow-sm">
-                                    <Label className={cn(
-                                        "text-xs font-bold uppercase tracking-wider",
-                                        errors.quantity || errors.pages ? "text-destructive" : "text-primary"
-                                    )}>
-                                        {product.configType === 'A' ? 'Base Quantity' : 'Number of Pages'} 
-                                        {(errors.quantity || errors.pages) && " (Required)"}
+                                    <Label className={cn("text-xs font-bold uppercase tracking-wider", errors.quantity || errors.pages ? "text-destructive" : "text-primary")}>
+                                        {product.configType === 'A' ? 'Base Quantity' : 'Number of Pages'}
                                     </Label>
                                     <Input 
                                         type="number" 
-                                        {...register(product.configType === 'A' ? 'quantity' : 'pages', { valueAsNumber: true })} 
+                                        {...register(product.configType === 'A' ? 'quantity' : 'pages', { 
+                                            valueAsNumber: true,
+                                            onBlur: () => setIsInteracting(false)
+                                        })}
+                                        onFocus={() => setIsInteracting(true)}
                                         className={cn("h-12 text-xl font-bold bg-background", (errors.quantity || errors.pages) && "border-destructive")} 
                                         ref={(e) => {
                                             if (product.configType === 'A') {
@@ -412,23 +355,13 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                             }
                                         }}
                                     />
-                                    {(errors.quantity || errors.pages) && (
-                                        <p className="text-xs text-destructive font-medium">
-                                            {errors.quantity?.message || errors.pages?.message}
-                                        </p>
-                                    )}
+                                    {(errors.quantity || errors.pages) && <p className="text-xs text-destructive font-medium">{errors.quantity?.message || errors.pages?.message}</p>}
                                 </div>
                             )}
 
-                            {/* Variant Selection */}
                             {product?.variants && (
                                 <div className="space-y-1.5">
-                                    <Label className={cn(
-                                        "text-xs font-semibold uppercase tracking-wider",
-                                        errors.variant ? "text-destructive" : "text-muted-foreground"
-                                    )}>
-                                        Variant {errors.variant && " (Required)"}
-                                    </Label>
+                                    <Label className={cn("text-xs font-semibold uppercase tracking-wider", errors.variant ? "text-destructive" : "text-muted-foreground")}>Variant</Label>
                                     <Controller
                                         name="variant"
                                         control={control}
@@ -436,11 +369,9 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                             <Select 
                                                 onValueChange={handleVariantChange} 
                                                 value={field.value || ""}
+                                                onOpenChange={(open) => setIsInteracting(open)}
                                             >
-                                                <SelectTrigger 
-                                                    className={cn("h-9", errors.variant && "border-destructive")}
-                                                    ref={variantTriggerRef}
-                                                >
+                                                <SelectTrigger className={cn("h-9", errors.variant && "border-destructive")} ref={variantTriggerRef}>
                                                     <SelectValue placeholder="Select variant" />
                                                 </SelectTrigger>
                                                 <SelectContent>
@@ -455,37 +386,12 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                 </div>
                             )}
 
-                            {product?.configType === 'D' && product.customFields && (
-                                <div className="space-y-3 p-3 rounded-lg border bg-background/50">
-                                    <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Quantities</Label>
-                                    {product.customFields.map((field) => (
-                                        <div key={field.id} className="flex items-center justify-between">
-                                            <span className="text-sm font-medium">{field.name}</span>
-                                            <Input type="number" className="w-24 h-8" {...register(`customFieldValues.${field.id}`, { valueAsNumber: true })} />
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-
-                            {product?.configType === 'E' && product.sizes && (
-                                <div className="space-y-3 p-3 rounded-lg border bg-background/50">
-                                    <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Sizes</Label>
-                                    {product.sizes.map((size, idx) => (
-                                        <div key={size.name} className="flex items-center justify-between">
-                                            <span className="text-sm font-medium">{size.name}</span>
-                                            <Input type="number" className="w-24 h-8" {...register(`sizes.${idx}.quantity`, { valueAsNumber: true })} />
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-
                             <div className="space-y-1.5">
                                 <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Special Request</Label>
-                                <Textarea {...register('specialRequest')} className="min-h-[80px] bg-background/50" placeholder="Notes for production..." />
+                                <Textarea {...register('specialRequest')} className="min-h-[80px] bg-background/50" placeholder="Notes..." />
                             </div>
                         </div>
 
-                        {/* Add-ons Section */}
                         <div className="space-y-4">
                             {product?.addons && product.addons.length > 0 && (
                                 <div className="space-y-3">
@@ -495,52 +401,28 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                             const parentIndex = addon.dependsOn ? product.addons!.findIndex(a => a.id === addon.dependsOn) : -1;
                                             const parentValue = parentIndex !== -1 ? watchedValues.addons?.[parentIndex]?.value : undefined;
                                             const isParentActive = parentValue !== undefined ? (typeof parentValue === 'number' ? parentValue > 0 : !!parentValue) : true;
-
-                                            const isVisible = (!addon.dependsOn || isParentActive) && 
-                                                              (!addon.visibleIfVariant || watchedValues.variant === addon.visibleIfVariant);
-                                            
-                                            if (!isVisible) return null;
-
-                                            const isChecked = typeof watchedValues.addons?.[index]?.value === 'number' 
-                                                ? watchedValues.addons?.[index]?.value > 0 
-                                                : !!watchedValues.addons?.[index]?.value;
-
+                                            if (!((!addon.dependsOn || isParentActive) && (!addon.visibleIfVariant || watchedValues.variant === addon.visibleIfVariant))) return null;
+                                            const isChecked = typeof watchedValues.addons?.[index]?.value === 'number' ? watchedValues.addons?.[index]?.value > 0 : !!watchedValues.addons?.[index]?.value;
                                             return (
-                                                <div key={addon.id} className="flex items-center justify-between py-1 animate-in fade-in slide-in-from-top-1">
+                                                <div key={addon.id} className="flex items-center justify-between py-1">
                                                     <div className="flex items-center gap-3">
                                                         <Controller
                                                             name={`addons.${index}.value`}
                                                             control={control}
                                                             render={({ field }) => (
-                                                                addon.type === 'checkbox' ? (
-                                                                    <Checkbox 
-                                                                        checked={!!field.value} 
-                                                                        onCheckedChange={field.onChange} 
-                                                                    />
-                                                                ) : (
-                                                                    <Checkbox 
-                                                                        checked={isChecked} 
-                                                                        onCheckedChange={(checked) => {
-                                                                            if (checked) {
-                                                                                const val = (typeof field.value === 'number' && field.value > 0) ? field.value : 1;
-                                                                                field.onChange(val);
-                                                                            } else {
-                                                                                field.onChange(false);
-                                                                            }
-                                                                        }} 
-                                                                    />
-                                                                )
+                                                                <Checkbox 
+                                                                    checked={addon.type === 'checkbox' ? !!field.value : isChecked} 
+                                                                    onCheckedChange={(checked) => {
+                                                                        if (addon.type === 'checkbox') field.onChange(checked);
+                                                                        else field.onChange(checked ? 1 : 0);
+                                                                    }} 
+                                                                />
                                                             )}
                                                         />
                                                         <span className="text-sm">{addon.name}</span>
                                                     </div>
-                                                    
                                                     {addon.type !== 'checkbox' && isChecked && (
-                                                        <Input
-                                                            type="number"
-                                                            className="w-20 h-8"
-                                                            {...register(`addons.${index}.value`, { valueAsNumber: true })}
-                                                        />
+                                                        <Input type="number" className="w-20 h-8" {...register(`addons.${index}.value`, { valueAsNumber: true })} />
                                                     )}
                                                 </div>
                                             );
