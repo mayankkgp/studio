@@ -1,9 +1,8 @@
 import { z } from 'zod';
 
-const requiredString = z.string().min(1, 'This field is required');
-const optionalString = z.string().optional();
+const requiredString = z.string().trim().min(1, 'This field is required');
+const optionalString = z.string().trim().optional();
 const requiredDate = z.date({ required_error: 'Please select a date' });
-const requiredNumber = z.number().min(1, 'Must be at least 1');
 
 export const eventDetailsSchema = z
   .object({
@@ -23,7 +22,7 @@ export const eventDetailsSchema = z
     engagementBrideName: optionalString,
     engagementGroomName: optionalString,
     weddingDate: z.date().optional(),
-    dateStatus: z.boolean().default(true), // false = Tentative, true = Fixed (defaulting to true)
+    dateStatus: z.boolean().default(true), // false = Tentative, true = Fixed
 
     // Anniversary
     husbandName: optionalString,

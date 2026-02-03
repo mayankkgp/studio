@@ -29,14 +29,6 @@ import { MobileNav } from '../layout/MobileNav';
 import { useHeaderSummary } from '@/hooks/use-header-summary';
 import { CITIES } from '@/lib/cities';
 
-const eventTypeOptions: { value: EventType; label: string; icon: React.ElementType }[] = [
-  { value: 'Wedding', label: 'Wedding', icon: Users },
-  { value: 'Engagement', label: 'Engagement', icon: Star },
-  { value: 'Anniversary', label: 'Anniversary', icon: PartyPopper },
-  { value: 'Birthday', label: 'Birthday', icon: Cake },
-  { value: 'Others', label: 'Others', icon: Milestone },
-];
-
 function FormError({ message }: { message?: string }) {
   return (
     <div className={cn(
@@ -166,6 +158,11 @@ export function EventDetailsForm() {
   const router = useRouter();
   const { order, setEventDetails, saveAsDraft, resetOrder, isLoaded } = useOrder();
   
+  // State for closing date popovers
+  const [openEventDate, setOpenEventDate] = useState(false);
+  const [openDueDate, setOpenDueDate] = useState(false);
+  const [openWeddingDate, setOpenWeddingDate] = useState(false);
+
   const form = useForm<EventDetails>({
     resolver: zodResolver(eventDetailsSchema),
     defaultValues: order.eventDetails,
@@ -183,7 +180,6 @@ export function EventDetailsForm() {
   const watchedFields = watch();
   const headerSummary = useHeaderSummary(watchedFields);
 
-  // Force dateStatus to true (Fixed) for all events except Engagement
   useEffect(() => {
     if (watchedFields.eventType && watchedFields.eventType !== 'Engagement') {
       setValue('dateStatus', true);
@@ -198,6 +194,12 @@ export function EventDetailsForm() {
   const onSubmit = (data: EventDetails) => {
     setEventDetails(data);
     router.push('/deliverables');
+  };
+
+  const handleCancel = () => {
+    if (window.confirm("Are you sure you want to cancel? All unsaved changes will be lost.")) {
+      resetOrder();
+    }
   };
 
   if (!isLoaded) {
@@ -303,7 +305,7 @@ export function EventDetailsForm() {
                       name="eventDate"
                       control={control}
                       render={({ field }) => (
-                        <Popover>
+                        <Popover open={openEventDate} onOpenChange={setOpenEventDate}>
                           <PopoverTrigger asChild>
                             <Button
                               variant={"outline"}
@@ -318,7 +320,15 @@ export function EventDetailsForm() {
                             </Button>
                           </PopoverTrigger>
                           <PopoverContent className="w-auto p-0 flex flex-col" align="start">
-                            <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                            <Calendar 
+                              mode="single" 
+                              selected={field.value} 
+                              onSelect={(date) => {
+                                field.onChange(date);
+                                setOpenEventDate(false);
+                              }} 
+                              initialFocus 
+                            />
                             {field.value && (
                               <div className="p-2 border-t">
                                 <Button 
@@ -326,7 +336,10 @@ export function EventDetailsForm() {
                                   size="sm" 
                                   className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
                                   type="button"
-                                  onClick={() => field.onChange(undefined)}
+                                  onClick={() => {
+                                    field.onChange(undefined);
+                                    setOpenEventDate(false);
+                                  }}
                                 >
                                   Clear Date
                                 </Button>
@@ -344,7 +357,7 @@ export function EventDetailsForm() {
                       name="orderDueDate"
                       control={control}
                       render={({ field }) => (
-                        <Popover>
+                        <Popover open={openDueDate} onOpenChange={setOpenDueDate}>
                           <PopoverTrigger asChild>
                             <Button
                               variant={"outline"}
@@ -359,7 +372,15 @@ export function EventDetailsForm() {
                             </Button>
                           </PopoverTrigger>
                           <PopoverContent className="w-auto p-0 flex flex-col" align="start">
-                            <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                            <Calendar 
+                              mode="single" 
+                              selected={field.value} 
+                              onSelect={(date) => {
+                                field.onChange(date);
+                                setOpenDueDate(false);
+                              }} 
+                              initialFocus 
+                            />
                             {field.value && (
                               <div className="p-2 border-t">
                                 <Button 
@@ -367,7 +388,10 @@ export function EventDetailsForm() {
                                   size="sm" 
                                   className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
                                   type="button"
-                                  onClick={() => field.onChange(undefined)}
+                                  onClick={() => {
+                                    field.onChange(undefined);
+                                    setOpenDueDate(false);
+                                  }}
                                 >
                                   Clear Date
                                 </Button>
@@ -432,7 +456,7 @@ export function EventDetailsForm() {
                                 name="weddingDate"
                                 control={control}
                                 render={({ field }) => (
-                                    <Popover>
+                                    <Popover open={openWeddingDate} onOpenChange={setOpenWeddingDate}>
                                     <PopoverTrigger asChild>
                                         <Button
                                         variant={"outline"}
@@ -447,7 +471,15 @@ export function EventDetailsForm() {
                                         </Button>
                                     </PopoverTrigger>
                                     <PopoverContent className="w-auto p-0 flex flex-col" align="start">
-                                        <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                                        <Calendar 
+                                          mode="single" 
+                                          selected={field.value} 
+                                          onSelect={(date) => {
+                                            field.onChange(date);
+                                            setOpenWeddingDate(false);
+                                          }} 
+                                          initialFocus 
+                                        />
                                         {field.value && (
                                           <div className="p-2 border-t">
                                             <Button 
@@ -455,7 +487,10 @@ export function EventDetailsForm() {
                                               size="sm" 
                                               className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
                                               type="button"
-                                              onClick={() => field.onChange(undefined)}
+                                              onClick={() => {
+                                                field.onChange(undefined);
+                                                setOpenWeddingDate(false);
+                                              }}
                                             >
                                               Clear Date
                                             </Button>
@@ -579,7 +614,7 @@ export function EventDetailsForm() {
       </main>
 
       <footer className="sticky bottom-0 z-10 flex items-center justify-between gap-4 border-t bg-background px-4 md:px-6 h-20">
-        <Button variant="outline" type="button" onClick={() => resetOrder()}>Cancel</Button>
+        <Button variant="outline" type="button" onClick={handleCancel}>Cancel</Button>
         <div className="flex items-center gap-4">
           <Button variant="secondary" type="button" onClick={saveAsDraft}>Save as Draft</Button>
           <Button type="submit" disabled={!isValid}>Next Step</Button>
@@ -588,3 +623,11 @@ export function EventDetailsForm() {
     </form>
   );
 }
+
+const eventTypeOptions: { value: EventType; label: string; icon: React.ElementType }[] = [
+  { value: 'Wedding', label: 'Wedding', icon: Users },
+  { value: 'Engagement', label: 'Engagement', icon: Star },
+  { value: 'Anniversary', label: 'Anniversary', icon: PartyPopper },
+  { value: 'Birthday', label: 'Birthday', icon: Cake },
+  { value: 'Others', label: 'Others', icon: Milestone },
+];
