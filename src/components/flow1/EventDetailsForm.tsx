@@ -1,11 +1,13 @@
+
 'use client';
 
-import { useEffect } from 'react';
+import * as React from 'react';
+import { useEffect, useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
-import { CalendarIcon, Users, Star, PartyPopper, Cake, Milestone } from 'lucide-react';
+import { CalendarIcon, Users, Star, PartyPopper, Cake, Milestone, Check, ChevronsUpDown } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,6 +20,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 
 import { eventDetailsSchema } from '@/lib/schemas';
 import type { EventDetails, EventType } from '@/lib/types';
@@ -25,6 +28,7 @@ import { useOrder } from '@/context/OrderContext';
 import { cn } from '@/lib/utils';
 import { MobileNav } from '../layout/MobileNav';
 import { useHeaderSummary } from '@/hooks/use-header-summary';
+import { CITIES } from '@/lib/cities';
 
 const eventTypeOptions: { value: EventType; label: string; icon: React.ElementType }[] = [
   { value: 'Wedding', label: 'Wedding', icon: Users },
@@ -33,6 +37,87 @@ const eventTypeOptions: { value: EventType; label: string; icon: React.ElementTy
   { value: 'Birthday', label: 'Birthday', icon: Cake },
   { value: 'Others', label: 'Others', icon: Milestone },
 ];
+
+function ComboboxCity({ 
+  value, 
+  onSelect, 
+  placeholder, 
+  error 
+}: { 
+  value?: string, 
+  onSelect: (val: string) => void, 
+  placeholder: string,
+  error?: string
+}) {
+  const [open, setOpen] = useState(false);
+  const [searchValue, setSearchValue] = useState("");
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className={cn(
+            "w-full justify-between font-normal text-left h-10 px-3",
+            !value && "text-muted-foreground",
+            error && "border-destructive"
+          )}
+        >
+          <span className="truncate">{value || placeholder}</span>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+        <Command>
+          <CommandInput 
+            placeholder={`Search ${placeholder.toLowerCase()}...`} 
+            onValueChange={setSearchValue}
+          />
+          <CommandList>
+            <CommandEmpty>
+              <div className="p-2 flex flex-col gap-2">
+                <p className="text-sm text-muted-foreground text-center">No city found.</p>
+                <Button 
+                  size="sm" 
+                  variant="secondary" 
+                  className="w-full justify-start h-8 px-2"
+                  onClick={() => {
+                    onSelect(searchValue);
+                    setOpen(false);
+                  }}
+                >
+                  Use "{searchValue}"
+                </Button>
+              </div>
+            </CommandEmpty>
+            <CommandGroup heading="Cities">
+              {CITIES.map((city) => (
+                <CommandItem
+                  key={city}
+                  value={city}
+                  onSelect={(currentValue) => {
+                    onSelect(currentValue === value ? "" : currentValue);
+                    setOpen(false);
+                  }}
+                >
+                  <Check
+                    className={cn(
+                      "mr-2 h-4 w-4",
+                      value === city ? "opacity-100" : "opacity-0"
+                    )}
+                  />
+                  {city}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 export function EventDetailsForm() {
   const router = useRouter();
@@ -57,7 +142,7 @@ export function EventDetailsForm() {
 
   const dueDateWarning = (
     watchedFields.orderDueDate && watchedFields.eventDate &&
-    watchedFields.orderDueDate > watchedFields.eventDate
+    new Date(watchedFields.orderDueDate) > new Date(watchedFields.eventDate)
   );
 
   const onSubmit = (data: EventDetails) => {
@@ -130,12 +215,33 @@ export function EventDetailsForm() {
               <div className="grid md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="venueName">Venue Name</Label>
-                  <Input id="venueName" placeholder="e.g., Grand Hyatt" {...register('venueName')} />
+                  <Controller
+                    name="venueName"
+                    control={control}
+                    render={({ field }) => (
+                      <ComboboxCity 
+                        value={field.value} 
+                        onSelect={field.onChange} 
+                        placeholder="Select or enter venue" 
+                        error={errors.venueName?.message}
+                      />
+                    )}
+                  />
                   {errors.venueName && <p className="text-sm font-medium text-destructive">{errors.venueName.message}</p>}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="shipToCity">Ship to City</Label>
-                  <Input id="shipToCity" placeholder="e.g., New Delhi" {...register('shipToCity')} />
+                  <Controller
+                    name="shipToCity"
+                    control={control}
+                    render={({ field }) => (
+                      <ComboboxCity 
+                        value={field.value} 
+                        onSelect={field.onChange} 
+                        placeholder="Select or enter city" 
+                      />
+                    )}
+                  />
                 </div>
               </div>
               <div className="grid md:grid-cols-2 gap-6">
@@ -152,7 +258,7 @@ export function EventDetailsForm() {
                               className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}
                             >
                               <CalendarIcon className="mr-2 h-4 w-4" />
-                              {field.value ? format(field.value, 'dd MMM yyyy') : <span>Pick a date</span>}
+                              {field.value ? format(new Date(field.value), 'dd MMM yyyy') : <span>Pick a date</span>}
                             </Button>
                           </PopoverTrigger>
                           <PopoverContent className="w-auto p-0" align="start">
@@ -176,7 +282,7 @@ export function EventDetailsForm() {
                               className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}
                             >
                               <CalendarIcon className="mr-2 h-4 w-4" />
-                              {field.value ? format(field.value, 'dd MMM yyyy') : <span>Pick a date</span>}
+                              {field.value ? format(new Date(field.value), 'dd MMM yyyy') : <span>Pick a date</span>}
                             </Button>
                           </PopoverTrigger>
                           <PopoverContent className="w-auto p-0" align="start">
@@ -243,7 +349,7 @@ export function EventDetailsForm() {
                                         className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}
                                         >
                                         <CalendarIcon className="mr-2 h-4 w-4" />
-                                        {field.value ? format(field.value, 'dd MMM yyyy') : <span>Pick a date</span>}
+                                        {field.value ? format(new Date(field.value), 'dd MMM yyyy') : <span>Pick a date</span>}
                                         </Button>
                                     </PopoverTrigger>
                                     <PopoverContent className="w-auto p-0" align="start">
