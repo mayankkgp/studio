@@ -64,6 +64,13 @@ function ComboboxCity({
   const [open, setOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
 
+  const handleSelectCustom = () => {
+    if (searchValue) {
+      onSelect(searchValue);
+      setOpen(false);
+    }
+  };
+
   return (
     <div className="relative group">
       <Popover open={open} onOpenChange={setOpen}>
@@ -73,17 +80,27 @@ function ComboboxCity({
             role="combobox"
             aria-expanded={open}
             className={cn(
-              "w-full justify-between font-normal text-left h-10 px-3 pr-10",
+              "w-full justify-between font-normal text-left h-10 px-3 pr-14",
               !value && "text-muted-foreground",
               error && "border-destructive ring-1 ring-destructive"
             )}
           >
             <span className="truncate">{value || placeholder}</span>
-            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            <ChevronsUpDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 shrink-0 opacity-50 pointer-events-none" />
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-          <Command>
+          <Command 
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                // If there's search text and no exact match is selected, use the custom value
+                const hasExactMatch = CITIES.some(city => city.toLowerCase() === searchValue.toLowerCase());
+                if (!hasExactMatch && searchValue) {
+                  handleSelectCustom();
+                }
+              }
+            }}
+          >
             <CommandInput 
               placeholder={`Search ${placeholder.toLowerCase()}...`} 
               onValueChange={setSearchValue}
@@ -96,10 +113,8 @@ function ComboboxCity({
                     size="sm" 
                     variant="secondary" 
                     className="w-full justify-start h-8 px-2"
-                    onClick={() => {
-                      onSelect(searchValue);
-                      setOpen(false);
-                    }}
+                    type="button"
+                    onClick={handleSelectCustom}
                   >
                     Use "{searchValue}"
                   </Button>
@@ -133,13 +148,15 @@ function ComboboxCity({
         <Button
           variant="ghost"
           size="icon"
-          className="absolute right-8 top-1/2 -translate-y-1/2 h-8 w-8 text-muted-foreground hover:text-foreground"
+          className="absolute right-8 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground hover:text-foreground z-20"
+          type="button"
           onClick={(e) => {
+            e.preventDefault();
             e.stopPropagation();
             onSelect("");
           }}
         >
-          <X className="h-4 w-4" />
+          <X className="h-3.5 w-3.5" />
         </Button>
       )}
     </div>
@@ -302,6 +319,7 @@ export function EventDetailsForm() {
                                   variant="ghost" 
                                   size="sm" 
                                   className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
+                                  type="button"
                                   onClick={() => field.onChange(undefined)}
                                 >
                                   Clear Date
@@ -342,6 +360,7 @@ export function EventDetailsForm() {
                                   variant="ghost" 
                                   size="sm" 
                                   className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
+                                  type="button"
                                   onClick={() => field.onChange(undefined)}
                                 >
                                   Clear Date
@@ -429,6 +448,7 @@ export function EventDetailsForm() {
                                               variant="ghost" 
                                               size="sm" 
                                               className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
+                                              type="button"
                                               onClick={() => field.onChange(undefined)}
                                             >
                                               Clear Date
