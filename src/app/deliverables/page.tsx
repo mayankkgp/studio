@@ -10,11 +10,43 @@ import { CommandBar } from "@/components/flow2/CommandBar";
 import { DeliverableRow } from "@/components/flow2/DeliverableRow";
 import { Package } from "lucide-react";
 import { Accordion } from "@/components/ui/accordion";
+import { useState, useEffect, useRef } from "react";
 
 export default function DeliverablesPage() {
     const router = useRouter();
     const { order, saveAsDraft } = useOrder();
     const headerSummary = useHeaderSummary(order.eventDetails);
+    
+    const [openItems, setOpenItems] = useState<string[]>([]);
+    const [rowValidity, setRowValidity] = useState<Record<string, boolean>>({});
+    const prevCount = useRef(order.deliverables.length);
+
+    // Auto-expand newly added items
+    useEffect(() => {
+        if (order.deliverables.length > prevCount.current) {
+            const newItem = order.deliverables[order.deliverables.length - 1];
+            setOpenItems(prev => Array.from(new Set([...prev, newItem.id])));
+        }
+        prevCount.current = order.deliverables.length;
+    }, [order.deliverables]);
+
+    const handleValidityChange = (id: string, isValid: boolean) => {
+        setRowValidity(prev => ({ ...prev, [id]: isValid }));
+    };
+
+    const handleValueChange = (newValues: string[]) => {
+        // Block closing if the item is invalid
+        const closedItems = openItems.filter(id => !newValues.includes(id));
+        const invalidClosedItems = closedItems.filter(id => rowValidity[id] === false);
+
+        if (invalidClosedItems.length > 0) {
+            // Re-add invalid items to the open list
+            setOpenItems(Array.from(new Set([...newValues, ...invalidClosedItems])));
+            return;
+        }
+
+        setOpenItems(newValues);
+    };
 
     return (
         <AppLayout>
@@ -41,9 +73,16 @@ export default function DeliverablesPage() {
 
                         {/* Deliverables List */}
                         <section className="space-y-4">
-                            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                                Added Items ({order.deliverables.length})
-                            </h2>
+                            <div className="flex items-center justify-between">
+                                <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                                    Added Items ({order.deliverables.length})
+                                </h2>
+                                {Object.values(rowValidity).some(v => v === false) && (
+                                    <span className="text-xs font-medium text-destructive animate-pulse">
+                                        Please complete all items
+                                    </span>
+                                )}
+                            </div>
                             
                             {order.deliverables.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center py-20 border-2 border-dashed rounded-xl bg-card/50">
@@ -52,9 +91,20 @@ export default function DeliverablesPage() {
                                     <p className="text-sm text-muted-foreground">Search above to start building your quote</p>
                                 </div>
                             ) : (
-                                <Accordion type="multiple" className="space-y-4">
+                                <Accordion 
+                                    type="multiple" 
+                                    value={openItems} 
+                                    onValueChange={handleValueChange} 
+                                    className="space-y-4"
+                                >
                                     {order.deliverables.map((item) => (
-                                        <DeliverableRow key={item.id} item={item} />
+                                        <DeliverableRow 
+                                            key={item.id} 
+                                            item={item} 
+                                            isExpanded={openItems.includes(item.id)}
+                                            onDone={() => setOpenItems(prev => prev.filter(id => id !== item.id))}
+                                            onValidityChange={handleValidityChange}
+                                        />
                                     ))}
                                 </Accordion>
                             )}
@@ -68,7 +118,7 @@ export default function DeliverablesPage() {
                         <Button variant="secondary" onClick={saveAsDraft}>Save as Draft</Button>
                         <Button
                             onClick={() => router.push('/commercials')}
-                            disabled={order.deliverables.length === 0}
+                            disabled={order.deliverables.length === 0 || Object.values(rowValidity).some(v => v === false)}
                         >
                             Next Step (Commercials)
                         </Button>

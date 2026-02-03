@@ -36,7 +36,7 @@ export function CommandBar() {
             id: `${product.id}-${Date.now()}`,
             productId: product.id,
             productName: productName,
-            variant: product.variants ? product.variants[0] : undefined,
+            variant: undefined, // Forced Intent: No default variant
             quantity: product.configType === 'A' ? 1 : undefined,
             pages: product.configType === 'B' ? 1 : undefined,
             addons: [],

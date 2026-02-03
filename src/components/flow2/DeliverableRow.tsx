@@ -6,13 +6,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { 
     AlertTriangle, 
-    ChevronDown, 
-    ChevronUp, 
     MoreHorizontal, 
     Trash2, 
-    Settings2, 
     Package,
-    ChevronRight
+    Check
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { productCatalog } from '@/lib/product-data';
@@ -24,6 +21,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import {
     AccordionItem,
     AccordionTrigger,
@@ -44,6 +42,9 @@ import {
 
 interface DeliverableRowProps {
     item: ConfiguredProduct;
+    isExpanded: boolean;
+    onDone: () => void;
+    onValidityChange: (id: string, isValid: boolean) => void;
 }
 
 const getValidationSchema = (product: Product | null) => {
@@ -83,7 +84,7 @@ const getValidationSchema = (product: Product | null) => {
     return z.object(schemaObject);
 };
 
-export function DeliverableRow({ item }: DeliverableRowProps) {
+export function DeliverableRow({ item, isExpanded, onDone, onValidityChange }: DeliverableRowProps) {
     const { updateDeliverable, removeDeliverable } = useOrder();
     const product = productCatalog.find(p => p.id === item.productId) || null;
     
@@ -111,8 +112,13 @@ export function DeliverableRow({ item }: DeliverableRowProps) {
         mode: 'onChange'
     });
 
-    const { register, control, watch, formState: { errors }, handleSubmit } = form;
+    const { register, control, watch, formState: { errors, isValid }, handleSubmit, trigger } = form;
     const watchedValues = watch();
+
+    // Notify parent of validity changes
+    React.useEffect(() => {
+        onValidityChange(item.id, isValid);
+    }, [isValid, item.id, onValidityChange]);
 
     // Auto-update context when form changes
     React.useEffect(() => {
@@ -169,43 +175,66 @@ export function DeliverableRow({ item }: DeliverableRowProps) {
         return warnings.join(' ');
     };
 
+    const handleDoneClick = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        const result = await trigger();
+        if (result) {
+            onDone();
+        }
+    };
+
     const getSummary = () => {
         if (!product) return '';
-        const parts: string[] = [];
         
-        if (item.variant) parts.push(item.variant);
-        
-        if (product.configType === 'A' && item.quantity) {
-            parts.push(`Qty: ${item.quantity}`);
-        } else if (product.configType === 'B' && item.pages) {
-            parts.push(`${item.pages} Pages`);
-        } else if (product.configType === 'D' && item.customFieldValues) {
-            const total = Object.values(item.customFieldValues).reduce((a, b) => a + b, 0);
-            parts.push(`${total} Units`);
-        } else if (product.configType === 'E' && item.sizes) {
-            const total = item.sizes.reduce((a, b) => a + b.quantity, 0);
-            parts.push(`${total} Units`);
+        // Show "Setup Required" if variant is missing but required
+        if (product.variants && !watchedValues.variant) {
+            return <Badge variant="destructive" className="animate-pulse">Setup Required</Badge>;
         }
 
-        if (item.addons?.length) {
-            parts.push(`${item.addons.length} Add-ons`);
+        const parts: string[] = [];
+        if (watchedValues.variant) parts.push(watchedValues.variant);
+        
+        if (product.configType === 'A' && watchedValues.quantity) {
+            parts.push(`Qty: ${watchedValues.quantity}`);
+        } else if (product.configType === 'B' && watchedValues.pages) {
+            parts.push(`${watchedValues.pages} Pages`);
+        } else if (product.configType === 'D' && watchedValues.customFieldValues) {
+            const total = Object.values(watchedValues.customFieldValues).reduce((a: any, b: any) => (a as number) + (b as number), 0);
+            if (total > 0) parts.push(`${total} Units`);
+        } else if (product.configType === 'E' && watchedValues.sizes) {
+            const total = watchedValues.sizes.reduce((a: any, b: any) => (a as number) + (b.quantity as number), 0);
+            if (total > 0) parts.push(`${total} Units`);
         }
+
+        const activeAddons = watchedValues.addons?.filter((a: any) => !!a.value).length || 0;
+        if (activeAddons > 0) parts.push(`${activeAddons} Add-ons`);
 
         return parts.join(' • ');
     };
 
     return (
         <div className="group relative">
-            <AccordionItem value={item.id} className="border rounded-xl bg-card shadow-sm overflow-hidden transition-all data-[state=open]:ring-2 data-[state=open]:ring-primary/20">
+            <AccordionItem 
+                value={item.id} 
+                className={cn(
+                    "border rounded-xl transition-all duration-200 overflow-hidden",
+                    isExpanded 
+                        ? "border-l-4 border-primary shadow-md bg-background ring-2 ring-primary/10" 
+                        : "bg-card hover:bg-muted/50"
+                )}
+            >
                 <div className="flex items-center px-4 h-16">
                     <AccordionTrigger className="flex-1 hover:no-underline py-0">
                         <div className="flex items-center gap-4 text-left">
-                            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                                <Package className="h-5 w-5 text-primary" />
+                            <div className={cn(
+                                "h-10 w-10 rounded-lg flex items-center justify-center transition-colors",
+                                isExpanded ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary"
+                            )}>
+                                <Package className="h-5 w-5" />
                             </div>
                             <div>
                                 <h3 className="font-semibold text-base leading-none">{item.productName}</h3>
-                                <p className="text-sm text-muted-foreground mt-1">{getSummary()}</p>
+                                <div className="text-sm mt-1">{getSummary()}</div>
                             </div>
                         </div>
                     </AccordionTrigger>
@@ -226,7 +255,7 @@ export function DeliverableRow({ item }: DeliverableRowProps) {
                             </TooltipProvider>
                         )}
 
-                        {product?.configType === 'A' && (
+                        {!isExpanded && product?.configType === 'A' && (
                             <div className="flex items-center gap-2">
                                 <Label htmlFor={`qty-${item.id}`} className="sr-only">Quantity</Label>
                                 <Input
@@ -238,35 +267,47 @@ export function DeliverableRow({ item }: DeliverableRowProps) {
                             </div>
                         )}
 
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-9 w-9">
-                                    <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                <DropdownMenuItem className="text-destructive" onClick={() => removeDeliverable(item.id)}>
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    Remove Item
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+                        {isExpanded ? (
+                             <Button size="sm" onClick={handleDoneClick} className="gap-2">
+                                <Check className="h-4 w-4" />
+                                Done
+                             </Button>
+                        ) : (
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-9 w-9">
+                                        <MoreHorizontal className="h-4 w-4" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuItem className="text-destructive" onClick={() => removeDeliverable(item.id)}>
+                                        <Trash2 className="mr-2 h-4 w-4" />
+                                        Remove Item
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        )}
                     </div>
                 </div>
 
-                <AccordionContent className="px-4 pb-4 border-t bg-muted/30">
+                <AccordionContent className="px-4 pb-4 border-t bg-muted/5 relative">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
                         <div className="space-y-4">
                             {/* Variant Selection */}
                             {product?.variants && (
                                 <div className="space-y-1.5">
-                                    <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Variant</Label>
+                                    <Label className={cn(
+                                        "text-xs font-semibold uppercase tracking-wider",
+                                        errors.variant ? "text-destructive" : "text-muted-foreground"
+                                    )}>
+                                        Variant {errors.variant && " (Required)"}
+                                    </Label>
                                     <Controller
                                         name="variant"
                                         control={control}
                                         render={({ field }) => (
                                             <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                                <SelectTrigger className="h-9">
+                                                <SelectTrigger className={cn("h-9", errors.variant && "border-destructive")}>
                                                     <SelectValue placeholder="Select variant" />
                                                 </SelectTrigger>
                                                 <SelectContent>
