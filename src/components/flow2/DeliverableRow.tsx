@@ -88,6 +88,9 @@ export function DeliverableRow({ item, isExpanded, onDone, onValidityChange }: D
     const { updateDeliverable, removeDeliverable } = useOrder();
     const product = productCatalog.find(p => p.id === item.productId) || null;
     
+    const qtyInputRef = React.useRef<HTMLInputElement>(null);
+    const variantTriggerRef = React.useRef<HTMLButtonElement>(null);
+
     const form = useForm({
         resolver: zodResolver(getValidationSchema(product)),
         defaultValues: {
@@ -112,13 +115,27 @@ export function DeliverableRow({ item, isExpanded, onDone, onValidityChange }: D
         mode: 'onChange'
     });
 
-    const { register, control, watch, formState: { errors, isValid }, handleSubmit, trigger } = form;
+    const { register, control, watch, formState: { errors, isValid }, handleSubmit, trigger, setValue } = form;
     const watchedValues = watch();
 
     // Notify parent of validity changes
     React.useEffect(() => {
         onValidityChange(item.id, isValid);
     }, [isValid, item.id, onValidityChange]);
+
+    // Auto-focus logic when expanded
+    React.useEffect(() => {
+        if (isExpanded) {
+            const timer = setTimeout(() => {
+                if (product?.variants) {
+                    variantTriggerRef.current?.focus();
+                } else if (product?.configType === 'A') {
+                    qtyInputRef.current?.focus();
+                }
+            }, 100);
+            return () => clearTimeout(timer);
+        }
+    }, [isExpanded, product]);
 
     // Auto-update context when form changes
     React.useEffect(() => {
@@ -183,12 +200,18 @@ export function DeliverableRow({ item, isExpanded, onDone, onValidityChange }: D
         }
     };
 
+    const handleDelete = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (window.confirm("Are you sure you want to remove this item? All configurations for this deliverable will be lost.")) {
+            removeDeliverable(item.id);
+        }
+    }
+
     const getSummary = () => {
         if (!product) return '';
         
-        // Show "Setup Required" if variant is missing but required
         if (product.variants && !watchedValues.variant) {
-            return <Badge variant="destructive" className="animate-pulse">Setup Required</Badge>;
+            return <Badge variant="destructive" className="bg-destructive text-destructive-foreground animate-pulse">Setup Required</Badge>;
         }
 
         const parts: string[] = [];
@@ -216,11 +239,13 @@ export function DeliverableRow({ item, isExpanded, onDone, onValidityChange }: D
         <div className="group relative">
             <AccordionItem 
                 value={item.id} 
+                id={`deliverable-${item.id}`}
                 className={cn(
                     "border rounded-xl transition-all duration-200 overflow-hidden",
                     isExpanded 
                         ? "border-l-4 border-primary shadow-md bg-background ring-2 ring-primary/10" 
-                        : "bg-card hover:bg-muted/50"
+                        : "bg-card hover:bg-muted/50",
+                    !isValid && !isExpanded && "border-destructive border-l-4 bg-destructive/5"
                 )}
             >
                 <div className="flex items-center px-4 h-16">
@@ -257,9 +282,9 @@ export function DeliverableRow({ item, isExpanded, onDone, onValidityChange }: D
 
                         {!isExpanded && product?.configType === 'A' && (
                             <div className="flex items-center gap-2">
-                                <Label htmlFor={`qty-${item.id}`} className="sr-only">Quantity</Label>
+                                <Label htmlFor={`qty-h-${item.id}`} className="sr-only">Quantity</Label>
                                 <Input
-                                    id={`qty-${item.id}`}
+                                    id={`qty-h-${item.id}`}
                                     type="number"
                                     className="w-20 h-9 bg-background/50"
                                     {...register('quantity', { valueAsNumber: true })}
@@ -280,7 +305,7 @@ export function DeliverableRow({ item, isExpanded, onDone, onValidityChange }: D
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
-                                    <DropdownMenuItem className="text-destructive" onClick={() => removeDeliverable(item.id)}>
+                                    <DropdownMenuItem className="text-destructive" onClick={handleDelete}>
                                         <Trash2 className="mr-2 h-4 w-4" />
                                         Remove Item
                                     </DropdownMenuItem>
@@ -293,6 +318,29 @@ export function DeliverableRow({ item, isExpanded, onDone, onValidityChange }: D
                 <AccordionContent className="px-4 pb-4 border-t bg-muted/5 relative">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
                         <div className="space-y-4">
+                            {/* Quantity for Type A */}
+                            {product?.configType === 'A' && (
+                                <div className="space-y-1.5">
+                                    <Label className={cn(
+                                        "text-xs font-semibold uppercase tracking-wider",
+                                        errors.quantity ? "text-destructive" : "text-muted-foreground"
+                                    )}>
+                                        Quantity {errors.quantity && " (Required)"}
+                                    </Label>
+                                    <Input 
+                                        type="number" 
+                                        {...register('quantity', { valueAsNumber: true })} 
+                                        className={cn("h-9", errors.quantity && "border-destructive")} 
+                                        ref={(e) => {
+                                            register('quantity').ref(e);
+                                            // @ts-ignore
+                                            qtyInputRef.current = e;
+                                        }}
+                                    />
+                                    {errors.quantity && <p className="text-xs text-destructive">{errors.quantity.message}</p>}
+                                </div>
+                            )}
+
                             {/* Variant Selection */}
                             {product?.variants && (
                                 <div className="space-y-1.5">
@@ -307,7 +355,10 @@ export function DeliverableRow({ item, isExpanded, onDone, onValidityChange }: D
                                         control={control}
                                         render={({ field }) => (
                                             <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                                <SelectTrigger className={cn("h-9", errors.variant && "border-destructive")}>
+                                                <SelectTrigger 
+                                                    className={cn("h-9", errors.variant && "border-destructive")}
+                                                    ref={variantTriggerRef}
+                                                >
                                                     <SelectValue placeholder="Select variant" />
                                                 </SelectTrigger>
                                                 <SelectContent>
@@ -318,6 +369,7 @@ export function DeliverableRow({ item, isExpanded, onDone, onValidityChange }: D
                                             </Select>
                                         )}
                                     />
+                                    {errors.variant && <p className="text-xs text-destructive">{errors.variant.message}</p>}
                                 </div>
                             )}
 
@@ -396,7 +448,6 @@ export function DeliverableRow({ item, isExpanded, onDone, onValidityChange }: D
                                                                         checked={isChecked} 
                                                                         onCheckedChange={(checked) => {
                                                                             if (checked) {
-                                                                                // Ensure it sets to at least 1 when selected
                                                                                 const val = (typeof field.value === 'number' && field.value > 0) ? field.value : 1;
                                                                                 field.onChange(val);
                                                                             } else {

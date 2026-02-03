@@ -21,18 +21,24 @@ export default function DeliverablesPage() {
     const [rowValidity, setRowValidity] = useState<Record<string, boolean>>({});
     const prevCount = useRef(order.deliverables.length);
 
-    // Auto-expand newly added items
+    // Auto-scroll to newly added items
     useEffect(() => {
         if (order.deliverables.length > prevCount.current) {
             const newItem = order.deliverables[order.deliverables.length - 1];
+            // Auto-expand
             setOpenItems(prev => Array.from(new Set([...prev, newItem.id])));
+            
+            // Scroll to it
+            setTimeout(() => {
+                const el = document.getElementById(`deliverable-${newItem.id}`);
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 100);
         }
         prevCount.current = order.deliverables.length;
     }, [order.deliverables]);
 
     const handleValidityChange = useCallback((id: string, isValid: boolean) => {
         setRowValidity(prev => {
-            // Only update if the value has actually changed to prevent render loops
             if (prev[id] === isValid) return prev;
             return { ...prev, [id]: isValid };
         });
@@ -43,18 +49,36 @@ export default function DeliverablesPage() {
     }, []);
 
     const handleValueChange = useCallback((newValues: string[]) => {
-        // Block closing if the item is invalid
         const closedItems = openItems.filter(id => !newValues.includes(id));
         const invalidClosedItems = closedItems.filter(id => rowValidity[id] === false);
 
         if (invalidClosedItems.length > 0) {
-            // Re-add invalid items to the open list
             setOpenItems(Array.from(new Set([...newValues, ...invalidClosedItems])));
             return;
         }
 
         setOpenItems(newValues);
     }, [openItems, rowValidity]);
+
+    const handleNextStep = () => {
+        // Find first invalid item ID
+        const firstInvalidId = Object.entries(rowValidity).find(([_, valid]) => !valid)?.[0];
+        
+        if (firstInvalidId) {
+            // Expand it if it isn't already
+            if (!openItems.includes(firstInvalidId)) {
+                setOpenItems(prev => [...prev, firstInvalidId]);
+            }
+            // Scroll to it
+            setTimeout(() => {
+                const el = document.getElementById(`deliverable-${firstInvalidId}`);
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 100);
+            return;
+        }
+
+        router.push('/commercials');
+    };
 
     return (
         <AppLayout>
@@ -74,12 +98,10 @@ export default function DeliverablesPage() {
 
                 <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
                     <div className="mx-auto max-w-4xl space-y-8">
-                        {/* Search & Quick Add Section */}
                         <section className="space-y-4">
                             <CommandBar />
                         </section>
 
-                        {/* Deliverables List */}
                         <section className="space-y-4">
                             <div className="flex items-center justify-between">
                                 <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
@@ -87,7 +109,7 @@ export default function DeliverablesPage() {
                                 </h2>
                                 {Object.values(rowValidity).some(v => v === false) && (
                                     <span className="text-xs font-medium text-destructive animate-pulse">
-                                        Please complete all items
+                                        Please complete all items before moving to commercials
                                     </span>
                                 )}
                             </div>
@@ -125,8 +147,8 @@ export default function DeliverablesPage() {
                     <div className="flex items-center gap-4">
                         <Button variant="secondary" onClick={saveAsDraft}>Save as Draft</Button>
                         <Button
-                            onClick={() => router.push('/commercials')}
-                            disabled={order.deliverables.length === 0 || Object.values(rowValidity).some(v => v === false)}
+                            onClick={handleNextStep}
+                            disabled={order.deliverables.length === 0}
                         >
                             Next Step (Commercials)
                         </Button>
