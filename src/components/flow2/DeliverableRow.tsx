@@ -125,20 +125,19 @@ export const DeliverableRow = React.memo(function DeliverableRow({
 
     const { register, control, watch, formState: { errors, isValid }, trigger, getValues } = form;
     
-    // Watch all values to trigger summary updates and debounced context sync
     const watchedValues = watch();
 
-    // Initial validation on mount
+    // Proactive validation on mount
     React.useEffect(() => {
         trigger();
     }, [trigger]);
 
-    // Reporting validity to parent - only when it actually changes
+    // Report validity to parent
     React.useEffect(() => {
         onValidityChange(item.id, isValid);
     }, [isValid, item.id, onValidityChange]);
 
-    // SMART AUTOFOCUS: Only if expanded AND INVALID
+    // Smart Autofocus: Focus relevant fields only on invalid expanded items
     React.useEffect(() => {
         if (isExpanded && !isValid) {
             const timer = setTimeout(() => {
@@ -152,7 +151,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         }
     }, [isExpanded, isValid, product]);
 
-    // DEBOUNCED GLOBAL SYNC: Only update global context after typing stops for 400ms
+    // Debounced context sync for performance
     React.useEffect(() => {
         const timer = setTimeout(() => {
             const currentValues = getValues();
@@ -225,13 +224,8 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         }
     }
 
-    const getSummary = () => {
+    const getSummaryText = () => {
         if (!product) return '';
-        
-        if (product.variants && !watchedValues.variant) {
-            return <Badge variant="destructive" className="bg-destructive text-destructive-foreground text-[10px] h-4 py-0">Setup Required</Badge>;
-        }
-
         const parts: string[] = [];
         if (watchedValues.variant) parts.push(watchedValues.variant);
         
@@ -314,7 +308,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                 </h3>
                                 {!isExpanded && (
                                     <div className="text-xs text-muted-foreground truncate flex-1">
-                                        {getSummary()}
+                                        {watchedValues.variant ? getSummaryText() : <Badge variant="destructive" className="bg-destructive text-destructive-foreground text-[10px] h-4 py-0">Setup Required</Badge>}
                                     </div>
                                 )}
                             </div>
@@ -373,7 +367,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                 <AccordionContent className="px-4 pb-4 border-t bg-muted/5 relative">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
                         <div className="space-y-4">
-                            {/* Prominent Quantity Input inside Expanded State */}
+                            {/* Quantity Input */}
                             {(product?.configType === 'A' || product?.configType === 'B') && (
                                 <div className="space-y-1.5 p-4 rounded-lg border-2 border-primary/20 bg-primary/5 shadow-sm">
                                     <Label className={cn(
@@ -405,7 +399,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                 </div>
                             )}
 
-                            {/* Variant Selection */}
+                            {/* Variant Selection (Controlled) */}
                             {product?.variants && (
                                 <div className="space-y-1.5">
                                     <Label className={cn(
@@ -418,7 +412,10 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                         name="variant"
                                         control={control}
                                         render={({ field }) => (
-                                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                            <Select 
+                                                onValueChange={field.onChange} 
+                                                value={field.value || ""}
+                                            >
                                                 <SelectTrigger 
                                                     className={cn("h-9", errors.variant && "border-destructive")}
                                                     ref={variantTriggerRef}
@@ -437,7 +434,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                 </div>
                             )}
 
-                            {/* Configuration Specifics */}
                             {product?.configType === 'D' && product.customFields && (
                                 <div className="space-y-3 p-3 rounded-lg border bg-background/50">
                                     <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Quantities</Label>
