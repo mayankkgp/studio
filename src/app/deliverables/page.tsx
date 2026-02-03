@@ -64,19 +64,30 @@ export default function DeliverablesPage() {
         setOpenItems(newValues);
     }, [openItems, rowValidity]);
 
-    // Split items into Active and Completed
+    // Split items into Active Queue and Completed
+    // Logic: Active Queue = Invalid items OR items that are currently open/expanded
+    // Completed = Valid items that are closed
     const { activeItems, completedItems } = useMemo(() => {
-        const active = order.deliverables.filter(item => rowValidity[item.id] === false);
-        const completed = order.deliverables.filter(item => rowValidity[item.id] === true);
-        
-        // Items that haven't reported validity yet (on mount) are briefly "unclassified"
-        const unclassified = order.deliverables.filter(item => rowValidity[item.id] === undefined);
+        const active = order.deliverables.filter(item => {
+            const isValid = rowValidity[item.id] === true;
+            const isExpanded = openItems.includes(item.id);
+            // If it hasn't reported validity yet, treat as active
+            const validityReported = rowValidity[item.id] !== undefined;
+            
+            return !validityReported || !isValid || isExpanded;
+        });
+
+        const completed = order.deliverables.filter(item => {
+            const isValid = rowValidity[item.id] === true;
+            const isExpanded = openItems.includes(item.id);
+            return isValid && !isExpanded;
+        });
 
         return { 
-            activeItems: [...active, ...unclassified], 
+            activeItems: active, 
             completedItems: [...completed].reverse() 
         };
-    }, [order.deliverables, rowValidity]);
+    }, [order.deliverables, rowValidity, openItems]);
 
     const handleNextStep = useCallback(() => {
         const firstInvalidId = Object.entries(rowValidity).find(([_, valid]) => !valid)?.[0];
@@ -126,10 +137,10 @@ export default function DeliverablesPage() {
                     </div>
                 </header>
 
-                <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
-                    <div className="mx-auto max-w-4xl space-y-8">
-                        {/* Sticky Command Bar Section */}
-                        <section className="sticky top-[-16px] md:top-[-24px] lg:top-[-32px] z-30 bg-background pt-4 pb-4 -mx-4 px-4 shadow-sm border-b md:border-none md:rounded-b-xl">
+                <main className="flex-1 overflow-y-auto bg-background">
+                    <div className="mx-auto max-w-4xl space-y-8 p-4 md:p-6 lg:p-8">
+                        {/* Sticky Command Bar Section - Flush to top with zero gaps */}
+                        <section className="sticky top-0 z-30 bg-background/95 backdrop-blur pt-4 md:pt-6 -mx-4 md:-mx-6 px-4 md:px-6 shadow-sm border-b md:border-none md:rounded-b-xl">
                             <CommandBar />
                         </section>
 

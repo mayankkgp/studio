@@ -127,7 +127,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
     
     const watchedValues = watch();
 
-    // Proactive validation on mount
+    // Proactive validation on mount to prevent "False Invalid" on remounts
     React.useEffect(() => {
         trigger();
     }, [trigger]);
@@ -192,7 +192,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         return warnings.join(' ');
     };
 
-    // Immediate sync for variant to prevent "jump-revert"
+    // Immediate sync for variant selection to prevent "Jump-Revert"
     const handleVariantChange = (val: string) => {
         setValue('variant', val, { shouldValidate: true, shouldDirty: true });
         const currentValues = getValues();
@@ -207,7 +207,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         });
     };
 
-    // Debounced context sync for performance (for text/numbers)
+    // Debounced context sync for performance (for typing) - 300ms wait
     React.useEffect(() => {
         const timer = setTimeout(() => {
             const currentValues = getValues();
@@ -219,7 +219,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                 addons: currentValues.addons?.filter((a: any) => a.value !== false && a.value !== 0) as any,
                 sizes: currentValues.sizes?.filter((s: any) => s.quantity > 0) as any
             });
-        }, 400);
+        }, 300);
 
         return () => clearTimeout(timer);
     }, [watchedValues.quantity, watchedValues.pages, watchedValues.specialRequest, watchedValues.customFieldValues, watchedValues.addons, watchedValues.sizes, onUpdate, item.id, product, getValues]);
@@ -382,7 +382,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                 <AccordionContent className="px-4 pb-4 border-t bg-muted/5 relative">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
                         <div className="space-y-4">
-                            {/* Quantity Input */}
+                            {/* Quantity Input - Prominent for Type A/B */}
                             {(product?.configType === 'A' || product?.configType === 'B') && (
                                 <div className="space-y-1.5 p-4 rounded-lg border-2 border-primary/20 bg-primary/5 shadow-sm">
                                     <Label className={cn(
@@ -414,7 +414,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                 </div>
                             )}
 
-                            {/* Variant Selection (Controlled) */}
+                            {/* Variant Selection */}
                             {product?.variants && (
                                 <div className="space-y-1.5">
                                     <Label className={cn(
