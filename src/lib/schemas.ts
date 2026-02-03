@@ -10,7 +10,7 @@ export const eventDetailsSchema = z
     eventType: z.enum(['Wedding', 'Engagement', 'Anniversary', 'Birthday', 'Others'], {
       required_error: 'You need to select an event type.',
     }),
-    venueName: requiredString,
+    venueName: optionalString,
     eventDate: requiredDate,
     orderDueDate: requiredDate,
     shipToCity: optionalString,

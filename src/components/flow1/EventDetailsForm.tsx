@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -7,7 +6,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
-import { CalendarIcon, Users, Star, PartyPopper, Cake, Milestone, Check, ChevronsUpDown } from 'lucide-react';
+import { CalendarIcon, Users, Star, PartyPopper, Cake, Milestone, Check, ChevronsUpDown, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -66,69 +65,84 @@ function ComboboxCity({
   const [searchValue, setSearchValue] = useState("");
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
+    <div className="relative group">
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            className={cn(
+              "w-full justify-between font-normal text-left h-10 px-3 pr-10",
+              !value && "text-muted-foreground",
+              error && "border-destructive ring-1 ring-destructive"
+            )}
+          >
+            <span className="truncate">{value || placeholder}</span>
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+          <Command>
+            <CommandInput 
+              placeholder={`Search ${placeholder.toLowerCase()}...`} 
+              onValueChange={setSearchValue}
+            />
+            <CommandList>
+              <CommandEmpty>
+                <div className="p-2 flex flex-col gap-2">
+                  <p className="text-sm text-muted-foreground text-center">No city found.</p>
+                  <Button 
+                    size="sm" 
+                    variant="secondary" 
+                    className="w-full justify-start h-8 px-2"
+                    onClick={() => {
+                      onSelect(searchValue);
+                      setOpen(false);
+                    }}
+                  >
+                    Use "{searchValue}"
+                  </Button>
+                </div>
+              </CommandEmpty>
+              <CommandGroup heading="Cities">
+                {CITIES.map((city) => (
+                  <CommandItem
+                    key={city}
+                    value={city}
+                    onSelect={(currentValue) => {
+                      onSelect(currentValue === value ? "" : currentValue);
+                      setOpen(false);
+                    }}
+                  >
+                    <Check
+                      className={cn(
+                        "mr-2 h-4 w-4",
+                        value === city ? "opacity-100" : "opacity-0"
+                      )}
+                    />
+                    {city}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+      {value && (
         <Button
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          className={cn(
-            "w-full justify-between font-normal text-left h-10 px-3",
-            !value && "text-muted-foreground",
-            error && "border-destructive ring-1 ring-destructive"
-          )}
+          variant="ghost"
+          size="icon"
+          className="absolute right-8 top-1/2 -translate-y-1/2 h-8 w-8 text-muted-foreground hover:text-foreground"
+          onClick={(e) => {
+            e.stopPropagation();
+            onSelect("");
+          }}
         >
-          <span className="truncate">{value || placeholder}</span>
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          <X className="h-4 w-4" />
         </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-        <Command>
-          <CommandInput 
-            placeholder={`Search ${placeholder.toLowerCase()}...`} 
-            onValueChange={setSearchValue}
-          />
-          <CommandList>
-            <CommandEmpty>
-              <div className="p-2 flex flex-col gap-2">
-                <p className="text-sm text-muted-foreground text-center">No city found.</p>
-                <Button 
-                  size="sm" 
-                  variant="secondary" 
-                  className="w-full justify-start h-8 px-2"
-                  onClick={() => {
-                    onSelect(searchValue);
-                    setOpen(false);
-                  }}
-                >
-                  Use "{searchValue}"
-                </Button>
-              </div>
-            </CommandEmpty>
-            <CommandGroup heading="Cities">
-              {CITIES.map((city) => (
-                <CommandItem
-                  key={city}
-                  value={city}
-                  onSelect={(currentValue) => {
-                    onSelect(currentValue === value ? "" : currentValue);
-                    setOpen(false);
-                  }}
-                >
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      value === city ? "opacity-100" : "opacity-0"
-                    )}
-                  />
-                  {city}
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
+      )}
+    </div>
   );
 }
 
@@ -142,7 +156,7 @@ export function EventDetailsForm() {
     mode: 'onChange'
   });
 
-  const { register, control, watch, handleSubmit, formState: { errors, isValid }, reset } = form;
+  const { register, control, watch, handleSubmit, formState: { errors, isValid }, reset, setValue } = form;
   
   useEffect(() => {
     if (isLoaded) {
@@ -228,7 +242,7 @@ export function EventDetailsForm() {
             <CardContent className="space-y-6">
               <div className="grid md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="venueName">Venue Name</Label>
+                  <Label htmlFor="venueName">Venue</Label>
                   <Controller
                     name="venueName"
                     control={control}
@@ -280,8 +294,20 @@ export function EventDetailsForm() {
                               {field.value ? format(new Date(field.value), 'dd MMM yyyy') : <span>Pick a date</span>}
                             </Button>
                           </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
+                          <PopoverContent className="w-auto p-0 flex flex-col" align="start">
                             <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                            {field.value && (
+                              <div className="p-2 border-t">
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
+                                  onClick={() => field.onChange(undefined)}
+                                >
+                                  Clear Date
+                                </Button>
+                              </div>
+                            )}
                           </PopoverContent>
                         </Popover>
                       )}
@@ -308,8 +334,20 @@ export function EventDetailsForm() {
                               {field.value ? format(new Date(field.value), 'dd MMM yyyy') : <span>Pick a date</span>}
                             </Button>
                           </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
+                          <PopoverContent className="w-auto p-0 flex flex-col" align="start">
                             <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                            {field.value && (
+                              <div className="p-2 border-t">
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
+                                  onClick={() => field.onChange(undefined)}
+                                >
+                                  Clear Date
+                                </Button>
+                              </div>
+                            )}
                           </PopoverContent>
                         </Popover>
                       )}
@@ -383,8 +421,20 @@ export function EventDetailsForm() {
                                         {field.value ? format(new Date(field.value), 'dd MMM yyyy') : <span>Pick a date</span>}
                                         </Button>
                                     </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0" align="start">
+                                    <PopoverContent className="w-auto p-0 flex flex-col" align="start">
                                         <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                                        {field.value && (
+                                          <div className="p-2 border-t">
+                                            <Button 
+                                              variant="ghost" 
+                                              size="sm" 
+                                              className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
+                                              onClick={() => field.onChange(undefined)}
+                                            >
+                                              Clear Date
+                                            </Button>
+                                          </div>
+                                        )}
                                     </PopoverContent>
                                     </Popover>
                                 )}
