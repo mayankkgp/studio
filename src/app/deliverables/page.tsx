@@ -10,7 +10,7 @@ import { CommandBar } from "@/components/flow2/CommandBar";
 import { DeliverableRow } from "@/components/flow2/DeliverableRow";
 import { Package } from "lucide-react";
 import { Accordion } from "@/components/ui/accordion";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 
 export default function DeliverablesPage() {
     const router = useRouter();
@@ -30,11 +30,19 @@ export default function DeliverablesPage() {
         prevCount.current = order.deliverables.length;
     }, [order.deliverables]);
 
-    const handleValidityChange = (id: string, isValid: boolean) => {
-        setRowValidity(prev => ({ ...prev, [id]: isValid }));
-    };
+    const handleValidityChange = useCallback((id: string, isValid: boolean) => {
+        setRowValidity(prev => {
+            // Only update if the value has actually changed to prevent render loops
+            if (prev[id] === isValid) return prev;
+            return { ...prev, [id]: isValid };
+        });
+    }, []);
 
-    const handleValueChange = (newValues: string[]) => {
+    const handleDone = useCallback((id: string) => {
+        setOpenItems(prev => prev.filter(itemId => itemId !== id));
+    }, []);
+
+    const handleValueChange = useCallback((newValues: string[]) => {
         // Block closing if the item is invalid
         const closedItems = openItems.filter(id => !newValues.includes(id));
         const invalidClosedItems = closedItems.filter(id => rowValidity[id] === false);
@@ -46,7 +54,7 @@ export default function DeliverablesPage() {
         }
 
         setOpenItems(newValues);
-    };
+    }, [openItems, rowValidity]);
 
     return (
         <AppLayout>
@@ -102,7 +110,7 @@ export default function DeliverablesPage() {
                                             key={item.id} 
                                             item={item} 
                                             isExpanded={openItems.includes(item.id)}
-                                            onDone={() => setOpenItems(prev => prev.filter(id => id !== item.id))}
+                                            onDone={() => handleDone(item.id)}
                                             onValidityChange={handleValidityChange}
                                         />
                                     ))}
