@@ -15,7 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function DeliverablesPage() {
     const router = useRouter();
-    const { order, saveAsDraft } = useOrder();
+    const { order, saveAsDraft, updateDeliverable, removeDeliverable } = useOrder();
     const { toast } = useToast();
     const headerSummary = useHeaderSummary(order.eventDetails);
     
@@ -151,8 +151,10 @@ export default function DeliverablesPage() {
                                             key={item.id} 
                                             item={item} 
                                             isExpanded={openItems.includes(item.id)}
-                                            onDone={() => handleDone(item.id)}
+                                            onDone={handleDone}
                                             onValidityChange={handleValidityChange}
+                                            onUpdate={updateDeliverable}
+                                            onRemove={removeDeliverable}
                                         />
                                     ))}
                                 </Accordion>

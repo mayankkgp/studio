@@ -13,7 +13,6 @@ import {
 import { cn } from '@/lib/utils';
 import { productCatalog } from '@/lib/product-data';
 import type { Product, ConfiguredProduct, SoftConstraint } from '@/lib/types';
-import { useOrder } from '@/context/OrderContext';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -36,8 +35,10 @@ import {
 interface DeliverableRowProps {
     item: ConfiguredProduct;
     isExpanded: boolean;
-    onDone: () => void;
+    onDone: (id: string) => void;
     onValidityChange: (id: string, isValid: boolean) => void;
+    onUpdate: (id: string, updates: Partial<ConfiguredProduct>) => void;
+    onRemove: (id: string) => void;
 }
 
 const getValidationSchema = (product: Product | null) => {
@@ -77,8 +78,14 @@ const getValidationSchema = (product: Product | null) => {
     return z.object(schemaObject);
 };
 
-export const DeliverableRow = React.memo(function DeliverableRow({ item, isExpanded, onDone, onValidityChange }: DeliverableRowProps) {
-    const { updateDeliverable, removeDeliverable } = useOrder();
+export const DeliverableRow = React.memo(function DeliverableRow({ 
+    item, 
+    isExpanded, 
+    onDone, 
+    onValidityChange,
+    onUpdate,
+    onRemove
+}: DeliverableRowProps) {
     const product = productCatalog.find(p => p.id === item.productId) || null;
     
     const qtyInputRef = React.useRef<HTMLInputElement>(null);
@@ -131,7 +138,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({ item, isExpan
     React.useEffect(() => {
         const subscription = watch((value) => {
             const warning = checkWarnings(value, product);
-            updateDeliverable(item.id, {
+            onUpdate(item.id, {
                 ...value,
                 warning,
                 addons: value.addons?.filter((a: any) => a.value !== false && a.value !== 0) as any,
@@ -139,7 +146,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({ item, isExpan
             });
         });
         return () => subscription.unsubscribe();
-    }, [watch, updateDeliverable, item.id, product]);
+    }, [watch, onUpdate, item.id, product]);
 
     const checkWarnings = (data: any, product: Product | null): string | undefined => {
         if (!product) return undefined;
@@ -186,14 +193,14 @@ export const DeliverableRow = React.memo(function DeliverableRow({ item, isExpan
         e.stopPropagation();
         const result = await trigger();
         if (result) {
-            onDone();
+            onDone(item.id);
         }
     };
 
     const handleDelete = (e: React.MouseEvent) => {
         e.stopPropagation();
         if (window.confirm("Are you sure you want to remove this item? All configurations for this deliverable will be lost.")) {
-            removeDeliverable(item.id);
+            onRemove(item.id);
         }
     }
 
