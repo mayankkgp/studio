@@ -503,24 +503,27 @@ export function EventDetailsForm() {
                             <FormError message={errors.weddingDate?.message} />
                         </div>
                         <div className="space-y-2">
-                           <Label>Wedding Date Status</Label>
+                           <Label className={cn(errors.dateStatus && "text-destructive")}>Wedding Date Status</Label>
                            <Controller
                               name="dateStatus"
                               control={control}
                               render={({ field }) => (
                                 <Tabs 
-                                  value={field.value ? 'fixed' : 'tentative'} 
+                                  value={field.value === true ? 'fixed' : field.value === false ? 'tentative' : ''} 
                                   onValueChange={(val) => field.onChange(val === 'fixed')}
                                   className="w-full"
                                 >
-                                  <TabsList className="grid w-full grid-cols-2 h-10">
+                                  <TabsList className={cn(
+                                    "grid w-full grid-cols-2 h-10",
+                                    errors.dateStatus && "border-destructive ring-1 ring-destructive"
+                                  )}>
                                     <TabsTrigger value="tentative">Tentative</TabsTrigger>
                                     <TabsTrigger value="fixed">Fixed</TabsTrigger>
                                   </TabsList>
                                 </Tabs>
                               )}
                             />
-                            <div className="h-5" />
+                            <FormError message={errors.dateStatus?.message} />
                         </div>
                     </div>
                   </>

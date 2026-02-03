@@ -22,7 +22,7 @@ export const eventDetailsSchema = z
     engagementBrideName: optionalString,
     engagementGroomName: optionalString,
     weddingDate: z.date().optional(),
-    dateStatus: z.boolean().default(true), // false = Tentative, true = Fixed
+    dateStatus: z.boolean().optional(), // No default, forced choice in refinement
 
     // Anniversary
     husbandName: optionalString,
@@ -52,6 +52,13 @@ export const eventDetailsSchema = z
       if (!data.engagementBrideName) ctx.addIssue({ code: 'custom', path: ['engagementBrideName'], message: 'Bride\'s name is required' });
       if (!data.engagementGroomName) ctx.addIssue({ code: 'custom', path: ['engagementGroomName'], message: 'Groom\'s name is required' });
       if (!data.weddingDate) ctx.addIssue({ code: 'custom', path: ['weddingDate'], message: 'Wedding date is required' });
+      if (data.dateStatus === undefined) {
+        ctx.addIssue({ 
+          code: 'custom', 
+          path: ['dateStatus'], 
+          message: 'Please select if the date is Fixed or Tentative' 
+        });
+      }
     }
 
     // Anniversary validation
