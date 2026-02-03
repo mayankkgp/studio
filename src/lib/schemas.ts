@@ -23,7 +23,7 @@ export const eventDetailsSchema = z
     engagementBrideName: optionalString,
     engagementGroomName: optionalString,
     weddingDate: z.date().optional(),
-    dateStatus: z.boolean().default(false), // false = Tentative, true = Fixed
+    dateStatus: z.boolean().default(true), // false = Tentative, true = Fixed (defaulting to true)
 
     // Anniversary
     husbandName: optionalString,

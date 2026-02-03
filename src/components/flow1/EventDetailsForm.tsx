@@ -93,7 +93,6 @@ function ComboboxCity({
           <Command 
             onKeyDown={(e) => {
               if (e.key === "Enter") {
-                // If there's search text and no exact match is selected, use the custom value
                 const hasExactMatch = CITIES.some(city => city.toLowerCase() === searchValue.toLowerCase());
                 if (!hasExactMatch && searchValue) {
                   handleSelectCustom();
@@ -183,6 +182,13 @@ export function EventDetailsForm() {
   
   const watchedFields = watch();
   const headerSummary = useHeaderSummary(watchedFields);
+
+  // Force dateStatus to true (Fixed) for all events except Engagement
+  useEffect(() => {
+    if (watchedFields.eventType && watchedFields.eventType !== 'Engagement') {
+      setValue('dateStatus', true);
+    }
+  }, [watchedFields.eventType, setValue]);
 
   const dueDateWarning = (
     watchedFields.orderDueDate && watchedFields.eventDate &&
@@ -479,7 +485,7 @@ export function EventDetailsForm() {
                                 </Tabs>
                               )}
                             />
-                            <div className="h-5" /> {/* Spacer for symmetry */}
+                            <div className="h-5" />
                         </div>
                     </div>
                   </>
