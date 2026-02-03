@@ -7,6 +7,11 @@ import * as z from 'zod';
 import { 
     AlertTriangle, 
     Trash2, 
+    ShoppingBag,
+    Clapperboard,
+    FileText,
+    MailOpen,
+    Frame,
     Package,
     Check
 } from 'lucide-react';
@@ -31,6 +36,7 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useToast } from "@/hooks/use-toast";
 
 interface DeliverableRowProps {
     item: ConfiguredProduct;
@@ -87,6 +93,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
     onRemove
 }: DeliverableRowProps) {
     const product = productCatalog.find(p => p.id === item.productId) || null;
+    const { toast } = useToast();
     
     const qtyInputRef = React.useRef<HTMLInputElement>(null);
     const variantTriggerRef = React.useRef<HTMLButtonElement>(null);
@@ -115,7 +122,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         mode: 'onChange'
     });
 
-    const { register, control, watch, formState: { errors, isValid }, handleSubmit, trigger, setValue } = form;
+    const { register, control, watch, formState: { errors, isValid }, handleSubmit, trigger } = form;
     const watchedValues = watch();
 
     React.useEffect(() => {
@@ -232,6 +239,24 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         return parts.join(' • ');
     };
 
+    const getIcon = () => {
+        switch (product?.configType) {
+            case 'A': return ShoppingBag;
+            case 'B': return Clapperboard;
+            case 'C': return FileText;
+            case 'D': return MailOpen;
+            case 'E': return Frame;
+            default: return Package;
+        }
+    };
+    const IconComponent = getIcon();
+
+    const iconStatusClasses = isExpanded 
+        ? "text-primary bg-primary/10" 
+        : isValid 
+            ? "text-green-600 bg-green-100" 
+            : "text-destructive bg-destructive/10";
+
     return (
         <div className="group relative">
             <AccordionItem 
@@ -245,16 +270,28 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                     !isValid && !isExpanded && "border-destructive border-2 bg-destructive/5"
                 )}
             >
-                <div className={cn("flex items-center px-4 transition-all", isExpanded ? "h-16" : "h-12")}>
-                    <AccordionTrigger className="flex-1 hover:no-underline py-0">
+                <div className={cn("flex items-center px-4 transition-all", isExpanded ? "h-16" : "h-10")}>
+                    <AccordionTrigger 
+                        className="flex-1 hover:no-underline py-0"
+                        onClick={(e) => {
+                            if (isExpanded && !isValid) {
+                                e.preventDefault();
+                                toast({
+                                    variant: "destructive",
+                                    title: "Incomplete Item",
+                                    description: "Please complete all required fields before closing."
+                                });
+                            }
+                        }}
+                    >
                         <div className="flex items-center gap-3 text-left w-full overflow-hidden">
-                            {!isExpanded ? (
-                                <Package className="h-4 w-4 text-primary/60 shrink-0" />
-                            ) : (
-                                <div className="h-10 w-10 rounded-lg flex items-center justify-center bg-primary text-primary-foreground shrink-0">
-                                    <Package className="h-5 w-5" />
-                                </div>
-                            )}
+                            <div className={cn(
+                                "rounded-lg flex items-center justify-center shrink-0 transition-colors",
+                                isExpanded ? "h-10 w-10" : "h-7 w-7",
+                                iconStatusClasses
+                            )}>
+                                <IconComponent className={isExpanded ? "h-5 w-5" : "h-4 w-4"} />
+                            </div>
                             <div className={cn("flex items-baseline gap-3", !isExpanded && "flex-1")}>
                                 <h3 className={cn("font-semibold leading-none shrink-0", isExpanded ? "text-base" : "text-sm")}>
                                     {item.productName}
@@ -269,6 +306,12 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                     </AccordionTrigger>
 
                     <div className="flex items-center gap-2 ml-4" onClick={(e) => e.stopPropagation()}>
+                        {!isExpanded && (
+                             <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded">
+                                Qty: {item.quantity || item.pages || 0}
+                             </span>
+                        )}
+
                         {item.warning && (
                             <TooltipProvider>
                                 <Tooltip>
@@ -284,18 +327,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                             </TooltipProvider>
                         )}
 
-                        {!isExpanded && product?.configType === 'A' && (
-                            <div className="flex items-center gap-2">
-                                <Label htmlFor={`qty-h-${item.id}`} className="sr-only">Quantity</Label>
-                                <Input
-                                    id={`qty-h-${item.id}`}
-                                    type="number"
-                                    className="w-16 h-8 bg-background/50 text-xs"
-                                    {...register('quantity', { valueAsNumber: true })}
-                                />
-                            </div>
-                        )}
-
                         <div className="flex items-center gap-2">
                              <Button 
                                 variant="ghost" 
@@ -308,7 +339,12 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                             </Button>
                             
                             {isExpanded && (
-                                <Button size="sm" onClick={handleDoneClick} className="gap-2 h-8">
+                                <Button 
+                                    size="sm" 
+                                    onClick={handleDoneClick} 
+                                    className="gap-2 h-8"
+                                    disabled={!isValid}
+                                >
                                     <Check className="h-4 w-4" />
                                     Done
                                 </Button>
@@ -320,26 +356,35 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                 <AccordionContent className="px-4 pb-4 border-t bg-muted/5 relative">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
                         <div className="space-y-4">
-                            {/* Prominent Quantity for Type A in Expanded View (At the very top) */}
-                            {product?.configType === 'A' && (
+                            {/* Prominent Quantity Input inside Expanded State */}
+                            {(product?.configType === 'A' || product?.configType === 'B') && (
                                 <div className="space-y-1.5 p-4 rounded-lg border-2 border-primary/20 bg-primary/5 shadow-sm">
                                     <Label className={cn(
                                         "text-xs font-bold uppercase tracking-wider",
-                                        errors.quantity ? "text-destructive" : "text-primary"
+                                        errors.quantity || errors.pages ? "text-destructive" : "text-primary"
                                     )}>
-                                        Base Quantity {errors.quantity && " (Required)"}
+                                        {product.configType === 'A' ? 'Base Quantity' : 'Number of Pages'} 
+                                        {(errors.quantity || errors.pages) && " (Required)"}
                                     </Label>
                                     <Input 
                                         type="number" 
-                                        {...register('quantity', { valueAsNumber: true })} 
-                                        className={cn("h-12 text-xl font-bold bg-background", errors.quantity && "border-destructive")} 
+                                        {...register(product.configType === 'A' ? 'quantity' : 'pages', { valueAsNumber: true })} 
+                                        className={cn("h-12 text-xl font-bold bg-background", (errors.quantity || errors.pages) && "border-destructive")} 
                                         ref={(e) => {
-                                            register('quantity').ref(e);
-                                            // @ts-ignore
-                                            qtyInputRef.current = e;
+                                            if (product.configType === 'A') {
+                                                register('quantity').ref(e);
+                                                // @ts-ignore
+                                                qtyInputRef.current = e;
+                                            } else {
+                                                register('pages').ref(e);
+                                            }
                                         }}
                                     />
-                                    {errors.quantity && <p className="text-xs text-destructive font-medium">{errors.quantity.message}</p>}
+                                    {(errors.quantity || errors.pages) && (
+                                        <p className="text-xs text-destructive font-medium">
+                                            {errors.quantity?.message || errors.pages?.message}
+                                        </p>
+                                    )}
                                 </div>
                             )}
 
@@ -376,13 +421,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                             )}
 
                             {/* Configuration Specifics */}
-                            {product?.configType === 'B' && (
-                                <div className="space-y-1.5">
-                                    <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Pages</Label>
-                                    <Input type="number" {...register('pages', { valueAsNumber: true })} className="h-9" />
-                                </div>
-                            )}
-
                             {product?.configType === 'D' && product.customFields && (
                                 <div className="space-y-3 p-3 rounded-lg border bg-background/50">
                                     <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Quantities</Label>

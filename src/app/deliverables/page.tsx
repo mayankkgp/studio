@@ -8,10 +8,11 @@ import { useRouter } from "next/navigation";
 import { useHeaderSummary } from '@/hooks/use-header-summary';
 import { CommandBar } from "@/components/flow2/CommandBar";
 import { DeliverableRow } from "@/components/flow2/DeliverableRow";
-import { Package } from "lucide-react";
+import { Package, CheckCircle2, AlertCircle } from "lucide-react";
 import { Accordion } from "@/components/ui/accordion";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 export default function DeliverablesPage() {
     const router = useRouter();
@@ -63,8 +64,22 @@ export default function DeliverablesPage() {
         setOpenItems(newValues);
     }, [openItems, rowValidity]);
 
+    // Split items into Active and Completed
+    const { activeItems, completedItems } = useMemo(() => {
+        const active = order.deliverables.filter(item => 
+            openItems.includes(item.id) || rowValidity[item.id] === false
+        );
+        const completed = order.deliverables.filter(item => 
+            !openItems.includes(item.id) && rowValidity[item.id] === true
+        );
+        // Completed items sorted newest first (reverse order of addition)
+        return { 
+            active, 
+            completedItems: [...completed].reverse() 
+        };
+    }, [order.deliverables, openItems, rowValidity]);
+
     const handleNextStep = useCallback(() => {
-        // Find first invalid item ID
         const firstInvalidId = Object.entries(rowValidity).find(([_, valid]) => !valid)?.[0];
         
         if (firstInvalidId) {
@@ -74,11 +89,9 @@ export default function DeliverablesPage() {
                 description: "Please complete all required fields before moving to commercials."
             });
 
-            // Expand it if it isn't already
             if (!openItems.includes(firstInvalidId)) {
                 setOpenItems(prev => [...prev, firstInvalidId]);
             }
-            // Scroll to it
             setTimeout(() => {
                 const el = document.getElementById(`deliverable-${firstInvalidId}`);
                 if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -116,50 +129,82 @@ export default function DeliverablesPage() {
 
                 <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
                     <div className="mx-auto max-w-4xl space-y-8">
-                        {/* Sticky Command Bar Section */}
-                        <section className="sticky top-0 z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 py-4 -mx-4 px-4 shadow-sm border-b md:border-none md:rounded-b-xl">
+                        {/* Sticky Command Bar Section with negative margin fix */}
+                        <section className="sticky top-0 z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 py-4 -mx-4 px-4 shadow-sm border-b md:border-none md:rounded-b-xl -mt-4 md:-mt-6">
                             <CommandBar />
                         </section>
 
-                        <section className="space-y-4">
-                            <div className="flex items-center justify-between">
-                                <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                                    Added Items ({order.deliverables.length})
-                                </h2>
-                                {Object.values(rowValidity).some(v => v === false) && (
-                                    <span className="text-xs font-medium text-destructive animate-pulse">
-                                        Please complete all items before moving to commercials
-                                    </span>
-                                )}
-                            </div>
-                            
-                            {order.deliverables.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center py-20 border-2 border-dashed rounded-xl bg-card/50">
-                                    <Package className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                                    <p className="text-muted-foreground font-medium">No items added yet</p>
-                                    <p className="text-sm text-muted-foreground">Search above or press ⌘K to start building your quote</p>
+                        <div className="space-y-12">
+                            {/* Active Queue Section */}
+                            <section className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <h2 className="text-xs font-bold uppercase tracking-widest text-primary flex items-center gap-2">
+                                        <AlertCircle className="h-4 w-4" />
+                                        Active Queue ({activeItems.length})
+                                    </h2>
                                 </div>
-                            ) : (
-                                <Accordion 
-                                    type="multiple" 
-                                    value={openItems} 
-                                    onValueChange={handleValueChange} 
-                                    className="space-y-4"
-                                >
-                                    {order.deliverables.map((item) => (
-                                        <DeliverableRow 
-                                            key={item.id} 
-                                            item={item} 
-                                            isExpanded={openItems.includes(item.id)}
-                                            onDone={handleDone}
-                                            onValidityChange={handleValidityChange}
-                                            onUpdate={updateDeliverable}
-                                            onRemove={removeDeliverable}
-                                        />
-                                    ))}
-                                </Accordion>
+                                
+                                {activeItems.length === 0 && completedItems.length === 0 ? (
+                                    <div className="flex flex-col items-center justify-center py-20 border-2 border-dashed rounded-xl bg-card/50">
+                                        <Package className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                                        <p className="text-muted-foreground font-medium">Your queue is empty</p>
+                                        <p className="text-sm text-muted-foreground">Search above or press ⌘K to start building your quote</p>
+                                    </div>
+                                ) : activeItems.length === 0 ? (
+                                    <div className="py-8 text-center border rounded-xl bg-muted/20 border-dashed">
+                                        <CheckCircle2 className="h-8 w-8 text-green-500 mx-auto mb-2" />
+                                        <p className="text-sm text-muted-foreground font-medium">All items configured</p>
+                                    </div>
+                                ) : (
+                                    <Accordion 
+                                        type="multiple" 
+                                        value={openItems} 
+                                        onValueChange={handleValueChange} 
+                                        className="space-y-4"
+                                    >
+                                        {activeItems.map((item) => (
+                                            <DeliverableRow 
+                                                key={item.id} 
+                                                item={item} 
+                                                isExpanded={openItems.includes(item.id)}
+                                                onDone={handleDone}
+                                                onValidityChange={handleValidityChange}
+                                                onUpdate={updateDeliverable}
+                                                onRemove={removeDeliverable}
+                                            />
+                                        ))}
+                                    </Accordion>
+                                )}
+                            </section>
+
+                            {/* Completed Items Section */}
+                            {completedItems.length > 0 && (
+                                <section className="space-y-4 opacity-75">
+                                    <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                                        <CheckCircle2 className="h-4 w-4" />
+                                        Completed ({completedItems.length})
+                                    </h2>
+                                    <Accordion 
+                                        type="multiple" 
+                                        value={openItems} 
+                                        onValueChange={handleValueChange} 
+                                        className="space-y-2"
+                                    >
+                                        {completedItems.map((item) => (
+                                            <DeliverableRow 
+                                                key={item.id} 
+                                                item={item} 
+                                                isExpanded={openItems.includes(item.id)}
+                                                onDone={handleDone}
+                                                onValidityChange={handleValidityChange}
+                                                onUpdate={updateDeliverable}
+                                                onRemove={removeDeliverable}
+                                            />
+                                        ))}
+                                    </Accordion>
+                                </section>
                             )}
-                        </section>
+                        </div>
                     </div>
                 </main>
 
@@ -167,9 +212,7 @@ export default function DeliverablesPage() {
                     <Button variant="outline" onClick={() => router.back()}>Back</Button>
                     <div className="flex items-center gap-4">
                         <Button variant="secondary" onClick={saveAsDraft}>Save as Draft</Button>
-                        <Button
-                            onClick={handleNextStep}
-                        >
+                        <Button onClick={handleNextStep}>
                             Next Step (Commercials)
                         </Button>
                     </div>
