@@ -46,22 +46,18 @@ export default function DeliverablesPage() {
         });
     }, []);
 
+    const handleEdit = useCallback((id: string) => {
+        setOpenItems(prev => Array.from(new Set([...prev, id])));
+    }, []);
+
     const handleDone = useCallback((id: string) => {
         setOpenItems(prev => prev.filter(itemId => itemId !== id));
     }, []);
 
+    // Explicit Toggle Logic: Accordion's internal onValueChange is disabled in favor of our buttons
     const handleValueChange = useCallback((newValues: string[]) => {
-        const closingIds = openItems.filter(id => !newValues.includes(id));
-        const invalidClosingIds = closingIds.filter(id => rowStatus[id]?.isValid === false);
-
-        if (invalidClosingIds.length > 0) {
-            // Re-open invalid items (Locked State)
-            setOpenItems(Array.from(new Set([...newValues, ...invalidClosingIds])));
-            return;
-        }
-
-        setOpenItems(newValues);
-    }, [openItems, rowStatus]);
+        // We do nothing here to prevent header-click toggling
+    }, []);
 
     // Split items into Action Required and Order List using "Expanded Pinning"
     const { activeItems, orderListItems } = useMemo(() => {
@@ -171,6 +167,7 @@ export default function DeliverablesPage() {
                                                 key={item.id} 
                                                 item={item} 
                                                 isExpanded={openItems.includes(item.id)}
+                                                onEdit={handleEdit}
                                                 onDone={handleDone}
                                                 onValidityChange={handleValidityChange}
                                                 onUpdate={updateDeliverable}
@@ -194,6 +191,7 @@ export default function DeliverablesPage() {
                                                 key={item.id} 
                                                 item={item} 
                                                 isExpanded={openItems.includes(item.id)}
+                                                onEdit={handleEdit}
                                                 onDone={handleDone}
                                                 onValidityChange={handleValidityChange}
                                                 onUpdate={updateDeliverable}

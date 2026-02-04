@@ -14,7 +14,7 @@ import {
     Frame,
     Package,
     Check,
-    Lock
+    Pencil
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { productCatalog } from '@/lib/product-data';
@@ -41,6 +41,7 @@ import {
 interface DeliverableRowProps {
     item: ConfiguredProduct;
     isExpanded: boolean;
+    onEdit: (id: string) => void;
     onDone: (id: string) => void;
     onValidityChange: (id: string, isValid: boolean) => void;
     onUpdate: (id: string, updates: Partial<ConfiguredProduct>) => void;
@@ -87,6 +88,7 @@ const getValidationSchema = (product: Product | null) => {
 export const DeliverableRow = React.memo(function DeliverableRow({ 
     item, 
     isExpanded, 
+    onEdit,
     onDone, 
     onValidityChange,
     onUpdate,
@@ -126,7 +128,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
     
     const watchedValues = watch();
 
-    // Proactive validation on mount
     React.useEffect(() => {
         trigger().then((result) => {
             hasValidated.current = true;
@@ -134,14 +135,12 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         });
     }, [trigger, item.id, onValidityChange]);
 
-    // Report validity status to parent
     React.useEffect(() => {
         if (hasValidated.current) {
             onValidityChange(item.id, isValid);
         }
     }, [isValid, item.id, onValidityChange]);
 
-    // Smart Autofocus: Only if invalid and expanded
     React.useEffect(() => {
         if (isExpanded && !isValid) {
             const timer = setTimeout(() => {
@@ -175,7 +174,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         return warnings.join(' ');
     };
 
-    // Immediate sync for variant selection
     const handleVariantChange = (val: string) => {
         setValue('variant', val, { shouldValidate: true, shouldDirty: true });
         const currentValues = getValues();
@@ -189,7 +187,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         });
     };
 
-    // Debounced context sync for other fields
     React.useEffect(() => {
         const timer = setTimeout(() => {
             const currentValues = getValues();
@@ -208,6 +205,11 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         e.stopPropagation();
         const result = await trigger();
         if (result) onDone(item.id);
+    };
+
+    const handleEditClick = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        onEdit(item.id);
     };
 
     const handleDelete = (e: React.MouseEvent) => {
@@ -244,8 +246,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             ? "text-green-600 bg-green-100" 
             : "text-destructive bg-destructive/10";
 
-    const isLocked = isExpanded && !isValid;
-
     return (
         <div className="group relative">
             <AccordionItem 
@@ -260,42 +260,30 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                 )}
             >
                 <div className={cn("flex items-center px-4 transition-all", isExpanded ? "h-16" : "h-10")}>
-                    <AccordionTrigger 
-                        className={cn("flex-1 hover:no-underline py-0", isLocked && "cursor-default [&>svg]:hidden")}
-                        onClick={(e) => {
-                            if (isLocked) {
-                                e.preventDefault();
-                            }
-                        }}
+                    <div 
+                        className="flex-1 flex items-center gap-3 text-left w-full overflow-hidden cursor-default"
+                        onClick={(e) => e.preventDefault()}
                     >
-                        <div className="flex items-center gap-3 text-left w-full overflow-hidden">
-                            <div className={cn(
-                                "rounded-lg flex items-center justify-center shrink-0 transition-colors",
-                                isExpanded ? "h-10 w-10" : "h-7 w-7",
-                                iconStatusClasses
-                            )}>
-                                <IconComponent className={isExpanded ? "h-5 w-5" : "h-4 w-4"} />
-                            </div>
-                            <div className={cn("flex items-baseline gap-3", !isExpanded && "flex-1")}>
-                                <h3 className={cn("font-semibold leading-none shrink-0", isExpanded ? "text-base" : "text-sm")}>
-                                    {item.productName}
-                                </h3>
-                                {!isExpanded && (
-                                    <div className="text-xs text-muted-foreground truncate flex-1">
-                                        {watchedValues.variant ? getSummaryText() : <Badge variant="destructive" className="bg-destructive text-destructive-foreground text-[10px] h-4 py-0">Setup Required</Badge>}
-                                    </div>
-                                )}
-                            </div>
+                        <div className={cn(
+                            "rounded-lg flex items-center justify-center shrink-0 transition-colors",
+                            isExpanded ? "h-10 w-10" : "h-7 w-7",
+                            iconStatusClasses
+                        )}>
+                            <IconComponent className={isExpanded ? "h-5 w-5" : "h-4 w-4"} />
                         </div>
-                        {isLocked && <Lock className="h-4 w-4 text-destructive shrink-0 ml-2" />}
-                    </AccordionTrigger>
+                        <div className={cn("flex items-baseline gap-3", !isExpanded && "flex-1")}>
+                            <h3 className={cn("font-semibold leading-none shrink-0", isExpanded ? "text-base" : "text-sm")}>
+                                {item.productName}
+                            </h3>
+                            {!isExpanded && (
+                                <div className="text-xs text-muted-foreground truncate flex-1">
+                                    {watchedValues.variant ? getSummaryText() : <Badge variant="destructive" className="bg-destructive text-destructive-foreground text-[10px] h-4 py-0">Setup Required</Badge>}
+                                </div>
+                            )}
+                        </div>
+                    </div>
 
-                    <div className="flex items-center gap-2 ml-4" onClick={(e) => e.stopPropagation()}>
-                        {!isExpanded && (
-                             <span className="text-xs font-medium text-muted-foreground">
-                                Qty: {item.quantity || item.pages || 0}
-                             </span>
-                        )}
+                    <div className="flex items-center gap-2 ml-4">
                         {item.warning && (
                             <TooltipProvider>
                                 <Tooltip>
@@ -317,7 +305,12 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                             >
                                 <Trash2 className="h-4 w-4" />
                             </Button>
-                            {isExpanded && (
+                            {!isExpanded ? (
+                                <Button size="sm" variant="outline" onClick={handleEditClick} className="gap-2 h-8">
+                                    <Pencil className="h-3.5 w-3.5" />
+                                    Edit
+                                </Button>
+                            ) : (
                                 <Button size="sm" onClick={handleDoneClick} className="gap-2 h-8" disabled={!isValid}>
                                     <Check className="h-4 w-4" />
                                     Done
