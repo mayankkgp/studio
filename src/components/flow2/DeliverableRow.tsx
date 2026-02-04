@@ -30,6 +30,7 @@ import { Badge } from "@/components/ui/badge";
 import {
     AccordionItem,
     AccordionContent,
+    AccordionTrigger
 } from "@/components/ui/accordion";
 import {
     Tooltip,
@@ -134,7 +135,9 @@ export const DeliverableRow = React.memo(function DeliverableRow({
     const adjustHeight = React.useCallback((el: HTMLTextAreaElement | null) => {
         if (!el) return;
         el.style.height = 'auto';
-        el.style.height = `${el.scrollHeight}px`;
+        // Ensure scrollHeight is used but matches min-h when single line
+        const nextHeight = Math.max(el.scrollHeight, 40);
+        el.style.height = `${nextHeight}px`;
     }, []);
 
     React.useEffect(() => {
@@ -189,19 +192,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         return warnings.length > 0 ? warnings.join(' ') : undefined;
     };
 
-    const handleVariantChange = (val: string) => {
-        setValue('variant', val, { shouldValidate: true, shouldDirty: true });
-        const currentValues = getValues();
-        const warning = getWarnings(currentValues, product);
-        onUpdate(item.id, {
-            ...currentValues,
-            variant: val,
-            warning,
-            addons: currentValues.addons?.filter((a: any) => a.value !== false && a.value !== 0) as any,
-            sizes: currentValues.sizes?.filter((s: any) => s.quantity > 0) as any
-        });
-    };
-
+    // Debounced update to global context
     React.useEffect(() => {
         const timer = setTimeout(() => {
             const currentValues = getValues();
@@ -234,7 +225,9 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         }
     }
 
-    const handleAddNote = () => {
+    const handleAddNote = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
         setShowNotes(true);
         setTimeout(() => {
             notesRef.current?.focus();
@@ -244,9 +237,11 @@ export const DeliverableRow = React.memo(function DeliverableRow({
     const getSummaryText = () => {
         if (!product) return '';
         const parts: string[] = [];
-        if (watchedValues.variant) parts.push(watchedValues.variant);
-        
         const hasVariants = product.variants && product.variants.length > 0;
+        
+        if (hasVariants && watchedValues.variant) {
+            parts.push(watchedValues.variant);
+        }
         
         if (product.configType === 'A' && watchedValues.quantity) {
             parts.push(`Qty: ${watchedValues.quantity}`);
@@ -286,7 +281,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             return (
                 <Textarea 
                     {...register('specialRequest')} 
-                    className="min-h-[40px] h-10 bg-background/50 overflow-hidden resize-none transition-all focus-visible:ring-1 py-2 leading-6" 
+                    className="min-h-[40px] h-10 bg-background/50 overflow-hidden resize-none transition-all focus-visible:ring-1 py-2 px-3 leading-6" 
                     placeholder="Add special instructions..."
                     ref={(e) => {
                         register('specialRequest').ref(e);
@@ -325,7 +320,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                     !isValid && !isExpanded && "border-destructive border-2 bg-destructive/5"
                 )}
             >
-                <div className={cn("flex items-center px-4 transition-all", isExpanded ? "h-16" : "h-10")}>
+                <div className={cn("flex items-center px-4 transition-all h-14")}>
                     <div className="flex-1 flex items-center gap-3 text-left w-full overflow-hidden">
                         <div className={cn(
                             "rounded-lg flex items-center justify-center shrink-0 transition-colors",
@@ -340,7 +335,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                             </h3>
                             {!isExpanded && (
                                 <div className="text-xs text-muted-foreground truncate flex-1">
-                                    {getSummaryText().includes('Setup Required') ? (
+                                    {getSummaryText() === 'Setup Required' ? (
                                         <Badge variant="destructive" className="bg-destructive text-destructive-foreground text-[10px] h-4 py-0">Setup Required</Badge>
                                     ) : getSummaryText()}
                                 </div>
@@ -383,6 +378,12 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                             )}
                         </div>
                     </div>
+                </div>
+
+                <div className="pointer-events-none absolute inset-0 -z-10">
+                    <AccordionTrigger className={cn("invisible", isLocked && "cursor-default [&>svg]:hidden")}>
+                        Toggle
+                    </AccordionTrigger>
                 </div>
 
                 <AccordionContent className="px-4 pb-4 border-t bg-muted/5 relative">
@@ -444,10 +445,10 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                             control={control}
                                             render={({ field }) => (
                                                 <Select 
-                                                    onValueChange={handleVariantChange} 
+                                                    onValueChange={field.onChange} 
                                                     value={field.value || ""}
                                                 >
-                                                    <SelectTrigger className={cn("h-9", errors.variant && "border-destructive")} ref={variantTriggerRef}>
+                                                    <SelectTrigger className={cn("h-10", errors.variant && "border-destructive")} ref={variantTriggerRef}>
                                                         <SelectValue placeholder="Select variant" />
                                                     </SelectTrigger>
                                                     <SelectContent>
