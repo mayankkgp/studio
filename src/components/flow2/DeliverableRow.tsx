@@ -133,7 +133,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
 
     const adjustHeight = React.useCallback((el: HTMLTextAreaElement | null) => {
         if (!el) return;
-        // Force reset to standard input height to measure correctly
+        // Force reset to standard input height to measure correctly for shrinking
         el.style.height = '40px'; 
         const scrollHeight = el.scrollHeight;
         // If content is larger than one line (40px), grow it.
@@ -250,7 +250,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         }
         
         const isReady = !hasVariants || !!watchedValues.variant;
-        if (!isReady) return 'Setup Required';
+        if (!isReady && hasVariants) return 'Setup Required';
         
         return parts.join(' • ');
     };
