@@ -14,7 +14,8 @@ import {
     Frame,
     Package,
     Check,
-    Pencil
+    Pencil,
+    MessageSquarePlus
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { productCatalog } from '@/lib/product-data';
@@ -28,7 +29,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import {
     AccordionItem,
-    AccordionTrigger,
     AccordionContent,
 } from "@/components/ui/accordion";
 import {
@@ -99,6 +99,9 @@ export const DeliverableRow = React.memo(function DeliverableRow({
     
     const qtyInputRef = React.useRef<HTMLInputElement>(null);
     const variantTriggerRef = React.useRef<HTMLButtonElement>(null);
+    const notesRef = React.useRef<HTMLTextAreaElement | null>(null);
+
+    const [showNotes, setShowNotes] = React.useState(!!item.specialRequest);
 
     const form = useForm({
         resolver: zodResolver(getValidationSchema(product)),
@@ -106,7 +109,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             variant: item.variant,
             quantity: item.quantity,
             pages: item.pages,
-            specialRequest: item.specialRequest,
+            specialRequest: item.specialRequest || '',
             customFieldValues: item.customFieldValues || {},
             addons: product?.addons?.map(addon => {
                 const existingAddon = item.addons?.find(a => a.id === addon.id);
@@ -127,6 +130,19 @@ export const DeliverableRow = React.memo(function DeliverableRow({
     const { register, control, watch, formState: { errors, isValid }, trigger, getValues, setValue } = form;
     
     const watchedValues = watch();
+
+    // Auto-expand textarea height
+    const adjustHeight = React.useCallback((el: HTMLTextAreaElement | null) => {
+        if (!el) return;
+        el.style.height = 'auto';
+        el.style.height = `${el.scrollHeight}px`;
+    }, []);
+
+    React.useEffect(() => {
+        if (showNotes && notesRef.current) {
+            adjustHeight(notesRef.current);
+        }
+    }, [showNotes, watchedValues.specialRequest, adjustHeight]);
 
     React.useEffect(() => {
         trigger().then((result) => {
@@ -219,6 +235,13 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         }
     }
 
+    const handleAddNote = () => {
+        setShowNotes(true);
+        setTimeout(() => {
+            notesRef.current?.focus();
+        }, 0);
+    };
+
     const getSummaryText = () => {
         if (!product) return '';
         const parts: string[] = [];
@@ -240,13 +263,13 @@ export const DeliverableRow = React.memo(function DeliverableRow({
     };
     const IconComponent = getIcon();
 
+    const isLocked = isExpanded && !isValid;
+
     const iconStatusClasses = isExpanded 
         ? "text-blue-600 bg-blue-50" 
         : isValid 
             ? "text-green-600 bg-green-100" 
             : "text-destructive bg-destructive/10";
-
-    const isLocked = isExpanded && !isValid;
 
     return (
         <div className="group relative">
@@ -262,13 +285,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                 )}
             >
                 <div className={cn("flex items-center px-4 transition-all", isExpanded ? "h-16" : "h-10")}>
-                    <div 
-                        className={cn(
-                            "flex-1 flex items-center gap-3 text-left w-full overflow-hidden",
-                            isLocked ? "cursor-default" : "cursor-default"
-                        )}
-                        onClick={(e) => e.preventDefault()}
-                    >
+                    <div className="flex-1 flex items-center gap-3 text-left w-full overflow-hidden">
                         <div className={cn(
                             "rounded-lg flex items-center justify-center shrink-0 transition-colors",
                             isExpanded ? "h-10 w-10" : "h-7 w-7",
@@ -381,7 +398,31 @@ export const DeliverableRow = React.memo(function DeliverableRow({
 
                             <div className="space-y-1.5">
                                 <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Special Request</Label>
-                                <Textarea {...register('specialRequest')} className="min-h-[80px] bg-background/50" placeholder="Notes..." />
+                                {showNotes ? (
+                                    <Textarea 
+                                        {...register('specialRequest')} 
+                                        className="min-h-[40px] h-10 bg-background/50 overflow-hidden resize-none transition-all" 
+                                        placeholder="Notes..."
+                                        ref={(e) => {
+                                            register('specialRequest').ref(e);
+                                            notesRef.current = e;
+                                        }}
+                                        onChange={(e) => {
+                                            register('specialRequest').onChange(e);
+                                            adjustHeight(e.target);
+                                        }}
+                                    />
+                                ) : (
+                                    <Button 
+                                        variant="ghost" 
+                                        size="sm" 
+                                        className="gap-2 text-muted-foreground hover:text-primary transition-colors"
+                                        onClick={handleAddNote}
+                                    >
+                                        <MessageSquarePlus className="h-4 w-4" />
+                                        Add Note
+                                    </Button>
+                                )}
                             </div>
                         </div>
 
