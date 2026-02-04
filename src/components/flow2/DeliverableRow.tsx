@@ -133,14 +133,11 @@ export const DeliverableRow = React.memo(function DeliverableRow({
 
     const adjustHeight = React.useCallback((el: HTMLTextAreaElement | null) => {
         if (!el) return;
-        // Force reset to standard input height to measure correctly for shrinking
-        el.style.height = '40px'; 
+        // Reset height to 0 to measure the true content height accurately
+        el.style.height = '0px'; 
         const scrollHeight = el.scrollHeight;
-        // If content is larger than one line (40px), grow it.
-        // Otherwise, stay strictly at 40px to match standard inputs.
-        if (scrollHeight > 40) {
-            el.style.height = `${scrollHeight}px`;
-        }
+        // Apply the measured height, ensuring it's at least 40px (standard input height)
+        el.style.height = `${Math.max(40, scrollHeight)}px`;
     }, []);
 
     React.useEffect(() => {
