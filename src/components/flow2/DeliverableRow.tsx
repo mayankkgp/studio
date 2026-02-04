@@ -42,7 +42,7 @@ interface DeliverableRowProps {
     item: ConfiguredProduct;
     isExpanded: boolean;
     onDone: (id: string) => void;
-    onValidityChange: (id: string, isValid: boolean, isInteracting: boolean) => void;
+    onValidityChange: (id: string, isValid: boolean) => void;
     onUpdate: (id: string, updates: Partial<ConfiguredProduct>) => void;
     onRemove: (id: string) => void;
 }
@@ -94,7 +94,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
 }: DeliverableRowProps) {
     const product = productCatalog.find(p => p.id === item.productId) || null;
     const hasValidated = React.useRef(false);
-    const [isInteracting, setIsInteracting] = React.useState(false);
     
     const qtyInputRef = React.useRef<HTMLInputElement>(null);
     const variantTriggerRef = React.useRef<HTMLButtonElement>(null);
@@ -131,16 +130,16 @@ export const DeliverableRow = React.memo(function DeliverableRow({
     React.useEffect(() => {
         trigger().then((result) => {
             hasValidated.current = true;
-            onValidityChange(item.id, result, isInteracting);
+            onValidityChange(item.id, result);
         });
-    }, [trigger, item.id, onValidityChange, isInteracting]);
+    }, [trigger, item.id, onValidityChange]);
 
-    // Report validity and interaction status to parent
+    // Report validity status to parent
     React.useEffect(() => {
         if (hasValidated.current) {
-            onValidityChange(item.id, isValid, isInteracting);
+            onValidityChange(item.id, isValid);
         }
-    }, [isValid, isInteracting, item.id, onValidityChange]);
+    }, [isValid, item.id, onValidityChange]);
 
     // Smart Autofocus: Only if invalid and expanded
     React.useEffect(() => {
@@ -266,7 +265,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                         onClick={(e) => {
                             if (isLocked) {
                                 e.preventDefault();
-                                // Silent Interaction for locked items
                             }
                         }}
                     >
@@ -340,10 +338,8 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                     <Input 
                                         type="number" 
                                         {...register(product.configType === 'A' ? 'quantity' : 'pages', { 
-                                            valueAsNumber: true,
-                                            onBlur: () => setIsInteracting(false)
+                                            valueAsNumber: true 
                                         })}
-                                        onFocus={() => setIsInteracting(true)}
                                         className={cn("h-12 text-xl font-bold bg-background", (errors.quantity || errors.pages) && "border-destructive")} 
                                         ref={(e) => {
                                             if (product.configType === 'A') {
@@ -369,7 +365,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                             <Select 
                                                 onValueChange={handleVariantChange} 
                                                 value={field.value || ""}
-                                                onOpenChange={(open) => setIsInteracting(open)}
                                             >
                                                 <SelectTrigger className={cn("h-9", errors.variant && "border-destructive")} ref={variantTriggerRef}>
                                                     <SelectValue placeholder="Select variant" />

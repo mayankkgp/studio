@@ -20,7 +20,7 @@ export default function DeliverablesPage() {
     const headerSummary = useHeaderSummary(order.eventDetails);
     
     const [openItems, setOpenItems] = useState<string[]>([]);
-    const [rowStatus, setRowStatus] = useState<Record<string, { isValid: boolean, isInteracting: boolean }>>({});
+    const [rowStatus, setRowStatus] = useState<Record<string, { isValid: boolean }>>({});
     const prevCount = useRef(order.deliverables.length);
 
     // Track previously active items to handle "Sticky" movement logic
@@ -38,11 +38,11 @@ export default function DeliverablesPage() {
         prevCount.current = order.deliverables.length;
     }, [order.deliverables]);
 
-    const handleValidityChange = useCallback((id: string, isValid: boolean, isInteracting: boolean) => {
+    const handleValidityChange = useCallback((id: string, isValid: boolean) => {
         setRowStatus(prev => {
             const current = prev[id];
-            if (current?.isValid === isValid && current?.isInteracting === isInteracting) return prev;
-            return { ...prev, [id]: { isValid, isInteracting } };
+            if (current?.isValid === isValid) return prev;
+            return { ...prev, [id]: { isValid } };
         });
     }, []);
 
@@ -63,21 +63,23 @@ export default function DeliverablesPage() {
         setOpenItems(newValues);
     }, [openItems, rowStatus]);
 
-    // Split items into Action Required and Order List
+    // Split items into Action Required and Order List using "Expanded Pinning"
     const { activeItems, orderListItems } = useMemo(() => {
         const active: any[] = [];
         const list: any[] = [];
 
         order.deliverables.forEach(item => {
             const status = rowStatus[item.id];
+            const isExpanded = openItems.includes(item.id);
             
-            // Movement Trigger Logic:
-            // 1. Move to Action Required if Invalid AND (Closed OR Not Interacting)
-            // 2. Stay in current section if Interacting (Typing) or if Valid
+            // 1. Keep it Active if it was already Active AND is currently Open (Pinned)
+            const isPinnedActive = activeIdsRef.current.has(item.id) && isExpanded;
             
-            const shouldBeActive = status 
-                ? (!status.isValid && (!status.isInteracting || activeIdsRef.current.has(item.id)))
-                : true;
+            // 2. Make it Active if it is Invalid AND Closed (New Task)
+            // Or if it's brand new (not in rowStatus yet)
+            const isNewActive = status ? (!status.isValid && !isExpanded) : true;
+
+            const shouldBeActive = isNewActive || isPinnedActive;
 
             if (shouldBeActive) {
                 active.push(item);
@@ -93,7 +95,7 @@ export default function DeliverablesPage() {
             activeItems: active, 
             orderListItems: [...list].reverse() 
         };
-    }, [order.deliverables, rowStatus]);
+    }, [order.deliverables, rowStatus, openItems]);
 
     const handleNextStep = useCallback(() => {
         const firstInvalidId = order.deliverables.find(item => rowStatus[item.id]?.isValid === false)?.id;
@@ -137,13 +139,13 @@ export default function DeliverablesPage() {
                 </header>
 
                 <main className="flex-1 overflow-y-auto bg-background">
-                    <div className="mx-auto max-w-4xl space-y-8">
-                        {/* Flush Sticky Command Bar */}
-                        <section className="sticky top-0 z-30 bg-background/95 backdrop-blur pt-4 md:pt-6 px-4 md:px-6 shadow-sm border-b md:border-none">
+                    <div className="mx-auto max-w-4xl">
+                        {/* Flush Sticky Command Bar with Persistent Buffer */}
+                        <section className="sticky top-0 z-30 bg-background/95 backdrop-blur pt-4 md:pt-6 -mx-4 md:-mx-6 px-4 md:px-6 shadow-sm border-b md:border-none pb-6 mb-6">
                             <CommandBar />
                         </section>
 
-                        <div className="space-y-12 pb-12 px-4 md:px-6 pt-6">
+                        <div className="space-y-12 pb-12 px-4 md:px-6">
                             {/* Active Queue Section */}
                             <section className="space-y-4">
                                 <h2 className="text-xs font-bold uppercase tracking-widest text-primary flex items-center gap-2">
