@@ -246,13 +246,15 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             ? "text-green-600 bg-green-100" 
             : "text-destructive bg-destructive/10";
 
+    const isLocked = isExpanded && !isValid;
+
     return (
         <div className="group relative">
             <AccordionItem 
                 value={item.id} 
                 id={`deliverable-${item.id}`}
                 className={cn(
-                    "border rounded-xl transition-all duration-200 overflow-hidden",
+                    "border rounded-xl transition-all duration-200 overflow-hidden scroll-mt-[176px]",
                     isExpanded 
                         ? "border-l-4 border-primary shadow-md bg-background ring-2 ring-primary/10" 
                         : "bg-card hover:bg-muted/50",
@@ -261,7 +263,10 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             >
                 <div className={cn("flex items-center px-4 transition-all", isExpanded ? "h-16" : "h-10")}>
                     <div 
-                        className="flex-1 flex items-center gap-3 text-left w-full overflow-hidden cursor-default"
+                        className={cn(
+                            "flex-1 flex items-center gap-3 text-left w-full overflow-hidden",
+                            isLocked ? "cursor-default" : "cursor-default"
+                        )}
                         onClick={(e) => e.preventDefault()}
                     >
                         <div className={cn(

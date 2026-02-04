@@ -26,17 +26,25 @@ export default function DeliverablesPage() {
     // Track previously active items to handle "Sticky" movement logic
     const activeIdsRef = useRef<Set<string>>(new Set());
 
+    // Smart Scroll Helper
+    const scrollToItem = useCallback((id: string) => {
+        setTimeout(() => {
+            const el = document.getElementById(`deliverable-${id}`);
+            if (el) {
+                // Ensure top is aligned even for tall cards
+                el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }, 300); // Wait for expansion animation
+    }, []);
+
     useEffect(() => {
         if (order.deliverables.length > prevCount.current) {
             const newItem = order.deliverables[order.deliverables.length - 1];
             setOpenItems(prev => Array.from(new Set([...prev, newItem.id])));
-            setTimeout(() => {
-                const el = document.getElementById(`deliverable-${newItem.id}`);
-                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }, 100);
+            scrollToItem(newItem.id);
         }
         prevCount.current = order.deliverables.length;
-    }, [order.deliverables]);
+    }, [order.deliverables, scrollToItem]);
 
     const handleValidityChange = useCallback((id: string, isValid: boolean) => {
         setRowStatus(prev => {
@@ -48,7 +56,8 @@ export default function DeliverablesPage() {
 
     const handleEdit = useCallback((id: string) => {
         setOpenItems(prev => Array.from(new Set([...prev, id])));
-    }, []);
+        scrollToItem(id);
+    }, [scrollToItem]);
 
     const handleDone = useCallback((id: string) => {
         setOpenItems(prev => prev.filter(itemId => itemId !== id));
@@ -105,10 +114,7 @@ export default function DeliverablesPage() {
             if (!openItems.includes(firstInvalidId)) {
                 setOpenItems(prev => [...prev, firstInvalidId]);
             }
-            setTimeout(() => {
-                const el = document.getElementById(`deliverable-${firstInvalidId}`);
-                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }, 100);
+            scrollToItem(firstInvalidId);
             return;
         }
 
@@ -118,7 +124,7 @@ export default function DeliverablesPage() {
         }
 
         router.push('/commercials');
-    }, [rowStatus, openItems, order.deliverables, router, toast]);
+    }, [rowStatus, openItems, order.deliverables, router, toast, scrollToItem]);
 
     return (
         <AppLayout>
