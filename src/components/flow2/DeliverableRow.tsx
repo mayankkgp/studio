@@ -53,7 +53,7 @@ const getValidationSchema = (product: Product | null) => {
     if (!product) return z.object({});
     
     let schemaObject: any = {
-        variant: product.variants ? z.string().min(1, "Variant required") : z.string().optional(),
+        variant: (product.variants && product.variants.length > 0) ? z.string().min(1, "Variant required") : z.string().optional(),
         specialRequest: z.string().optional(),
     };
 
@@ -99,7 +99,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
     const hasValidated = React.useRef(false);
     
     const qtyInputRef = React.useRef<HTMLInputElement>(null);
-    const variantTriggerRef = React.useRef<HTMLButtonElement>(null);
     const notesRef = React.useRef<HTMLTextAreaElement | null>(null);
 
     const [showNotes, setShowNotes] = React.useState(!!item.specialRequest);
@@ -128,16 +127,20 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         mode: 'onChange'
     });
 
-    const { register, control, watch, formState: { errors, isValid }, trigger, getValues, setValue } = form;
+    const { register, control, watch, formState: { errors, isValid }, trigger, getValues } = form;
     
     const watchedValues = watch();
 
     const adjustHeight = React.useCallback((el: HTMLTextAreaElement | null) => {
         if (!el) return;
-        el.style.height = 'auto';
-        // Ensure scrollHeight is used but matches min-h when single line
-        const nextHeight = Math.max(el.scrollHeight, 40);
-        el.style.height = `${nextHeight}px`;
+        // Force reset to standard input height to measure correctly
+        el.style.height = '40px'; 
+        const scrollHeight = el.scrollHeight;
+        // If content is larger than one line (40px), grow it.
+        // Otherwise, stay strictly at 40px to match standard inputs.
+        if (scrollHeight > 40) {
+            el.style.height = `${scrollHeight}px`;
+        }
     }, []);
 
     React.useEffect(() => {
@@ -162,9 +165,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
     React.useEffect(() => {
         if (isExpanded && !isValid) {
             const timer = setTimeout(() => {
-                if (product?.variants) {
-                    variantTriggerRef.current?.focus();
-                } else if (product?.configType === 'A') {
+                if (product?.configType === 'A') {
                     qtyInputRef.current?.focus();
                 }
             }, 100);
@@ -192,7 +193,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         return warnings.length > 0 ? warnings.join(' ') : undefined;
     };
 
-    // Debounced update to global context
     React.useEffect(() => {
         const timer = setTimeout(() => {
             const currentValues = getValues();
@@ -281,7 +281,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             return (
                 <Textarea 
                     {...register('specialRequest')} 
-                    className="min-h-[40px] h-10 bg-background/50 overflow-hidden resize-none transition-all focus-visible:ring-1 py-2 px-3 leading-6" 
+                    className="h-10 min-h-[40px] bg-background/50 overflow-hidden resize-none transition-all focus-visible:ring-1 py-2 px-3 leading-6" 
                     placeholder="Add special instructions..."
                     ref={(e) => {
                         register('specialRequest').ref(e);
@@ -437,7 +437,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                     </div>
                                 )}
 
-                                {product?.variants && (
+                                {product?.variants && product.variants.length > 0 && (
                                     <div className="space-y-1.5">
                                         <Label className={cn("text-xs font-semibold uppercase tracking-wider", errors.variant ? "text-destructive" : "text-muted-foreground")}>Variant</Label>
                                         <Controller
@@ -448,7 +448,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                     onValueChange={field.onChange} 
                                                     value={field.value || ""}
                                                 >
-                                                    <SelectTrigger className={cn("h-10", errors.variant && "border-destructive")} ref={variantTriggerRef}>
+                                                    <SelectTrigger className={cn("h-10", errors.variant && "border-destructive")}>
                                                         <SelectValue placeholder="Select variant" />
                                                     </SelectTrigger>
                                                     <SelectContent>
