@@ -131,7 +131,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
     
     const watchedValues = watch();
 
-    // Auto-expand textarea height
     const adjustHeight = React.useCallback((el: HTMLTextAreaElement | null) => {
         if (!el) return;
         el.style.height = 'auto';
@@ -170,7 +169,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         }
     }, [isExpanded, isValid, product]);
 
-    const checkWarnings = (data: any, product: Product | null): string | undefined => {
+    const getWarnings = (data: any, product: Product | null): string | undefined => {
         if (!product) return undefined;
         const warnings: string[] = [];
         const check = (value: number, constraints: SoftConstraint[]) => {
@@ -187,13 +186,13 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                  check(value, product.softConstraints);
             }
         }
-        return warnings.join(' ');
+        return warnings.length > 0 ? warnings.join(' ') : undefined;
     };
 
     const handleVariantChange = (val: string) => {
         setValue('variant', val, { shouldValidate: true, shouldDirty: true });
         const currentValues = getValues();
-        const warning = checkWarnings(currentValues, product);
+        const warning = getWarnings(currentValues, product);
         onUpdate(item.id, {
             ...currentValues,
             variant: val,
@@ -206,7 +205,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
     React.useEffect(() => {
         const timer = setTimeout(() => {
             const currentValues = getValues();
-            const warning = checkWarnings(currentValues, product);
+            const warning = getWarnings(currentValues, product);
             onUpdate(item.id, {
                 ...currentValues,
                 warning,
@@ -284,7 +283,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                     !isValid && !isExpanded && "border-destructive border-2 bg-destructive/5"
                 )}
             >
-                <div className={cn("flex items-center px-4 transition-all", isExpanded ? "h-16" : "h-10")}>
+                <div className={cn("flex items-center px-4 transition-all cursor-default", isExpanded ? "h-16" : "h-10")}>
                     <div className="flex-1 flex items-center gap-3 text-left w-full overflow-hidden">
                         <div className={cn(
                             "rounded-lg flex items-center justify-center shrink-0 transition-colors",
@@ -396,13 +395,13 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                 </div>
                             )}
 
-                            <div className="space-y-1.5">
-                                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Special Request</Label>
+                            {/* Label-Free Progressive Disclosure Special Request */}
+                            <div className="pt-2">
                                 {showNotes ? (
                                     <Textarea 
                                         {...register('specialRequest')} 
-                                        className="min-h-[40px] h-10 bg-background/50 overflow-hidden resize-none transition-all" 
-                                        placeholder="Notes..."
+                                        className="min-h-[40px] h-10 bg-background/50 overflow-hidden resize-none transition-all focus-visible:ring-1" 
+                                        placeholder="Add special instructions..."
                                         ref={(e) => {
                                             register('specialRequest').ref(e);
                                             notesRef.current = e;
@@ -416,11 +415,11 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                     <Button 
                                         variant="ghost" 
                                         size="sm" 
-                                        className="gap-2 text-muted-foreground hover:text-primary transition-colors"
+                                        className="h-8 gap-2 text-muted-foreground hover:text-primary transition-colors p-0 hover:bg-transparent"
                                         onClick={handleAddNote}
                                     >
                                         <MessageSquarePlus className="h-4 w-4" />
-                                        Add Note
+                                        <span className="text-xs font-medium uppercase tracking-wider">Add Note</span>
                                     </Button>
                                 )}
                             </div>
@@ -461,6 +460,44 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                 </div>
                                             );
                                         })}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Sizes Rendering (Type E) */}
+                            {product?.sizes && product.sizes.length > 0 && (
+                                <div className="space-y-3">
+                                    <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Sizes</Label>
+                                    <div className="space-y-2 rounded-lg border bg-background/50 p-4">
+                                        {product.sizes.map((size, index) => (
+                                            <div key={size.name} className="flex items-center justify-between py-1">
+                                                <span className="text-sm">{size.name}</span>
+                                                <Input 
+                                                    type="number" 
+                                                    className="w-20 h-8" 
+                                                    {...register(`sizes.${index}.quantity`, { valueAsNumber: true })} 
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Custom Fields Rendering */}
+                            {product?.customFields && product.customFields.length > 0 && (
+                                <div className="space-y-3">
+                                    <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Additional Details</Label>
+                                    <div className="space-y-2 rounded-lg border bg-background/50 p-4">
+                                        {product.customFields.map((field) => (
+                                            <div key={field.id} className="flex items-center justify-between py-1">
+                                                <span className="text-sm">{field.name}</span>
+                                                <Input 
+                                                    type="number" 
+                                                    className="w-20 h-8" 
+                                                    {...register(`customFieldValues.${field.id}`, { valueAsNumber: true })} 
+                                                />
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
                             )}
