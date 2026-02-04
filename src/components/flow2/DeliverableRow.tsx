@@ -245,8 +245,18 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         if (!product) return '';
         const parts: string[] = [];
         if (watchedValues.variant) parts.push(watchedValues.variant);
-        if (product.configType === 'A' && watchedValues.quantity) parts.push(`Qty: ${watchedValues.quantity}`);
-        else if (product.configType === 'B' && watchedValues.pages) parts.push(`${watchedValues.pages} Pages`);
+        
+        const hasVariants = product.variants && product.variants.length > 0;
+        
+        if (product.configType === 'A' && watchedValues.quantity) {
+            parts.push(`Qty: ${watchedValues.quantity}`);
+        } else if (product.configType === 'B' && watchedValues.pages) {
+            parts.push(`${watchedValues.pages} Pages`);
+        }
+        
+        const isReady = !hasVariants || !!watchedValues.variant;
+        if (!isReady) return 'Setup Required';
+        
         return parts.join(' • ');
     };
 
@@ -263,8 +273,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
     const IconComponent = getIcon();
 
     const isLocked = isExpanded && !isValid;
-    const isSimpleTypeA = product?.configType === 'A' && !product?.variants;
-    const isSummaryReady = !product?.variants || !!watchedValues.variant;
+    const isSimpleTypeA = product?.configType === 'A' && (!product?.variants || product.variants.length === 0);
 
     const iconStatusClasses = isExpanded 
         ? "text-blue-600 bg-blue-50" 
@@ -277,7 +286,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             return (
                 <Textarea 
                     {...register('specialRequest')} 
-                    className="min-h-[40px] h-10 bg-background/50 overflow-hidden resize-none transition-all focus-visible:ring-1" 
+                    className="min-h-[40px] h-10 bg-background/50 overflow-hidden resize-none transition-all focus-visible:ring-1 py-2 leading-6" 
                     placeholder="Add special instructions..."
                     ref={(e) => {
                         register('specialRequest').ref(e);
@@ -316,7 +325,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                     !isValid && !isExpanded && "border-destructive border-2 bg-destructive/5"
                 )}
             >
-                <div className={cn("flex items-center px-4 transition-all cursor-default", isExpanded ? "h-16" : "h-10")}>
+                <div className={cn("flex items-center px-4 transition-all", isExpanded ? "h-16" : "h-10")}>
                     <div className="flex-1 flex items-center gap-3 text-left w-full overflow-hidden">
                         <div className={cn(
                             "rounded-lg flex items-center justify-center shrink-0 transition-colors",
@@ -331,7 +340,9 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                             </h3>
                             {!isExpanded && (
                                 <div className="text-xs text-muted-foreground truncate flex-1">
-                                    {isSummaryReady ? getSummaryText() : <Badge variant="destructive" className="bg-destructive text-destructive-foreground text-[10px] h-4 py-0">Setup Required</Badge>}
+                                    {getSummaryText().includes('Setup Required') ? (
+                                        <Badge variant="destructive" className="bg-destructive text-destructive-foreground text-[10px] h-4 py-0">Setup Required</Badge>
+                                    ) : getSummaryText()}
                                 </div>
                             )}
                         </div>
@@ -379,12 +390,12 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                         <div className="flex flex-wrap items-center gap-8 pt-4 pb-2">
                             <div className="flex items-center gap-3">
                                 <Label className={cn("text-xs font-bold uppercase tracking-wider whitespace-nowrap", errors.quantity ? "text-destructive" : "text-muted-foreground")}>
-                                    Quantity
+                                    Qty
                                 </Label>
                                 <Input 
                                     type="number" 
                                     {...register('quantity', { valueAsNumber: true })}
-                                    className={cn("w-24 h-10 text-lg font-bold bg-background", errors.quantity && "border-destructive")} 
+                                    className={cn("w-20 h-10 text-lg font-bold bg-background", errors.quantity && "border-destructive")} 
                                     ref={(e) => {
                                         register('quantity').ref(e);
                                         // @ts-ignore
@@ -392,7 +403,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                     }}
                                 />
                             </div>
-                            <div className="flex-1 min-w-[240px]">
+                            <div className="flex-1 min-w-[200px]">
                                 {renderNotesArea()}
                             </div>
                             {errors.quantity && <p className="text-xs text-destructive font-medium w-full">{errors.quantity.message}</p>}
