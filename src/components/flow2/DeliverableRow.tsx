@@ -133,10 +133,11 @@ export const DeliverableRow = React.memo(function DeliverableRow({
 
     const adjustHeight = React.useCallback((el: HTMLTextAreaElement | null) => {
         if (!el) return;
-        // Reset height to 0 to measure the true content height accurately
+        // Reset height to allow measuring the true scrollHeight
         el.style.height = '0px'; 
         const scrollHeight = el.scrollHeight;
-        // Apply the measured height, ensuring it's at least 40px (standard input height)
+        // Standard single-line height for ShadCN inputs is 40px (h-10)
+        // We ensure a minimum of 40px and allow it to grow without scrollbars.
         el.style.height = `${Math.max(40, scrollHeight)}px`;
     }, []);
 
@@ -278,7 +279,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             return (
                 <Textarea 
                     {...register('specialRequest')} 
-                    className="h-10 min-h-[40px] bg-background/50 overflow-hidden resize-none transition-all focus-visible:ring-1 py-2 px-3 leading-6" 
+                    className="min-h-[40px] bg-background/50 overflow-hidden resize-none py-2 px-3 leading-6" 
                     placeholder="Add special instructions..."
                     ref={(e) => {
                         register('specialRequest').ref(e);
