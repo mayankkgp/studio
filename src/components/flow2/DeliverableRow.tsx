@@ -263,12 +263,45 @@ export const DeliverableRow = React.memo(function DeliverableRow({
     const IconComponent = getIcon();
 
     const isLocked = isExpanded && !isValid;
+    const isSimpleTypeA = product?.configType === 'A' && !product?.variants;
+    const isSummaryReady = !product?.variants || !!watchedValues.variant;
 
     const iconStatusClasses = isExpanded 
         ? "text-blue-600 bg-blue-50" 
         : isValid 
             ? "text-green-600 bg-green-100" 
             : "text-destructive bg-destructive/10";
+
+    const renderNotesArea = () => {
+        if (showNotes) {
+            return (
+                <Textarea 
+                    {...register('specialRequest')} 
+                    className="min-h-[40px] h-10 bg-background/50 overflow-hidden resize-none transition-all focus-visible:ring-1" 
+                    placeholder="Add special instructions..."
+                    ref={(e) => {
+                        register('specialRequest').ref(e);
+                        notesRef.current = e;
+                    }}
+                    onChange={(e) => {
+                        register('specialRequest').onChange(e);
+                        adjustHeight(e.target);
+                    }}
+                />
+            );
+        }
+        return (
+            <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-8 gap-2 text-muted-foreground hover:text-primary transition-colors p-0 hover:bg-transparent"
+                onClick={handleAddNote}
+            >
+                <MessageSquarePlus className="h-4 w-4" />
+                <span className="text-xs font-medium uppercase tracking-wider">Add Note</span>
+            </Button>
+        );
+    };
 
     return (
         <div className="group relative">
@@ -298,7 +331,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                             </h3>
                             {!isExpanded && (
                                 <div className="text-xs text-muted-foreground truncate flex-1">
-                                    {watchedValues.variant ? getSummaryText() : <Badge variant="destructive" className="bg-destructive text-destructive-foreground text-[10px] h-4 py-0">Setup Required</Badge>}
+                                    {isSummaryReady ? getSummaryText() : <Badge variant="destructive" className="bg-destructive text-destructive-foreground text-[10px] h-4 py-0">Setup Required</Badge>}
                                 </div>
                             )}
                         </div>
@@ -342,167 +375,164 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                 </div>
 
                 <AccordionContent className="px-4 pb-4 border-t bg-muted/5 relative">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
-                        <div className="space-y-4">
-                            {(product?.configType === 'A' || product?.configType === 'B') && (
-                                <div className="space-y-1.5 p-4 rounded-lg border-2 border-primary/20 bg-primary/5 shadow-sm">
-                                    <Label className={cn("text-xs font-bold uppercase tracking-wider", errors.quantity || errors.pages ? "text-destructive" : "text-primary")}>
-                                        {product.configType === 'A' ? 'Base Quantity' : 'Number of Pages'}
-                                    </Label>
-                                    <Input 
-                                        type="number" 
-                                        {...register(product.configType === 'A' ? 'quantity' : 'pages', { 
-                                            valueAsNumber: true 
-                                        })}
-                                        className={cn("h-12 text-xl font-bold bg-background", (errors.quantity || errors.pages) && "border-destructive")} 
-                                        ref={(e) => {
-                                            if (product.configType === 'A') {
-                                                register('quantity').ref(e);
-                                                // @ts-ignore
-                                                qtyInputRef.current = e;
-                                            } else {
-                                                register('pages').ref(e);
-                                            }
-                                        }}
-                                    />
-                                    {(errors.quantity || errors.pages) && <p className="text-xs text-destructive font-medium">{errors.quantity?.message || errors.pages?.message}</p>}
-                                </div>
-                            )}
+                    {isSimpleTypeA ? (
+                        <div className="flex flex-wrap items-center gap-8 pt-4 pb-2">
+                            <div className="flex items-center gap-3">
+                                <Label className={cn("text-xs font-bold uppercase tracking-wider whitespace-nowrap", errors.quantity ? "text-destructive" : "text-muted-foreground")}>
+                                    Quantity
+                                </Label>
+                                <Input 
+                                    type="number" 
+                                    {...register('quantity', { valueAsNumber: true })}
+                                    className={cn("w-24 h-10 text-lg font-bold bg-background", errors.quantity && "border-destructive")} 
+                                    ref={(e) => {
+                                        register('quantity').ref(e);
+                                        // @ts-ignore
+                                        qtyInputRef.current = e;
+                                    }}
+                                />
+                            </div>
+                            <div className="flex-1 min-w-[240px]">
+                                {renderNotesArea()}
+                            </div>
+                            {errors.quantity && <p className="text-xs text-destructive font-medium w-full">{errors.quantity.message}</p>}
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
+                            <div className="space-y-4">
+                                {(product?.configType === 'A' || product?.configType === 'B') && (
+                                    <div className="space-y-1.5 p-4 rounded-lg border-2 border-primary/20 bg-primary/5 shadow-sm">
+                                        <Label className={cn("text-xs font-bold uppercase tracking-wider", errors.quantity || errors.pages ? "text-destructive" : "text-primary")}>
+                                            {product.configType === 'A' ? 'Base Quantity' : 'Number of Pages'}
+                                        </Label>
+                                        <Input 
+                                            type="number" 
+                                            {...register(product.configType === 'A' ? 'quantity' : 'pages', { 
+                                                valueAsNumber: true 
+                                            })}
+                                            className={cn("h-12 text-xl font-bold bg-background", (errors.quantity || errors.pages) && "border-destructive")} 
+                                            ref={(e) => {
+                                                if (product.configType === 'A') {
+                                                    register('quantity').ref(e);
+                                                    // @ts-ignore
+                                                    qtyInputRef.current = e;
+                                                } else {
+                                                    register('pages').ref(e);
+                                                }
+                                            }}
+                                        />
+                                        {(errors.quantity || errors.pages) && <p className="text-xs text-destructive font-medium">{errors.quantity?.message || errors.pages?.message}</p>}
+                                    </div>
+                                )}
 
-                            {product?.variants && (
-                                <div className="space-y-1.5">
-                                    <Label className={cn("text-xs font-semibold uppercase tracking-wider", errors.variant ? "text-destructive" : "text-muted-foreground")}>Variant</Label>
-                                    <Controller
-                                        name="variant"
-                                        control={control}
-                                        render={({ field }) => (
-                                            <Select 
-                                                onValueChange={handleVariantChange} 
-                                                value={field.value || ""}
-                                            >
-                                                <SelectTrigger className={cn("h-9", errors.variant && "border-destructive")} ref={variantTriggerRef}>
-                                                    <SelectValue placeholder="Select variant" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {product.variants!.map(v => (
-                                                        <SelectItem key={v} value={v}>{v}</SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        )}
-                                    />
-                                    {errors.variant && <p className="text-xs text-destructive">{errors.variant.message}</p>}
-                                </div>
-                            )}
+                                {product?.variants && (
+                                    <div className="space-y-1.5">
+                                        <Label className={cn("text-xs font-semibold uppercase tracking-wider", errors.variant ? "text-destructive" : "text-muted-foreground")}>Variant</Label>
+                                        <Controller
+                                            name="variant"
+                                            control={control}
+                                            render={({ field }) => (
+                                                <Select 
+                                                    onValueChange={handleVariantChange} 
+                                                    value={field.value || ""}
+                                                >
+                                                    <SelectTrigger className={cn("h-9", errors.variant && "border-destructive")} ref={variantTriggerRef}>
+                                                        <SelectValue placeholder="Select variant" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {product.variants!.map(v => (
+                                                            <SelectItem key={v} value={v}>{v}</SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            )}
+                                        />
+                                        {errors.variant && <p className="text-xs text-destructive">{errors.variant.message}</p>}
+                                    </div>
+                                )}
 
-                            {/* Label-Free Progressive Disclosure Special Request */}
-                            <div className="pt-2">
-                                {showNotes ? (
-                                    <Textarea 
-                                        {...register('specialRequest')} 
-                                        className="min-h-[40px] h-10 bg-background/50 overflow-hidden resize-none transition-all focus-visible:ring-1" 
-                                        placeholder="Add special instructions..."
-                                        ref={(e) => {
-                                            register('specialRequest').ref(e);
-                                            notesRef.current = e;
-                                        }}
-                                        onChange={(e) => {
-                                            register('specialRequest').onChange(e);
-                                            adjustHeight(e.target);
-                                        }}
-                                    />
-                                ) : (
-                                    <Button 
-                                        variant="ghost" 
-                                        size="sm" 
-                                        className="h-8 gap-2 text-muted-foreground hover:text-primary transition-colors p-0 hover:bg-transparent"
-                                        onClick={handleAddNote}
-                                    >
-                                        <MessageSquarePlus className="h-4 w-4" />
-                                        <span className="text-xs font-medium uppercase tracking-wider">Add Note</span>
-                                    </Button>
+                                <div className="pt-2">
+                                    {renderNotesArea()}
+                                </div>
+                            </div>
+
+                            <div className="space-y-4">
+                                {product?.addons && product.addons.length > 0 && (
+                                    <div className="space-y-3">
+                                        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Add-ons</Label>
+                                        <div className="space-y-2 rounded-lg border bg-background/50 p-4">
+                                            {product.addons.map((addon, index) => {
+                                                const parentIndex = addon.dependsOn ? product.addons!.findIndex(a => a.id === addon.dependsOn) : -1;
+                                                const parentValue = parentIndex !== -1 ? watchedValues.addons?.[parentIndex]?.value : undefined;
+                                                const isParentActive = parentValue !== undefined ? (typeof parentValue === 'number' ? parentValue > 0 : !!parentValue) : true;
+                                                if (!((!addon.dependsOn || isParentActive) && (!addon.visibleIfVariant || watchedValues.variant === addon.visibleIfVariant))) return null;
+                                                const isChecked = typeof watchedValues.addons?.[index]?.value === 'number' ? watchedValues.addons?.[index]?.value > 0 : !!watchedValues.addons?.[index]?.value;
+                                                return (
+                                                    <div key={addon.id} className="flex items-center justify-between py-1">
+                                                        <div className="flex items-center gap-3">
+                                                            <Controller
+                                                                name={`addons.${index}.value`}
+                                                                control={control}
+                                                                render={({ field }) => (
+                                                                    <Checkbox 
+                                                                        checked={addon.type === 'checkbox' ? !!field.value : isChecked} 
+                                                                        onCheckedChange={(checked) => {
+                                                                            if (addon.type === 'checkbox') field.onChange(checked);
+                                                                            else field.onChange(checked ? 1 : 0);
+                                                                        }} 
+                                                                    />
+                                                                )}
+                                                            />
+                                                            <span className="text-sm">{addon.name}</span>
+                                                        </div>
+                                                        {addon.type !== 'checkbox' && isChecked && (
+                                                            <Input type="number" className="w-20 h-8" {...register(`addons.${index}.value`, { valueAsNumber: true })} />
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {product?.sizes && product.sizes.length > 0 && (
+                                    <div className="space-y-3">
+                                        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Sizes</Label>
+                                        <div className="space-y-2 rounded-lg border bg-background/50 p-4">
+                                            {product.sizes.map((size, index) => (
+                                                <div key={size.name} className="flex items-center justify-between py-1">
+                                                    <span className="text-sm">{size.name}</span>
+                                                    <Input 
+                                                        type="number" 
+                                                        className="w-20 h-8" 
+                                                        {...register(`sizes.${index}.quantity`, { valueAsNumber: true })} 
+                                                    />
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {product?.customFields && product.customFields.length > 0 && (
+                                    <div className="space-y-3">
+                                        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Additional Details</Label>
+                                        <div className="space-y-2 rounded-lg border bg-background/50 p-4">
+                                            {product.customFields.map((field) => (
+                                                <div key={field.id} className="flex items-center justify-between py-1">
+                                                    <span className="text-sm">{field.name}</span>
+                                                    <Input 
+                                                        type="number" 
+                                                        className="w-20 h-8" 
+                                                        {...register(`customFieldValues.${field.id}`, { valueAsNumber: true })} 
+                                                    />
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
                                 )}
                             </div>
                         </div>
-
-                        <div className="space-y-4">
-                            {product?.addons && product.addons.length > 0 && (
-                                <div className="space-y-3">
-                                    <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Add-ons</Label>
-                                    <div className="space-y-2 rounded-lg border bg-background/50 p-4">
-                                        {product.addons.map((addon, index) => {
-                                            const parentIndex = addon.dependsOn ? product.addons!.findIndex(a => a.id === addon.dependsOn) : -1;
-                                            const parentValue = parentIndex !== -1 ? watchedValues.addons?.[parentIndex]?.value : undefined;
-                                            const isParentActive = parentValue !== undefined ? (typeof parentValue === 'number' ? parentValue > 0 : !!parentValue) : true;
-                                            if (!((!addon.dependsOn || isParentActive) && (!addon.visibleIfVariant || watchedValues.variant === addon.visibleIfVariant))) return null;
-                                            const isChecked = typeof watchedValues.addons?.[index]?.value === 'number' ? watchedValues.addons?.[index]?.value > 0 : !!watchedValues.addons?.[index]?.value;
-                                            return (
-                                                <div key={addon.id} className="flex items-center justify-between py-1">
-                                                    <div className="flex items-center gap-3">
-                                                        <Controller
-                                                            name={`addons.${index}.value`}
-                                                            control={control}
-                                                            render={({ field }) => (
-                                                                <Checkbox 
-                                                                    checked={addon.type === 'checkbox' ? !!field.value : isChecked} 
-                                                                    onCheckedChange={(checked) => {
-                                                                        if (addon.type === 'checkbox') field.onChange(checked);
-                                                                        else field.onChange(checked ? 1 : 0);
-                                                                    }} 
-                                                                />
-                                                            )}
-                                                        />
-                                                        <span className="text-sm">{addon.name}</span>
-                                                    </div>
-                                                    {addon.type !== 'checkbox' && isChecked && (
-                                                        <Input type="number" className="w-20 h-8" {...register(`addons.${index}.value`, { valueAsNumber: true })} />
-                                                    )}
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Sizes Rendering (Type E) */}
-                            {product?.sizes && product.sizes.length > 0 && (
-                                <div className="space-y-3">
-                                    <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Sizes</Label>
-                                    <div className="space-y-2 rounded-lg border bg-background/50 p-4">
-                                        {product.sizes.map((size, index) => (
-                                            <div key={size.name} className="flex items-center justify-between py-1">
-                                                <span className="text-sm">{size.name}</span>
-                                                <Input 
-                                                    type="number" 
-                                                    className="w-20 h-8" 
-                                                    {...register(`sizes.${index}.quantity`, { valueAsNumber: true })} 
-                                                />
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Custom Fields Rendering */}
-                            {product?.customFields && product.customFields.length > 0 && (
-                                <div className="space-y-3">
-                                    <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Additional Details</Label>
-                                    <div className="space-y-2 rounded-lg border bg-background/50 p-4">
-                                        {product.customFields.map((field) => (
-                                            <div key={field.id} className="flex items-center justify-between py-1">
-                                                <span className="text-sm">{field.name}</span>
-                                                <Input 
-                                                    type="number" 
-                                                    className="w-20 h-8" 
-                                                    {...register(`customFieldValues.${field.id}`, { valueAsNumber: true })} 
-                                                />
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    </div>
+                    )}
                 </AccordionContent>
             </AccordionItem>
         </div>
