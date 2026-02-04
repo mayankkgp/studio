@@ -70,14 +70,13 @@ export default function DeliverablesPage() {
 
         order.deliverables.forEach(item => {
             const status = rowStatus[item.id];
-            const isExpanded = openItems.includes(item.id);
             
             // Movement Trigger Logic:
             // 1. Move to Action Required if Invalid AND (Closed OR Not Interacting)
-            // 2. Stay in current section if Interacting (Typing)
+            // 2. Stay in current section if Interacting (Typing) or if Valid
             
             const shouldBeActive = status 
-                ? (!status.isValid && (!status.isInteracting || activeIdsRef.current.has(item.id))) || isExpanded
+                ? (!status.isValid && (!status.isInteracting || activeIdsRef.current.has(item.id)))
                 : true;
 
             if (shouldBeActive) {
@@ -94,7 +93,7 @@ export default function DeliverablesPage() {
             activeItems: active, 
             orderListItems: [...list].reverse() 
         };
-    }, [order.deliverables, rowStatus, openItems]);
+    }, [order.deliverables, rowStatus]);
 
     const handleNextStep = useCallback(() => {
         const firstInvalidId = order.deliverables.find(item => rowStatus[item.id]?.isValid === false)?.id;
@@ -144,7 +143,7 @@ export default function DeliverablesPage() {
                             <CommandBar />
                         </section>
 
-                        <div className="space-y-12 pb-12 px-4 md:px-6">
+                        <div className="space-y-12 pb-12 px-4 md:px-6 pt-6">
                             {/* Active Queue Section */}
                             <section className="space-y-4">
                                 <h2 className="text-xs font-bold uppercase tracking-widest text-primary flex items-center gap-2">

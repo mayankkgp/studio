@@ -133,7 +133,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             hasValidated.current = true;
             onValidityChange(item.id, result, isInteracting);
         });
-    }, [trigger, item.id, onValidityChange]);
+    }, [trigger, item.id, onValidityChange, isInteracting]);
 
     // Report validity and interaction status to parent
     React.useEffect(() => {
@@ -262,7 +262,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             >
                 <div className={cn("flex items-center px-4 transition-all", isExpanded ? "h-16" : "h-10")}>
                     <AccordionTrigger 
-                        className={cn("flex-1 hover:no-underline py-0", isLocked && "[&>svg]:hidden")}
+                        className={cn("flex-1 hover:no-underline py-0", isLocked && "cursor-default [&>svg]:hidden")}
                         onClick={(e) => {
                             if (isLocked) {
                                 e.preventDefault();
