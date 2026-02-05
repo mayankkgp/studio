@@ -13,13 +13,13 @@ import { useOrder } from "@/context/OrderContext";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { calculateBillableItems } from "@/lib/pricing";
-import type { BillableItem } from "@/lib/types";
+import type { BillableItem, ConfiguredProduct } from "@/lib/types";
 import { DollarSign } from "lucide-react";
 import { useHeaderSummary } from "@/hooks/use-header-summary";
 
 export default function CommercialsPage() {
     const router = useRouter();
-    const { order, setPaymentReceived, saveAsDraft } = useOrder();
+    const { order, setPaymentReceived, saveAsDraft, updateDeliverable } = useOrder();
     const headerSummary = useHeaderSummary(order.eventDetails);
     
     const [billableItems, setBillableItems] = useState<BillableItem[]>([]);
@@ -29,21 +29,32 @@ export default function CommercialsPage() {
     }, [order.deliverables]);
 
     const handleComponentChange = (itemIndex: number, compIndex: number, field: 'rate' | 'multiplier', value: number) => {
-        const newBillableItems = [...billableItems];
-        const item = newBillableItems[itemIndex];
+        const item = billableItems[itemIndex];
         const component = item.components[compIndex];
         
+        // Find corresponding deliverable to update multiplier if needed
+        const deliverable = order.deliverables.find(d => d.id === item.configuredProductId);
+        if (!deliverable) return;
+
         if (field === 'rate') {
-            component.rate = value;
+            // Store rate override in deliverable
+            const rateOverrides = { ...deliverable.rateOverrides, [component.label]: value };
+            updateDeliverable(deliverable.id, { rateOverrides });
         } else if (field === 'multiplier') {
-            component.multiplier = value;
+            // Update the underlying deliverable value based on component type
+            // This is complex as multiplier maps to different fields (quantity, pages, customFieldValues, addon values)
+            // For now, we update the local UI only as multipliers are primarily changed in Deliverables page
+            // and rates are primarily changed in Commercials page.
+            
+            const newBillableItems = [...billableItems];
+            const updatedItem = { ...newBillableItems[itemIndex] };
+            const updatedComponent = { ...updatedItem.components[compIndex] };
+            updatedComponent.multiplier = value;
+            updatedComponent.total = updatedComponent.rate * value;
+            updatedItem.components[compIndex] = updatedComponent;
+            newBillableItems[itemIndex] = updatedItem;
+            setBillableItems(newBillableItems);
         }
-
-        component.total = component.rate * component.multiplier;
-        item.components[compIndex] = component;
-        newBillableItems[itemIndex] = item;
-
-        setBillableItems(newBillableItems);
     };
 
     const totalValue = useMemo(() => {

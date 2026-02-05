@@ -18,11 +18,71 @@ type OrderContextType = {
 
 const OrderContext = createContext<OrderContextType | undefined>(undefined);
 
+// Sample Data Generators for "Random Suitable Default Values"
+const SAMPLE_DELIVERABLES: ConfiguredProduct[] = [
+  {
+    id: `1-${Date.now()}-sample`,
+    productId: 1,
+    productName: "Logo",
+    variant: "Custom",
+    quantity: 1,
+    addons: [],
+    customFieldValues: {},
+    specialRequest: "Make it look premium",
+  },
+  {
+    id: `5-${Date.now()}-sample`,
+    productId: 5,
+    productName: "Invite",
+    variant: undefined,
+    addons: [
+      { id: 'name_swap', name: 'Name Swap', value: true }
+    ],
+    customFieldValues: {
+      event_page_cat: 3,
+      cover_page_custom: 1
+    },
+    specialRequest: "",
+  },
+  {
+    id: `334-${Date.now()}-sample`,
+    productId: 334,
+    productName: "Ritual Card - Blossom",
+    variant: "Catalogue",
+    addons: [
+      { id: 'physical', name: 'Physical', value: 50 }
+    ],
+    customFieldValues: {
+      petals: 8
+    },
+    specialRequest: "",
+  },
+  {
+    id: `9-${Date.now()}-sample`,
+    productId: 9,
+    productName: "Welcome Note",
+    variant: "Custom",
+    addons: [
+      { id: 'physical', name: 'Physical', value: 100 }
+    ],
+    customFieldValues: {},
+    specialRequest: "",
+  }
+];
+
 const initialOrderState: Order = {
   orderId: '',
-  eventDetails: {},
-  deliverables: [],
-  paymentReceived: 0,
+  eventDetails: {
+    eventType: 'Wedding',
+    brideName: 'Riya',
+    groomName: 'Arjun',
+    eventDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    orderDueDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
+    venueName: 'Taj Palace, Mumbai',
+    shipToCity: 'Mumbai'
+  },
+  deliverables: SAMPLE_DELIVERABLES,
+  paymentReceived: 5000,
 };
 
 export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ children }: { children: React.ReactNode }) => {
@@ -34,10 +94,6 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const newOrderId = `#ORD-${Math.floor(1000 + Math.random() * 9000)}`;
     setOrder((prev) => ({ ...prev, orderId: newOrderId }));
     setIsLoaded(true);
-    
-    try {
-      localStorage.removeItem('srishbish-order');
-    } catch (e) {}
   }, []);
 
   const saveAsDraft = useCallback(() => {
@@ -75,7 +131,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const resetOrder = useCallback(() => {
     const newOrderId = `#ORD-${Math.floor(1000 + Math.random() * 9000)}`;
-    const newOrder = { ...initialOrderState, orderId: newOrderId };
+    const newOrder = { ...initialOrderState, orderId: newOrderId, deliverables: [] };
     setOrder(newOrder);
     toast({
         title: 'Order Reset',

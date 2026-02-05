@@ -32,6 +32,11 @@ export function calculateBillableItems(deliverables: ConfiguredProduct[]): Billa
             baseRate = getRate(product.variantRateKeys[item.variant]);
         }
 
+        // Apply Override if exists
+        if (item.rateOverrides && item.rateOverrides[variantLabel] !== undefined) {
+            baseRate = item.rateOverrides[variantLabel];
+        }
+
         // Rule: Determine if Fixed or Variable based on presence of main quantity/pages input
         let baseMultiplier = 1;
         let isBaseFixed = true;
@@ -47,10 +52,14 @@ export function calculateBillableItems(deliverables: ConfiguredProduct[]): Billa
         else if (isBlossom) {
             baseMultiplier = item.customFieldValues?.petals || 0;
             isBaseFixed = false;
+        } 
+        // Rule: For Type C products, the basePrice is a fixed setup fee
+        else if (product.configType === 'C') {
+            baseMultiplier = 1;
+            isBaseFixed = true;
         }
 
         // Rule: In invite product, there is no fixed variant pricing row.
-        // For Blossom, the base row is included if petals are provided.
         if (!isInvite && (baseRate > 0 || isBaseFixed || (isBlossom && baseMultiplier > 0))) {
             components.push({
                 label: variantLabel,
@@ -63,7 +72,6 @@ export function calculateBillableItems(deliverables: ConfiguredProduct[]): Billa
 
         // 2. CUSTOM FIELD ROWS
         // Rule: For all products (including Invite), treat each custom field as variable price row.
-        // If value is 0, do not include.
         if (product.customFields && item.customFieldValues) {
             product.customFields.forEach(field => {
                 // SPECIAL RULE: Ritual Card - Blossom 'petals' field is used for base multiplier, not a separate row
@@ -71,7 +79,13 @@ export function calculateBillableItems(deliverables: ConfiguredProduct[]): Billa
 
                 const value = item.customFieldValues?.[field.id];
                 if (value && value > 0) {
-                    const rate = getRate(field.rateKey);
+                    let rate = getRate(field.rateKey);
+                    
+                    // Apply Override
+                    if (item.rateOverrides && item.rateOverrides[field.name] !== undefined) {
+                        rate = item.rateOverrides[field.name];
+                    }
+
                     components.push({
                         label: field.name,
                         multiplier: value,
@@ -89,6 +103,12 @@ export function calculateBillableItems(deliverables: ConfiguredProduct[]): Billa
             if (!addonDef || addon.value === undefined || addon.value === false || addon.value === null) return;
 
             let rate = getRate(addonDef.rateKey);
+            
+            // Apply Override
+            if (item.rateOverrides && item.rateOverrides[addon.name] !== undefined) {
+                rate = item.rateOverrides[addon.name];
+            }
+
             let multiplier = 0;
             let isFixed = false;
 
@@ -96,7 +116,10 @@ export function calculateBillableItems(deliverables: ConfiguredProduct[]): Billa
             if (isBlossom && addonDef.id === 'physical') {
                 const petals = item.customFieldValues?.petals || 0;
                 const surchargeRate = rates['physical_petal_surcharge'] || 10;
-                rate = petals * surchargeRate;
+                // If overridden, we use the literal override rate, otherwise dynamic
+                if (!(item.rateOverrides && item.rateOverrides[addon.name] !== undefined)) {
+                    rate = petals * surchargeRate;
+                }
             }
 
             // Rule: Checkbox = Fixed (1), Numeric = Variable (Value)
@@ -122,12 +145,18 @@ export function calculateBillableItems(deliverables: ConfiguredProduct[]): Billa
         // 4. PROVIDED SPECIAL REQUEST ROW
         // Rule: Always a fixed price row if note is provided
         if (item.specialRequest && item.specialRequest.trim().length > 0) {
+            const label = 'Special Request';
+            let rate = 0;
+            if (item.rateOverrides && item.rateOverrides[label] !== undefined) {
+                rate = item.rateOverrides[label];
+            }
+
             components.push({
-                label: 'Special Request',
+                label: label,
                 description: item.specialRequest,
                 multiplier: 1,
-                rate: 0, // Default 0, editable in commercials UI
-                total: 0,
+                rate: rate,
+                total: rate * 1,
                 isFixed: true,
             });
         }

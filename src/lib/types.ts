@@ -62,6 +62,7 @@ export type ConfiguredProduct = {
   addons: ConfiguredProductAddon[];
   specialRequest?: string;
   warning?: string;
+  rateOverrides?: Record<string, number>; // Maps component label to custom rate
 };
 
 export type BillableComponent = {
