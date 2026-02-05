@@ -11,7 +11,6 @@ import {
     Clapperboard,
     FileText,
     MailOpen,
-    Frame,
     Package,
     Check,
     Pencil,
@@ -108,30 +107,6 @@ const getValidationSchema = (product: Product | null) => {
         });
     }
 
-    if (product.configType === 'E' && product.sizes) {
-        schemaObject.sizes = z.array(z.object({
-            id: z.string(),
-            name: z.string(),
-            quantity: z.number().nullable()
-        })).superRefine((sizes, ctx) => {
-            sizes.forEach((sizeEntry, idx) => {
-                const sizeDef = product.sizes?.find(s => s.id === sizeEntry.id);
-                if (sizeEntry.quantity !== null && sizeEntry.quantity !== undefined) {
-                    if (sizeDef?.softConstraints) {
-                        sizeDef.softConstraints.forEach(constraint => {
-                            if (constraint.type === 'min' && (sizeEntry.quantity as number) < constraint.value) {
-                                ctx.addIssue({ code: z.ZodIssueCode.custom, message: constraint.message.toUpperCase(), path: [idx, 'quantity'] });
-                            }
-                            if (constraint.type === 'max' && (sizeEntry.quantity as number) > constraint.value) {
-                                ctx.addIssue({ code: z.ZodIssueCode.custom, message: constraint.message.toUpperCase(), path: [idx, 'quantity'] });
-                            }
-                        });
-                    }
-                }
-            });
-        });
-    }
-
     return z.object(schemaObject);
 };
 
@@ -166,14 +141,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                     name: addon.name, 
                     value: existingAddon?.value ?? undefined
                 };
-            }) || [],
-            sizes: product?.sizes?.map(size => {
-                const existingSize = item.sizes?.find(s => s.id === size.id);
-                return {
-                    id: size.id,
-                    name: size.name,
-                    quantity: existingSize?.quantity ?? null
-                };
             }) || []
         },
         mode: 'onChange'
@@ -189,7 +156,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         el.style.height = `${Math.max(40, scrollHeight)}px`;
     }, []);
 
-    // Initial validation on mount to suppress false-negative signals during remounting
+    // Stabilize mount validation
     React.useEffect(() => {
         const initValidation = async () => {
             await trigger();
@@ -198,7 +165,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         initValidation();
     }, [trigger]);
 
-    // Update parent about validity ONLY after the first validation pass completes
+    // Parent validity sync
     React.useEffect(() => {
         if (hasValidated) {
             onValidityChange(item.id, isValid);
@@ -209,8 +176,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         const currentValues = getValues();
         onUpdate(item.id, {
             ...currentValues,
-            addons: (currentValues.addons || []).filter((a: any) => a.value !== undefined && a.value !== false) as any,
-            sizes: (currentValues.sizes || []).filter((s: any) => s.quantity !== null) as any
+            addons: (currentValues.addons || []).filter((a: any) => a.value !== undefined && a.value !== false) as any
         });
     }, [getValues, item.id, onUpdate]);
 
@@ -226,7 +192,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         watchedValues.customFieldValues, 
         watchedValues.addons, 
         watchedValues.variant,
-        watchedValues.sizes,
         performSyncUpdate
     ]);
 
@@ -235,7 +200,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         const result = await trigger();
         if (result) {
             performSyncUpdate();
-            onValidityChange(item.id, true);
             onDone(item.id);
         }
     };
@@ -298,7 +262,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             case 'B': return Clapperboard;
             case 'C': return FileText;
             case 'D': return MailOpen;
-            case 'E': return Frame;
             default: return Package;
         }
     };
@@ -314,7 +277,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         <div className="group relative">
             <AccordionItem 
                 value={item.id} 
-                id={`deliverable-${item.id}`}
                 className={cn(
                     "border rounded-xl transition-all duration-200 overflow-hidden",
                     isExpanded 
@@ -429,23 +391,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                             </div>
                         )}
 
-                        {product?.configType === 'E' && product.sizes && (
-                            <div className="flex flex-wrap items-center gap-6">
-                                {product.sizes.map((size, index) => (
-                                    <div key={size.id} className="flex items-center gap-3">
-                                        <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                                            {size.name}
-                                        </Label>
-                                        <Input 
-                                            type="number" 
-                                            className="w-20 h-10 px-2 text-sm bg-background"
-                                            {...register(`sizes.${index}.quantity`, { valueAsNumber: true })} 
-                                        />
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-
                         <div className="flex flex-col gap-4">
                             {product?.addons && product.addons.length > 0 && (
                                 <div className="flex flex-wrap gap-2">
@@ -506,7 +451,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                                     {hasError && (
                                                                         <TooltipProvider>
                                                                             <Tooltip>
-                                                                                <TooltipTrigger asChild><AlertCircle className="h-3 w-3" /></TooltipTrigger>
+                                                                                <TooltipTrigger asChild><AlertCircle className="h-3 w-3 text-white" /></TooltipTrigger>
                                                                                 <TooltipContent><p>{hasError.message}</p></TooltipContent>
                                                                             </Tooltip>
                                                                         </TooltipProvider>

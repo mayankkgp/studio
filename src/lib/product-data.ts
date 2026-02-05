@@ -112,21 +112,21 @@ export const productCatalog: Product[] = [
     ]
   },
 
-  // Type E (Multi-Size)
-  { id: 18, name: 'Paper Bags', configType: 'E', basePrice: 0, variants: ['Catalogue', 'Custom'], sizes: [
-      { id: 'large', name: 'Large', rateKey: 'paper_bag_large_rate', softConstraints: [{ type: 'min', value: 100, message: 'MOQ is 100.' }] },
-      { id: 'medium', name: 'Medium', rateKey: 'paper_bag_medium_rate', softConstraints: [{ type: 'min', value: 100, message: 'MOQ is 100.' }] },
-      { id: 'small', name: 'Small', rateKey: 'paper_bag_small_rate', softConstraints: [{ type: 'min', value: 100, message: 'MOQ is 100.' }] }
+  // Former Type E (Converted to Type C with Addons)
+  { id: 18, name: 'Paper Bags', configType: 'C', basePrice: 0, variants: ['Catalogue', 'Custom'], addons: [
+      { id: 'large', name: 'Large', type: 'physical_quantity', rateKey: 'paper_bag_large_rate', softConstraints: [{ type: 'min', value: 100, message: 'MOQ is 100.' }] },
+      { id: 'medium', name: 'Medium', type: 'physical_quantity', rateKey: 'paper_bag_medium_rate', softConstraints: [{ type: 'min', value: 100, message: 'MOQ is 100.' }] },
+      { id: 'small', name: 'Small', type: 'physical_quantity', rateKey: 'paper_bag_small_rate', softConstraints: [{ type: 'min', value: 100, message: 'MOQ is 100.' }] }
     ]
   },
-  { id: 22, name: 'Contract Board', configType: 'E', basePrice: 0, variants: ['Catalogue', 'Custom'], sizes: [
-      { id: 'a3', name: 'A3', rateKey: 'contract_board_a3_rate', softConstraints: [{ type: 'min', value: 1, message: 'Min 1.' }] },
-      { id: '2x3ft', name: '2x3 ft', rateKey: 'contract_board_2x3_rate', softConstraints: [{ type: 'min', value: 1, message: 'Min 1.' }] }
+  { id: 22, name: 'Contract Board', configType: 'C', basePrice: 0, variants: ['Catalogue', 'Custom'], addons: [
+      { id: 'a3', name: 'A3', type: 'physical_quantity', rateKey: 'contract_board_a3_rate', softConstraints: [{ type: 'min', value: 1, message: 'Min 1.' }] },
+      { id: '2x3ft', name: '2x3 ft', type: 'physical_quantity', rateKey: 'contract_board_2x3_rate', softConstraints: [{ type: 'min', value: 1, message: 'Min 1.' }] }
     ]
   },
-  { id: 31, name: 'Hangover Kits', configType: 'E', basePrice: 0, variants: ['Catalogue', 'Custom'], sizes: [
-      { id: 'small', name: '5x7 in', rateKey: 'hangover_kit_small_rate', softConstraints: [{ type: 'min', value: 50, message: 'MOQ is 50.' }] },
-      { id: 'large', name: '10x11 in', rateKey: 'hangover_kit_large_rate', softConstraints: [{ type: 'min', value: 50, message: 'MOQ is 50.' }] }
+  { id: 31, name: 'Hangover Kits', configType: 'C', basePrice: 0, variants: ['Catalogue', 'Custom'], addons: [
+      { id: 'small', name: '5x7 in', type: 'physical_quantity', rateKey: 'hangover_kit_small_rate', softConstraints: [{ type: 'min', value: 50, message: 'MOQ is 50.' }] },
+      { id: 'large', name: '10x11 in', type: 'physical_quantity', rateKey: 'hangover_kit_large_rate', softConstraints: [{ type: 'min', value: 50, message: 'MOQ is 50.' }] }
     ]
   },
 ];

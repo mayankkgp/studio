@@ -21,6 +21,7 @@ export default function DeliverablesPage() {
     
     const [openItems, setOpenItems] = useState<string[]>([]);
     const [rowStatus, setRowStatus] = useState<Record<string, { isValid: boolean }>>({});
+    const [committedItemIds, setCommittedItemIds] = useState<string[]>([]);
     const prevCount = useRef(order.deliverables.length);
 
     const handleValidityChange = useCallback((id: string, isValid: boolean) => {
@@ -34,37 +35,36 @@ export default function DeliverablesPage() {
         setOpenItems(prev => Array.from(new Set([...prev, id])));
     }, []);
 
-    const handleDone = useCallback((id: string) => {
+    const handleDone = useCallback(async (id: string) => {
+        // Validation check is handled inside DeliverableRow, but parent tracks commitment
+        setCommittedItemIds(prev => Array.from(new Set([...prev, id])));
         setOpenItems(prev => prev.filter(itemId => itemId !== id));
     }, []);
 
-    // Split items based on current validity and expansion state
+    // Persistent splitting: Once an item moves to Order List, it stays there.
     const { activeItems, orderListItems } = useMemo(() => {
         const active: any[] = [];
         const list: any[] = [];
 
         order.deliverables.forEach(item => {
-            const isValid = rowStatus[item.id]?.isValid ?? false;
-            const isExpanded = openItems.includes(item.id);
-            
-            // If it's invalid OR currently open, it belongs in Action Required
-            if (!isValid || isExpanded) {
-                active.push(item);
-            } else {
+            if (committedItemIds.includes(item.id)) {
                 list.push(item);
+            } else {
+                active.push(item);
             }
         });
 
+        // Maintain consistent reverse order for list items (newest at bottom)
         return { 
             activeItems: active, 
-            orderListItems: [...list].reverse() 
+            orderListItems: list 
         };
-    }, [order.deliverables, rowStatus, openItems]);
+    }, [order.deliverables, committedItemIds]);
 
     useEffect(() => {
         if (order.deliverables.length > prevCount.current) {
             const newItem = order.deliverables[order.deliverables.length - 1];
-            setOpenItems(prev => Array.from(new Set([...prev, newItem.id])));
+            setOpenItems([newItem.id]);
         }
         prevCount.current = order.deliverables.length;
     }, [order.deliverables]);
@@ -78,7 +78,7 @@ export default function DeliverablesPage() {
                 title: "Incomplete Items",
                 description: "Please complete all required fields before moving to commercials."
             });
-            setOpenItems(prev => Array.from(new Set([...prev, firstInvalidItem.id])));
+            setOpenItems([firstInvalidItem.id]);
             return;
         }
 
@@ -149,7 +149,7 @@ export default function DeliverablesPage() {
                                             <DeliverableRow 
                                                 key={item.id} 
                                                 item={item} 
-                                                isExpanded={false}
+                                                isExpanded={openItems.includes(item.id)}
                                                 onEdit={handleEdit}
                                                 onDone={handleDone}
                                                 onValidityChange={handleValidityChange}

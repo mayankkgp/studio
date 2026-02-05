@@ -54,23 +54,6 @@ export function calculateBillableItems(deliverables: ConfiguredProduct[]): Billa
                     });
                 }
                 break;
-            case 'E':
-                if (item.sizes) {
-                    item.sizes.forEach(sizeEntry => {
-                        const sizeDef = product.sizes?.find(s => s.id === sizeEntry.id);
-                        if (sizeDef && sizeEntry.quantity && sizeEntry.quantity > 0) {
-                            const rate = getRate(sizeDef.rateKey);
-                            components.push({
-                                label: `Base Price (${sizeDef.name})`,
-                                multiplier: sizeEntry.quantity,
-                                rate: rate,
-                                total: rate * sizeEntry.quantity,
-                                isFixed: false,
-                            });
-                        }
-                    });
-                }
-                break;
         }
 
         // Custom Fields

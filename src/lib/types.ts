@@ -31,17 +31,10 @@ export type CustomField = {
   softConstraints?: SoftConstraint[];
 };
 
-export type ProductSize = {
-  id: string;
-  name: string;
-  rateKey: string;
-  softConstraints?: SoftConstraint[];
-};
-
 export type Product = {
   id: number;
   name: string;
-  configType: 'A' | 'B' | 'C' | 'D' | 'E';
+  configType: 'A' | 'B' | 'C' | 'D';
   basePrice: number;
   variants?: string[];
   variantRateKeys?: Record<string, string>;
@@ -49,7 +42,6 @@ export type Product = {
   softConstraints?: SoftConstraint[];
   addons?: Addon[];
   customFields?: CustomField[];
-  sizes?: ProductSize[];
   specialLogic?: 'RitualCardBlossom' | 'MenuCardCustom' | 'BadgesCustom' | 'WaxSealCustomQty';
 };
 
@@ -57,12 +49,6 @@ export type ConfiguredProductAddon = {
   id: string;
   name: string;
   value: boolean | number | null;
-};
-
-export type ConfiguredProductSize = {
-  id: string;
-  name: string;
-  quantity: number | null;
 };
 
 export type ConfiguredProduct = {
@@ -74,7 +60,6 @@ export type ConfiguredProduct = {
   pages?: number | null;
   customFieldValues?: Record<string, number | null>;
   addons: ConfiguredProductAddon[];
-  sizes: ConfiguredProductSize[];
   specialRequest?: string;
   warning?: string;
 };
