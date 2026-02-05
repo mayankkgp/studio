@@ -94,7 +94,7 @@ export default function CommercialsPage() {
                     {/* Left Panel: Billable Items List (Expert Workflow) */}
                     <main className="flex-1 flex flex-col overflow-hidden bg-background pt-6 pb-6">
                         {/* Scroll Wrapper: Full width to dock scrollbar to edge */}
-                        <div className="flex-1 overflow-y-auto custom-scrollbar">
+                        <div className="flex-1 overflow-y-auto custom-scrollbar w-full">
                             {/* Centering Wrapper */}
                             <div className="max-w-4xl mx-auto w-full px-4 lg:px-6">
                                 <div className="w-full">
@@ -123,7 +123,7 @@ export default function CommercialsPage() {
                                                         <React.Fragment key={item.configuredProductId}>
                                                             {/* Product Header Row */}
                                                             <TableRow className="bg-[#5C4B35] hover:bg-[#5C4B35] transition-none z-10 relative">
-                                                                <TableCell colSpan={3} className="py-2.5 font-bold text-sm text-[#FFFFFF] border-l border-r border-stone-200">
+                                                                <TableCell colSpan={3} className="py-2.5 font-bold text-sm text-[#FFFFFF] border-l border-stone-200">
                                                                     {item.productName}
                                                                 </TableCell>
                                                                 <TableCell className="py-2.5 text-right font-bold text-sm text-[#FFFFFF] border-r border-stone-200">
@@ -138,14 +138,11 @@ export default function CommercialsPage() {
                                                                 return (
                                                                     <TableRow 
                                                                         key={`${item.configuredProductId}-${compIdx}`} 
-                                                                        className={cn(
-                                                                            "group h-10 bg-[#F9F2DC] hover:bg-[#E6DEBC] transition-colors",
-                                                                            "border-stone-200"
-                                                                        )}
+                                                                        className="group h-10 bg-[#F9F2DC] hover:bg-[#E6DEBC] transition-colors"
                                                                     >
                                                                         <TableCell className={cn(
-                                                                            "py-0 pl-8 text-sm text-[#2E261F] font-medium relative border-l border-stone-200",
-                                                                            isAbsoluteLastRow && "border-b rounded-bl-lg"
+                                                                            "py-0 pl-8 text-sm text-[#2E261F] font-medium relative border-l border-b border-stone-300",
+                                                                            isAbsoluteLastRow && "rounded-bl-lg"
                                                                         )}>
                                                                             {isSpecialRequest ? (
                                                                                 <React.Fragment>
@@ -158,16 +155,10 @@ export default function CommercialsPage() {
                                                                                 comp.label
                                                                             )}
                                                                         </TableCell>
-                                                                        <TableCell className={cn(
-                                                                            "py-0 text-center text-sm text-[#2E261F] cursor-default select-none border-stone-200",
-                                                                            isAbsoluteLastRow && "border-b"
-                                                                        )}>
+                                                                        <TableCell className="py-0 text-center text-sm text-[#2E261F] cursor-default select-none border-b border-stone-300">
                                                                             {comp.isFixed ? "-" : comp.multiplier}
                                                                         </TableCell>
-                                                                        <TableCell className={cn(
-                                                                            "py-0 text-right border-stone-200",
-                                                                            isAbsoluteLastRow && "border-b"
-                                                                        )}>
+                                                                        <TableCell className="py-0 text-right border-b border-stone-300">
                                                                             <input
                                                                                 type="number"
                                                                                 defaultValue={comp.rate}
@@ -177,8 +168,8 @@ export default function CommercialsPage() {
                                                                             />
                                                                         </TableCell>
                                                                         <TableCell className={cn(
-                                                                            "py-0 text-right text-sm font-bold text-[#2E261F] border-r border-stone-200",
-                                                                            isAbsoluteLastRow && "border-b rounded-br-lg"
+                                                                            "py-0 text-right text-sm font-bold text-[#2E261F] border-r border-b border-stone-300",
+                                                                            isAbsoluteLastRow && "rounded-br-lg"
                                                                         )}>
                                                                             {formatCurrency(comp.total)}
                                                                         </TableCell>
@@ -228,13 +219,13 @@ export default function CommercialsPage() {
                                 </Label>
                                 <div className="relative">
                                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">₹</span>
-                                    <Input 
+                                    <input 
                                         id="payment" 
                                         type="number" 
                                         placeholder="0"
                                         value={order.paymentReceived || ''}
                                         onChange={(e) => setPaymentReceived(Number(e.target.value))}
-                                        className="pl-7 h-11 text-lg font-semibold bg-background border-input"
+                                        className="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 pl-7 text-lg font-semibold ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                                     />
                                 </div>
                             </div>
@@ -246,7 +237,7 @@ export default function CommercialsPage() {
                         </div>
 
                         {/* Action Buttons Pushed to Bottom */}
-                        <div className="mt-auto space-y-3 pt-12">
+                        <div className="mt-auto space-y-3">
                             <Button 
                                 variant="outline" 
                                 className="w-full h-10 group bg-background/50" 
