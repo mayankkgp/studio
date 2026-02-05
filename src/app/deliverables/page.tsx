@@ -74,23 +74,24 @@ export default function DeliverablesPage() {
         };
     }, [order.deliverables, committedItemIds]);
 
+    // CTA activation conditions:
+    // 1. All product cards must be valid
+    // 2. All product cards must be in closed/collapsed state (openOrderListItems.length === 0)
+    // 3. The 'action' section must be empty (activeItems.length === 0)
+    const isNextStepActive = useMemo(() => {
+        const hasItems = order.deliverables.length > 0;
+        const allConfirmed = activeItems.length === 0;
+        const allCollapsed = openOrderListItems.length === 0;
+        const allValid = order.deliverables.every(item => rowStatus[item.id]?.isValid);
+        
+        return hasItems && allConfirmed && allCollapsed && allValid;
+    }, [order.deliverables, activeItems.length, openOrderListItems.length, rowStatus]);
+
     const handleNextStep = useCallback(() => {
-        if (activeItems.length > 0) {
-            toast({
-                variant: "destructive",
-                title: "Items Remaining",
-                description: "Please confirm all items in 'Action Required' before moving to commercials."
-            });
-            return;
+        if (isNextStepActive) {
+            router.push('/commercials');
         }
-
-        if (order.deliverables.length === 0) {
-            toast({ variant: "destructive", title: "No Items", description: "Add a product to continue." });
-            return;
-        }
-
-        router.push('/commercials');
-    }, [activeItems.length, order.deliverables.length, router, toast]);
+    }, [isNextStepActive, router]);
 
     return (
         <AppLayout>
@@ -185,7 +186,9 @@ export default function DeliverablesPage() {
                     <Button variant="outline" onClick={() => router.back()}>Back</Button>
                     <div className="flex items-center gap-4">
                         <Button variant="secondary" onClick={saveAsDraft}>Save as Draft</Button>
-                        <Button onClick={handleNextStep}>Next Step (Commercials)</Button>
+                        <Button onClick={handleNextStep} disabled={!isNextStepActive}>
+                            Next Step (Commercials)
+                        </Button>
                     </div>
                 </footer>
             </div>

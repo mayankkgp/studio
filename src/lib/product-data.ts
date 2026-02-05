@@ -96,7 +96,7 @@ export const productCatalog: Product[] = [
   { id: 58, name: 'Placecards', configType: 'C', basePrice: 0, variants: ['Catalogue', 'Custom'], addons: [{ id: 'physical', name: 'Physical', type: 'physical_quantity', rateKey: 'placecard_rate', softConstraints: [{ type: 'min', value: 25, message: 'MOQ is 25.' }] }] },
   { id: 60, name: 'Tote Bags', configType: 'C', basePrice: 0, variants: ['Catalogue', 'Custom'], addons: [{ id: 'physical', name: 'Physical', type: 'physical_quantity', rateKey: 'tote_bag_rate', softConstraints: [{ type: 'min', value: 25, message: 'MOQ is 25.' }] }] },
   
-  // Type D (Invite Complex)
+  // Type D (Invite Complex) - No Variants
   { id: 5, name: 'Invite', configType: 'D', basePrice: 0, customFields: [
       { id: 'event_page_cat', name: 'Event Page (Catalogue)', type: 'numeric', rateKey: 'event_page_cat_rate' },
       { id: 'event_page_custom', name: 'Event Page (Custom)', type: 'numeric', rateKey: 'event_page_custom_rate' },
