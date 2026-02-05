@@ -23,24 +23,6 @@ export default function DeliverablesPage() {
     const [rowStatus, setRowStatus] = useState<Record<string, { isValid: boolean }>>({});
     const prevCount = useRef(order.deliverables.length);
 
-    const scrollToItem = useCallback((id: string) => {
-        setTimeout(() => {
-            const el = document.getElementById(`deliverable-${id}`);
-            if (el) {
-                el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
-        }, 300);
-    }, []);
-
-    useEffect(() => {
-        if (order.deliverables.length > prevCount.current) {
-            const newItem = order.deliverables[order.deliverables.length - 1];
-            setOpenItems(prev => Array.from(new Set([...prev, newItem.id])));
-            scrollToItem(newItem.id);
-        }
-        prevCount.current = order.deliverables.length;
-    }, [order.deliverables, scrollToItem]);
-
     const handleValidityChange = useCallback((id: string, isValid: boolean) => {
         setRowStatus(prev => {
             if (prev[id]?.isValid === isValid) return prev;
@@ -79,6 +61,14 @@ export default function DeliverablesPage() {
         };
     }, [order.deliverables, rowStatus, openItems]);
 
+    useEffect(() => {
+        if (order.deliverables.length > prevCount.current) {
+            const newItem = order.deliverables[order.deliverables.length - 1];
+            setOpenItems(prev => Array.from(new Set([...prev, newItem.id])));
+        }
+        prevCount.current = order.deliverables.length;
+    }, [order.deliverables]);
+
     const handleNextStep = useCallback(() => {
         const firstInvalidItem = order.deliverables.find(item => rowStatus[item.id]?.isValid === false);
         
@@ -89,7 +79,6 @@ export default function DeliverablesPage() {
                 description: "Please complete all required fields before moving to commercials."
             });
             setOpenItems(prev => Array.from(new Set([...prev, firstInvalidItem.id])));
-            scrollToItem(firstInvalidItem.id);
             return;
         }
 
@@ -99,7 +88,7 @@ export default function DeliverablesPage() {
         }
 
         router.push('/commercials');
-    }, [rowStatus, order.deliverables, router, toast, scrollToItem]);
+    }, [rowStatus, order.deliverables, router, toast]);
 
     return (
         <AppLayout>
@@ -132,11 +121,6 @@ export default function DeliverablesPage() {
                                     <div className="flex flex-col items-center justify-center py-20 border-2 border-dashed rounded-xl bg-card/50">
                                         <Package className="h-12 w-12 text-muted-foreground/50 mb-4" />
                                         <p className="text-muted-foreground font-medium">Your queue is empty</p>
-                                    </div>
-                                ) : activeItems.length === 0 ? (
-                                    <div className="py-8 text-center border rounded-xl bg-muted/20 border-dashed">
-                                        <CheckCircle2 className="h-8 w-8 text-green-500 mx-auto mb-2" />
-                                        <p className="text-sm text-muted-foreground font-medium">No items require attention</p>
                                     </div>
                                 ) : (
                                     activeItems.map((item) => (

@@ -144,11 +144,12 @@ export const DeliverableRow = React.memo(function DeliverableRow({
     onUpdate,
     onRemove
 }: DeliverableRowProps) {
-    const product = productCatalog.find(p => p.id === item.productId) || null;
-    const isBranchA = product?.configType === 'A' || product?.configType === 'B';
+    const product = React.useMemo(() => productCatalog.find(p => p.id === item.productId) || null, [item.productId]);
+    const isBranchA = React.useMemo(() => product?.configType === 'A' || product?.configType === 'B', [product]);
     
     const notesRef = React.useRef<HTMLTextAreaElement | null>(null);
     const [showNotes, setShowNotes] = React.useState(!!item.specialRequest);
+    const [hasValidated, setHasValidated] = React.useState(false);
 
     const form = useForm({
         resolver: zodResolver(getValidationSchema(product)),
@@ -188,16 +189,21 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         el.style.height = `${Math.max(40, scrollHeight)}px`;
     }, []);
 
+    // Initial validation on mount to suppress false-negative signals during remounting
     React.useEffect(() => {
-        if (showNotes && notesRef.current) {
-            adjustHeight(notesRef.current);
-        }
-    }, [showNotes, watchedValues.specialRequest, adjustHeight]);
+        const initValidation = async () => {
+            await trigger();
+            setHasValidated(true);
+        };
+        initValidation();
+    }, [trigger]);
 
-    // Update parent about validity
+    // Update parent about validity ONLY after the first validation pass completes
     React.useEffect(() => {
-        onValidityChange(item.id, isValid);
-    }, [item.id, isValid, onValidityChange]);
+        if (hasValidated) {
+            onValidityChange(item.id, isValid);
+        }
+    }, [item.id, isValid, hasValidated, onValidityChange]);
 
     const performSyncUpdate = React.useCallback(() => {
         const currentValues = getValues();
@@ -246,13 +252,8 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         }
     }
 
-    const handleAddNote = (e: React.MouseEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setShowNotes(true);
-        setTimeout(() => {
-            notesRef.current?.focus();
-        }, 0);
+    const hasConstraintError = (error: any) => {
+        return error?.message && error.message.toUpperCase() !== 'REQUIRED';
     };
 
     const getSummaryText = () => {
@@ -309,75 +310,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             ? "text-blue-600 bg-blue-50" 
             : "text-green-600 bg-green-100";
 
-    const hasConstraintError = (error: any) => {
-        return error?.message && error.message.toUpperCase() !== 'REQUIRED';
-    };
-
-    const renderPromotedInput = () => {
-        if (product?.configType === 'A') {
-            return (
-                <div className="flex items-center gap-4">
-                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap min-w-[40px]">QTY *</Label>
-                    <Input 
-                        id={`qty-input-${item.id}`}
-                        type="number" 
-                        {...register('quantity', { valueAsNumber: true })}
-                        className={cn(
-                            "w-24 h-10 text-lg bg-background",
-                            hasConstraintError(errors.quantity) && "border-destructive ring-destructive border-2"
-                        )}
-                    />
-                </div>
-            );
-        }
-        if (product?.configType === 'B') {
-            return (
-                <div className="flex items-center gap-4">
-                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap min-w-[40px]">PAGES *</Label>
-                    <Input 
-                        id={`pages-input-${item.id}`}
-                        type="number" 
-                        {...register('pages', { valueAsNumber: true })}
-                        className={cn(
-                            "w-24 h-10 text-lg bg-background",
-                            hasConstraintError(errors.pages) && "border-destructive ring-destructive border-2"
-                        )}
-                    />
-                </div>
-            );
-        }
-        return null;
-    };
-
-    const renderVariantSelection = () => {
-        if (!product?.variants || product.variants.length === 0) return null;
-        return (
-            <div className="flex items-start gap-4">
-                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground pt-3 whitespace-nowrap">VARIANT *</Label>
-                <div className="flex flex-wrap gap-2">
-                    {product.variants!.map(v => (
-                        <Button
-                            key={v}
-                            type="button"
-                            variant={watchedValues.variant === v ? "default" : "outline"}
-                            size="sm"
-                            className={cn(
-                                "h-9 rounded-full px-4",
-                                watchedValues.variant === v ? "shadow-sm" : "hover:bg-accent"
-                            )}
-                            onClick={() => setValue('variant', v, { shouldValidate: true })}
-                        >
-                            {v}
-                        </Button>
-                    ))}
-                </div>
-            </div>
-        );
-    };
-
-    const isComplexProduct = product?.configType === 'D' || product?.specialLogic === 'RitualCardBlossom'; 
-    const warningText = getPriorityWarning();
-
     return (
         <div className="group relative">
             <AccordionItem 
@@ -406,9 +338,9 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                             <h3 className={cn("font-semibold leading-none shrink-0", isExpanded ? "text-base" : "text-sm")}>
                                 {item.productName}
                             </h3>
-                            {warningText ? (
+                            {getPriorityWarning() ? (
                                 <Badge variant="destructive" className="text-[10px] h-4 py-0 font-bold uppercase">
-                                    {warningText}
+                                    {getPriorityWarning()}
                                 </Badge>
                             ) : !isExpanded && (
                                 <div className="text-xs text-muted-foreground truncate flex-1">
@@ -437,55 +369,84 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                 <AccordionContent className="px-4 pb-4 border-t bg-muted/5 relative">
                     <div className="flex flex-col gap-6 pt-4">
                         <div className="flex flex-wrap items-start justify-between gap-6">
-                            {renderVariantSelection()}
-                            {isBranchA && renderPromotedInput()}
+                            {product?.variants && product.variants.length > 0 && (
+                                <div className="flex items-start gap-4">
+                                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground pt-3 whitespace-nowrap">VARIANT *</Label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {product.variants.map(v => (
+                                            <Button
+                                                key={v}
+                                                type="button"
+                                                variant={watchedValues.variant === v ? "default" : "outline"}
+                                                size="sm"
+                                                className={cn(
+                                                    "h-9 rounded-full px-4",
+                                                    watchedValues.variant === v ? "shadow-sm" : "hover:bg-accent"
+                                                )}
+                                                onClick={() => setValue('variant', v, { shouldValidate: true })}
+                                            >
+                                                {v}
+                                            </Button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {isBranchA && (
+                                <div className="flex items-center gap-4">
+                                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap min-w-[40px]">
+                                        {product?.configType === 'A' ? 'QTY *' : 'PAGES *'}
+                                    </Label>
+                                    <Input 
+                                        type="number" 
+                                        {...register(product?.configType === 'A' ? 'quantity' : 'pages', { valueAsNumber: true })}
+                                        className={cn(
+                                            "w-24 h-10 text-lg bg-background",
+                                            hasConstraintError(product?.configType === 'A' ? errors.quantity : errors.pages) && "border-destructive ring-destructive border-2"
+                                        )}
+                                    />
+                                </div>
+                            )}
                         </div>
 
                         {product?.customFields && product.customFields.length > 0 && (
                             <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-                                {product.customFields.map((field) => {
-                                    const hasError = hasConstraintError((errors.customFieldValues as any)?.[field.id]);
-                                    return (
-                                        <div key={field.id} className="flex items-center gap-3">
-                                            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                                                {field.name} *
-                                            </Label>
-                                            <Input 
-                                                id={`custom-input-${item.id}-${field.id}`}
-                                                type="number" 
-                                                className={cn(
-                                                    "w-16 h-10 px-2 text-sm bg-background",
-                                                    hasError && "border-destructive ring-destructive border-2"
-                                                )}
-                                                {...register(`customFieldValues.${field.id}`, { valueAsNumber: true })} 
-                                            />
-                                        </div>
-                                    );
-                                })}
+                                {product.customFields.map((field) => (
+                                    <div key={field.id} className="flex items-center gap-3">
+                                        <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                                            {field.name} *
+                                        </Label>
+                                        <Input 
+                                            type="number" 
+                                            className={cn(
+                                                "w-16 h-10 px-2 text-sm bg-background",
+                                                hasConstraintError((errors.customFieldValues as any)?.[field.id]) && "border-destructive ring-destructive border-2"
+                                            )}
+                                            {...register(`customFieldValues.${field.id}`, { valueAsNumber: true })} 
+                                        />
+                                    </div>
+                                ))}
                             </div>
                         )}
 
                         {product?.configType === 'E' && product.sizes && (
                             <div className="flex flex-wrap items-center gap-6">
-                                {product.sizes.map((size, index) => {
-                                    return (
-                                        <div key={size.id} className="flex items-center gap-3">
-                                            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                                                {size.name}
-                                            </Label>
-                                            <Input 
-                                                id={`size-input-${item.id}-${size.id}`}
-                                                type="number" 
-                                                className="w-20 h-10 px-2 text-sm bg-background"
-                                                {...register(`sizes.${index}.quantity`, { valueAsNumber: true })} 
-                                            />
-                                        </div>
-                                    );
-                                })}
+                                {product.sizes.map((size, index) => (
+                                    <div key={size.id} className="flex items-center gap-3">
+                                        <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                                            {size.name}
+                                        </Label>
+                                        <Input 
+                                            type="number" 
+                                            className="w-20 h-10 px-2 text-sm bg-background"
+                                            {...register(`sizes.${index}.quantity`, { valueAsNumber: true })} 
+                                        />
+                                    </div>
+                                ))}
                             </div>
                         )}
 
-                        <div className={cn("flex", isComplexProduct ? "flex-col items-stretch gap-4" : "flex-wrap items-start gap-6")}>
+                        <div className="flex flex-col gap-4">
                             {product?.addons && product.addons.length > 0 && (
                                 <div className="flex flex-wrap gap-2">
                                     {product.addons.map((addon, index) => {
@@ -524,12 +485,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                                     variant="outline"
                                                                     size="sm"
                                                                     className="h-8 rounded-full px-3 gap-1.5 text-xs"
-                                                                    onClick={() => {
-                                                                        field.onChange(null); 
-                                                                        setTimeout(() => {
-                                                                            document.getElementById(`addon-input-${item.id}-${addon.id}`)?.focus();
-                                                                        }, 0);
-                                                                    }}
+                                                                    onClick={() => field.onChange(null)}
                                                                 >
                                                                     <Plus className="h-3 w-3" />
                                                                     {addon.name}
@@ -542,7 +498,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                                         {addon.name}
                                                                     </span>
                                                                     <Input
-                                                                        id={`addon-input-${item.id}-${addon.id}`}
                                                                         type="number"
                                                                         className="h-6 px-2 py-0 text-xs bg-white border-none focus-visible:ring-0 rounded-md font-bold text-black w-12"
                                                                         value={field.value ?? ''}
@@ -567,7 +522,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                 </div>
                             )}
 
-                            <div className={cn(isComplexProduct ? "w-full" : "flex-1 min-w-[250px]")}>
+                            <div className="flex-1">
                                 {showNotes ? (
                                     <Textarea 
                                         {...register('specialRequest')} 
@@ -583,7 +538,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                         }}
                                     />
                                 ) : (
-                                    <Button variant="ghost" size="sm" className="h-8 gap-2 text-muted-foreground p-0" onClick={handleAddNote}>
+                                    <Button variant="ghost" size="sm" className="h-8 gap-2 text-muted-foreground p-0" onClick={() => setShowNotes(true)}>
                                         <MessageSquarePlus className="h-4 w-4" />
                                         <span className="text-xs font-medium uppercase">Add Note</span>
                                     </Button>

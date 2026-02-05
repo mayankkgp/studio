@@ -31,7 +31,7 @@ export const productCatalog: Product[] = [
     ],
   },
   
-  // Type C (Setup Based with Variants and Size Add-ons)
+  // Type C (Setup Based)
   { id: 3, name: 'Hashtag', configType: 'C', basePrice: 0, variants: ['Catalogue', 'Custom'], addons: [{ id: 'physical', name: 'Extra Options', type: 'physical_quantity', rateKey: 'hashtag_option_rate', softConstraints: [{ type: 'min', value: 1, message: 'Min 1 option.' }] }] },
   { id: 8, name: 'Itinerary - Key Card', configType: 'C', basePrice: 0, variants: ['Catalogue', 'Custom'], addons: [{ id: 'physical', name: 'Physical', type: 'physical_quantity', rateKey: 'key_card_rate', softConstraints: [{ type: 'min', value: 25, message: 'MOQ is 25.' }] }] },
   { id: 81, name: 'Itinerary - Room', configType: 'C', basePrice: 0, variants: ['Catalogue', 'Custom'], addons: [{ id: 'physical', name: 'Physical', type: 'physical_quantity', rateKey: 'room_itinerary_rate', softConstraints: [{ type: 'min', value: 25, message: 'MOQ is 25.' }] }] },
