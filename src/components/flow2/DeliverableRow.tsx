@@ -209,14 +209,14 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         if (product.configType === 'A' && typeof watchedValues.quantity === 'number') {
             const warning = getLogicWarning(watchedValues.quantity, product.softConstraints);
             parts.push(
-                <span key="qty" className={cn(warning && "text-destructive font-bold")}>
+                <span key="qty" className={cn(warning && "text-orange-600 font-bold")}>
                     Qty: {watchedValues.quantity}
                 </span>
             );
         } else if (product.configType === 'B' && typeof watchedValues.pages === 'number') {
             const warning = getLogicWarning(watchedValues.pages, product.softConstraints);
             parts.push(
-                <span key="pages" className={cn(warning && "text-destructive font-bold")}>
+                <span key="pages" className={cn(warning && "text-orange-600 font-bold")}>
                     {watchedValues.pages} Pgs
                 </span>
             );
@@ -228,7 +228,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                 if (val !== undefined && val !== null && val !== '') {
                     const warning = getLogicWarning(val, field.softConstraints);
                     parts.push(
-                        <span key={field.id} className={cn(warning && "text-destructive font-bold")}>
+                        <span key={field.id} className={cn(warning && "text-orange-600 font-bold")}>
                             {field.name}: {val}
                         </span>
                     );
@@ -244,7 +244,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                     const displayName = addonDef?.name || addon.name;
                     const warning = getLogicWarning(addon.value, addonDef?.softConstraints);
                     parts.push(
-                        <span key={addon.id} className={cn(warning && "text-destructive font-bold")}>
+                        <span key={addon.id} className={cn(warning && "text-orange-600 font-bold")}>
                             {displayName}{typeof addon.value === 'number' ? ` (${addon.value})` : ''}
                         </span>
                     );
@@ -339,7 +339,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                         </h3>
                         {warningData.message && !isPersistent && (
                             <Badge 
-                                variant={warningData.type === 'hard' ? 'destructive' : 'secondary'} 
+                                variant={warningData.type === 'hard' ? 'destructive' : 'warning'} 
                                 className="text-[10px] h-4 py-0 font-bold uppercase shrink-0"
                             >
                                 {warningData.message}
@@ -407,7 +407,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                     {...register(product?.configType === 'A' ? 'quantity' : 'pages', { valueAsNumber: true })}
                                     className={cn(
                                         "w-24 h-10 text-lg bg-background [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
-                                        getLogicWarning(product?.configType === 'A' ? watchedValues.quantity : watchedValues.pages, product?.softConstraints) && "border-destructive ring-destructive border-2"
+                                        getLogicWarning(product?.configType === 'A' ? watchedValues.quantity : watchedValues.pages, product?.softConstraints) && "border-orange-400 ring-orange-400 border-2"
                                     )}
                                 />
                             </div>
@@ -425,7 +425,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                         type="number" 
                                         className={cn(
                                             "w-16 h-10 px-2 text-sm bg-background [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
-                                            getLogicWarning((watchedValues.customFieldValues as any)?.[field.id], field.softConstraints) && "border-destructive ring-destructive border-2"
+                                            getLogicWarning((watchedValues.customFieldValues as any)?.[field.id], field.softConstraints) && "border-orange-400 ring-orange-400 border-2"
                                         )}
                                         {...register(`customFieldValues.${field.id}`, { valueAsNumber: true })} 
                                     />
@@ -485,7 +485,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                         return (
                                                             <div className={cn(
                                                                 "inline-flex items-center rounded-full h-8 pl-4 pr-3 gap-2 bg-primary text-primary-foreground shadow-sm transition-colors",
-                                                                softWarning && "bg-destructive text-destructive-foreground"
+                                                                softWarning && "bg-orange-500 text-white"
                                                             )}>
                                                                 <span className="text-xs font-medium cursor-pointer" onClick={() => field.onChange(false)}>
                                                                     {addon.name}
