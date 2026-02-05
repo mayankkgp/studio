@@ -209,14 +209,14 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         if (product.configType === 'A' && typeof watchedValues.quantity === 'number') {
             const warning = getLogicWarning(watchedValues.quantity, product.softConstraints);
             parts.push(
-                <span key="qty" className={cn(warning && "text-orange-600 font-bold")}>
+                <span key="qty" className={cn(warning && "text-[#FA7315] font-bold")}>
                     Qty: {watchedValues.quantity}
                 </span>
             );
         } else if (product.configType === 'B' && typeof watchedValues.pages === 'number') {
             const warning = getLogicWarning(watchedValues.pages, product.softConstraints);
             parts.push(
-                <span key="pages" className={cn(warning && "text-orange-600 font-bold")}>
+                <span key="pages" className={cn(warning && "text-[#FA7315] font-bold")}>
                     {watchedValues.pages} Pgs
                 </span>
             );
@@ -228,7 +228,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                 if (val !== undefined && val !== null && val !== '') {
                     const warning = getLogicWarning(val, field.softConstraints);
                     parts.push(
-                        <span key={field.id} className={cn(warning && "text-orange-600 font-bold")}>
+                        <span key={field.id} className={cn(warning && "text-[#FA7315] font-bold")}>
                             {field.name}: {val}
                         </span>
                     );
@@ -244,7 +244,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                     const displayName = addonDef?.name || addon.name;
                     const warning = getLogicWarning(addon.value, addonDef?.softConstraints);
                     parts.push(
-                        <span key={addon.id} className={cn(warning && "text-orange-600 font-bold")}>
+                        <span key={addon.id} className={cn(warning && "text-[#FA7315] font-bold")}>
                             {displayName}{typeof addon.value === 'number' ? ` (${addon.value})` : ''}
                         </span>
                     );
@@ -484,8 +484,8 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                         const valString = val.toString();
                                                         return (
                                                             <div className={cn(
-                                                                "inline-flex items-center rounded-full h-8 pl-4 pr-3 gap-2 bg-primary text-primary-foreground shadow-sm transition-colors",
-                                                                softWarning && "bg-orange-500 text-white"
+                                                                "inline-flex items-center rounded-full h-8 pl-4 pr-3 gap-2 bg-[#FA7315] text-white shadow-sm transition-colors",
+                                                                softWarning && "ring-2 ring-white"
                                                             )}>
                                                                 <span className="text-xs font-medium cursor-pointer" onClick={() => field.onChange(false)}>
                                                                     {addon.name}

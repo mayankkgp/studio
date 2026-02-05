@@ -31,20 +31,21 @@ export default function DeliverablesPage() {
     }, []);
 
     const handleDone = useCallback(async (id: string, forceValid: boolean = false) => {
-        // Only block if HARD validation fails (e.g. missing mandatory fields)
+        // Move to top of Order List (committedItemIds)
+        // Hard validation (missing variant/mandatory) blocks, soft constraints don't
         const isValid = forceValid || rowStatus[id]?.isValid;
         
         if (isValid) {
             setCommittedItemIds(prev => {
                 const filtered = prev.filter(itemId => itemId !== id);
-                return [id, ...filtered]; // Prepend to top of Order List
+                return [id, ...filtered]; // Prepend recently completed to top
             });
             setOpenOrderListItems(prev => prev.filter(itemId => itemId !== id));
         } else {
             toast({
                 variant: "destructive",
                 title: "Setup Required",
-                description: "Please complete all mandatory fields (marked with *) before confirming."
+                description: "Please select a variant and complete mandatory fields (marked with *) before confirming."
             });
         }
     }, [rowStatus, toast]);
@@ -59,13 +60,12 @@ export default function DeliverablesPage() {
     }, [removeDeliverable]);
 
     const { activeItems, orderListItems } = useMemo(() => {
-        // Order list items follow the committedItemIds order (most recent first)
+        // Order list items follow committed order (most recent at top)
         const list = committedItemIds
             .map(id => order.deliverables.find(item => item.id === id))
             .filter(item => !!item);
 
-        // Active items follow the deliverables order (Context prepends new items)
-        // These are items NOT in the committedItemIds list
+        // Active items follow deliverables order (Newest added by CommandBar is prepended to deliverables array)
         const active = order.deliverables.filter(item => !committedItemIds.includes(item.id));
 
         return { 
@@ -113,6 +113,7 @@ export default function DeliverablesPage() {
                         </section>
 
                         <div className="space-y-12">
+                            {/* Action Required: Always Expanded, No Collapse */}
                             <section className="space-y-4">
                                 <h2 className="text-xs font-bold uppercase tracking-widest text-primary flex items-center gap-2">
                                     <AlertCircle className="h-4 w-4" />
@@ -128,7 +129,7 @@ export default function DeliverablesPage() {
                                     <Accordion 
                                         type="multiple" 
                                         value={activeItems.map(i => i.id)} 
-                                        className="space-y-2"
+                                        className="space-y-2 pointer-events-auto"
                                     >
                                         {activeItems.map((item) => (
                                             <DeliverableRow 
@@ -147,6 +148,7 @@ export default function DeliverablesPage() {
                                 )}
                             </section>
 
+                            {/* Order List: Collapsed by Default */}
                             {orderListItems.length > 0 && (
                                 <section className="space-y-4">
                                     <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
