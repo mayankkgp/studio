@@ -24,7 +24,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -384,8 +383,8 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                 <AccordionContent className="px-4 pb-4 border-t bg-muted/5 relative">
                     {isSimpleTypeA ? (
                         <div className="flex flex-wrap items-center gap-8 pt-4 pb-2">
-                            <div className="flex items-center gap-3">
-                                <Label className={cn("text-xs font-bold uppercase tracking-wider whitespace-nowrap", errors.quantity ? "text-destructive" : "text-muted-foreground")}>
+                            <div className="flex items-center gap-4">
+                                <Label className={cn("text-xs font-bold uppercase tracking-wider whitespace-nowrap min-w-[40px]", errors.quantity ? "text-destructive" : "text-muted-foreground")}>
                                     Qty
                                 </Label>
                                 <Input 
@@ -435,32 +434,36 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                 )}
 
                                 {product?.variants && product.variants.length > 0 && (
-                                    <div className="space-y-3">
-                                        <Label className={cn("text-xs font-semibold uppercase tracking-wider", errors.variant ? "text-destructive" : "text-muted-foreground")}>Variant</Label>
-                                        <Controller
-                                            name="variant"
-                                            control={control}
-                                            render={({ field }) => (
-                                                <div className="flex flex-wrap gap-2">
-                                                    {product.variants!.map(v => (
-                                                        <Button
-                                                            key={v}
-                                                            type="button"
-                                                            variant={field.value === v ? "default" : "outline"}
-                                                            size="sm"
-                                                            className={cn(
-                                                                "h-9 rounded-full px-4 transition-all",
-                                                                field.value === v ? "shadow-sm" : "hover:bg-accent hover:text-accent-foreground"
-                                                            )}
-                                                            onClick={() => field.onChange(v)}
-                                                        >
-                                                            {v}
-                                                        </Button>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        />
-                                        {errors.variant && <p className="text-xs text-destructive font-medium">{errors.variant.message}</p>}
+                                    <div className="flex items-start gap-4">
+                                        <Label className={cn("text-xs font-bold uppercase tracking-wider whitespace-nowrap min-w-[40px] mt-2.5", errors.variant ? "text-destructive" : "text-muted-foreground")}>
+                                            Variant
+                                        </Label>
+                                        <div className="flex flex-col gap-1">
+                                            <Controller
+                                                name="variant"
+                                                control={control}
+                                                render={({ field }) => (
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {product.variants!.map(v => (
+                                                            <Button
+                                                                key={v}
+                                                                type="button"
+                                                                variant={field.value === v ? "default" : "outline"}
+                                                                size="sm"
+                                                                className={cn(
+                                                                    "h-9 rounded-full px-4 transition-all",
+                                                                    field.value === v ? "shadow-sm" : "hover:bg-accent hover:text-accent-foreground"
+                                                                )}
+                                                                onClick={() => field.onChange(v)}
+                                                            >
+                                                                {v}
+                                                            </Button>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            />
+                                            {errors.variant && <p className="text-xs text-destructive font-medium">{errors.variant.message}</p>}
+                                        </div>
                                     </div>
                                 )}
 
