@@ -91,6 +91,7 @@ const getValidationSchema = (product: Product | null) => {
             addons.forEach((addon, idx) => {
                 const addonDef = product.addons?.find(a => a.id === addon.id);
                 if (addonDef && (addonDef.type === 'numeric' || addonDef.type === 'physical_quantity')) {
+                    // Numeric add-ons are mandatory IF selected (value is not undefined)
                     if (addon.value !== undefined) {
                         if (addon.value === null || typeof addon.value !== 'number') {
                             ctx.addIssue({
@@ -272,13 +273,28 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         if (isValid) return null;
 
         // 1. Check Main Product constraints (MOQ etc)
-        const mainError = (errors as any).quantity || (errors as any).pages;
+        const quantityError = errors.quantity as any;
+        const pagesError = errors.pages as any;
+        const mainError = quantityError || pagesError;
+        
         if (mainError?.message) {
             const msg = mainError.message.toUpperCase();
-            if (msg !== 'REQUIRED' && msg !== 'SETUP REQUIRED') return msg;
+            // Ignore generic type errors or "Required" for the badge if we want specific constraints
+            if (msg !== 'REQUIRED' && !msg.includes('EXPECTED NUMBER')) return msg;
         }
 
-        // 2. Check Add-on constraints
+        // 2. Check Custom Fields
+        if (errors.customFieldValues) {
+            const cfErrors = errors.customFieldValues as Record<string, any>;
+            for (const key in cfErrors) {
+                if (cfErrors[key]?.message) {
+                    const msg = cfErrors[key].message.toUpperCase();
+                    if (msg !== 'REQUIRED') return msg;
+                }
+            }
+        }
+
+        // 3. Check Add-on constraints
         if (errors.addons) {
             const addonErrors = errors.addons as any[];
             for (let err of addonErrors) {
@@ -289,7 +305,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             }
         }
 
-        // 3. Fallback to basic Setup Required if we have missing fields
+        // 4. Fallback for missing mandatory fields
         if (product?.variants?.length && !watchedValues.variant) return 'SETUP REQUIRED';
         if (product?.configType === 'A' && (watchedValues.quantity === null || watchedValues.quantity === undefined)) return 'SETUP REQUIRED';
         if (product?.configType === 'B' && (watchedValues.pages === null || watchedValues.pages === undefined)) return 'SETUP REQUIRED';
@@ -311,11 +327,11 @@ export const DeliverableRow = React.memo(function DeliverableRow({
 
     const isBranchA = product?.configType === 'A' && (!product?.variants || product.variants.length === 0);
 
-    const iconStatusClasses = isExpanded 
-        ? "text-blue-600 bg-blue-50" 
-        : isValid 
-            ? "text-green-600 bg-green-100" 
-            : "text-destructive bg-destructive/10";
+    const iconStatusClasses = !isValid 
+        ? "text-destructive bg-destructive/10"
+        : isExpanded 
+            ? "text-blue-600 bg-blue-50" 
+            : "text-green-600 bg-green-100";
 
     const renderNotesArea = (fullWidth: boolean = false) => {
         if (showNotes) {
@@ -437,13 +453,13 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                             <h3 className={cn("font-semibold leading-none shrink-0", isExpanded ? "text-base" : "text-sm")}>
                                 {item.productName}
                             </h3>
-                            {!isExpanded && (
+                            {warningText ? (
+                                <Badge variant="destructive" className="bg-destructive text-destructive-foreground text-[10px] h-4 py-0 font-bold tracking-wide uppercase">
+                                    {warningText}
+                                </Badge>
+                            ) : !isExpanded && (
                                 <div className="text-xs text-muted-foreground truncate flex-1">
-                                    {warningText ? (
-                                        <Badge variant="destructive" className="bg-destructive text-destructive-foreground text-[10px] h-4 py-0 font-bold tracking-wide uppercase">
-                                            {warningText}
-                                        </Badge>
-                                    ) : getSummaryText()}
+                                    {getSummaryText()}
                                 </div>
                             )}
                         </div>
