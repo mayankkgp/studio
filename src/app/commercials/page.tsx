@@ -5,8 +5,7 @@ import { MobileNav } from "@/components/layout/MobileNav";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useOrder } from "@/context/OrderContext";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -14,9 +13,7 @@ import { calculateBillableItems } from "@/lib/pricing";
 import type { BillableItem } from "@/lib/types";
 import { DollarSign, ChevronLeft, Save, Zap, Star } from "lucide-react";
 import { useHeaderSummary } from "@/hooks/use-header-summary";
-import { Separator } from "@/components/ui/separator";
 import * as React from 'react';
-import { cn } from "@/lib/utils";
 
 export default function CommercialsPage() {
     const router = useRouter();
@@ -93,87 +90,82 @@ export default function CommercialsPage() {
                 </header>
 
                 <div className="flex flex-1 overflow-hidden">
-                    {/* Left Panel: Billable Items (Scrollable) */}
-                    <main className="flex-1 overflow-y-auto custom-scrollbar relative">
-                        {/* Persistent Header Gap - Remains visible during scroll */}
-                        <div className="sticky top-0 z-30 h-4 lg:h-6 bg-background w-full" />
-                        
-                        <div className="max-w-4xl mx-auto px-4 lg:px-6 pb-6 space-y-0">
+                    {/* Left Panel: Billable Items List (Expert Workflow) */}
+                    <main className="flex-1 flex flex-col overflow-hidden pt-6 px-4 lg:px-6 pb-6 bg-background">
+                        <div className="flex-1 overflow-y-auto custom-scrollbar border rounded-lg bg-card shadow-sm w-full max-w-4xl mx-auto">
                             {billableItems.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center py-24 text-muted-foreground border-2 border-dashed rounded-xl bg-muted/20">
+                                <div className="flex flex-col items-center justify-center h-full py-24 text-muted-foreground">
                                     <DollarSign className="h-12 w-12 opacity-20 mb-4" />
                                     <p className="font-medium">No price rows generated.</p>
                                     <p className="text-sm">Go back to configure deliverables.</p>
                                 </div>
                             ) : (
-                                <div className="border rounded-lg overflow-hidden bg-card shadow-sm border-separate border-spacing-0">
-                                    <Table className="border-collapse">
-                                        <TableHeader className="bg-background">
-                                            <TableRow className="hover:bg-transparent border-b-0">
-                                                <TableHead className="sticky top-4 lg:top-6 z-20 bg-background h-10 text-xs font-bold uppercase border-b shadow-[0_1px_0_0_rgba(0,0,0,0.1)]">Line Item</TableHead>
-                                                <TableHead className="sticky top-4 lg:top-6 z-20 bg-background h-10 text-xs font-bold uppercase text-center w-24 border-b shadow-[0_1px_0_0_rgba(0,0,0,0.1)]">Multiplier</TableHead>
-                                                <TableHead className="sticky top-4 lg:top-6 z-20 bg-background h-10 text-xs font-bold uppercase text-right w-32 border-b shadow-[0_1px_0_0_rgba(0,0,0,0.1)]">Rate (₹)</TableHead>
-                                                <TableHead className="sticky top-4 lg:top-6 z-20 bg-background h-10 text-xs font-bold uppercase text-right w-32 border-b shadow-[0_1px_0_0_rgba(0,0,0,0.1)]">Total</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {billableItems.map((item) => {
-                                                const itemTotal = item.components.reduce((acc, comp) => acc + comp.total, 0);
-                                                return (
-                                                    <React.Fragment key={item.configuredProductId}>
-                                                        {/* Product Header Row */}
-                                                        <TableRow className="bg-[#5C4B35] hover:bg-[#5C4B35] border-t-2 border-primary/20 transition-none z-10 relative">
-                                                            <TableCell colSpan={3} className="py-2.5 font-bold text-sm text-[#FFFFFF]">
-                                                                {item.productName}
-                                                            </TableCell>
-                                                            <TableCell className="py-2.5 text-right font-bold text-sm text-[#FFFFFF]">
-                                                                {formatCurrency(itemTotal)}
-                                                            </TableCell>
-                                                        </TableRow>
-                                                        {/* Component Rows */}
-                                                        {item.components.map((comp, idx) => {
-                                                            const isSpecialRequest = comp.label === 'Special Request';
-                                                            return (
-                                                                <TableRow 
-                                                                    key={`${item.configuredProductId}-${idx}`} 
-                                                                    className="group h-10 border-b last:border-b-0 bg-[#F9F2DC] hover:bg-[#E6DEBC] transition-colors"
-                                                                >
-                                                                    <TableCell className="py-0 pl-8 text-sm text-[#2E261F] font-medium relative">
-                                                                        {isSpecialRequest ? (
-                                                                            <React.Fragment>
-                                                                                <Star className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 shrink-0 text-amber-500 fill-amber-500" />
-                                                                                <div className="truncate max-w-[200px] md:max-w-md lg:max-w-lg" title={comp.description}>
-                                                                                    {comp.description}
-                                                                                </div>
-                                                                            </React.Fragment>
-                                                                        ) : (
-                                                                            comp.label
-                                                                        )}
-                                                                    </TableCell>
-                                                                    <TableCell className="py-0 text-center text-sm text-[#2E261F] cursor-default select-none">
-                                                                        {comp.isFixed ? "-" : comp.multiplier}
-                                                                    </TableCell>
-                                                                    <TableCell className="py-0 text-right">
-                                                                        <input
-                                                                            type="number"
-                                                                            defaultValue={comp.rate}
-                                                                            onBlur={(e) => handleRateChange(item.configuredProductId, comp.label, Number(e.target.value))}
-                                                                            onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-                                                                            className="w-full h-8 text-right bg-transparent border-none focus:ring-1 focus:ring-primary rounded px-2 transition-all hover:bg-black/5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none font-semibold text-sm text-[#2E261F]"
-                                                                        />
-                                                                    </TableCell>
-                                                                    <TableCell className="py-0 text-right text-sm font-bold text-[#2E261F]">
-                                                                        {formatCurrency(comp.total)}
-                                                                    </TableCell>
-                                                                </TableRow>
-                                                            );
-                                                        })}
-                                                    </React.Fragment>
-                                                );
-                                            })}
-                                        </TableBody>
-                                    </Table>
-                                </div>
+                                <table className="w-full caption-bottom text-sm border-collapse">
+                                    <TableHeader className="bg-background sticky top-0 z-30">
+                                        <TableRow className="hover:bg-transparent border-b-0">
+                                            <TableHead className="sticky top-0 z-20 bg-background h-10 text-xs font-bold uppercase border-b shadow-[0_1px_0_0_rgba(0,0,0,0.1)]">Line Item</TableHead>
+                                            <TableHead className="sticky top-0 z-20 bg-background h-10 text-xs font-bold uppercase text-center w-24 border-b shadow-[0_1px_0_0_rgba(0,0,0,0.1)]">Multiplier</TableHead>
+                                            <TableHead className="sticky top-0 z-20 bg-background h-10 text-xs font-bold uppercase text-right w-32 border-b shadow-[0_1px_0_0_rgba(0,0,0,0.1)]">Rate (₹)</TableHead>
+                                            <TableHead className="sticky top-0 z-20 bg-background h-10 text-xs font-bold uppercase text-right w-32 border-b shadow-[0_1px_0_0_rgba(0,0,0,0.1)]">Total</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {billableItems.map((item) => {
+                                            const itemTotal = item.components.reduce((acc, comp) => acc + comp.total, 0);
+                                            return (
+                                                <React.Fragment key={item.configuredProductId}>
+                                                    {/* Product Header Row */}
+                                                    <TableRow className="bg-[#5C4B35] hover:bg-[#5C4B35] border-t-2 border-primary/20 transition-none z-10 relative">
+                                                        <TableCell colSpan={3} className="py-2.5 font-bold text-sm text-[#FFFFFF]">
+                                                            {item.productName}
+                                                        </TableCell>
+                                                        <TableCell className="py-2.5 text-right font-bold text-sm text-[#FFFFFF]">
+                                                            {formatCurrency(itemTotal)}
+                                                        </TableCell>
+                                                    </TableRow>
+                                                    {/* Component Rows */}
+                                                    {item.components.map((comp, idx) => {
+                                                        const isSpecialRequest = comp.label === 'Special Request';
+                                                        return (
+                                                            <TableRow 
+                                                                key={`${item.configuredProductId}-${idx}`} 
+                                                                className="group h-10 border-b last:border-b-0 bg-[#F9F2DC] hover:bg-[#E6DEBC] transition-colors"
+                                                            >
+                                                                <TableCell className="py-0 pl-8 text-sm text-[#2E261F] font-medium relative">
+                                                                    {isSpecialRequest ? (
+                                                                        <React.Fragment>
+                                                                            <Star className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 shrink-0 text-amber-500 fill-amber-500" />
+                                                                            <div className="truncate max-w-[200px] md:max-w-md lg:max-w-lg" title={comp.description}>
+                                                                                {comp.description}
+                                                                            </div>
+                                                                        </React.Fragment>
+                                                                    ) : (
+                                                                        comp.label
+                                                                    )}
+                                                                </TableCell>
+                                                                <TableCell className="py-0 text-center text-sm text-[#2E261F] cursor-default select-none">
+                                                                    {comp.isFixed ? "-" : comp.multiplier}
+                                                                </TableCell>
+                                                                <TableCell className="py-0 text-right">
+                                                                    <input
+                                                                        type="number"
+                                                                        defaultValue={comp.rate}
+                                                                        onBlur={(e) => handleRateChange(item.configuredProductId, comp.label, Number(e.target.value))}
+                                                                        onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+                                                                        className="w-full h-8 text-right bg-transparent border-none focus:ring-1 focus:ring-primary rounded px-2 transition-all hover:bg-black/5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none font-semibold text-sm text-[#2E261F]"
+                                                                    />
+                                                                </TableCell>
+                                                                <TableCell className="py-0 text-right text-sm font-bold text-[#2E261F]">
+                                                                    {formatCurrency(comp.total)}
+                                                                </TableCell>
+                                                            </TableRow>
+                                                        );
+                                                    })}
+                                                </React.Fragment>
+                                            );
+                                        })}
+                                    </TableBody>
+                                </table>
                             )}
                         </div>
                     </main>
