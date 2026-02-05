@@ -10,7 +10,7 @@ import { CommandBar } from "@/components/flow2/CommandBar";
 import { DeliverableRow } from "@/components/flow2/DeliverableRow";
 import { Package, CheckCircle2, AlertCircle } from "lucide-react";
 import { Accordion } from "@/components/ui/accordion";
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function DeliverablesPage() {
@@ -22,7 +22,6 @@ export default function DeliverablesPage() {
     const [openItems, setOpenItems] = useState<string[]>([]);
     const [rowStatus, setRowStatus] = useState<Record<string, { isValid: boolean }>>({});
     const [committedItemIds, setCommittedItemIds] = useState<string[]>([]);
-    const prevCount = useRef(order.deliverables.length);
 
     const handleValidityChange = useCallback((id: string, isValid: boolean) => {
         setRowStatus(prev => {
@@ -36,12 +35,14 @@ export default function DeliverablesPage() {
     }, []);
 
     const handleDone = useCallback(async (id: string) => {
-        // Mark as committed to move to Order List permanently
-        setCommittedItemIds(prev => Array.from(new Set([...prev, id])));
-        setOpenItems(prev => prev.filter(itemId => itemId !== id));
-    }, []);
+        // Only allow moving to Order List if valid
+        if (rowStatus[id]?.isValid) {
+            setCommittedItemIds(prev => Array.from(new Set([...prev, id])));
+            setOpenItems(prev => prev.filter(itemId => itemId !== id));
+        }
+    }, [rowStatus]);
 
-    // Stable split: Once committed, it stays in the Order List.
+    // Persistent splitting: once an item is committed, it stays in the Order List permanently
     const { activeItems, orderListItems } = useMemo(() => {
         const active: any[] = [];
         const list: any[] = [];
@@ -60,13 +61,13 @@ export default function DeliverablesPage() {
         };
     }, [order.deliverables, committedItemIds]);
 
+    // Expand newly added items
     useEffect(() => {
-        if (order.deliverables.length > prevCount.current) {
-            const newItem = order.deliverables[order.deliverables.length - 1];
-            setOpenItems([newItem.id]);
+        const lastItem = order.deliverables[order.deliverables.length - 1];
+        if (lastItem && !committedItemIds.includes(lastItem.id) && !openItems.includes(lastItem.id)) {
+            setOpenItems([lastItem.id]);
         }
-        prevCount.current = order.deliverables.length;
-    }, [order.deliverables]);
+    }, [order.deliverables.length]);
 
     const handleNextStep = useCallback(() => {
         const firstInvalidItem = order.deliverables.find(item => rowStatus[item.id]?.isValid === false);
@@ -122,18 +123,20 @@ export default function DeliverablesPage() {
                                         <p className="text-muted-foreground font-medium">Your queue is empty</p>
                                     </div>
                                 ) : (
-                                    activeItems.map((item) => (
-                                        <DeliverableRow 
-                                            key={item.id} 
-                                            item={item} 
-                                            isExpanded={openItems.includes(item.id)}
-                                            onEdit={handleEdit}
-                                            onDone={handleDone}
-                                            onValidityChange={handleValidityChange}
-                                            onUpdate={updateDeliverable}
-                                            onRemove={removeDeliverable}
-                                        />
-                                    ))
+                                    <div className="space-y-2">
+                                        {activeItems.map((item) => (
+                                            <DeliverableRow 
+                                                key={item.id} 
+                                                item={item} 
+                                                isExpanded={openItems.includes(item.id)}
+                                                onEdit={handleEdit}
+                                                onDone={handleDone}
+                                                onValidityChange={handleValidityChange}
+                                                onUpdate={updateDeliverable}
+                                                onRemove={removeDeliverable}
+                                            />
+                                        ))}
+                                    </div>
                                 )}
                             </section>
 

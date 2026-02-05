@@ -120,7 +120,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
     onRemove
 }: DeliverableRowProps) {
     const product = React.useMemo(() => productCatalog.find(p => p.id === item.productId) || null, [item.productId]);
-    const isBranchA = React.useMemo(() => product?.configType === 'A' || product?.configType === 'B', [product]);
+    const isBranchA = product?.configType === 'A' || product?.configType === 'B';
     
     const notesRef = React.useRef<HTMLTextAreaElement | null>(null);
     const [showNotes, setShowNotes] = React.useState(!!item.specialRequest);
@@ -156,7 +156,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         el.style.height = `${Math.max(40, scrollHeight)}px`;
     }, []);
 
-    // Stabilize mount validation pass
+    // Initial validation pass to ensure state is reported correctly after remount
     React.useEffect(() => {
         const initValidation = async () => {
             await trigger();
@@ -165,7 +165,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         initValidation();
     }, [trigger]);
 
-    // Parent validity sync
+    // Report validity to parent
     React.useEffect(() => {
         if (hasValidated) {
             onValidityChange(item.id, isValid);
@@ -439,14 +439,14 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                         } else {
                                                             const valueLength = (field.value?.toString().length || 0);
                                                             return (
-                                                                <div className="inline-flex items-center rounded-full h-8 pl-3 pr-1 gap-2 bg-primary text-primary-foreground shadow-sm">
+                                                                <div className="inline-flex items-center rounded-full h-8 pl-3 pr-2.5 gap-2 bg-primary text-primary-foreground shadow-sm">
                                                                     <span className="text-xs font-medium cursor-pointer" onClick={() => field.onChange(false)}>
                                                                         {addon.name}
                                                                     </span>
                                                                     <Input
                                                                         type="number"
-                                                                        className="h-6 px-2 py-0 text-xs bg-white border-none focus-visible:ring-0 rounded-md font-bold text-black [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none min-w-[2rem]"
-                                                                        style={{ width: `${Math.max(2, valueLength) + 1}ch` }}
+                                                                        className="h-6 px-2 py-0 text-xs bg-white border-none focus-visible:ring-0 rounded-md font-bold text-black [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none min-w-[2.5rem]"
+                                                                        style={{ width: `${Math.max(2, valueLength) + 1.8}ch` }}
                                                                         value={field.value ?? ''}
                                                                         onChange={(e) => field.onChange(e.target.value === '' ? null : Number(e.target.value))}
                                                                         onKeyDown={(e) => {
