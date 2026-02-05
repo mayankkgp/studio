@@ -36,9 +36,7 @@ export default function DeliverablesPage() {
 
     const handleDone = useCallback(async (id: string) => {
         if (rowStatus[id]?.isValid) {
-            // Move to top of committed list
             setCommittedItemIds(prev => Array.from(new Set([id, ...prev])));
-            // Collapse it in the list
             setOpenItems(prev => prev.filter(itemId => itemId !== id));
         } else {
             toast({
@@ -50,11 +48,7 @@ export default function DeliverablesPage() {
     }, [rowStatus, toast]);
 
     const { activeItems, orderListItems } = useMemo(() => {
-        // Active items are those NOT in committedItemIds
-        // deliverables is already prepended with new items in Context
         const active = order.deliverables.filter(item => !committedItemIds.includes(item.id));
-        
-        // Order list items follow the order of committedItemIds (newest committed on top)
         const list = committedItemIds
             .map(id => order.deliverables.find(item => item.id === id))
             .filter(item => !!item);

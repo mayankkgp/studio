@@ -51,7 +51,7 @@ const getValidationSchema = (product: Product | null) => {
     if (!product) return z.object({});
     
     let schemaObject: any = {
-        variant: product.variants && product.variants.length > 0 ? z.string().min(1, "REQUIRED") : z.string().optional(),
+        variant: product.variants && product.variants.length > 0 ? z.string().min(1, "VARIANT REQUIRED") : z.string().optional(),
         specialRequest: z.string().optional(),
     };
 
@@ -222,19 +222,14 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         if (!product) return '';
         const parts: string[] = [];
         
-        // 1. Variant
-        if (watchedValues.variant) {
-            parts.push(watchedValues.variant);
-        }
+        if (watchedValues.variant) parts.push(watchedValues.variant);
 
-        // 2. Quantity / Pages
         if (product.configType === 'A' && typeof watchedValues.quantity === 'number') {
             parts.push(`Qty: ${watchedValues.quantity}`);
         } else if (product.configType === 'B' && typeof watchedValues.pages === 'number') {
             parts.push(`${watchedValues.pages} Pgs`);
         }
 
-        // 3. Custom Fields
         if (product.customFields && watchedValues.customFieldValues) {
             product.customFields.forEach(field => {
                 const val = (watchedValues.customFieldValues as any)[field.id];
@@ -244,7 +239,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             });
         }
 
-        // 4. Add-ons
         if (watchedValues.addons) {
             watchedValues.addons.forEach((addon: any) => {
                 const isSelected = addon.value !== undefined && addon.value !== false && addon.value !== null && addon.value !== '';
@@ -260,7 +254,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             });
         }
 
-        // 5. Special Request (first 20 chars)
         if (watchedValues.specialRequest) {
             const truncated = watchedValues.specialRequest.slice(0, 20);
             const suffix = watchedValues.specialRequest.length > 20 ? '...' : '';
@@ -368,7 +361,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
 
             <AccordionContent className="px-4 pb-4 border-t bg-muted/5 relative" forceMount={isExpanded}>
                 <div className="flex flex-col gap-6 pt-4">
-                    <div className="flex flex-wrap items-start justify-between gap-6">
+                    <div className="flex flex-wrap items-center justify-between gap-6">
                         {product?.variants && product.variants.length > 0 && (
                             <div className="flex items-center gap-4">
                                 <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap min-w-[60px]">
@@ -531,7 +524,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                     }}
                                 />
                             ) : (
-                                <Button variant="ghost" size="sm" className="h-8 gap-2 text-muted-foreground p-0" onClick={() => setShowNotes(true)}>
+                                <Button variant="ghost" size="sm" className="h-8 gap-2 text-muted-foreground px-3" onClick={() => setShowNotes(true)}>
                                     <MessageSquarePlus className="h-4 w-4" />
                                     <span className="text-xs font-medium uppercase">Add Note</span>
                                 </Button>
