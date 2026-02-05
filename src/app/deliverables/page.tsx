@@ -10,7 +10,7 @@ import { CommandBar } from "@/components/flow2/CommandBar";
 import { DeliverableRow } from "@/components/flow2/DeliverableRow";
 import { Package, CheckCircle2, AlertCircle } from "lucide-react";
 import { Accordion } from "@/components/ui/accordion";
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function DeliverablesPage() {
@@ -20,7 +20,13 @@ export default function DeliverablesPage() {
     const headerSummary = useHeaderSummary(order.eventDetails);
     
     const [rowStatus, setRowStatus] = useState<Record<string, { isValid: boolean }>>({});
-    const [committedItemIds, setCommittedItemIds] = useState<string[]>([]);
+    
+    // Initialize committedItemIds with existing deliverables on mount
+    // This ensures that navigating back from Commercials moves everything to Order List
+    const [committedItemIds, setCommittedItemIds] = useState<string[]>(() => 
+        order.deliverables.map(item => item.id)
+    );
+    
     const [openOrderListItems, setOpenOrderListItems] = useState<string[]>([]);
 
     const handleValidityChange = useCallback((id: string, isValid: boolean) => {
