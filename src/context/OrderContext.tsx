@@ -30,22 +30,17 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [isLoaded, setIsLoaded] = useState(false);
   const { toast } = useToast();
   
-  // Initial load - generate a fresh Order ID and clear any legacy storage
   useEffect(() => {
     const newOrderId = `#ORD-${Math.floor(1000 + Math.random() * 9000)}`;
     setOrder((prev) => ({ ...prev, orderId: newOrderId }));
     setIsLoaded(true);
     
-    // Clear any existing legacy cache to ensure a clean start
     try {
       localStorage.removeItem('srishbish-order');
-    } catch (e) {
-      // Ignore errors if localStorage is blocked
-    }
+    } catch (e) {}
   }, []);
 
   const saveAsDraft = useCallback(() => {
-    // Manual save functionality - kept as a placeholder/UI action
     toast({
       title: 'Draft Saved (Session Only)',
       description: `Your order ${order.orderId} is active for this session. Persistence is disabled.`,
@@ -57,7 +52,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, []);
   
   const addDeliverable = useCallback((deliverable: ConfiguredProduct) => {
-    setOrder((prev) => ({ ...prev, deliverables: [...prev.deliverables, deliverable] }));
+    setOrder((prev) => ({ ...prev, deliverables: [deliverable, ...prev.deliverables] }));
   }, []);
 
   const updateDeliverable = useCallback((id: string, updates: Partial<ConfiguredProduct>) => {

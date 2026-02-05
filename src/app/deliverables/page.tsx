@@ -36,7 +36,7 @@ export default function DeliverablesPage() {
 
     const handleDone = useCallback(async (id: string) => {
         if (rowStatus[id]?.isValid) {
-            setCommittedItemIds(prev => Array.from(new Set([...prev, id])));
+            setCommittedItemIds(prev => Array.from(new Set([id, ...prev])));
             setOpenItems(prev => prev.filter(itemId => itemId !== id));
         } else {
             toast({
@@ -48,20 +48,14 @@ export default function DeliverablesPage() {
     }, [rowStatus, toast]);
 
     const { activeItems, orderListItems } = useMemo(() => {
-        const active: any[] = [];
-        const list: any[] = [];
-
-        order.deliverables.forEach(item => {
-            if (committedItemIds.includes(item.id)) {
-                list.push(item);
-            } else {
-                active.push(item);
-            }
-        });
+        const active = order.deliverables.filter(item => !committedItemIds.includes(item.id));
+        const list = committedItemIds
+            .map(id => order.deliverables.find(item => item.id === id))
+            .filter(item => !!item);
 
         return { 
             activeItems: active, 
-            orderListItems: list 
+            orderListItems: list as any[]
         };
     }, [order.deliverables, committedItemIds]);
 
@@ -118,18 +112,19 @@ export default function DeliverablesPage() {
                                         <p className="text-muted-foreground font-medium">Your queue is empty</p>
                                     </div>
                                 ) : (
-                                    <Accordion type="multiple" value={activeItems.map(i => i.id)} className="space-y-2">
+                                    <Accordion type="multiple" value={activeItems.map(i => i.id)} className="space-y-2 pointer-events-none">
                                         {activeItems.map((item) => (
-                                            <DeliverableRow 
-                                                key={item.id} 
-                                                item={item} 
-                                                isExpanded={true}
-                                                onEdit={handleEdit}
-                                                onDone={handleDone}
-                                                onValidityChange={handleValidityChange}
-                                                onUpdate={updateDeliverable}
-                                                onRemove={removeDeliverable}
-                                            />
+                                            <div key={item.id} className="pointer-events-auto">
+                                                <DeliverableRow 
+                                                    item={item} 
+                                                    isExpanded={true}
+                                                    onEdit={handleEdit}
+                                                    onDone={handleDone}
+                                                    onValidityChange={handleValidityChange}
+                                                    onUpdate={updateDeliverable}
+                                                    onRemove={removeDeliverable}
+                                                />
+                                            </div>
                                         ))}
                                     </Accordion>
                                 )}

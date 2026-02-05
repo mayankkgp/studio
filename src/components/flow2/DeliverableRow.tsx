@@ -440,7 +440,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                                 <Input
                                                                     type="number"
                                                                     className="h-6 px-2 py-0 text-xs bg-white border-none focus-visible:ring-0 rounded-md font-bold text-black [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none min-w-[3rem]"
-                                                                    style={{ width: `${Math.max(2, valueLength) + 2.5}ch` }}
+                                                                    style={{ width: `${Math.max(2, valueLength) + 3}ch` }}
                                                                     value={field.value ?? ''}
                                                                     onChange={(e) => field.onChange(e.target.value === '' ? null : Number(e.target.value))}
                                                                     onKeyDown={(e) => {
