@@ -96,7 +96,7 @@ export default function CommercialsPage() {
                         <div className="flex-1 overflow-y-auto custom-scrollbar">
                             {/* Centering Wrapper */}
                             <div className="max-w-4xl mx-auto w-full pt-6 px-4 lg:px-6 pb-6">
-                                <div className="border rounded-lg bg-card shadow-sm overflow-hidden">
+                                <div className="border rounded-lg bg-card shadow-sm">
                                     {billableItems.length === 0 ? (
                                         <div className="flex flex-col items-center justify-center py-24 text-muted-foreground bg-card">
                                             <DollarSign className="h-12 w-12 opacity-20 mb-4" />
@@ -105,12 +105,12 @@ export default function CommercialsPage() {
                                         </div>
                                     ) : (
                                         <table className="w-full caption-bottom text-sm border-collapse">
-                                            <TableHeader className="bg-white sticky top-0 z-30 border-b-2 border-stone-200">
-                                                <TableRow className="hover:bg-transparent">
-                                                    <TableHead className="bg-white h-10 text-xs font-bold uppercase">Line Item</TableHead>
-                                                    <TableHead className="bg-white h-10 text-xs font-bold uppercase text-center w-24">Multiplier</TableHead>
-                                                    <TableHead className="bg-white h-10 text-xs font-bold uppercase text-right w-32">Rate (₹)</TableHead>
-                                                    <TableHead className="bg-white h-10 text-xs font-bold uppercase text-right w-32">Total</TableHead>
+                                            <TableHeader className="relative z-30">
+                                                <TableRow className="hover:bg-transparent border-none">
+                                                    <TableHead className="bg-white h-10 text-xs font-bold uppercase sticky top-0 z-30 border-b-2 border-stone-200">Line Item</TableHead>
+                                                    <TableHead className="bg-white h-10 text-xs font-bold uppercase text-center w-24 sticky top-0 z-30 border-b-2 border-stone-200">Multiplier</TableHead>
+                                                    <TableHead className="bg-white h-10 text-xs font-bold uppercase text-right w-32 sticky top-0 z-30 border-b-2 border-stone-200">Rate (₹)</TableHead>
+                                                    <TableHead className="bg-white h-10 text-xs font-bold uppercase text-right w-32 sticky top-0 z-30 border-b-2 border-stone-200">Total</TableHead>
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
