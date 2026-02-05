@@ -120,19 +120,14 @@ export default function DeliverablesPage() {
                         </section>
 
                         <div className="space-y-12">
-                            {/* Action Required: Always Expanded, No Collapse */}
-                            <section className="space-y-4">
-                                <h2 className="text-xs font-bold uppercase tracking-widest text-primary flex items-center gap-2">
-                                    <AlertCircle className="h-4 w-4" />
-                                    Action Required ({activeItems.length})
-                                </h2>
-                                
-                                {activeItems.length === 0 ? (
-                                    <div className="flex flex-col items-center justify-center py-12 border-2 border-dashed rounded-xl bg-card/50">
-                                        <Package className="h-10 w-10 text-muted-foreground/30 mb-2" />
-                                        <p className="text-muted-foreground text-sm font-medium">No items awaiting setup</p>
-                                    </div>
-                                ) : (
+                            {/* Action Required: Only shown if there are active items */}
+                            {activeItems.length > 0 && (
+                                <section className="space-y-4">
+                                    <h2 className="text-xs font-bold uppercase tracking-widest text-primary flex items-center gap-2">
+                                        <AlertCircle className="h-4 w-4" />
+                                        Action Required ({activeItems.length})
+                                    </h2>
+                                    
                                     <Accordion 
                                         type="multiple" 
                                         value={activeItems.map(i => i.id)} 
@@ -152,8 +147,8 @@ export default function DeliverablesPage() {
                                             />
                                         ))}
                                     </Accordion>
-                                )}
-                            </section>
+                                </section>
+                            )}
 
                             {/* Order List: Collapsed by Default */}
                             {orderListItems.length > 0 && (
@@ -183,6 +178,14 @@ export default function DeliverablesPage() {
                                         ))}
                                     </Accordion>
                                 </section>
+                            )}
+                            
+                            {/* Empty State: Only shown if absolutely nothing is present */}
+                            {order.deliverables.length === 0 && (
+                                <div className="flex flex-col items-center justify-center py-24 border-2 border-dashed rounded-xl bg-card/50">
+                                    <Package className="h-12 w-12 text-muted-foreground/30 mb-4" />
+                                    <p className="text-muted-foreground text-sm font-medium">Search for products above to start building the order</p>
+                                </div>
                             )}
                         </div>
                     </div>
