@@ -53,12 +53,25 @@ const getValidationSchema = (product: Product | null) => {
     }
 
     if (product.customFields) {
-        schemaObject.customFieldValues = z.object(
-            product.customFields.reduce((acc, field) => ({
-                ...acc,
-                [field.id]: z.number({ required_error: "REQUIRED", invalid_type_error: "REQUIRED" })
-            }), {})
-        ).optional();
+        if (product.id === 5) {
+            // SPECIAL RULE: Invite Product (ID 5) - At least one custom field must be > 0
+            schemaObject.customFieldValues = z.object(
+                product.customFields.reduce((acc, field) => ({
+                    ...acc,
+                    [field.id]: z.union([z.number(), z.null(), z.undefined()])
+                }), {})
+            ).refine((vals: any) => {
+                return Object.values(vals).some(v => typeof v === 'number' && v > 0);
+            }, { message: "REQUIRED" });
+        } else {
+            // Standard validation for other products with custom fields (all are mandatory)
+            schemaObject.customFieldValues = z.object(
+                product.customFields.reduce((acc, field) => ({
+                    ...acc,
+                    [field.id]: z.number({ required_error: "REQUIRED", invalid_type_error: "REQUIRED" })
+                }), {})
+            );
+        }
     }
     
     if (product.addons) {
