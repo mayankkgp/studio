@@ -72,20 +72,66 @@ const getValidationSchema = (product: Product | null) => {
     }
     
     if (product.addons) {
-        // All add-ons are now optional
         schemaObject.addons = z.array(z.object({
             id: z.string(), 
             name: z.string(),
-            value: z.union([z.boolean(), z.number(), z.null(), z.undefined()])
-        })).optional();
+            value: z.any()
+        })).superRefine((addons, ctx) => {
+            addons.forEach((addon, idx) => {
+                const addonDef = product.addons?.find(a => a.id === addon.id);
+                if (addonDef && (addonDef.type === 'numeric' || addonDef.type === 'physical_quantity')) {
+                    // Mandatory if selected
+                    if (addon.value !== undefined) {
+                        if (addon.value === null || typeof addon.value !== 'number') {
+                            ctx.addIssue({
+                                code: z.ZodIssueCode.custom,
+                                message: "Required",
+                                path: [idx, 'value']
+                            });
+                        } else if (addonDef.softConstraints) {
+                            // Check MOQ/Constraints for Add-on
+                            addonDef.softConstraints.forEach(constraint => {
+                                if (constraint.type === 'min' && (addon.value as number) < constraint.value) {
+                                    ctx.addIssue({
+                                        code: z.ZodIssueCode.custom,
+                                        message: constraint.message,
+                                        path: [idx, 'value']
+                                    });
+                                }
+                            });
+                        }
+                    }
+                }
+            });
+        });
     }
 
     if (product.sizes) {
-        // All sizes are now optional
         schemaObject.sizes = z.array(z.object({
             name: z.string(), 
             quantity: z.union([z.number(), z.null(), z.undefined()])
         })).optional();
+    }
+    
+    // Main product soft constraints (MOQ)
+    if (product.softConstraints) {
+        if (product.configType === 'A') {
+            schemaObject.quantity = z.number({ required_error: "Required" }).superRefine((val, ctx) => {
+                product.softConstraints?.forEach(constraint => {
+                    if (constraint.type === 'min' && val < constraint.value) {
+                        ctx.addIssue({ code: z.ZodIssueCode.custom, message: constraint.message });
+                    }
+                });
+            });
+        } else if (product.configType === 'B') {
+            schemaObject.pages = z.number({ required_error: "Required" }).superRefine((val, ctx) => {
+                product.softConstraints?.forEach(constraint => {
+                    if (constraint.type === 'min' && val < constraint.value) {
+                        ctx.addIssue({ code: z.ZodIssueCode.custom, message: constraint.message });
+                    }
+                });
+            });
+        }
     }
     
     return z.object(schemaObject);
@@ -227,11 +273,33 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             parts.push(`${watchedValues.pages} Pages`);
         }
         
-        if (!hasVariants) return parts.join(' • ');
-        if (!watchedValues.variant) return 'Setup Required';
+        if (!hasVariants && parts.length === 0) return '';
         
         return parts.join(' • ');
     };
+
+    const getPriorityWarning = () => {
+        if (isValid) return null;
+
+        // 1. Primary missing fields
+        if (product?.variants?.length && !watchedValues.variant) return 'SETUP REQUIRED';
+        if (product?.configType === 'A' && watchedValues.quantity === null) return 'SETUP REQUIRED';
+        if (product?.configType === 'B' && watchedValues.pages === null) return 'SETUP REQUIRED';
+
+        // 2. MOQ / Soft Constraint Warnings (Main Product)
+        if (product?.configType === 'A' && errors.quantity?.message) return errors.quantity.message.toUpperCase();
+        if (product?.configType === 'B' && errors.pages?.message) return errors.pages.message.toUpperCase();
+
+        // 3. Add-on Warnings (including MOQ)
+        if (errors.addons) {
+            const addonErrors = errors.addons as any[];
+            for (let err of addonErrors) {
+                if (err?.value?.message) return err.value.message.toUpperCase();
+            }
+        }
+
+        return 'SETUP REQUIRED';
+    }
 
     const getIcon = () => {
         switch (product?.configType) {
@@ -343,6 +411,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
 
     const isComplexProduct = item.productId === 4 || item.productId === 5; 
     const showHeader = (product?.variants && product.variants.length > 0) || renderPromotedInput() !== null;
+    const warningText = getPriorityWarning();
 
     return (
         <div className="group relative">
@@ -372,8 +441,10 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                             </h3>
                             {!isExpanded && (
                                 <div className="text-xs text-muted-foreground truncate flex-1">
-                                    {getSummaryText() === 'Setup Required' ? (
-                                        <Badge variant="destructive" className="bg-destructive text-destructive-foreground text-[10px] h-4 py-0 font-bold tracking-wide uppercase">SETUP REQUIRED</Badge>
+                                    {warningText ? (
+                                        <Badge variant="destructive" className="bg-destructive text-destructive-foreground text-[10px] h-4 py-0 font-bold tracking-wide uppercase">
+                                            {warningText}
+                                        </Badge>
                                     ) : getSummaryText()}
                                 </div>
                             )}
