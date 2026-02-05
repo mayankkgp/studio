@@ -371,7 +371,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
 
             <AccordionContent className="px-4 pb-4 border-t bg-muted/5 relative" forceMount={isExpanded}>
                 <div className="flex flex-col gap-6 pt-4">
-                    <div className="flex flex-wrap items-center justify-between gap-6">
+                    <div className="flex flex-wrap items-center gap-x-8 gap-y-4">
                         {product?.variants && product.variants.length > 0 && (
                             <div className="flex items-center gap-4">
                                 <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap">
@@ -407,32 +407,32 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                     {...register(product?.configType === 'A' ? 'quantity' : 'pages', { valueAsNumber: true })}
                                     className={cn(
                                         "w-24 h-10 text-lg bg-background [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
-                                        getLogicWarning(product?.configType === 'A' ? watchedValues.quantity : watchedValues.pages, product?.softConstraints) && "border-orange-400 ring-orange-400 border-2"
+                                        getLogicWarning(product?.configType === 'A' ? watchedValues.quantity : watchedValues.pages, product?.softConstraints) && "border-[#FA7315] ring-[#FA7315] border-2"
                                     )}
                                 />
                             </div>
                         )}
-                    </div>
 
-                    {product?.customFields && product.customFields.length > 0 && (
-                        <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-                            {product.customFields.map((field) => (
-                                <div key={field.id} className="flex items-center gap-3">
-                                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                                        {field.name} *
-                                    </Label>
-                                    <Input 
-                                        type="number" 
-                                        className={cn(
-                                            "w-16 h-10 px-2 text-sm bg-background [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
-                                            getLogicWarning((watchedValues.customFieldValues as any)?.[field.id], field.softConstraints) && "border-orange-400 ring-orange-400 border-2"
-                                        )}
-                                        {...register(`customFieldValues.${field.id}`, { valueAsNumber: true })} 
-                                    />
-                                </div>
-                            ))}
-                        </div>
-                    )}
+                        {product?.customFields && product.customFields.length > 0 && (
+                            <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+                                {product.customFields.map((field) => (
+                                    <div key={field.id} className="flex items-center gap-3">
+                                        <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap">
+                                            {field.name} *
+                                        </Label>
+                                        <Input 
+                                            type="number" 
+                                            className={cn(
+                                                "w-16 h-10 px-2 text-sm bg-background [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
+                                                getLogicWarning((watchedValues.customFieldValues as any)?.[field.id], field.softConstraints) && "border-[#FA7315] ring-[#FA7315] border-2"
+                                            )}
+                                            {...register(`customFieldValues.${field.id}`, { valueAsNumber: true })} 
+                                        />
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
 
                     <div className="flex flex-col gap-4">
                         {product?.addons && product.addons.length > 0 && (
