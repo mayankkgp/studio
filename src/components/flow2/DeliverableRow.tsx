@@ -37,10 +37,6 @@ import {
     TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-/**
- * Relaxed Schema: Only mandatory presence (Required) is blocking.
- * Soft constraints (min/max/MOQ) are handled manually for visual feedback only.
- */
 const getValidationSchema = (product: Product | null) => {
     if (!product) return z.object({});
     
@@ -76,7 +72,6 @@ const getValidationSchema = (product: Product | null) => {
                 const addonDef = product.addons?.find(a => a.id === addon.id);
                 const isSelected = addon.value !== undefined && addon.value !== false;
                 
-                // For physical/numeric addons, if they are "active" (clicked), they must have a value
                 if (isSelected && addonDef && (addonDef.type === 'numeric' || addonDef.type === 'physical_quantity')) {
                     if (addon.value === null || addon.value === '' || isNaN(Number(addon.value))) {
                          ctx.addIssue({ code: z.ZodIssueCode.custom, message: "REQUIRED", path: [idx, 'value'] });
@@ -137,7 +132,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         el.style.height = `${Math.max(40, scrollHeight)}px`;
     }, []);
 
-    // Manual check for soft constraints (visual cues only)
     const getLogicWarning = React.useCallback((fieldValue: any, constraints?: SoftConstraint[]) => {
         if (fieldValue === undefined || fieldValue === null || fieldValue === '') return null;
         if (!constraints) return null;
@@ -190,7 +184,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         e.stopPropagation();
         const res = await trigger();
         performSyncUpdate();
-        // Pass validity directly to parent to bypass race conditions
         onDone(item.id, res);
     };
 
@@ -204,25 +197,42 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         if (window.confirm("Are you sure you want to remove this item?")) {
             onRemove(item.id);
         }
-    }
+    };
 
     const getSummaryText = () => {
-        if (!product) return '';
-        const parts: string[] = [];
+        if (!product) return null;
+        const parts: React.ReactNode[] = [];
         
-        if (watchedValues.variant) parts.push(watchedValues.variant);
+        if (watchedValues.variant) {
+            parts.push(<span key="variant">{watchedValues.variant}</span>);
+        }
 
         if (product.configType === 'A' && typeof watchedValues.quantity === 'number') {
-            parts.push(`Qty: ${watchedValues.quantity}`);
+            const warning = getLogicWarning(watchedValues.quantity, product.softConstraints);
+            parts.push(
+                <span key="qty" className={cn(warning && "text-destructive font-bold")}>
+                    Qty: {watchedValues.quantity}
+                </span>
+            );
         } else if (product.configType === 'B' && typeof watchedValues.pages === 'number') {
-            parts.push(`${watchedValues.pages} Pgs`);
+            const warning = getLogicWarning(watchedValues.pages, product.softConstraints);
+            parts.push(
+                <span key="pages" className={cn(warning && "text-destructive font-bold")}>
+                    {watchedValues.pages} Pgs
+                </span>
+            );
         }
 
         if (product.customFields && watchedValues.customFieldValues) {
             product.customFields.forEach(field => {
                 const val = (watchedValues.customFieldValues as any)[field.id];
                 if (val !== undefined && val !== null && val !== '') {
-                    parts.push(`${field.name}: ${val}`);
+                    const warning = getLogicWarning(val, field.softConstraints);
+                    parts.push(
+                        <span key={field.id} className={cn(warning && "text-destructive font-bold")}>
+                            {field.name}: {val}
+                        </span>
+                    );
                 }
             });
         }
@@ -233,26 +243,26 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                 if (isSelected) {
                     const addonDef = product.addons?.find(a => a.id === addon.id);
                     const displayName = addonDef?.name || addon.name;
-                    if (typeof addon.value === 'number') {
-                        parts.push(`${displayName} (${addon.value})`);
-                    } else {
-                        parts.push(displayName);
-                    }
+                    const warning = getLogicWarning(addon.value, addonDef?.softConstraints);
+                    parts.push(
+                        <span key={addon.id} className={cn(warning && "text-destructive font-bold")}>
+                            {displayName}{typeof addon.value === 'number' ? ` (${addon.value})` : ''}
+                        </span>
+                    );
                 }
             });
         }
 
         if (watchedValues.specialRequest) {
-            const truncated = watchedValues.specialRequest.slice(0, 20);
+            const snippet = watchedValues.specialRequest.slice(0, 20);
             const suffix = watchedValues.specialRequest.length > 20 ? '...' : '';
-            parts.push(`Notes: ${truncated}${suffix}`);
+            parts.push(<span key="notes" className="text-muted-foreground italic">Notes: {snippet}{suffix}</span>);
         }
 
-        return parts.join(' • ');
+        return parts.reduce((prev, curr, i) => [prev, <span key={`sep-${i}`} className="mx-1 text-muted-foreground/50">•</span>, curr]);
     };
 
     const getPriorityWarning = React.useCallback(() => {
-        // Hard errors (Blocking)
         if (!isValid) {
             if (errors.variant) return 'VARIANT REQUIRED';
             if (errors.quantity || errors.pages) return 'REQUIRED';
@@ -261,7 +271,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             return 'SETUP REQUIRED';
         }
 
-        // Soft warnings (Non-blocking)
         if (product?.configType === 'A') {
             const warning = getLogicWarning(watchedValues.quantity, product.softConstraints);
             if (warning) return warning;
@@ -303,11 +312,8 @@ export const DeliverableRow = React.memo(function DeliverableRow({
     };
     const IconComponent = getIcon();
 
-    const iconStatusClasses = !isValid 
-        ? "text-destructive bg-destructive/10"
-        : isExpanded 
-            ? "text-blue-600 bg-blue-50" 
-            : "text-green-600 bg-green-100";
+    const warningMessage = getPriorityWarning();
+    const showWarningBadge = warningMessage && !isPersistent;
 
     return (
         <AccordionItem 
@@ -327,20 +333,20 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                     <div className={cn(
                         "rounded-lg flex items-center justify-center shrink-0 transition-colors",
                         isExpanded ? "h-10 w-10" : "h-7 w-7",
-                        iconStatusClasses
+                        !isValid ? "text-destructive bg-destructive/10" : isExpanded ? "text-blue-600 bg-blue-50" : "text-green-600 bg-green-100"
                     )}>
                         <IconComponent className={isExpanded ? "h-5 w-5" : "h-4 w-4"} />
                     </div>
-                    <div className={cn("flex items-baseline gap-3 flex-1 overflow-hidden", !isExpanded && "flex-1")}>
+                    <div className={cn("flex items-baseline gap-3 flex-1 overflow-hidden")}>
                         <h3 className={cn("font-semibold leading-none shrink-0", isExpanded ? "text-base" : "text-sm")}>
                             {item.productName}
                         </h3>
-                        {getPriorityWarning() ? (
+                        {showWarningBadge ? (
                             <Badge variant="destructive" className="text-[10px] h-4 py-0 font-bold uppercase shrink-0">
-                                {getPriorityWarning()}
+                                {warningMessage}
                             </Badge>
                         ) : !isExpanded && (
-                            <div className="text-xs text-muted-foreground truncate flex-1 min-w-0">
+                            <div className="text-xs text-muted-foreground truncate flex-1 min-w-0 flex items-center">
                                 {getSummaryText()}
                             </div>
                         )}
@@ -533,7 +539,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                     />
                                 </div>
                             ) : (
-                                <Button variant="ghost" size="sm" className="h-8 gap-2 text-muted-foreground px-4" onClick={() => setShowNotes(true)}>
+                                <Button variant="ghost" size="sm" className="h-8 gap-2 text-muted-foreground px-3" onClick={() => setShowNotes(true)}>
                                     <MessageSquarePlus className="h-4 w-4" />
                                     <span className="text-xs font-medium uppercase">Add Note</span>
                                 </Button>

@@ -22,6 +22,7 @@ export default function DeliverablesPage() {
     
     const [rowStatus, setRowStatus] = useState<Record<string, { isValid: boolean }>>({});
     const [committedItemIds, setCommittedItemIds] = useState<string[]>([]);
+    const [openOrderListItems, setOpenOrderListItems] = useState<string[]>([]);
 
     const handleValidityChange = useCallback((id: string, isValid: boolean) => {
         setRowStatus(prev => {
@@ -30,17 +31,8 @@ export default function DeliverablesPage() {
         });
     }, []);
 
-    const handleEdit = useCallback((id: string) => {
-        // Items in Action Required are always expanded. 
-        // For Order List, we just need to manage expansion if we want, 
-        // but the requirement is persistence of section.
-        // We'll use a local state for open items in the Order List specifically.
-    }, []);
-
-    const [openOrderListItems, setOpenOrderListItems] = useState<string[]>([]);
-
     const handleDone = useCallback(async (id: string, forceValid: boolean = false) => {
-        // Movement is blocked only if the form is actually invalid (Hard Errors)
+        // Only block if HARD validation fails (e.g. missing variant or mandatory empty addon)
         const isValid = forceValid || rowStatus[id]?.isValid;
         
         if (isValid) {
@@ -62,13 +54,18 @@ export default function DeliverablesPage() {
         setOpenOrderListItems(prev => Array.from(new Set([...prev, id])));
     }, []);
 
+    const handleRemove = useCallback((id: string) => {
+        setCommittedItemIds(prev => prev.filter(itemId => itemId !== id));
+        removeDeliverable(id);
+    }, [removeDeliverable]);
+
     const { activeItems, orderListItems } = useMemo(() => {
-        // Order list items are those IN committedItemIds, in the order of the committedItemIds array (most recent first)
+        // Order list items follow the committedItemIds order (most recent first)
         const list = committedItemIds
             .map(id => order.deliverables.find(item => item.id === id))
             .filter(item => !!item);
 
-        // Active items are those NOT in committedItemIds, in the order of the deliverables array (newest first)
+        // Active items follow the deliverables order (Context prepends new items)
         const active = order.deliverables.filter(item => !committedItemIds.includes(item.id));
 
         return { 
@@ -78,9 +75,7 @@ export default function DeliverablesPage() {
     }, [order.deliverables, committedItemIds]);
 
     const handleNextStep = useCallback(() => {
-        const hasInvalidItems = activeItems.length > 0;
-        
-        if (hasInvalidItems) {
+        if (activeItems.length > 0) {
             toast({
                 variant: "destructive",
                 title: "Items Remaining",
@@ -133,21 +128,20 @@ export default function DeliverablesPage() {
                                     <Accordion 
                                         type="multiple" 
                                         value={activeItems.map(i => i.id)} 
-                                        className="space-y-2 pointer-events-none" // Disable accordion clicking in Action
+                                        className="space-y-2"
                                     >
                                         {activeItems.map((item) => (
-                                            <div key={item.id} className="pointer-events-auto">
-                                                <DeliverableRow 
-                                                    item={item} 
-                                                    isExpanded={true}
-                                                    isNonCollapsible={true}
-                                                    onEdit={() => {}}
-                                                    onDone={(id, isValid) => handleDone(id, isValid)}
-                                                    onValidityChange={handleValidityChange}
-                                                    onUpdate={updateDeliverable}
-                                                    onRemove={removeDeliverable}
-                                                />
-                                            </div>
+                                            <DeliverableRow 
+                                                key={item.id} 
+                                                item={item} 
+                                                isExpanded={true}
+                                                isNonCollapsible={true}
+                                                onEdit={() => {}}
+                                                onDone={handleDone}
+                                                onValidityChange={handleValidityChange}
+                                                onUpdate={updateDeliverable}
+                                                onRemove={handleRemove}
+                                            />
                                         ))}
                                     </Accordion>
                                 )}
@@ -174,7 +168,7 @@ export default function DeliverablesPage() {
                                                 onDone={() => setOpenOrderListItems(prev => prev.filter(id => id !== item.id))}
                                                 onValidityChange={handleValidityChange}
                                                 onUpdate={updateDeliverable}
-                                                onRemove={removeDeliverable}
+                                                onRemove={handleRemove}
                                                 isPersistent={true}
                                             />
                                         ))}
