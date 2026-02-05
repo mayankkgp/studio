@@ -321,7 +321,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                         <Input 
                             type="number" 
                             {...register('quantity', { valueAsNumber: true })}
-                            className={cn("w-24 h-10 text-lg bg-background", errors.quantity && "border-destructive")} 
+                            className={cn("w-24 h-10 text-lg bg-background [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none", errors.quantity && "border-destructive")} 
                             ref={(e) => {
                                 register('quantity').ref(e);
                                 // @ts-ignore
@@ -350,7 +350,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                         <Input 
                             type="number" 
                             {...register('pages', { valueAsNumber: true })}
-                            className={cn("w-24 h-10 text-lg bg-background", errors.pages && "border-destructive")} 
+                            className={cn("w-24 h-10 text-lg bg-background [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none", errors.pages && "border-destructive")} 
                         />
                         {errors.pages && (
                             <TooltipProvider>
@@ -375,7 +375,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                     <div className="flex items-center gap-2">
                         <Input 
                             type="number" 
-                            className={cn("w-24 h-10 text-lg bg-background", errors.customFieldValues?.[promotedCustomField.id] && "border-destructive")} 
+                            className={cn("w-24 h-10 text-lg bg-background [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none", errors.customFieldValues?.[promotedCustomField.id] && "border-destructive")} 
                             {...register(`customFieldValues.${promotedCustomField.id}`, { valueAsNumber: true })} 
                         />
                         {errors.customFieldValues?.[promotedCustomField.id] && (
@@ -396,6 +396,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
     };
 
     const isComplexProduct = item.productId === 4 || item.productId === 5; // Save the Date or Invite
+    const showHeader = (product?.variants && product.variants.length > 0) || renderPromotedInput() !== null;
 
     return (
         <div className="group relative">
@@ -487,7 +488,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                     ) : (
                         <div className="flex flex-col gap-6 pt-4">
                             {/* Row 1: Header (Variants + Promoted Input) */}
-                            {((product?.variants && product.variants.length > 0) || renderPromotedInput() !== null) && (
+                            {showHeader && (
                                 <div className="flex flex-wrap items-start justify-between gap-6">
                                     {product?.variants && product.variants.length > 0 ? (
                                         <div className="flex items-start gap-4 flex-1">
@@ -548,7 +549,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                 <div className="flex items-center gap-2">
                                                     <Input 
                                                         type="number" 
-                                                        className={cn("w-16 h-10 px-2 text-sm bg-background", errors.customFieldValues?.[field.id] && "border-destructive")} 
+                                                        className={cn("w-16 h-10 px-2 text-sm bg-background [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none", errors.customFieldValues?.[field.id] && "border-destructive")} 
                                                         {...register(`customFieldValues.${field.id}`, { valueAsNumber: true })} 
                                                     />
                                                     {errors.customFieldValues?.[field.id] && (
@@ -603,7 +604,8 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                             <Input
                                                                 id={`size-input-${item.id}-${index}`}
                                                                 type="number"
-                                                                className="w-12 h-6 px-1.5 py-0 text-xs bg-primary-foreground text-primary border-none focus-visible:ring-0 focus-visible:ring-offset-0 rounded-md font-bold"
+                                                                className="h-6 px-1.5 py-0 text-xs bg-primary-foreground text-primary border-none focus-visible:ring-0 focus-visible:ring-offset-0 rounded-md font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                                style={{ width: `${Math.max(2, String(field.value).length + 1)}ch` }}
                                                                 value={field.value}
                                                                 onChange={(e) => field.onChange(Number(e.target.value))}
                                                                 onBlur={() => {
@@ -619,7 +621,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                 </div>
                             )}
 
-                            {/* Row 4: Unified Footer (Add-ons + Notes) */}
+                            {/* Unified Footer Row: Add-ons + Notes */}
                             <div className={cn(
                                 "flex gap-6",
                                 isComplexProduct ? "flex-col items-stretch" : "flex-wrap items-start"
@@ -681,7 +683,8 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                                         <Input
                                                                             id={`addon-input-${addon.id}`}
                                                                             type="number"
-                                                                            className="w-12 h-6 px-1.5 py-0 text-xs bg-primary-foreground text-primary border-none focus-visible:ring-0 focus-visible:ring-offset-0 rounded-md font-bold"
+                                                                            className="h-6 px-1.5 py-0 text-xs bg-primary-foreground text-primary border-none focus-visible:ring-0 focus-visible:ring-offset-0 rounded-md font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                                            style={{ width: `${Math.max(2, String(field.value).length + 1)}ch` }}
                                                                             value={field.value as number}
                                                                             onChange={(e) => field.onChange(Number(e.target.value))}
                                                                             onBlur={() => {
