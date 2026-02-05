@@ -117,7 +117,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             customFieldValues: item.customFieldValues || {},
             addons: product?.addons?.map(addon => {
                 const existingAddon = item.addons?.find(a => a.id === addon.id);
-                // expert users: don't default to unselected if it was already selected but blank
                 const initialValue = existingAddon?.value ?? undefined;
                 return { 
                     id: addon.id, 
@@ -202,7 +201,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             onUpdate(item.id, {
                 ...currentValues,
                 warning,
-                // Only filter out undefined/false. null/NaN stay in the state as "selected but empty" to show errors
                 addons: currentValues.addons?.filter((a: any) => a.value !== undefined && a.value !== false) as any,
                 sizes: currentValues.sizes?.filter((s: any) => s.quantity !== undefined) as any
             });
@@ -403,7 +401,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         return null;
     };
 
-    const isComplexProduct = item.productId === 4 || item.productId === 5; // Save the Date or Invite
+    const isComplexProduct = item.productId === 4 || item.productId === 5; 
     const showHeader = (product?.variants && product.variants.length > 0) || renderPromotedInput() !== null;
 
     return (
@@ -495,7 +493,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                         </div>
                     ) : (
                         <div className="flex flex-col gap-6 pt-4">
-                            {/* Row 1: Header (Variants + Promoted Input) */}
                             {showHeader && (
                                 <div className="flex flex-wrap items-start justify-between gap-6">
                                     {product?.variants && product.variants.length > 0 ? (
@@ -544,7 +541,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                 </div>
                             )}
 
-                            {/* Row 2: Custom Fields (Remaining) */}
                             {product?.customFields && product.customFields.length > (promotedCustomField ? 1 : 0) && (
                                 <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
                                     {product.customFields.map((field) => {
@@ -577,7 +573,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                 </div>
                             )}
 
-                            {/* Row 3: Sizes Cluster */}
                             {product?.sizes && product.sizes.length > 0 && (
                                 <div className="flex flex-wrap gap-2">
                                     {product.sizes.map((size, index) => (
@@ -597,7 +592,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                             size="sm"
                                                             className="h-8 rounded-full px-3 gap-1.5 transition-all text-xs"
                                                             onClick={() => {
-                                                                field.onChange(null); // Explicit selection but blank
+                                                                field.onChange(null); 
                                                                 setTimeout(() => {
                                                                     document.getElementById(`size-input-${item.id}-${index}`)?.focus();
                                                                 }, 0);
@@ -620,8 +615,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                                 id={`size-input-${item.id}-${index}`}
                                                                 type="number"
                                                                 className={cn(
-                                                                    "h-6 px-1.5 py-0 text-xs bg-white border-none focus-visible:ring-0 focus-visible:ring-offset-0 rounded-md font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
-                                                                    hasError ? "text-destructive" : "text-primary"
+                                                                    "h-6 px-1.5 py-0 text-xs bg-white border-none focus-visible:ring-0 focus-visible:ring-offset-0 rounded-md font-bold text-black [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                                                 )}
                                                                 style={{ width: `${Math.max(2, String(field.value ?? '').length + 1)}ch` }}
                                                                 value={field.value ?? ''}
@@ -649,12 +643,10 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                 </div>
                             )}
 
-                            {/* Unified Footer Row: Add-ons + Notes */}
                             <div className={cn(
                                 "flex gap-6",
                                 isComplexProduct ? "flex-col items-stretch" : "flex-wrap items-start"
                             )}>
-                                {/* Add-ons cluster */}
                                 {product?.addons && product.addons.length > 0 && (
                                     <div className="flex flex-wrap gap-2">
                                         {product.addons.map((addon, index) => {
@@ -695,7 +687,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                                         size="sm"
                                                                         className="h-8 rounded-full px-3 gap-1.5 transition-all text-xs"
                                                                         onClick={() => {
-                                                                            field.onChange(null); // Explicit selection but blank
+                                                                            field.onChange(null); 
                                                                             setTimeout(() => {
                                                                                 document.getElementById(`addon-input-${addon.id}`)?.focus();
                                                                             }, 0);
@@ -718,8 +710,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                                             id={`addon-input-${addon.id}`}
                                                                             type="number"
                                                                             className={cn(
-                                                                                "h-6 px-1.5 py-0 text-xs bg-white border-none focus-visible:ring-0 focus-visible:ring-offset-0 rounded-md font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
-                                                                                hasError ? "text-destructive" : "text-primary"
+                                                                                "h-6 px-1.5 py-0 text-xs bg-white border-none focus-visible:ring-0 focus-visible:ring-offset-0 rounded-md font-bold text-black [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                                                             )}
                                                                             style={{ width: `${Math.max(2, String(field.value ?? '').length + 1)}ch` }}
                                                                             value={field.value ?? ''}
@@ -749,7 +740,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                     </div>
                                 )}
 
-                                {/* Special Request (Notes) */}
                                 <div className={cn(isComplexProduct ? "w-full" : "flex-1 min-w-[250px]")}>
                                     {renderNotesArea(true)}
                                 </div>
