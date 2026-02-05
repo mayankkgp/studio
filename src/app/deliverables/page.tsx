@@ -35,14 +35,18 @@ export default function DeliverablesPage() {
     }, []);
 
     const handleDone = useCallback(async (id: string) => {
-        // Only allow moving to Order List if valid
         if (rowStatus[id]?.isValid) {
             setCommittedItemIds(prev => Array.from(new Set([...prev, id])));
             setOpenItems(prev => prev.filter(itemId => itemId !== id));
+        } else {
+            toast({
+                variant: "destructive",
+                title: "Setup Required",
+                description: "Please complete all mandatory fields before confirming this item."
+            });
         }
-    }, [rowStatus]);
+    }, [rowStatus, toast]);
 
-    // Persistent splitting: once an item is committed, it stays in the Order List permanently
     const { activeItems, orderListItems } = useMemo(() => {
         const active: any[] = [];
         const list: any[] = [];
@@ -61,14 +65,6 @@ export default function DeliverablesPage() {
         };
     }, [order.deliverables, committedItemIds]);
 
-    // Expand newly added items
-    useEffect(() => {
-        const lastItem = order.deliverables[order.deliverables.length - 1];
-        if (lastItem && !committedItemIds.includes(lastItem.id) && !openItems.includes(lastItem.id)) {
-            setOpenItems([lastItem.id]);
-        }
-    }, [order.deliverables.length]);
-
     const handleNextStep = useCallback(() => {
         const firstInvalidItem = order.deliverables.find(item => rowStatus[item.id]?.isValid === false);
         
@@ -78,7 +74,6 @@ export default function DeliverablesPage() {
                 title: "Incomplete Items",
                 description: "Please complete all required fields before moving to commercials."
             });
-            setOpenItems([firstInvalidItem.id]);
             return;
         }
 
@@ -89,6 +84,12 @@ export default function DeliverablesPage() {
 
         router.push('/commercials');
     }, [rowStatus, order.deliverables, router, toast]);
+
+    const handleAccordionChange = (newValues: string[]) => {
+        // Only allow changes for committed items
+        // Active items are always forced to be expanded in their own view logic
+        setOpenItems(newValues);
+    };
 
     return (
         <AppLayout>
@@ -105,12 +106,12 @@ export default function DeliverablesPage() {
                 </header>
 
                 <main className="flex-1 overflow-y-auto bg-background">
-                    <div className="mx-auto max-w-4xl px-4 md:px-6">
+                    <div className="mx-auto max-w-4xl px-4 md:px-6 pb-12">
                         <section className="sticky top-0 z-30 bg-background/95 backdrop-blur pt-4 md:pt-6 pb-6 mb-6">
                             <CommandBar />
                         </section>
 
-                        <Accordion type="multiple" value={openItems} onValueChange={setOpenItems} className="space-y-12 pb-12">
+                        <div className="space-y-12">
                             <section className="space-y-4">
                                 <h2 className="text-xs font-bold uppercase tracking-widest text-primary flex items-center gap-2">
                                     <AlertCircle className="h-4 w-4" />
@@ -128,7 +129,7 @@ export default function DeliverablesPage() {
                                             <DeliverableRow 
                                                 key={item.id} 
                                                 item={item} 
-                                                isExpanded={openItems.includes(item.id)}
+                                                isExpanded={true} // FORCE EXPANDED in Action Section
                                                 onEdit={handleEdit}
                                                 onDone={handleDone}
                                                 onValidityChange={handleValidityChange}
@@ -146,7 +147,7 @@ export default function DeliverablesPage() {
                                         <CheckCircle2 className="h-4 w-4" />
                                         Order List ({orderListItems.length})
                                     </h2>
-                                    <div className="space-y-2">
+                                    <Accordion type="multiple" value={openItems} onValueChange={handleAccordionChange} className="space-y-2">
                                         {orderListItems.map((item) => (
                                             <DeliverableRow 
                                                 key={item.id} 
@@ -159,10 +160,10 @@ export default function DeliverablesPage() {
                                                 onRemove={removeDeliverable}
                                             />
                                         ))}
-                                    </div>
+                                    </Accordion>
                                 </section>
                             )}
-                        </Accordion>
+                        </div>
                     </div>
                 </main>
 

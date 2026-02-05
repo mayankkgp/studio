@@ -22,7 +22,7 @@ export const eventDetailsSchema = z
     engagementBrideName: optionalString,
     engagementGroomName: optionalString,
     weddingDate: z.date().optional(),
-    dateStatus: z.boolean().optional(), // No default, forced choice in refinement
+    dateStatus: z.boolean().optional(),
 
     // Anniversary
     husbandName: optionalString,
