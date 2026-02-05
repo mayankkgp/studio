@@ -62,7 +62,7 @@ export default function CommercialsPage() {
         <AppLayout>
             <div className="flex flex-col h-screen overflow-hidden bg-background">
                 {/* Header: Simplified for high-density view */}
-                <header className="flex h-16 shrink-0 items-center gap-4 border-b px-4 md:px-6">
+                <header className="flex h-16 shrink-0 items-center gap-4 border-b px-4 md:px-6 bg-background z-50">
                     <MobileNav />
                     <div className="flex-1 overflow-hidden">
                         <h1 className="font-semibold text-base md:text-lg font-headline truncate" title={headerSummary}>
@@ -77,8 +77,11 @@ export default function CommercialsPage() {
 
                 <div className="flex flex-1 overflow-hidden">
                     {/* Left Panel: Billable Items (Scrollable) */}
-                    <main className="flex-1 overflow-y-auto p-4 lg:p-6 custom-scrollbar">
-                        <div className="max-w-4xl mx-auto space-y-0">
+                    <main className="flex-1 overflow-y-auto custom-scrollbar relative">
+                        {/* Persistent Header Gap - Remains visible during scroll */}
+                        <div className="sticky top-0 z-30 h-4 lg:h-6 bg-background w-full" />
+                        
+                        <div className="max-w-4xl mx-auto px-4 lg:px-6 pb-6 space-y-0">
                             {billableItems.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center py-24 text-muted-foreground border-2 border-dashed rounded-xl bg-muted/20">
                                     <DollarSign className="h-12 w-12 opacity-20 mb-4" />
@@ -86,14 +89,14 @@ export default function CommercialsPage() {
                                     <p className="text-sm">Go back to configure deliverables.</p>
                                 </div>
                             ) : (
-                                <div className="border rounded-lg overflow-hidden bg-card shadow-sm">
+                                <div className="border rounded-lg overflow-hidden bg-card shadow-sm border-separate border-spacing-0">
                                     <Table>
-                                        <TableHeader className="bg-muted/50">
-                                            <TableRow className="hover:bg-transparent border-b">
-                                                <TableHead className="h-10 text-xs font-bold uppercase">Line Item</TableHead>
-                                                <TableHead className="h-10 text-xs font-bold uppercase text-center w-24">Multiplier</TableHead>
-                                                <TableHead className="h-10 text-xs font-bold uppercase text-right w-32">Rate (₹)</TableHead>
-                                                <TableHead className="h-10 text-xs font-bold uppercase text-right w-32">Total</TableHead>
+                                        <TableHeader className="bg-background">
+                                            <TableRow className="hover:bg-transparent">
+                                                <TableHead className="sticky top-4 lg:top-6 z-20 bg-background h-10 text-xs font-bold uppercase border-b shadow-[0_1px_0_0_rgba(0,0,0,0.1)]">Line Item</TableHead>
+                                                <TableHead className="sticky top-4 lg:top-6 z-20 bg-background h-10 text-xs font-bold uppercase text-center w-24 border-b shadow-[0_1px_0_0_rgba(0,0,0,0.1)]">Multiplier</TableHead>
+                                                <TableHead className="sticky top-4 lg:top-6 z-20 bg-background h-10 text-xs font-bold uppercase text-right w-32 border-b shadow-[0_1px_0_0_rgba(0,0,0,0.1)]">Rate (₹)</TableHead>
+                                                <TableHead className="sticky top-4 lg:top-6 z-20 bg-background h-10 text-xs font-bold uppercase text-right w-32 border-b shadow-[0_1px_0_0_rgba(0,0,0,0.1)]">Total</TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
@@ -102,7 +105,7 @@ export default function CommercialsPage() {
                                                 return (
                                                     <React.Fragment key={item.configuredProductId}>
                                                         {/* Product Header Row: mocha background, white text, top border */}
-                                                        <TableRow className="bg-[#5C4B35] hover:bg-[#5C4B35] border-t-2 border-primary/20 transition-none">
+                                                        <TableRow className="bg-[#5C4B35] hover:bg-[#5C4B35] border-t-2 border-primary/20 transition-none z-10 relative">
                                                             <TableCell colSpan={3} className="py-2.5 font-bold text-sm text-[#FFFFFF]">
                                                                 {item.productName}
                                                             </TableCell>
@@ -122,7 +125,7 @@ export default function CommercialsPage() {
                                                                         {isSpecialRequest ? (
                                                                             <React.Fragment>
                                                                                 <Star className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 shrink-0 text-amber-500 fill-amber-500" />
-                                                                                <div className="truncate max-w-xs md:max-w-md lg:max-w-xl" title={comp.description}>
+                                                                                <div className="truncate max-w-[200px] md:max-w-md lg:max-w-lg" title={comp.description}>
                                                                                     {comp.description}
                                                                                 </div>
                                                                             </React.Fragment>
@@ -159,7 +162,7 @@ export default function CommercialsPage() {
                     </main>
 
                     {/* Right Panel: Summary & Actions (Sticky) */}
-                    <aside className="w-80 lg:w-96 shrink-0 border-l bg-card/50 flex flex-col p-6 space-y-8">
+                    <aside className="w-80 lg:w-96 shrink-0 border-l bg-card/50 flex flex-col p-6 space-y-8 z-40">
                         <div>
                             <Button 
                                 variant="ghost" 
