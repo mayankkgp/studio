@@ -23,18 +23,16 @@ export default function DeliverablesPage() {
     const [rowStatus, setRowStatus] = useState<Record<string, { isValid: boolean }>>({});
     const prevCount = useRef(order.deliverables.length);
 
-    // Track previously active items to handle "Sticky" movement logic
+    // Persist "Active" status for items while they are being edited
     const activeIdsRef = useRef<Set<string>>(new Set());
 
-    // Smart Scroll Helper
     const scrollToItem = useCallback((id: string) => {
         setTimeout(() => {
             const el = document.getElementById(`deliverable-${id}`);
             if (el) {
-                // Ensure top is aligned even for tall cards
                 el.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
-        }, 300); // Wait for expansion animation
+        }, 300);
     }, []);
 
     useEffect(() => {
@@ -63,12 +61,12 @@ export default function DeliverablesPage() {
         setOpenItems(prev => prev.filter(itemId => itemId !== id));
     }, []);
 
-    // Explicit Toggle Logic: Accordion's internal onValueChange is disabled in favor of our buttons
+    // Controlled Accordion prevents random toggles
     const handleValueChange = useCallback((newValues: string[]) => {
-        // We do nothing here to prevent header-click toggling
+        // No-op for header clicks
     }, []);
 
-    // Split items into Action Required and Order List using "Expanded Pinning"
+    // Movement Logic: Divide deliverables into "Action Required" and "Order List"
     const { activeItems, orderListItems } = useMemo(() => {
         const active: any[] = [];
         const list: any[] = [];
@@ -77,14 +75,16 @@ export default function DeliverablesPage() {
             const status = rowStatus[item.id];
             const isExpanded = openItems.includes(item.id);
             
-            // 1. Keep it Active if it was already Active AND is currently Open (Pinned)
+            // 1. Keep it in Action Required if it's currently open (Pinned)
             const isPinnedActive = activeIdsRef.current.has(item.id) && isExpanded;
             
-            // 2. Make it Active if it is Invalid AND Closed (New Task)
-            // Or if it's brand new (not in rowStatus yet)
-            const isNewActive = status ? (!status.isValid && !isExpanded) : true;
+            // 2. Add to Action Required if it's invalid (New/Edited Task)
+            const isInvalid = status ? !status.isValid : true;
+            
+            // 3. Brand new items are always active
+            const isBrandNew = !status;
 
-            const shouldBeActive = isNewActive || isPinnedActive;
+            const shouldBeActive = isBrandNew || isInvalid || isPinnedActive;
 
             if (shouldBeActive) {
                 active.push(item);
@@ -93,7 +93,7 @@ export default function DeliverablesPage() {
             }
         });
 
-        // Update tracking ref for next render
+        // Update tracking for the next cycle
         activeIdsRef.current = new Set(active.map(i => i.id));
 
         return { 
@@ -141,14 +141,13 @@ export default function DeliverablesPage() {
                 </header>
 
                 <main className="flex-1 overflow-y-auto bg-background">
-                    <div className="mx-auto max-w-4xl">
-                        {/* Flush Sticky Command Bar with Persistent Buffer */}
-                        <section className="sticky top-0 z-30 bg-background/95 backdrop-blur pt-4 md:pt-6 -mx-4 md:-mx-6 px-4 md:px-6 shadow-sm border-b md:border-none pb-6 mb-6">
+                    <div className="mx-auto max-w-4xl px-4 md:px-6">
+                        <section className="sticky top-0 z-30 bg-background/95 backdrop-blur pt-4 md:pt-6 pb-6 mb-6">
                             <CommandBar />
                         </section>
 
-                        <div className="space-y-12 pb-12 px-4 md:px-6">
-                            {/* Active Queue Section */}
+                        <div className="space-y-12 pb-12">
+                            {/* Action Required Section */}
                             <section className="space-y-4">
                                 <h2 className="text-xs font-bold uppercase tracking-widest text-primary flex items-center gap-2">
                                     <AlertCircle className="h-4 w-4" />
@@ -159,7 +158,6 @@ export default function DeliverablesPage() {
                                     <div className="flex flex-col items-center justify-center py-20 border-2 border-dashed rounded-xl bg-card/50">
                                         <Package className="h-12 w-12 text-muted-foreground/50 mb-4" />
                                         <p className="text-muted-foreground font-medium">Your queue is empty</p>
-                                        <p className="text-sm text-muted-foreground">Search above or press ⌘K to start</p>
                                     </div>
                                 ) : activeItems.length === 0 ? (
                                     <div className="py-8 text-center border rounded-xl bg-muted/20 border-dashed">
@@ -186,7 +184,7 @@ export default function DeliverablesPage() {
 
                             {/* Order List Section */}
                             {orderListItems.length > 0 && (
-                                <section className="space-y-4 opacity-80">
+                                <section className="space-y-4">
                                     <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
                                         <CheckCircle2 className="h-4 w-4" />
                                         Order List ({orderListItems.length})

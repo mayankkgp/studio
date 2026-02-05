@@ -89,10 +89,8 @@ const getValidationSchema = (product: Product | null) => {
         })).superRefine((addons, ctx) => {
             addons.forEach((addon, idx) => {
                 const addonDef = product.addons?.find(a => a.id === addon.id);
-                // Validate if it's selected (not undefined and not false)
                 if (addon.value !== undefined && addon.value !== false) {
                     if (addonDef && (addonDef.type === 'numeric' || addonDef.type === 'physical_quantity')) {
-                        // null or empty string means selected but no value provided
                         if (addon.value === null || addon.value === '') {
                              ctx.addIssue({ code: z.ZodIssueCode.custom, message: "REQUIRED", path: [idx, 'value'] });
                         } else if (typeof addon.value !== 'number' || isNaN(addon.value)) {
@@ -151,7 +149,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
 }: DeliverableRowProps) {
     const product = productCatalog.find(p => p.id === item.productId) || null;
     const isBranchA = product?.configType === 'A' || product?.configType === 'B';
-    const hasValidated = React.useRef(false);
     
     const notesRef = React.useRef<HTMLTextAreaElement | null>(null);
     const [showNotes, setShowNotes] = React.useState(!!item.specialRequest);
@@ -200,7 +197,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         }
     }, [showNotes, watchedValues.specialRequest, adjustHeight]);
 
-    // Reactive validity reporting
     React.useEffect(() => {
         onValidityChange(item.id, isValid);
     }, [item.id, isValid, onValidityChange]);
@@ -237,7 +233,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         const result = await trigger();
         if (result) {
             performSyncUpdate();
-            // Immediate validity sync before closing to ensure movement logic in parent triggers
+            // Critical: Force an immediate validity report before collapsing to ensure movement in parent
             onValidityChange(item.id, true);
             onDone(item.id);
         }
@@ -283,15 +279,10 @@ export const DeliverableRow = React.memo(function DeliverableRow({
 
     const getPriorityWarning = React.useCallback(() => {
         if (isValid) return null;
-
-        // Check primary fields
         const qError = errors.quantity as any;
         if (qError?.message && qError.message.toUpperCase() !== 'REQUIRED') return qError.message.toUpperCase();
-        
         const pError = errors.pages as any;
         if (pError?.message && pError.message.toUpperCase() !== 'REQUIRED') return pError.message.toUpperCase();
-
-        // Check custom fields
         if (errors.customFieldValues) {
             const cfErrors = errors.customFieldValues as Record<string, any>;
             for (const key in cfErrors) {
@@ -299,23 +290,18 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                 if (msg && String(msg).toUpperCase() !== 'REQUIRED') return String(msg).toUpperCase();
             }
         }
-
-        // Check sizes
         if (errors.sizes && Array.isArray(errors.sizes)) {
             for (const err of (errors.sizes as any[])) {
                 const msg = err?.quantity?.message || err?.message;
                 if (msg && String(msg).toUpperCase() !== 'REQUIRED') return String(msg).toUpperCase();
             }
         }
-
-        // Check addons for specific constraints (like MOQ)
         if (errors.addons && Array.isArray(errors.addons)) {
             for (const err of (errors.addons as any[])) {
                 const msg = err?.value?.message || err?.message;
                 if (msg && String(msg).toUpperCase() !== 'REQUIRED') return String(msg).toUpperCase();
             }
         }
-
         return 'SETUP REQUIRED';
     }, [isValid, errors]);
 
@@ -351,8 +337,8 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                         type="number" 
                         {...register('quantity', { valueAsNumber: true })}
                         className={cn(
-                            "w-24 h-10 text-lg bg-background [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
-                            hasConstraintError(errors.quantity) && "border-destructive ring-destructive focus-visible:ring-destructive"
+                            "w-24 h-10 text-lg bg-background",
+                            hasConstraintError(errors.quantity) && "border-destructive ring-destructive"
                         )}
                     />
                 </div>
@@ -367,8 +353,8 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                         type="number" 
                         {...register('pages', { valueAsNumber: true })}
                         className={cn(
-                            "w-24 h-10 text-lg bg-background [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
-                            hasConstraintError(errors.pages) && "border-destructive ring-destructive focus-visible:ring-destructive"
+                            "w-24 h-10 text-lg bg-background",
+                            hasConstraintError(errors.pages) && "border-destructive ring-destructive"
                         )}
                     />
                 </div>
@@ -390,8 +376,8 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                             variant={watchedValues.variant === v ? "default" : "outline"}
                             size="sm"
                             className={cn(
-                                "h-9 rounded-full px-4 transition-all",
-                                watchedValues.variant === v ? "shadow-sm" : "hover:bg-accent hover:text-accent-foreground"
+                                "h-9 rounded-full px-4",
+                                watchedValues.variant === v ? "shadow-sm" : "hover:bg-accent"
                             )}
                             onClick={() => form.setValue('variant', v, { shouldValidate: true })}
                         >
@@ -412,9 +398,9 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                 value={item.id} 
                 id={`deliverable-${item.id}`}
                 className={cn(
-                    "border rounded-xl transition-all duration-200 overflow-hidden scroll-mt-[176px]",
+                    "border rounded-xl transition-all duration-200 overflow-hidden",
                     isExpanded 
-                        ? "border-l-4 border-primary shadow-md bg-background ring-2 ring-primary/10" 
+                        ? "border-l-4 border-primary shadow-md bg-background" 
                         : cn(
                             "bg-card hover:bg-muted/50",
                             !isValid && "border-destructive border-2 bg-destructive/5"
@@ -435,7 +421,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                 {item.productName}
                             </h3>
                             {warningText ? (
-                                <Badge variant="destructive" className="bg-destructive text-destructive-foreground text-[10px] h-4 py-0 font-bold tracking-wide uppercase">
+                                <Badge variant="destructive" className="text-[10px] h-4 py-0 font-bold uppercase">
                                     {warningText}
                                 </Badge>
                             ) : !isExpanded && (
@@ -447,7 +433,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                     </div>
 
                     <div className="flex items-center gap-2 ml-4">
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={handleDelete}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={handleDelete}>
                             <Trash2 className="h-4 w-4" />
                         </Button>
                         {!isExpanded ? (
@@ -479,14 +465,14 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                     const hasError = hasConstraintError((errors.customFieldValues as any)?.[field.id]);
                                     return (
                                         <div key={field.id} className="flex items-center gap-3">
-                                            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap">
+                                            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                                                 {field.name} *
                                             </Label>
                                             <Input 
                                                 id={`custom-input-${item.id}-${field.id}`}
                                                 type="number" 
                                                 className={cn(
-                                                    "w-16 h-10 px-2 text-sm bg-background [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
+                                                    "w-16 h-10 px-2 text-sm bg-background",
                                                     hasError && "border-destructive ring-destructive"
                                                 )}
                                                 {...register(`customFieldValues.${field.id}`, { valueAsNumber: true })} 
@@ -502,13 +488,13 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                 {product.sizes.map((size, index) => {
                                     return (
                                         <div key={size.id} className="flex items-center gap-3">
-                                            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap">
+                                            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                                                 {size.name}
                                             </Label>
                                             <Input 
                                                 id={`size-input-${item.id}-${size.id}`}
                                                 type="number" 
-                                                className="w-20 h-10 px-2 text-sm bg-background [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                className="w-20 h-10 px-2 text-sm bg-background"
                                                 {...register(`sizes.${index}.quantity`, { valueAsNumber: true })} 
                                             />
                                         </div>
@@ -523,8 +509,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                     {product.addons.map((addon, index) => {
                                         const parentIndex = addon.dependsOn ? product.addons!.findIndex(a => a.id === addon.dependsOn) : -1;
                                         const parentValue = parentIndex !== -1 ? watchedValues.addons?.[parentIndex]?.value : undefined;
-                                        const isParentActive = parentValue !== undefined && parentValue !== false ? true : false;
-                                        
+                                        const isParentActive = parentValue !== undefined && parentValue !== false;
                                         if (!((!addon.dependsOn || isParentActive) && (!addon.visibleIfVariant || watchedValues.variant === addon.visibleIfVariant))) return null;
                                         
                                         return (
@@ -542,7 +527,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                                 type="button"
                                                                 variant={field.value ? "default" : "outline"}
                                                                 size="sm"
-                                                                className="h-8 rounded-full px-3 gap-1.5 transition-all text-xs"
+                                                                className="h-8 rounded-full px-3 gap-1.5 text-xs"
                                                                 onClick={() => field.onChange(field.value ? false : true)}
                                                             >
                                                                 {field.value ? <Check className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
@@ -556,7 +541,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                                     type="button"
                                                                     variant="outline"
                                                                     size="sm"
-                                                                    className="h-8 rounded-full px-3 gap-1.5 transition-all text-xs"
+                                                                    className="h-8 rounded-full px-3 gap-1.5 text-xs"
                                                                     onClick={() => {
                                                                         field.onChange(null); 
                                                                         setTimeout(() => {
@@ -570,24 +555,21 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                             );
                                                         } else {
                                                             return (
-                                                                <div className={cn(
-                                                                    "inline-flex items-center rounded-full h-8 pl-3 pr-1 gap-2 shadow-sm transition-colors bg-primary text-primary-foreground"
-                                                                )}>
+                                                                <div className="inline-flex items-center rounded-full h-8 pl-3 pr-1 gap-2 bg-primary text-primary-foreground shadow-sm">
                                                                     <span className="text-xs font-medium cursor-pointer" onClick={() => field.onChange(false)}>
                                                                         {addon.name}
                                                                     </span>
                                                                     <Input
                                                                         id={`addon-input-${item.id}-${addon.id}`}
                                                                         type="number"
-                                                                        className="h-6 px-2 py-0 text-xs bg-white border-none focus-visible:ring-0 focus-visible:ring-offset-0 rounded-md font-bold text-black [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                                                        style={{ width: `${Math.max(2, String(field.value ?? '').length + 2)}ch` }}
+                                                                        className="h-6 px-2 py-0 text-xs bg-white border-none focus-visible:ring-0 rounded-md font-bold text-black w-12"
                                                                         value={field.value ?? ''}
                                                                         onChange={(e) => field.onChange(e.target.value === '' ? null : Number(e.target.value))}
                                                                     />
                                                                     {hasError && (
                                                                         <TooltipProvider>
                                                                             <Tooltip>
-                                                                                <TooltipTrigger asChild><AlertCircle className="h-3 w-3 shrink-0" /></TooltipTrigger>
+                                                                                <TooltipTrigger asChild><AlertCircle className="h-3 w-3" /></TooltipTrigger>
                                                                                 <TooltipContent><p>{hasError.message}</p></TooltipContent>
                                                                             </Tooltip>
                                                                         </TooltipProvider>
@@ -607,7 +589,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                 {showNotes ? (
                                     <Textarea 
                                         {...register('specialRequest')} 
-                                        className="min-h-[40px] bg-background/50 overflow-hidden resize-none py-2 px-3 leading-6" 
+                                        className="min-h-[40px] bg-background/50 overflow-hidden resize-none leading-6" 
                                         placeholder="Add special instructions..."
                                         ref={(e) => {
                                             register('specialRequest').ref(e);
@@ -619,9 +601,9 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                         }}
                                     />
                                 ) : (
-                                    <Button variant="ghost" size="sm" className="h-8 gap-2 text-muted-foreground hover:text-primary transition-colors p-0" onClick={handleAddNote}>
+                                    <Button variant="ghost" size="sm" className="h-8 gap-2 text-muted-foreground p-0" onClick={handleAddNote}>
                                         <MessageSquarePlus className="h-4 w-4" />
-                                        <span className="text-xs font-medium uppercase tracking-wider">Add Note</span>
+                                        <span className="text-xs font-medium uppercase">Add Note</span>
                                     </Button>
                                 )}
                             </div>
