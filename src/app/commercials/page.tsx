@@ -118,12 +118,14 @@ export default function CommercialsPage() {
                                                                     key={`${item.configuredProductId}-${idx}`} 
                                                                     className="group h-10 border-b last:border-b-0 bg-[#F9F2DC] hover:bg-[#E6DEBC] transition-colors"
                                                                 >
-                                                                    <TableCell className="py-0 pl-8 text-sm text-[#2E261F] font-medium">
+                                                                    <TableCell className="py-0 pl-8 text-sm text-[#2E261F] font-medium relative">
                                                                         {isSpecialRequest ? (
-                                                                            <div className="flex items-center gap-2 max-w-xs md:max-w-md lg:max-w-xl">
-                                                                                <Star className="h-3.5 w-3.5 shrink-0 text-amber-500 fill-amber-500" />
-                                                                                <span className="truncate" title={comp.description}>{comp.description}</span>
-                                                                            </div>
+                                                                            <React.Fragment>
+                                                                                <Star className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 shrink-0 text-amber-500 fill-amber-500" />
+                                                                                <div className="truncate max-w-xs md:max-w-md lg:max-w-xl" title={comp.description}>
+                                                                                    {comp.description}
+                                                                                </div>
+                                                                            </React.Fragment>
                                                                         ) : (
                                                                             comp.label
                                                                         )}
