@@ -20,7 +20,6 @@ export default function DeliverablesPage() {
     const { toast } = useToast();
     const headerSummary = useHeaderSummary(order.eventDetails);
     
-    const [openItems, setOpenItems] = useState<string[]>([]);
     const [rowStatus, setRowStatus] = useState<Record<string, { isValid: boolean }>>({});
     const [committedItemIds, setCommittedItemIds] = useState<string[]>([]);
 
@@ -32,30 +31,45 @@ export default function DeliverablesPage() {
     }, []);
 
     const handleEdit = useCallback((id: string) => {
-        setOpenItems(prev => Array.from(new Set([...prev, id])));
+        // Items in Action Required are always expanded. 
+        // For Order List, we just need to manage expansion if we want, 
+        // but the requirement is persistence of section.
+        // We'll use a local state for open items in the Order List specifically.
     }, []);
 
-    const handleDone = useCallback(async (id: string) => {
-        if (rowStatus[id]?.isValid) {
-            setCommittedItemIds(prev => Array.from(new Set([id, ...prev])));
-            setOpenItems(prev => prev.filter(itemId => itemId !== id));
+    const [openOrderListItems, setOpenOrderListItems] = useState<string[]>([]);
+
+    const handleDone = useCallback(async (id: string, forceValid: boolean = false) => {
+        // Movement is blocked only if the form is actually invalid (Hard Errors)
+        const isValid = forceValid || rowStatus[id]?.isValid;
+        
+        if (isValid) {
+            setCommittedItemIds(prev => {
+                const filtered = prev.filter(itemId => itemId !== id);
+                return [id, ...filtered]; // Prepend to top of Order List
+            });
+            setOpenOrderListItems(prev => prev.filter(itemId => itemId !== id));
         } else {
             toast({
                 variant: "destructive",
                 title: "Setup Required",
-                description: "Please complete all mandatory fields before confirming this item."
+                description: "Please complete all mandatory fields (marked with *) before confirming."
             });
         }
     }, [rowStatus, toast]);
 
+    const handleOrderListEdit = useCallback((id: string) => {
+        setOpenOrderListItems(prev => Array.from(new Set([...prev, id])));
+    }, []);
+
     const { activeItems, orderListItems } = useMemo(() => {
-        // Active items are those NOT in committedItemIds
-        const active = order.deliverables.filter(item => !committedItemIds.includes(item.id));
-        
-        // Order list items are those IN committedItemIds, maintaining the prepended order from the set
-        const list = [...committedItemIds]
+        // Order list items are those IN committedItemIds, in the order of the committedItemIds array (most recent first)
+        const list = committedItemIds
             .map(id => order.deliverables.find(item => item.id === id))
             .filter(item => !!item);
+
+        // Active items are those NOT in committedItemIds, in the order of the deliverables array (newest first)
+        const active = order.deliverables.filter(item => !committedItemIds.includes(item.id));
 
         return { 
             activeItems: active, 
@@ -64,13 +78,13 @@ export default function DeliverablesPage() {
     }, [order.deliverables, committedItemIds]);
 
     const handleNextStep = useCallback(() => {
-        const firstInvalidItem = order.deliverables.find(item => rowStatus[item.id]?.isValid === false);
+        const hasInvalidItems = activeItems.length > 0;
         
-        if (firstInvalidItem) {
+        if (hasInvalidItems) {
             toast({
                 variant: "destructive",
-                title: "Incomplete Items",
-                description: "Please complete all required fields before moving to commercials."
+                title: "Items Remaining",
+                description: "Please confirm all items in 'Action Required' before moving to commercials."
             });
             return;
         }
@@ -81,7 +95,7 @@ export default function DeliverablesPage() {
         }
 
         router.push('/commercials');
-    }, [rowStatus, order.deliverables, router, toast]);
+    }, [activeItems.length, order.deliverables.length, router, toast]);
 
     return (
         <AppLayout>
@@ -110,28 +124,30 @@ export default function DeliverablesPage() {
                                     Action Required ({activeItems.length})
                                 </h2>
                                 
-                                {activeItems.length === 0 && orderListItems.length === 0 ? (
-                                    <div className="flex flex-col items-center justify-center py-20 border-2 border-dashed rounded-xl bg-card/50">
-                                        <Package className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                                        <p className="text-muted-foreground font-medium">Your queue is empty</p>
+                                {activeItems.length === 0 ? (
+                                    <div className="flex flex-col items-center justify-center py-12 border-2 border-dashed rounded-xl bg-card/50">
+                                        <Package className="h-10 w-10 text-muted-foreground/30 mb-2" />
+                                        <p className="text-muted-foreground text-sm font-medium">No items awaiting setup</p>
                                     </div>
                                 ) : (
                                     <Accordion 
                                         type="multiple" 
                                         value={activeItems.map(i => i.id)} 
-                                        className="space-y-2"
+                                        className="space-y-2 pointer-events-none" // Disable accordion clicking in Action
                                     >
                                         {activeItems.map((item) => (
-                                            <DeliverableRow 
-                                                key={item.id}
-                                                item={item} 
-                                                isExpanded={true}
-                                                onEdit={handleEdit}
-                                                onDone={handleDone}
-                                                onValidityChange={handleValidityChange}
-                                                onUpdate={updateDeliverable}
-                                                onRemove={removeDeliverable}
-                                            />
+                                            <div key={item.id} className="pointer-events-auto">
+                                                <DeliverableRow 
+                                                    item={item} 
+                                                    isExpanded={true}
+                                                    isNonCollapsible={true}
+                                                    onEdit={() => {}}
+                                                    onDone={(id, isValid) => handleDone(id, isValid)}
+                                                    onValidityChange={handleValidityChange}
+                                                    onUpdate={updateDeliverable}
+                                                    onRemove={removeDeliverable}
+                                                />
+                                            </div>
                                         ))}
                                     </Accordion>
                                 )}
@@ -143,14 +159,19 @@ export default function DeliverablesPage() {
                                         <CheckCircle2 className="h-4 w-4" />
                                         Order List ({orderListItems.length})
                                     </h2>
-                                    <Accordion type="multiple" value={openItems} onValueChange={setOpenItems} className="space-y-2">
+                                    <Accordion 
+                                        type="multiple" 
+                                        value={openOrderListItems} 
+                                        onValueChange={setOpenOrderListItems} 
+                                        className="space-y-2"
+                                    >
                                         {orderListItems.map((item) => (
                                             <DeliverableRow 
                                                 key={item.id} 
                                                 item={item} 
-                                                isExpanded={openItems.includes(item.id)}
-                                                onEdit={handleEdit}
-                                                onDone={handleDone}
+                                                isExpanded={openOrderListItems.includes(item.id)}
+                                                onEdit={() => handleOrderListEdit(item.id)}
+                                                onDone={() => setOpenOrderListItems(prev => prev.filter(id => id !== item.id))}
                                                 onValidityChange={handleValidityChange}
                                                 onUpdate={updateDeliverable}
                                                 onRemove={removeDeliverable}

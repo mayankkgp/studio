@@ -38,8 +38,8 @@ import {
 } from "@/components/ui/tooltip";
 
 /**
- * Validates only mandatory presence (Required). 
- * Soft constraints (min/max) are handled manually for non-blocking feedback.
+ * Relaxed Schema: Only mandatory presence (Required) is blocking.
+ * Soft constraints (min/max/MOQ) are handled manually for visual feedback only.
  */
 const getValidationSchema = (product: Product | null) => {
     if (!product) return z.object({});
@@ -76,6 +76,7 @@ const getValidationSchema = (product: Product | null) => {
                 const addonDef = product.addons?.find(a => a.id === addon.id);
                 const isSelected = addon.value !== undefined && addon.value !== false;
                 
+                // For physical/numeric addons, if they are "active" (clicked), they must have a value
                 if (isSelected && addonDef && (addonDef.type === 'numeric' || addonDef.type === 'physical_quantity')) {
                     if (addon.value === null || addon.value === '' || isNaN(Number(addon.value))) {
                          ctx.addIssue({ code: z.ZodIssueCode.custom, message: "REQUIRED", path: [idx, 'value'] });
@@ -91,6 +92,7 @@ const getValidationSchema = (product: Product | null) => {
 export const DeliverableRow = React.memo(function DeliverableRow({ 
     item, 
     isExpanded, 
+    isNonCollapsible = false,
     onEdit,
     onDone, 
     onValidityChange,
@@ -135,7 +137,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         el.style.height = `${Math.max(40, scrollHeight)}px`;
     }, []);
 
-    // Manual check for soft constraints (non-blocking)
+    // Manual check for soft constraints (visual cues only)
     const getLogicWarning = React.useCallback((fieldValue: any, constraints?: SoftConstraint[]) => {
         if (fieldValue === undefined || fieldValue === null || fieldValue === '') return null;
         if (!constraints) return null;
@@ -148,11 +150,12 @@ export const DeliverableRow = React.memo(function DeliverableRow({
 
     React.useEffect(() => {
         const initValidation = async () => {
-            await trigger();
+            const res = await trigger();
+            onValidityChange(item.id, res);
             setHasValidated(true);
         };
         initValidation();
-    }, [trigger]);
+    }, [trigger, item.id, onValidityChange]);
 
     React.useEffect(() => {
         if (hasValidated) {
@@ -185,9 +188,10 @@ export const DeliverableRow = React.memo(function DeliverableRow({
 
     const handleDoneClick = async (e: React.MouseEvent) => {
         e.stopPropagation();
-        const result = await trigger();
+        const res = await trigger();
         performSyncUpdate();
-        if (result) onDone(item.id);
+        // Pass validity directly to parent to bypass race conditions
+        onDone(item.id, res);
     };
 
     const handleEditClick = (e: React.MouseEvent) => {
@@ -274,7 +278,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             }
         }
         if (watchedValues.addons) {
-            for (let i = 0; i < watchedValues.addons.length; i++) {
+            for (let i = 0; i < (watchedValues.addons?.length || 0); i++) {
                 const addon = watchedValues.addons[i];
                 const addonDef = product?.addons?.find(a => a.id === addon.id);
                 const isSelected = addon.value !== undefined && addon.value !== false && addon.value !== null;
@@ -471,7 +475,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                         );
                                                     } else {
                                                         const val = field.value ?? '';
-                                                        const valueLength = val.toString().length;
+                                                        const valString = val.toString();
                                                         return (
                                                             <div className={cn(
                                                                 "inline-flex items-center rounded-full h-8 pl-4 pr-3 gap-2 bg-primary text-primary-foreground shadow-sm transition-colors",
@@ -483,7 +487,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                                 <Input
                                                                     type="number"
                                                                     className="h-6 px-2 py-0 text-xs bg-white border-none focus-visible:ring-0 rounded-md font-bold text-black [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                                                    style={{ width: `${Math.max(2, valueLength) + 3}ch` }}
+                                                                    style={{ width: `${Math.max(2, valString.length) + 3}ch` }}
                                                                     value={val}
                                                                     onChange={(e) => field.onChange(e.target.value === '' ? null : Number(e.target.value))}
                                                                     onKeyDown={(e) => {
@@ -529,7 +533,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                     />
                                 </div>
                             ) : (
-                                <Button variant="ghost" size="sm" className="h-8 gap-2 text-muted-foreground px-3" onClick={() => setShowNotes(true)}>
+                                <Button variant="ghost" size="sm" className="h-8 gap-2 text-muted-foreground px-4" onClick={() => setShowNotes(true)}>
                                     <MessageSquarePlus className="h-4 w-4" />
                                     <span className="text-xs font-medium uppercase">Add Note</span>
                                 </Button>
@@ -545,8 +549,9 @@ export const DeliverableRow = React.memo(function DeliverableRow({
 interface DeliverableRowProps {
     item: ConfiguredProduct;
     isExpanded: boolean;
+    isNonCollapsible?: boolean;
     onEdit: (id: string) => void;
-    onDone: (id: string) => void;
+    onDone: (id: string, isValid: boolean) => void;
     onValidityChange: (id: string, isValid: boolean) => void;
     onUpdate: (id: string, updates: Partial<ConfiguredProduct>) => void;
     onRemove: (id: string) => void;
