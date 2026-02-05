@@ -221,12 +221,52 @@ export const DeliverableRow = React.memo(function DeliverableRow({
     const getSummaryText = () => {
         if (!product) return '';
         const parts: string[] = [];
-        if (watchedValues.variant) parts.push(watchedValues.variant);
+        
+        // 1. Variant
+        if (watchedValues.variant) {
+            parts.push(watchedValues.variant);
+        }
+
+        // 2. Quantity / Pages
         if (product.configType === 'A' && typeof watchedValues.quantity === 'number') {
             parts.push(`Qty: ${watchedValues.quantity}`);
         } else if (product.configType === 'B' && typeof watchedValues.pages === 'number') {
-            parts.push(`${watchedValues.pages} Pages`);
+            parts.push(`${watchedValues.pages} Pgs`);
         }
+
+        // 3. Custom Fields
+        if (product.customFields && watchedValues.customFieldValues) {
+            product.customFields.forEach(field => {
+                const val = (watchedValues.customFieldValues as any)[field.id];
+                if (val !== undefined && val !== null && val !== '') {
+                    parts.push(`${field.name}: ${val}`);
+                }
+            });
+        }
+
+        // 4. Add-ons
+        if (watchedValues.addons) {
+            watchedValues.addons.forEach((addon: any) => {
+                const isSelected = addon.value !== undefined && addon.value !== false && addon.value !== null && addon.value !== '';
+                if (isSelected) {
+                    const addonDef = product.addons?.find(a => a.id === addon.id);
+                    const displayName = addonDef?.name || addon.name;
+                    if (typeof addon.value === 'number') {
+                        parts.push(`${displayName} (${addon.value})`);
+                    } else {
+                        parts.push(displayName);
+                    }
+                }
+            });
+        }
+
+        // 5. Special Request (first 20 chars)
+        if (watchedValues.specialRequest) {
+            const truncated = watchedValues.specialRequest.slice(0, 20);
+            const suffix = watchedValues.specialRequest.length > 20 ? '...' : '';
+            parts.push(`Notes: ${truncated}${suffix}`);
+        }
+
         return parts.join(' • ');
     };
 
@@ -294,16 +334,16 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                     )}>
                         <IconComponent className={isExpanded ? "h-5 w-5" : "h-4 w-4"} />
                     </div>
-                    <div className={cn("flex items-baseline gap-3", !isExpanded && "flex-1")}>
+                    <div className={cn("flex items-baseline gap-3 flex-1 overflow-hidden", !isExpanded && "flex-1")}>
                         <h3 className={cn("font-semibold leading-none shrink-0", isExpanded ? "text-base" : "text-sm")}>
                             {item.productName}
                         </h3>
                         {getPriorityWarning() ? (
-                            <Badge variant="destructive" className="text-[10px] h-4 py-0 font-bold uppercase">
+                            <Badge variant="destructive" className="text-[10px] h-4 py-0 font-bold uppercase shrink-0">
                                 {getPriorityWarning()}
                             </Badge>
                         ) : !isExpanded && (
-                            <div className="text-xs text-muted-foreground truncate flex-1">
+                            <div className="text-xs text-muted-foreground truncate flex-1 min-w-0">
                                 {getSummaryText()}
                             </div>
                         )}
@@ -440,7 +480,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                         const val = field.value ?? '';
                                                         const valueLength = val.toString().length;
                                                         return (
-                                                            <div className="inline-flex items-center rounded-full h-8 px-4 gap-2 bg-primary text-primary-foreground shadow-sm">
+                                                            <div className="inline-flex items-center rounded-full h-8 pl-4 pr-3 gap-2 bg-primary text-primary-foreground shadow-sm">
                                                                 <span className="text-xs font-medium cursor-pointer" onClick={() => field.onChange(false)}>
                                                                     {addon.name}
                                                                 </span>

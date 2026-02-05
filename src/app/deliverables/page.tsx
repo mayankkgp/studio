@@ -36,7 +36,9 @@ export default function DeliverablesPage() {
 
     const handleDone = useCallback(async (id: string) => {
         if (rowStatus[id]?.isValid) {
+            // Move to top of committed list
             setCommittedItemIds(prev => Array.from(new Set([id, ...prev])));
+            // Collapse it in the list
             setOpenItems(prev => prev.filter(itemId => itemId !== id));
         } else {
             toast({
@@ -49,6 +51,7 @@ export default function DeliverablesPage() {
 
     const { activeItems, orderListItems } = useMemo(() => {
         // Active items are those NOT in committedItemIds
+        // deliverables is already prepended with new items in Context
         const active = order.deliverables.filter(item => !committedItemIds.includes(item.id));
         
         // Order list items follow the order of committedItemIds (newest committed on top)
@@ -118,20 +121,19 @@ export default function DeliverablesPage() {
                                     <Accordion 
                                         type="multiple" 
                                         value={activeItems.map(i => i.id)} 
-                                        className="space-y-2 pointer-events-none"
+                                        className="space-y-2"
                                     >
                                         {activeItems.map((item) => (
-                                            <div key={item.id} className="pointer-events-auto">
-                                                <DeliverableRow 
-                                                    item={item} 
-                                                    isExpanded={true}
-                                                    onEdit={handleEdit}
-                                                    onDone={handleDone}
-                                                    onValidityChange={handleValidityChange}
-                                                    onUpdate={updateDeliverable}
-                                                    onRemove={removeDeliverable}
-                                                />
-                                            </div>
+                                            <DeliverableRow 
+                                                key={item.id}
+                                                item={item} 
+                                                isExpanded={true}
+                                                onEdit={handleEdit}
+                                                onDone={handleDone}
+                                                onValidityChange={handleValidityChange}
+                                                onUpdate={updateDeliverable}
+                                                onRemove={removeDeliverable}
+                                            />
                                         ))}
                                     </Accordion>
                                 )}
