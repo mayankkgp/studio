@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { 
     AlertTriangle, 
+    AlertCircle,
     Trash2, 
     ShoppingBag,
     Clapperboard,
@@ -132,8 +133,10 @@ export const DeliverableRow = React.memo(function DeliverableRow({
 
     const adjustHeight = React.useCallback((el: HTMLTextAreaElement | null) => {
         if (!el) return;
+        // Reset height to allow shrinking
         el.style.height = '0px'; 
         const scrollHeight = el.scrollHeight;
+        // Force minimum height of 40px to match standard inputs
         el.style.height = `${Math.max(40, scrollHeight)}px`;
     }, []);
 
@@ -387,21 +390,34 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                 <Label className={cn("text-xs font-bold uppercase tracking-wider whitespace-nowrap min-w-[40px]", errors.quantity ? "text-destructive" : "text-muted-foreground")}>
                                     Qty
                                 </Label>
-                                <Input 
-                                    type="number" 
-                                    {...register('quantity', { valueAsNumber: true })}
-                                    className={cn("w-24 h-10 text-lg font-bold bg-background", errors.quantity && "border-destructive")} 
-                                    ref={(e) => {
-                                        register('quantity').ref(e);
-                                        // @ts-ignore
-                                        qtyInputRef.current = e;
-                                    }}
-                                />
+                                <div className="flex items-center gap-2">
+                                    <Input 
+                                        type="number" 
+                                        {...register('quantity', { valueAsNumber: true })}
+                                        className={cn("w-24 h-10 text-lg font-bold bg-background", errors.quantity && "border-destructive")} 
+                                        ref={(e) => {
+                                            register('quantity').ref(e);
+                                            // @ts-ignore
+                                            qtyInputRef.current = e;
+                                        }}
+                                    />
+                                    {errors.quantity && (
+                                        <TooltipProvider>
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <AlertCircle className="h-4 w-4 text-destructive shrink-0 cursor-help" />
+                                                </TooltipTrigger>
+                                                <TooltipContent>
+                                                    <p>{errors.quantity.message}</p>
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        </TooltipProvider>
+                                    )}
+                                </div>
                             </div>
                             <div className="flex-1 min-w-[200px]">
                                 {renderNotesArea()}
                             </div>
-                            {errors.quantity && <p className="text-xs text-destructive font-medium w-full">{errors.quantity.message}</p>}
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
@@ -411,7 +427,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                         <Label className={cn("text-xs font-bold uppercase tracking-wider whitespace-nowrap min-w-[40px]", (errors.quantity || errors.pages) ? "text-destructive" : "text-muted-foreground")}>
                                             {product.configType === 'A' ? 'Qty' : 'Pages'}
                                         </Label>
-                                        <div className="flex flex-col gap-1">
+                                        <div className="flex items-center gap-2">
                                             <Input 
                                                 type="number" 
                                                 {...register(product.configType === 'A' ? 'quantity' : 'pages', { 
@@ -428,7 +444,18 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                     }
                                                 }}
                                             />
-                                            {(errors.quantity || errors.pages) && <p className="text-xs text-destructive font-medium whitespace-nowrap">{errors.quantity?.message || errors.pages?.message}</p>}
+                                            {(errors.quantity || errors.pages) && (
+                                                <TooltipProvider>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <AlertCircle className="h-4 w-4 text-destructive shrink-0 cursor-help" />
+                                                        </TooltipTrigger>
+                                                        <TooltipContent>
+                                                            <p>{errors.quantity?.message || errors.pages?.message}</p>
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                </TooltipProvider>
+                                            )}
                                         </div>
                                     </div>
                                 )}
@@ -438,7 +465,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                         <Label className={cn("text-xs font-bold uppercase tracking-wider whitespace-nowrap min-w-[40px] mt-2.5", errors.variant ? "text-destructive" : "text-muted-foreground")}>
                                             Variant
                                         </Label>
-                                        <div className="flex flex-col gap-1">
+                                        <div className="flex items-center gap-2">
                                             <Controller
                                                 name="variant"
                                                 control={control}
@@ -462,7 +489,18 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                     </div>
                                                 )}
                                             />
-                                            {errors.variant && <p className="text-xs text-destructive font-medium">{errors.variant.message}</p>}
+                                            {errors.variant && (
+                                                <TooltipProvider>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <AlertCircle className="h-4 w-4 text-destructive shrink-0 cursor-help" />
+                                                        </TooltipTrigger>
+                                                        <TooltipContent>
+                                                            <p>{errors.variant.message}</p>
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                </TooltipProvider>
+                                            )}
                                         </div>
                                     </div>
                                 )}
