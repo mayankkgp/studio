@@ -12,15 +12,35 @@ export const rates: Record<string, number> = {
   parent_page_cat_rate: 800,
   parent_page_custom_rate: 1500,
 
-  // Base Rate Keys (for variant-specific base prices)
+  // Base Rate Keys (Variant Prices)
   logo_cat_rate: 3000,
   logo_custom_rate: 5000,
   std_cat_rate: 5000,
   std_custom_rate: 12000,
+  
+  sticker_1in_rate: 5,
+  sticker_2in_rate: 8,
+  sticker_3in_rate: 12,
+  sticker_4in_rate: 15,
+  sticker_5in_rate: 20,
+  
+  stirrer_style_a_rate: 20,
+  stirrer_style_b_rate: 20,
+  stirrer_style_c_rate: 20,
+  stirrer_style_d_rate: 20,
+  stirrer_style_e_rate: 20,
+  
+  straw_white_rate: 15,
+  straw_golden_rate: 25,
+  
+  brooch_white_rate: 50,
+  brooch_golden_rate: 80,
+
   itinerary_cat_rate: 1500,
   itinerary_custom_rate: 3500,
   passport_cat_rate: 2000,
   passport_custom_rate: 4500,
+  
   welcome_note_cat_rate: 1000,
   welcome_note_custom_rate: 2500,
   door_dangler_cat_rate: 800,
@@ -124,4 +144,9 @@ export const rates: Record<string, number> = {
   menu_board_a4_rate: 150,
   menu_board_a3_rate: 300,
   menu_board_2x3_rate: 1200,
+  pickup_board_a4_rate: 150,
+  pickup_board_a3_rate: 300,
+  pickup_board_2x3_rate: 1200,
+  contract_board_a3_rate: 300,
+  contract_board_2x3_rate: 1200,
 };

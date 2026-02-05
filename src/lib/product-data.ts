@@ -41,9 +41,45 @@ export const productCatalog: Product[] = [
     variantRateKeys: { 'Catalogue': 'dessert_topper_cat_rate', 'Custom': 'dessert_topper_custom_rate' },
     softConstraints: [{ type: 'min', value: 25, message: 'MOQ is 25.' }] 
   },
-  { id: 40, name: 'Drink Stirrer', configType: 'A', basePrice: 70, variants: ['Style A', 'Style B', 'Style C', 'Style D', 'Style E'], softConstraints: [{ type: 'min', value: 25, message: 'MOQ is 25.' }] },
-  { id: 41, name: 'Sticker', configType: 'A', basePrice: 20, variants: ['1in', '2in', '3in', '4in', '5in'], softConstraints: [{ type: 'min', value: 50, message: 'MOQ is 50.' }] },
-  { id: 42, name: 'Straw with Flag', configType: 'A', basePrice: 30, variants: ['White', 'Golden'], softConstraints: [{ type: 'min', value: 25, message: 'MOQ is 25.' }] },
+  { 
+    id: 40, 
+    name: 'Drink Stirrer', 
+    configType: 'A', 
+    basePrice: 0, 
+    variants: ['Style A', 'Style B', 'Style C', 'Style D', 'Style E'], 
+    variantRateKeys: { 
+        'Style A': 'stirrer_style_a_rate', 
+        'Style B': 'stirrer_style_b_rate',
+        'Style C': 'stirrer_style_c_rate',
+        'Style D': 'stirrer_style_d_rate',
+        'Style E': 'stirrer_style_e_rate'
+    },
+    softConstraints: [{ type: 'min', value: 25, message: 'MOQ is 25.' }] 
+  },
+  { 
+    id: 41, 
+    name: 'Sticker', 
+    configType: 'A', 
+    basePrice: 0, 
+    variants: ['1in', '2in', '3in', '4in', '5in'], 
+    variantRateKeys: {
+        '1in': 'sticker_1in_rate',
+        '2in': 'sticker_2in_rate',
+        '3in': 'sticker_3in_rate',
+        '4in': 'sticker_4in_rate',
+        '5in': 'sticker_5in_rate'
+    },
+    softConstraints: [{ type: 'min', value: 50, message: 'MOQ is 50.' }] 
+  },
+  { 
+    id: 42, 
+    name: 'Straw with Flag', 
+    configType: 'A', 
+    basePrice: 0, 
+    variants: ['White', 'Golden'], 
+    variantRateKeys: { 'White': 'straw_white_rate', 'Golden': 'straw_golden_rate' },
+    softConstraints: [{ type: 'min', value: 25, message: 'MOQ is 25.' }] 
+  },
   { 
     id: 43, 
     name: 'Wax Seal', 
@@ -53,7 +89,15 @@ export const productCatalog: Product[] = [
     variantRateKeys: { 'Catalogue': 'wax_seal_cat_rate', 'Custom': 'wax_seal_custom_rate' },
     softConstraints: [{ type: 'min', value: 10, message: 'MOQ is 10.' }] 
   },
-  { id: 44, name: 'Pin Brooch', configType: 'A', basePrice: 120, variants: ['White', 'Golden'], softConstraints: [{ type: 'min', value: 25, message: 'MOQ is 25.' }] },
+  { 
+    id: 44, 
+    name: 'Pin Brooch', 
+    configType: 'A', 
+    basePrice: 0, 
+    variants: ['White', 'Golden'], 
+    variantRateKeys: { 'White': 'brooch_white_rate', 'Golden': 'brooch_golden_rate' },
+    softConstraints: [{ type: 'min', value: 25, message: 'MOQ is 25.' }] 
+  },
   { id: 45, name: 'Cake Topper', configType: 'A', basePrice: 500, softConstraints: [{ type: 'min', value: 1, message: 'Minimum quantity is 1.' }] },
   { id: 46, name: 'Coconut Stamp', configType: 'A', basePrice: 800, softConstraints: [{ type: 'min', value: 1, message: 'Minimum quantity is 1.' }] },
   { id: 47, name: 'Welcome Mala', configType: 'A', basePrice: 120, softConstraints: [{ type: 'min', value: 25, message: 'MOQ is 25.' }] },
@@ -150,10 +194,10 @@ export const productCatalog: Product[] = [
     configType: 'C', 
     basePrice: 0, 
     variants: ['B/W', 'Colored'], 
-    variantRateKeys: { 'B/W': 'newspaper_bw_rate', 'Colored': 'newspaper_color_rate' }, // This is setup, so we use variant rates as setup fee
-    addons: [{ id: 'physical', name: 'Physical', type: 'physical_quantity', rateKey: 'newspaper_rate', softConstraints: [{ type: 'min', value: 50, message: 'MOQ is 50.' }] }] 
+    variantRateKeys: { 'B/W': 'newspaper_bw_rate', 'Colored': 'newspaper_color_rate' }, 
+    addons: [{ id: 'physical', name: 'Physical', type: 'physical_quantity', rateKey: 'newspaper_bw_rate', softConstraints: [{ type: 'min', value: 50, message: 'MOQ is 50.' }] }] 
   },
-  { id: 15, name: 'Magazine', configType: 'C', basePrice: 2000, variants: ['Catalogue', 'Custom'], addons: [{ id: 'physical', name: 'Physical', type: 'physical_quantity', rateKey: 'magazine_rate', softConstraints: [{ type: 'min', value: 50, message: 'MOQ is 50.' }] }] },
+  { id: 15, name: 'Magazine', configType: 'C', basePrice: 250, variants: ['Catalogue', 'Custom'], addons: [{ id: 'physical', name: 'Physical', type: 'physical_quantity', rateKey: 'magazine_rate', softConstraints: [{ type: 'min', value: 50, message: 'MOQ is 50.' }] }] },
   { 
     id: 16, 
     name: 'Tambola', 
@@ -332,8 +376,7 @@ export const productCatalog: Product[] = [
     variants: ['Catalogue', 'Custom'], 
     variantRateKeys: { 'Catalogue': 'luggage_tag_cat_rate', 'Custom': 'luggage_tag_custom_rate' },
     addons: [
-      { id: 'paper', name: 'Paper', type: 'physical_quantity', rateKey: 'luggage_tag_rate', softConstraints: [{ type: 'min', value: 25, message: 'MOQ is 25.' }] },
-      { id: 'plastic', name: 'Plastic', type: 'physical_quantity', rateKey: 'luggage_tag_rate', softConstraints: [{ type: 'min', value: 25, message: 'MOQ is 25.' }] }
+      { id: 'physical', name: 'Physical', type: 'physical_quantity', rateKey: 'luggage_tag_rate', softConstraints: [{ type: 'min', value: 25, message: 'MOQ is 25.' }] }
     ]
   },
   { 
@@ -390,9 +433,9 @@ export const productCatalog: Product[] = [
     variantRateKeys: { 'Catalogue': 'game_cat_rate', 'Custom': 'game_custom_rate' },
     addons: [{ id: 'physical', name: 'Physical', type: 'physical_quantity', rateKey: 'board_game_rate', softConstraints: [{ type: 'min', value: 1, message: 'Min 1.' }] }] 
   },
-  { id: 54, name: 'Coaster', configType: 'C', basePrice: 0, variants: ['Paper', 'Plastic'], addons: [{ id: 'physical', name: 'Physical', type: 'physical_quantity', rateKey: 'coaster_rate', softConstraints: [{ type: 'min', value: 25, message: 'MOQ is 25.' }] }] },
+  { id: 54, name: 'Coaster', configType: 'C', basePrice: 0, variants: ['Paper', 'Plastic'], addons: [{ id: 'physical', name: 'Physical', type: 'physical_quantity', rateKey: 'coaster_paper_rate', softConstraints: [{ type: 'min', value: 25, message: 'MOQ is 25.' }] }] },
   { id: 55, name: 'Maggi/Ice Cream Tub', configType: 'C', basePrice: 0, variants: ['Catalogue', 'Custom'], addons: [{ id: 'physical', name: 'Physical', type: 'physical_quantity', rateKey: 'tub_rate', softConstraints: [{ type: 'min', value: 25, message: 'MOQ is 25.' }] }] },
-  { id: 56, name: 'Table Numbers', configType: 'C', basePrice: 0, variants: ['Paper', 'Acrylic'], addons: [{ id: 'physical', name: 'Physical', type: 'physical_quantity', rateKey: 'table_number_rate', softConstraints: [{ type: 'min', value: 5, message: 'Min 5 tables.' }] }] },
+  { id: 56, name: 'Table Numbers', configType: 'C', basePrice: 0, variants: ['Paper', 'Acrylic'], addons: [{ id: 'physical', name: 'Physical', type: 'physical_quantity', rateKey: 'table_number_paper_rate', softConstraints: [{ type: 'min', value: 5, message: 'Min 5 tables.' }] }] },
   { id: 57, name: 'Car Stickers', configType: 'C', basePrice: 0, variants: ['Catalogue', 'Custom'], addons: [{ id: 'physical', name: 'Physical', type: 'physical_quantity', rateKey: 'car_sticker_rate', softConstraints: [{ type: 'min', value: 5, message: 'MOQ is 5.' }] }] },
   { id: 58, name: 'Placecards', configType: 'C', basePrice: 0, variants: ['Catalogue', 'Custom'], addons: [{ id: 'physical', name: 'Physical', type: 'physical_quantity', rateKey: 'placecard_rate', softConstraints: [{ type: 'min', value: 25, message: 'MOQ is 25.' }] }] },
   { 
@@ -442,8 +485,8 @@ export const productCatalog: Product[] = [
     variants: ['Catalogue', 'Custom'], 
     variantRateKeys: { 'Catalogue': 'board_cat_rate', 'Custom': 'board_custom_rate' },
     addons: [
-      { id: 'a3', name: 'A3', type: 'physical_quantity', rateKey: 'board_game_rate', softConstraints: [{ type: 'min', value: 1, message: 'Min 1.' }] },
-      { id: '2x3ft', name: '2x3 ft', type: 'physical_quantity', rateKey: 'board_game_rate', softConstraints: [{ type: 'min', value: 1, message: 'Min 1.' }] }
+      { id: 'a3', name: 'A3', type: 'physical_quantity', rateKey: 'contract_board_a3_rate', softConstraints: [{ type: 'min', value: 1, message: 'Min 1.' }] },
+      { id: '2x3ft', name: '2x3 ft', type: 'physical_quantity', rateKey: 'contract_board_2x3_rate', softConstraints: [{ type: 'min', value: 1, message: 'Min 1.' }] }
     ]
   },
   { 

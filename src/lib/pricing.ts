@@ -47,8 +47,8 @@ export function calculateBillableItems(deliverables: ConfiguredProduct[]): Billa
                 // For Type C products (Stationery, Games, Boards), Base Price is a one-time "Design & Setup Fee"
                 if (baseRate > 0) {
                      components.push({
-                        label: 'Design & Setup Fee',
-                        multiplier: 1, // Strictly Fixed Cost for Type C/D base price
+                        label: product.configType === 'D' ? 'Design Fee' : 'Design & Setup Fee',
+                        multiplier: 1, // Rule: Type C Base Price is a Fixed Setup Fee
                         rate: baseRate,
                         total: baseRate,
                         isFixed: true,
@@ -82,14 +82,15 @@ export function calculateBillableItems(deliverables: ConfiguredProduct[]): Billa
             let rate = getRate(addonDef.rateKey);
             let multiplier = 0;
 
-            // Special Logic for "Ritual Card - Blossom" physical petal surcharge
+            // Rule: "Ritual Card - Blossom" Dynamic Rate (Product ID 334)
             if (product.id === 334 && addonDef.id === 'physical') {
                 const petals = item.customFieldValues?.petals || 0;
-                rate = petals * (rates['physical_petal_surcharge'] || 10);
+                const surchargeRate = rates['physical_petal_surcharge'] || 10;
+                rate = petals * surchargeRate;
             }
 
-            if (addonDef.type === 'checkbox' && addon.value === true) {
-                // Checkbox add-ons must always be treated as Fixed Costs (Multiplier = 1)
+            // Rule: Checkbox Add-ons are Fixed Costs
+            if (addonDef.type === 'checkbox' && (addon.value === true || addon.value === 1)) {
                 multiplier = 1; 
             } else if ((addonDef.type === 'numeric' || addonDef.type === 'physical_quantity') && typeof addon.value === 'number' && addon.value > 0) {
                 multiplier = addon.value;
@@ -101,7 +102,7 @@ export function calculateBillableItems(deliverables: ConfiguredProduct[]): Billa
                     multiplier,
                     rate,
                     total: rate * multiplier,
-                    isFixed: addonDef.type !== 'checkbox',
+                    isFixed: addonDef.type === 'checkbox',
                 });
             }
         });
