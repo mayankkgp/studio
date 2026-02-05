@@ -15,7 +15,8 @@ import {
     Check,
     Pencil,
     MessageSquarePlus,
-    Plus
+    Plus,
+    X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { productCatalog } from '@/lib/product-data';
@@ -117,6 +118,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
     const notesRef = React.useRef<HTMLTextAreaElement | null>(null);
     const [showNotes, setShowNotes] = React.useState(!!item.specialRequest);
     const [hasValidated, setHasValidated] = React.useState(false);
+    const [justActivatedAddonId, setJustActivatedAddonId] = React.useState<string | null>(null);
 
     const form = useForm({
         resolver: zodResolver(getValidationSchema(product)),
@@ -495,7 +497,10 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                                 variant="outline"
                                                                 size="sm"
                                                                 className="h-8 rounded-full px-3 gap-1.5 text-xs"
-                                                                onClick={() => field.onChange(null)}
+                                                                onClick={() => {
+                                                                    setJustActivatedAddonId(addon.id);
+                                                                    field.onChange(null);
+                                                                }}
                                                             >
                                                                 <Plus className="h-3 w-3" />
                                                                 {addon.name}
@@ -505,18 +510,28 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                         const val = field.value ?? '';
                                                         const valString = val.toString();
                                                         return (
-                                                            <div className={cn(
-                                                                "inline-flex items-center rounded-full h-8 pl-4 pr-3 gap-2 bg-[#FA7315] text-white shadow-sm transition-colors",
-                                                                softWarning && "ring-2 ring-white"
-                                                            )}>
-                                                                <span className="text-xs font-medium cursor-pointer" onClick={() => field.onChange(false)}>
+                                                            <div 
+                                                                className={cn(
+                                                                    "inline-flex items-center rounded-full h-8 pl-4 pr-1.5 gap-2 bg-[#FA7315] text-white shadow-sm transition-colors cursor-pointer",
+                                                                    softWarning && "ring-2 ring-white"
+                                                                )}
+                                                                onClick={(e) => {
+                                                                    const input = e.currentTarget.querySelector('input');
+                                                                    input?.focus();
+                                                                }}
+                                                            >
+                                                                <span className="text-xs font-medium">
                                                                     {addon.name}
                                                                 </span>
                                                                 <Input
                                                                     type="number"
+                                                                    autoFocus={justActivatedAddonId === addon.id}
                                                                     className="h-6 px-2 py-0 text-xs bg-white border-none focus-visible:ring-0 rounded-md font-bold text-black [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                                                     style={{ width: `${Math.max(2, valString.length) + 3}ch` }}
                                                                     value={val}
+                                                                    onBlur={() => {
+                                                                        if (justActivatedAddonId === addon.id) setJustActivatedAddonId(null);
+                                                                    }}
                                                                     onChange={(e) => field.onChange(e.target.value === '' ? null : Number(e.target.value))}
                                                                     onKeyDown={(e) => {
                                                                         if (e.key === 'Enter') {
@@ -527,11 +542,23 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                                 {softWarning && (
                                                                     <TooltipProvider>
                                                                         <Tooltip>
-                                                                            <TooltipTrigger asChild><AlertCircle className="h-3 w-3 text-white" /></TooltipTrigger>
+                                                                            <TooltipTrigger asChild><AlertCircle className="h-3.5 w-3.5 text-white" /></TooltipTrigger>
                                                                             <TooltipContent><p>{softWarning}</p></TooltipContent>
                                                                         </Tooltip>
                                                                     </TooltipProvider>
                                                                 )}
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    className="h-5 w-5 rounded-full hover:bg-white/20 text-white p-0"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        field.onChange(false);
+                                                                    }}
+                                                                >
+                                                                    <X className="h-3 w-3" />
+                                                                </Button>
                                                             </div>
                                                         );
                                                     }
