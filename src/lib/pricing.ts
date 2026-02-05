@@ -50,6 +50,7 @@ export function calculateBillableItems(deliverables: ConfiguredProduct[]): Billa
         }
 
         // Rule: In invite product, there is no fixed variant pricing row.
+        // For Blossom, the base row is included if petals are provided.
         if (!isInvite && (baseRate > 0 || isBaseFixed || (isBlossom && baseMultiplier > 0))) {
             components.push({
                 label: variantLabel,
@@ -65,6 +66,9 @@ export function calculateBillableItems(deliverables: ConfiguredProduct[]): Billa
         // If value is 0, do not include.
         if (product.customFields && item.customFieldValues) {
             product.customFields.forEach(field => {
+                // SPECIAL RULE: Ritual Card - Blossom 'petals' field is used for base multiplier, not a separate row
+                if (isBlossom && field.id === 'petals') return;
+
                 const value = item.customFieldValues?.[field.id];
                 if (value && value > 0) {
                     const rate = getRate(field.rateKey);
