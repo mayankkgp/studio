@@ -80,9 +80,16 @@ const getValidationSchema = (product: Product | null) => {
     
     if (product.customFields) {
         schemaObject.customFieldValues = z.object(
-            product.customFields.reduce((acc, field) => ({
-                ...acc, [field.id]: z.number({ required_error: "Required", invalid_type_error: "Required" })
-            }), {})
+            product.customFields.reduce((acc, field) => {
+                let fSchema = z.number({ required_error: "Required", invalid_type_error: "Required" });
+                if (field.softConstraints) {
+                    field.softConstraints.forEach(constraint => {
+                        if (constraint.type === 'min') fSchema = fSchema.min(constraint.value, constraint.message);
+                        if (constraint.type === 'max') fSchema = fSchema.max(constraint.value, constraint.message);
+                    });
+                }
+                return { ...acc, [field.id]: fSchema };
+            }, {})
         ).optional();
     }
     
@@ -94,9 +101,16 @@ const getValidationSchema = (product: Product | null) => {
         })).superRefine((addons, ctx) => {
             addons.forEach((addon, idx) => {
                 const addonDef = product.addons?.find(a => a.id === addon.id);
+                // If selected (value not undefined), mandatory check if it's numeric/physical
                 if (addonDef && (addonDef.type === 'numeric' || addonDef.type === 'physical_quantity')) {
-                    if (addon.value !== undefined && addon.value !== null && addon.value !== '') {
-                        if (typeof addon.value !== 'number') {
+                    if (addon.value !== undefined) {
+                        if (addon.value === null || addon.value === '') {
+                             ctx.addIssue({
+                                code: z.ZodIssueCode.custom,
+                                message: "Required",
+                                path: [idx, 'value']
+                            });
+                        } else if (typeof addon.value !== 'number') {
                             ctx.addIssue({
                                 code: z.ZodIssueCode.custom,
                                 message: "Required",
@@ -113,12 +127,6 @@ const getValidationSchema = (product: Product | null) => {
                                 }
                             });
                         }
-                    } else if (addon.value === null || addon.value === '') {
-                        ctx.addIssue({
-                            code: z.ZodIssueCode.custom,
-                            message: "Required",
-                            path: [idx, 'value']
-                        });
                     }
                 }
             });
@@ -263,6 +271,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         e.stopPropagation();
         const result = await trigger();
         if (result) {
+            // Immediate sync to avoid race conditions with global state updates
             performSyncUpdate();
             onDone(item.id);
         }
@@ -354,8 +363,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         }
     };
     const IconComponent = getIcon();
-
-    const isBranchA = product?.configType === 'A' && (!product?.variants || product.variants.length === 0);
 
     const iconStatusClasses = !isValid 
         ? "text-destructive bg-destructive/10"
@@ -606,7 +613,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                             onClick={() => {
                                                                 field.onChange(null); 
                                                                 setTimeout(() => {
-                                                                    document.getElementById(`size-input-${item.id}-${size.name}`)?.focus();
+                                                                    document.getElementById(`size-input-${item.id}-${size.name.replace(/\s+/g, '-')}`)?.focus();
                                                                 }, 0);
                                                             }}
                                                         >
@@ -621,7 +628,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                                 {size.name}
                                                             </span>
                                                             <Input
-                                                                id={`size-input-${item.id}-${size.name}`}
+                                                                id={`size-input-${item.id}-${size.name.replace(/\s+/g, '-')}`}
                                                                 type="number"
                                                                 className="h-6 px-2 py-0 text-xs bg-white border-none focus-visible:ring-0 focus-visible:ring-offset-0 rounded-md font-bold text-black [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                                                 style={{ width: `${Math.max(2, String(field.value ?? '').length + 2)}ch` }}

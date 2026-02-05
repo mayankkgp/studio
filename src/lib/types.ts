@@ -34,6 +34,7 @@ export type CustomField = {
   name: string;
   type: 'numeric';
   rateKey?: string;
+  softConstraints?: SoftConstraint[];
 };
 
 export type Product = {
