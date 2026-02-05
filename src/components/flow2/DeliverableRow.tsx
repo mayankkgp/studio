@@ -72,17 +72,19 @@ const getValidationSchema = (product: Product | null) => {
     }
     
     if (product.addons) {
+        // All add-ons are now optional
         schemaObject.addons = z.array(z.object({
             id: z.string(), 
             name: z.string(),
-            value: z.union([z.boolean(), z.number({ required_error: "Required", invalid_type_error: "Required" }), z.null()]).refine(val => val !== null, "Required")
+            value: z.union([z.boolean(), z.number(), z.null(), z.undefined()])
         })).optional();
     }
 
     if (product.sizes) {
+        // All sizes are now optional
         schemaObject.sizes = z.array(z.object({
             name: z.string(), 
-            quantity: z.union([z.number({ required_error: "Required", invalid_type_error: "Required" }), z.null()]).refine(val => val !== null, "Required")
+            quantity: z.union([z.number(), z.null(), z.undefined()])
         })).optional();
     }
     
@@ -371,7 +373,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                             {!isExpanded && (
                                 <div className="text-xs text-muted-foreground truncate flex-1">
                                     {getSummaryText() === 'Setup Required' ? (
-                                        <Badge variant="destructive" className="bg-destructive text-destructive-foreground text-[10px] h-4 py-0 font-bold tracking-wide">SETUP REQUIRED</Badge>
+                                        <Badge variant="destructive" className="bg-destructive text-destructive-foreground text-[10px] h-4 py-0 font-bold tracking-wide uppercase">SETUP REQUIRED</Badge>
                                     ) : getSummaryText()}
                                 </div>
                             )}
