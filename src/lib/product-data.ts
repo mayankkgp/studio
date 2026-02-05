@@ -347,6 +347,8 @@ export const productCatalog: Product[] = [
     name: 'Ritual Card - Blossom', 
     configType: 'C', 
     basePrice: 0, 
+    variants: ['Catalogue', 'Custom'],
+    variantRateKeys: { 'Catalogue': 'blossom_cat_rate', 'Custom': 'blossom_custom_rate' },
     customFields: [{id: 'petals', name: 'Petals', type: 'numeric', rateKey: 'petal_rate', softConstraints: [{ type: 'min', value: 4, message: 'Min 4 petals.' }, { type: 'max', value: 12, message: 'Max 12 petals.' }] }], 
     addons: [{ id: 'physical', name: 'Physical', type: 'physical_quantity', rateKey: 'ritual_card_rate', softConstraints: [{ type: 'min', value: 25, message: 'MOQ is 25.' }] }] 
   },

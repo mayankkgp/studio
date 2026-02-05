@@ -95,6 +95,8 @@ export const rates: Record<string, number> = {
   bag_custom_rate: 3000,
   tub_cup_cat_rate: 1000,
   tub_cup_custom_rate: 2500,
+  blossom_cat_rate: 0,
+  blossom_custom_rate: 0,
 
   // Caricature Rates
   caricature_couple_rate: 3000,
