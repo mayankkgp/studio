@@ -135,6 +135,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         if (!el) return;
         el.style.height = '0px'; 
         const scrollHeight = el.scrollHeight;
+        // Base height is 40px (h-10), it only grows if content is larger
         el.style.height = `${Math.max(40, scrollHeight)}px`;
     }, []);
 
@@ -244,8 +245,11 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             parts.push(`${watchedValues.pages} Pages`);
         }
         
-        const isReady = !hasVariants || !!watchedValues.variant;
-        if (!isReady && hasVariants) return 'Setup Required';
+        // Simple products (no variants) are ready as long as quantity/pages is valid
+        if (!hasVariants) return parts.join(' • ');
+
+        // Complex products require a variant to be selected
+        if (!watchedValues.variant) return 'Setup Required';
         
         return parts.join(' • ');
     };
@@ -592,16 +596,51 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                 {product?.sizes && product.sizes.length > 0 && (
                                     <div className="space-y-3">
                                         <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Sizes</Label>
-                                        <div className="space-y-2 rounded-lg border bg-background/50 p-4">
+                                        <div className="flex flex-wrap gap-2">
                                             {product.sizes.map((size, index) => (
-                                                <div key={size.name} className="flex items-center justify-between py-1">
-                                                    <span className="text-sm">{size.name}</span>
-                                                    <Input 
-                                                        type="number" 
-                                                        className="w-20 h-8" 
-                                                        {...register(`sizes.${index}.quantity`, { valueAsNumber: true })} 
-                                                    />
-                                                </div>
+                                                <Controller
+                                                    key={size.name}
+                                                    name={`sizes.${index}.quantity`}
+                                                    control={control}
+                                                    render={({ field }) => {
+                                                        const isChecked = field.value > 0;
+                                                        if (!isChecked) {
+                                                            return (
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    className="h-8 rounded-full px-3 gap-1.5 transition-all text-xs"
+                                                                    onClick={() => {
+                                                                        field.onChange(1);
+                                                                        setTimeout(() => {
+                                                                            document.getElementById(`size-input-${item.id}-${index}`)?.focus();
+                                                                        }, 0);
+                                                                    }}
+                                                                >
+                                                                    <Plus className="h-3 w-3" />
+                                                                    {size.name}
+                                                                </Button>
+                                                            );
+                                                        } else {
+                                                            return (
+                                                                <div className="inline-flex items-center bg-primary text-primary-foreground rounded-full h-8 pl-3 pr-1 gap-2 shadow-sm">
+                                                                    <span className="text-xs font-medium">{size.name}</span>
+                                                                    <Input
+                                                                        id={`size-input-${item.id}-${index}`}
+                                                                        type="number"
+                                                                        className="w-12 h-6 px-1.5 py-0 text-xs bg-primary-foreground text-primary border-none focus-visible:ring-0 focus-visible:ring-offset-0 rounded-md font-bold"
+                                                                        value={field.value}
+                                                                        onChange={(e) => field.onChange(Number(e.target.value))}
+                                                                        onBlur={() => {
+                                                                            if (Number(field.value) === 0) field.onChange(0);
+                                                                        }}
+                                                                    />
+                                                                </div>
+                                                            );
+                                                        }
+                                                    }}
+                                                />
                                             ))}
                                         </div>
                                     </div>
