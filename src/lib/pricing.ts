@@ -44,10 +44,11 @@ export function calculateBillableItems(deliverables: ConfiguredProduct[]): Billa
                 break;
             case 'C':
             case 'D':
+                // For Type C products (Stationery, Games, Boards), Base Price is a one-time "Design & Setup Fee"
                 if (baseRate > 0) {
                      components.push({
                         label: 'Design & Setup Fee',
-                        multiplier: 1,
+                        multiplier: 1, // Strictly Fixed Cost for Type C/D base price
                         rate: baseRate,
                         total: baseRate,
                         isFixed: true,
@@ -78,11 +79,18 @@ export function calculateBillableItems(deliverables: ConfiguredProduct[]): Billa
             const addonDef = product.addons?.find(a => a.id === addon.id);
             if (!addonDef || !addon.value) return;
 
-            const rate = getRate(addonDef.rateKey);
+            let rate = getRate(addonDef.rateKey);
             let multiplier = 0;
 
+            // Special Logic for "Ritual Card - Blossom" physical petal surcharge
+            if (product.id === 334 && addonDef.id === 'physical') {
+                const petals = item.customFieldValues?.petals || 0;
+                rate = petals * (rates['physical_petal_surcharge'] || 10);
+            }
+
             if (addonDef.type === 'checkbox' && addon.value === true) {
-                multiplier = item.quantity || 1; 
+                // Checkbox add-ons must always be treated as Fixed Costs (Multiplier = 1)
+                multiplier = 1; 
             } else if ((addonDef.type === 'numeric' || addonDef.type === 'physical_quantity') && typeof addon.value === 'number' && addon.value > 0) {
                 multiplier = addon.value;
             }
