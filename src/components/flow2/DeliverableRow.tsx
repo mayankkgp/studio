@@ -58,29 +58,19 @@ const getValidationSchema = (product: Product | null) => {
 
     if (product.configType === 'A') {
         let qSchema = z.number({ required_error: "Required", invalid_type_error: "Required" });
-        if (product.softConstraints) {
-            qSchema = qSchema.superRefine((val, ctx) => {
-                product.softConstraints?.forEach(constraint => {
-                    if (constraint.type === 'min' && val < constraint.value) {
-                        ctx.addIssue({ code: z.ZodIssueCode.custom, message: constraint.message });
-                    }
-                });
-            });
-        }
+        product.softConstraints?.forEach(constraint => {
+            if (constraint.type === 'min') qSchema = qSchema.min(constraint.value, constraint.message);
+            if (constraint.type === 'max') qSchema = qSchema.max(constraint.value, constraint.message);
+        });
         schemaObject.quantity = qSchema;
     }
     
     if (product.configType === 'B') {
         let pSchema = z.number({ required_error: "Required", invalid_type_error: "Required" });
-        if (product.softConstraints) {
-            pSchema = pSchema.superRefine((val, ctx) => {
-                product.softConstraints?.forEach(constraint => {
-                    if (constraint.type === 'min' && val < constraint.value) {
-                        ctx.addIssue({ code: z.ZodIssueCode.custom, message: constraint.message });
-                    }
-                });
-            });
-        }
+        product.softConstraints?.forEach(constraint => {
+            if (constraint.type === 'min') pSchema = pSchema.min(constraint.value, constraint.message);
+            if (constraint.type === 'max') pSchema = pSchema.max(constraint.value, constraint.message);
+        });
         schemaObject.pages = pSchema;
     }
     
@@ -225,9 +215,11 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                 addons: currentValues.addons?.filter((a: any) => a.value !== undefined) as any,
                 sizes: currentValues.sizes?.filter((s: any) => s.quantity !== undefined) as any
             });
+            // Ensure validation state is fresh for warning text calculations
+            trigger();
         }, 300);
         return () => clearTimeout(timer);
-    }, [watchedValues.quantity, watchedValues.pages, watchedValues.specialRequest, watchedValues.customFieldValues, watchedValues.addons, watchedValues.sizes, onUpdate, item.id, product, getValues]);
+    }, [watchedValues.quantity, watchedValues.pages, watchedValues.specialRequest, watchedValues.customFieldValues, watchedValues.addons, watchedValues.sizes, watchedValues.variant, onUpdate, item.id, trigger, getValues]);
 
     const handleDoneClick = async (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -276,20 +268,17 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         return parts.join(' • ');
     };
 
-    const getPriorityWarning = () => {
+    const getPriorityWarning = React.useCallback(() => {
         if (isValid) return null;
 
-        // 1. Specific MOQ / Soft Constraint Warnings (Main Product)
-        if (product?.configType === 'A' && (errors as any).quantity?.message) {
-            const msg = (errors as any).quantity.message.toUpperCase();
-            if (msg !== 'REQUIRED') return msg;
-        }
-        if (product?.configType === 'B' && (errors as any).pages?.message) {
-            const msg = (errors as any).pages.message.toUpperCase();
-            if (msg !== 'REQUIRED') return msg;
+        // 1. Check Main Product constraints (MOQ etc)
+        const mainError = (errors as any).quantity || (errors as any).pages;
+        if (mainError?.message) {
+            const msg = mainError.message.toUpperCase();
+            if (msg !== 'REQUIRED' && msg !== 'SETUP REQUIRED') return msg;
         }
 
-        // 2. Add-on Warnings (including MOQ)
+        // 2. Check Add-on constraints
         if (errors.addons) {
             const addonErrors = errors.addons as any[];
             for (let err of addonErrors) {
@@ -300,13 +289,13 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             }
         }
 
-        // 3. Falling back to primary missing fields
+        // 3. Fallback to basic Setup Required if we have missing fields
         if (product?.variants?.length && !watchedValues.variant) return 'SETUP REQUIRED';
-        if (product?.configType === 'A' && watchedValues.quantity === null) return 'SETUP REQUIRED';
-        if (product?.configType === 'B' && watchedValues.pages === null) return 'SETUP REQUIRED';
+        if (product?.configType === 'A' && (watchedValues.quantity === null || watchedValues.quantity === undefined)) return 'SETUP REQUIRED';
+        if (product?.configType === 'B' && (watchedValues.pages === null || watchedValues.pages === undefined)) return 'SETUP REQUIRED';
 
         return 'SETUP REQUIRED';
-    }
+    }, [isValid, errors, product, watchedValues]);
 
     const getIcon = () => {
         switch (product?.configType) {
@@ -429,8 +418,10 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                     "border rounded-xl transition-all duration-200 overflow-hidden scroll-mt-[176px]",
                     isExpanded 
                         ? "border-l-4 border-primary shadow-md bg-background ring-2 ring-primary/10" 
-                        : "bg-card hover:bg-muted/50",
-                    !isValid && !isExpanded && "border-destructive border-2 bg-destructive/5"
+                        : cn(
+                            "bg-card hover:bg-muted/50",
+                            !isValid && "border-destructive border-2 bg-destructive/5"
+                        )
                 )}
             >
                 <div className={cn("flex items-center px-4 transition-all h-14")}>
@@ -506,29 +497,23 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                             <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap min-w-[40px] mt-2.5">
                                                 Variant *
                                             </Label>
-                                            <Controller
-                                                name="variant"
-                                                control={control}
-                                                render={({ field }) => (
-                                                    <div className="flex flex-wrap gap-2">
-                                                        {product.variants!.map(v => (
-                                                            <Button
-                                                                key={v}
-                                                                type="button"
-                                                                variant={field.value === v ? "default" : "outline"}
-                                                                size="sm"
-                                                                className={cn(
-                                                                    "h-9 rounded-full px-4 transition-all",
-                                                                    field.value === v ? "shadow-sm" : "hover:bg-accent hover:text-accent-foreground"
-                                                                )}
-                                                                onClick={() => field.onChange(v)}
-                                                            >
-                                                                {v}
-                                                            </Button>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                            />
+                                            <div className="flex flex-wrap gap-2">
+                                                {product.variants!.map(v => (
+                                                    <Button
+                                                        key={v}
+                                                        type="button"
+                                                        variant={watchedValues.variant === v ? "default" : "outline"}
+                                                        size="sm"
+                                                        className={cn(
+                                                            "h-9 rounded-full px-4 transition-all",
+                                                            watchedValues.variant === v ? "shadow-sm" : "hover:bg-accent hover:text-accent-foreground"
+                                                        )}
+                                                        onClick={() => form.setValue('variant', v, { shouldValidate: true })}
+                                                    >
+                                                        {v}
+                                                    </Button>
+                                                ))}
+                                            </div>
                                         </div>
                                     ) : <div className="flex-1" />}
                                     {renderPromotedInput()}
@@ -607,7 +592,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                 </div>
                             )}
 
-                            <div className={cn("flex gap-6", isComplexProduct ? "flex-col items-stretch" : "flex-wrap items-start")}>
+                            <div className={cn("flex", isComplexProduct ? "flex-col items-stretch gap-4" : "flex-wrap items-start gap-6")}>
                                 {product?.addons && product.addons.length > 0 && (
                                     <div className="flex flex-wrap gap-2">
                                         {product.addons.map((addon, index) => {
