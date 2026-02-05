@@ -1,9 +1,16 @@
-import type { BillableItem, ConfiguredProduct, BillableComponent, Product } from "./types";
+'use client';
+
+import type { BillableItem, ConfiguredProduct, BillableComponent } from "./types";
 import { productCatalog } from './product-data';
 import { rates } from './rates';
 
 const getRate = (rateKey?: string) => (rateKey && rates[rateKey]) || 0;
 
+/**
+ * Calculates billable items based on configured deliverables.
+ * Follows the "Price Row" model where every variant, add-on, and special request 
+ * generates a specific row in the bill.
+ */
 export function calculateBillableItems(deliverables: ConfiguredProduct[]): BillableItem[] {
     return deliverables.map(item => {
         const product = productCatalog.find(p => p.id === item.productId);
@@ -11,7 +18,7 @@ export function calculateBillableItems(deliverables: ConfiguredProduct[]): Billa
 
         const components: BillableComponent[] = [];
         
-        // 1. RESOLVE VARIANT / BASE PRICE ROW
+        // 1. RESOLVE BASE ROW (VARIANT)
         // Rule: If no variant in product, treat product name as variant name
         const variantLabel = item.variant || item.productName;
         
@@ -31,10 +38,16 @@ export function calculateBillableItems(deliverables: ConfiguredProduct[]): Billa
         } else if (product.configType === 'B') {
             baseMultiplier = item.pages || 0;
             isBaseFixed = false;
+        } 
+        // SPECIAL RULE: Ritual Card - Blossom (ID 334) variant row is variable, using 'petals' as multiplier
+        else if (product.id === 334) {
+            baseMultiplier = item.customFieldValues?.petals || 0;
+            isBaseFixed = false;
         }
 
-        // Only add base row if it has value or is a fixed setup fee
-        if (baseRate > 0 || isBaseFixed) {
+        // Add base row if it has value OR if it's a fixed setup fee 
+        // OR if it's specifically the Blossom card with active petals
+        if (baseRate > 0 || isBaseFixed || (product.id === 334 && baseMultiplier > 0)) {
             components.push({
                 label: variantLabel,
                 multiplier: baseMultiplier,
@@ -45,6 +58,8 @@ export function calculateBillableItems(deliverables: ConfiguredProduct[]): Billa
         }
 
         // 2. CUSTOM FIELD ROWS
+        // Rule: For all products (including Invite), treat each custom field as variable price row.
+        // If value is 0, do not include.
         if (product.customFields && item.customFieldValues) {
             product.customFields.forEach(field => {
                 const value = item.customFieldValues?.[field.id];
@@ -70,14 +85,14 @@ export function calculateBillableItems(deliverables: ConfiguredProduct[]): Billa
             let multiplier = 0;
             let isFixed = false;
 
-            // Rule: Ritual Card - Blossom Dynamic Rate
+            // SPECIAL RULE: Ritual Card - Blossom Physical Dynamic Rate
             if (product.id === 334 && addonDef.id === 'physical') {
                 const petals = item.customFieldValues?.petals || 0;
                 const surchargeRate = rates['physical_petal_surcharge'] || 10;
                 rate = petals * surchargeRate;
             }
 
-            // Rule: Checkbox = Fixed, Numeric = Variable
+            // Rule: Checkbox = Fixed (1), Numeric = Variable (Value)
             if (addonDef.type === 'checkbox') {
                 multiplier = 1;
                 isFixed = true;
@@ -104,7 +119,7 @@ export function calculateBillableItems(deliverables: ConfiguredProduct[]): Billa
                 label: 'Special Request',
                 description: item.specialRequest,
                 multiplier: 1,
-                rate: 0, // Default 0, editable in commercials
+                rate: 0, // Default 0, editable in commercials UI
                 total: 0,
                 isFixed: true,
             });
