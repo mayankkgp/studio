@@ -51,11 +51,28 @@ export default function CommercialsPage() {
         return value.toLocaleString('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0, maximumFractionDigits: 0 });
     }
 
-    const balanceStatus = useMemo(() => {
+    const balanceDisplay = useMemo(() => {
         if (totalValue === 0 && payment === 0) return null;
-        if (balance > 0) return <Badge variant="destructive" className="w-full justify-center py-1">Balance: {formatCurrency(balance)}</Badge>;
-        if (balance < 0) return <Badge variant="secondary" className="w-full justify-center py-1">Excess: {formatCurrency(Math.abs(balance))}</Badge>;
-        return <Badge variant="default" className="w-full justify-center py-1">Fully Paid</Badge>;
+        
+        if (balance > 0) {
+            return (
+                <div className="space-y-1">
+                    <div className="text-[10px] font-bold uppercase text-muted-foreground">Balance Due</div>
+                    <div className="text-2xl font-bold text-destructive">
+                        {formatCurrency(balance)}
+                    </div>
+                </div>
+            );
+        }
+        
+        return (
+            <div className="space-y-1">
+                <div className="text-[10px] font-bold uppercase text-muted-foreground">Status</div>
+                <div className="text-2xl font-bold text-green-600">
+                    {balance < 0 ? `Excess: ${formatCurrency(Math.abs(balance))}` : 'Fully Paid'}
+                </div>
+            </div>
+        );
     }, [totalValue, payment, balance]);
 
     return (
@@ -104,7 +121,7 @@ export default function CommercialsPage() {
                                                 const itemTotal = item.components.reduce((acc, comp) => acc + comp.total, 0);
                                                 return (
                                                     <React.Fragment key={item.configuredProductId}>
-                                                        {/* Product Header Row: mocha background, white text, top border */}
+                                                        {/* Product Header Row */}
                                                         <TableRow className="bg-[#5C4B35] hover:bg-[#5C4B35] border-t-2 border-primary/20 transition-none z-10 relative">
                                                             <TableCell colSpan={3} className="py-2.5 font-bold text-sm text-[#FFFFFF]">
                                                                 {item.productName}
@@ -113,7 +130,7 @@ export default function CommercialsPage() {
                                                                 {formatCurrency(itemTotal)}
                                                             </TableCell>
                                                         </TableRow>
-                                                        {/* Component Rows: theme cream background, beige hover */}
+                                                        {/* Component Rows */}
                                                         {item.components.map((comp, idx) => {
                                                             const isSpecialRequest = comp.label === 'Special Request';
                                                             return (
@@ -162,64 +179,73 @@ export default function CommercialsPage() {
                     </main>
 
                     {/* Right Panel: Summary & Actions (Sticky) */}
-                    <aside className="w-80 lg:w-96 shrink-0 border-l bg-card/50 flex flex-col p-6 space-y-8 z-40">
-                        <div>
+                    <aside className="w-80 lg:w-96 shrink-0 border-l bg-card/50 flex flex-col p-6 z-40">
+                        <div className="space-y-6">
                             <Button 
                                 variant="ghost" 
                                 size="sm" 
-                                className="mb-4 -ml-2 text-muted-foreground hover:text-foreground"
+                                className="h-9 -ml-2 text-muted-foreground hover:text-foreground"
                                 onClick={() => router.back()}
                             >
                                 <ChevronLeft className="h-4 w-4 mr-1" />
                                 Back to Deliverables
                             </Button>
                             
-                            <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-6">Commercial Summary</h2>
-                            
-                            <div className="space-y-6">
-                                <div className="space-y-1">
-                                    <div className="text-sm font-medium text-muted-foreground">Order Total</div>
-                                    <div className="text-4xl font-bold font-headline text-primary">
-                                        {formatCurrency(totalValue)}
-                                    </div>
-                                </div>
-
-                                <Separator />
-
-                                <div className="space-y-4">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="payment" className="text-xs font-bold uppercase text-muted-foreground">
-                                            Payment Received
-                                        </Label>
-                                        <div className="relative">
-                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">₹</span>
-                                            <Input 
-                                                id="payment" 
-                                                type="number" 
-                                                placeholder="0"
-                                                value={order.paymentReceived || ''}
-                                                onChange={(e) => setPaymentReceived(Number(e.target.value))}
-                                                className="pl-7 h-11 text-lg font-semibold bg-background"
-                                            />
+                            <div className="space-y-2">
+                                <h2 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Financial Summary</h2>
+                                
+                                <div className="space-y-4 pt-2">
+                                    {/* Financial Calculation Unit */}
+                                    <div className="space-y-0.5">
+                                        <div className="text-[10px] font-bold uppercase text-muted-foreground">Total Order Value</div>
+                                        <div className="text-5xl font-bold font-headline text-primary tracking-tight">
+                                            {formatCurrency(totalValue)}
                                         </div>
                                     </div>
-                                    
-                                    <div className="pt-2">
-                                        {balanceStatus}
+
+                                    <div className="space-y-3">
+                                        <div className="space-y-1">
+                                            <Label htmlFor="payment" className="text-[10px] font-bold uppercase text-muted-foreground">
+                                                Payment Received
+                                            </Label>
+                                            <div className="relative">
+                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">₹</span>
+                                                <Input 
+                                                    id="payment" 
+                                                    type="number" 
+                                                    placeholder="0"
+                                                    value={order.paymentReceived || ''}
+                                                    onChange={(e) => setPaymentReceived(Number(e.target.value))}
+                                                    className="pl-7 h-11 text-lg font-semibold bg-background border-primary/20"
+                                                />
+                                            </div>
+                                        </div>
+                                        
+                                        <div>
+                                            {balanceDisplay}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="mt-auto space-y-3">
-                            <Button variant="outline" className="w-full h-11 justify-between px-4 group" onClick={saveAsDraft}>
+                        {/* Action Buttons Pushed to Bottom */}
+                        <div className="mt-auto space-y-3 pt-12">
+                            <Button 
+                                variant="outline" 
+                                className="w-full h-10 justify-between px-4 group bg-background/50" 
+                                onClick={saveAsDraft}
+                            >
                                 <span className="flex items-center gap-2">
                                     <Save className="h-4 w-4" />
                                     Save as Draft
                                 </span>
-                                <span className="text-[10px] opacity-0 group-hover:opacity-50 transition-opacity">Session Only</span>
+                                <span className="text-[10px] opacity-0 group-hover:opacity-50 transition-opacity">Session</span>
                             </Button>
-                            <Button className="w-full h-12 text-base font-bold gap-2 shadow-lg shadow-primary/20" onClick={() => alert("Order Activated!")}>
+                            <Button 
+                                className="w-full h-14 text-base font-bold gap-2 shadow-lg shadow-primary/20" 
+                                onClick={() => alert("Order Activated!")}
+                            >
                                 <Zap className="h-5 w-5 fill-current" />
                                 Activate Order
                             </Button>
