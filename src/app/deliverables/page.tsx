@@ -36,12 +36,12 @@ export default function DeliverablesPage() {
     }, []);
 
     const handleDone = useCallback(async (id: string) => {
-        // Validation check is handled inside DeliverableRow, but parent tracks commitment
+        // Mark as committed to move to Order List permanently
         setCommittedItemIds(prev => Array.from(new Set([...prev, id])));
         setOpenItems(prev => prev.filter(itemId => itemId !== id));
     }, []);
 
-    // Persistent splitting: Once an item moves to Order List, it stays there.
+    // Stable split: Once committed, it stays in the Order List.
     const { activeItems, orderListItems } = useMemo(() => {
         const active: any[] = [];
         const list: any[] = [];
@@ -54,7 +54,6 @@ export default function DeliverablesPage() {
             }
         });
 
-        // Maintain consistent reverse order for list items (newest at bottom)
         return { 
             activeItems: active, 
             orderListItems: list 

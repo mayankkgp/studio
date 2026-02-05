@@ -156,7 +156,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         el.style.height = `${Math.max(40, scrollHeight)}px`;
     }, []);
 
-    // Stabilize mount validation
+    // Stabilize mount validation pass
     React.useEffect(() => {
         const initValidation = async () => {
             await trigger();
@@ -363,7 +363,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                         type="number" 
                                         {...register(product?.configType === 'A' ? 'quantity' : 'pages', { valueAsNumber: true })}
                                         className={cn(
-                                            "w-24 h-10 text-lg bg-background",
+                                            "w-24 h-10 text-lg bg-background [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
                                             hasConstraintError(product?.configType === 'A' ? errors.quantity : errors.pages) && "border-destructive ring-destructive border-2"
                                         )}
                                     />
@@ -381,7 +381,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                         <Input 
                                             type="number" 
                                             className={cn(
-                                                "w-16 h-10 px-2 text-sm bg-background",
+                                                "w-16 h-10 px-2 text-sm bg-background [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
                                                 hasConstraintError((errors.customFieldValues as any)?.[field.id]) && "border-destructive ring-destructive border-2"
                                             )}
                                             {...register(`customFieldValues.${field.id}`, { valueAsNumber: true })} 
@@ -437,6 +437,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                                 </Button>
                                                             );
                                                         } else {
+                                                            const valueLength = (field.value?.toString().length || 0);
                                                             return (
                                                                 <div className="inline-flex items-center rounded-full h-8 pl-3 pr-1 gap-2 bg-primary text-primary-foreground shadow-sm">
                                                                     <span className="text-xs font-medium cursor-pointer" onClick={() => field.onChange(false)}>
@@ -444,9 +445,15 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                                     </span>
                                                                     <Input
                                                                         type="number"
-                                                                        className="h-6 px-2 py-0 text-xs bg-white border-none focus-visible:ring-0 rounded-md font-bold text-black w-12"
+                                                                        className="h-6 px-2 py-0 text-xs bg-white border-none focus-visible:ring-0 rounded-md font-bold text-black [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none min-w-[2rem]"
+                                                                        style={{ width: `${Math.max(2, valueLength) + 1}ch` }}
                                                                         value={field.value ?? ''}
                                                                         onChange={(e) => field.onChange(e.target.value === '' ? null : Number(e.target.value))}
+                                                                        onKeyDown={(e) => {
+                                                                            if (e.key === 'Enter') {
+                                                                                e.currentTarget.blur();
+                                                                            }
+                                                                        }}
                                                                     />
                                                                     {hasError && (
                                                                         <TooltipProvider>
