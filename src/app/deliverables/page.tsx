@@ -58,6 +58,7 @@ export default function DeliverablesPage() {
     }, []);
 
     // Split items into Action Required vs Order List
+    // Logic: Item stays in active if it is invalid OR currently expanded
     const { activeItems, orderListItems } = useMemo(() => {
         const active: any[] = [];
         const list: any[] = [];
@@ -67,7 +68,6 @@ export default function DeliverablesPage() {
             const isExpanded = openItems.includes(item.id);
             const isValid = status?.isValid ?? false;
             
-            // Movement Logic: Item stays in active if it is invalid OR currently expanded
             if (!isValid || isExpanded) {
                 active.push(item);
             } else {
@@ -132,19 +132,19 @@ export default function DeliverablesPage() {
                                     Action Required ({activeItems.length})
                                 </h2>
                                 
-                                {activeItems.length === 0 && orderListItems.length === 0 ? (
-                                    <div className="flex flex-col items-center justify-center py-20 border-2 border-dashed rounded-xl bg-card/50">
-                                        <Package className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                                        <p className="text-muted-foreground font-medium">Your queue is empty</p>
-                                    </div>
-                                ) : activeItems.length === 0 ? (
-                                    <div className="py-8 text-center border rounded-xl bg-muted/20 border-dashed">
-                                        <CheckCircle2 className="h-8 w-8 text-green-500 mx-auto mb-2" />
-                                        <p className="text-sm text-muted-foreground font-medium">No items require attention</p>
-                                    </div>
-                                ) : (
-                                    <Accordion type="multiple" value={openItems} onValueChange={setOpenItems} className="space-y-4">
-                                        {activeItems.map((item) => (
+                                <Accordion type="multiple" value={openItems} onValueChange={setOpenItems} className="space-y-4">
+                                    {activeItems.length === 0 && orderListItems.length === 0 ? (
+                                        <div className="flex flex-col items-center justify-center py-20 border-2 border-dashed rounded-xl bg-card/50">
+                                            <Package className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                                            <p className="text-muted-foreground font-medium">Your queue is empty</p>
+                                        </div>
+                                    ) : activeItems.length === 0 ? (
+                                        <div className="py-8 text-center border rounded-xl bg-muted/20 border-dashed">
+                                            <CheckCircle2 className="h-8 w-8 text-green-500 mx-auto mb-2" />
+                                            <p className="text-sm text-muted-foreground font-medium">No items require attention</p>
+                                        </div>
+                                    ) : (
+                                        activeItems.map((item) => (
                                             <DeliverableRow 
                                                 key={item.id} 
                                                 item={item} 
@@ -155,9 +155,9 @@ export default function DeliverablesPage() {
                                                 onUpdate={updateDeliverable}
                                                 onRemove={removeDeliverable}
                                             />
-                                        ))}
-                                    </Accordion>
-                                )}
+                                        ))
+                                    )}
+                                </Accordion>
                             </section>
 
                             {orderListItems.length > 0 && (

@@ -430,10 +430,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                     </div>
                 </div>
 
-                <div className="pointer-events-none absolute inset-0 -z-10">
-                    <AccordionTrigger className="invisible">Toggle</AccordionTrigger>
-                </div>
-
                 <AccordionContent className="px-4 pb-4 border-t bg-muted/5 relative">
                     <div className="flex flex-col gap-6 pt-4">
                         <div className="flex flex-wrap items-start justify-between gap-6">
