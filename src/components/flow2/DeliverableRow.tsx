@@ -394,7 +394,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         return (
             <div className="flex flex-wrap items-center gap-x-8 gap-y-4">
                 {product.sizes.map((s, idx) => {
-                    const hasError = hasConstraintError((errors.sizes as any)?.[idx]?.quantity);
                     return (
                         <div key={s.id} className="flex items-center gap-4">
                             <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap">{s.name} QTY</Label>
@@ -402,8 +401,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                 id={`size-input-${item.id}-${s.id}`}
                                 type="number"
                                 className={cn(
-                                    "w-20 h-10 px-2 text-sm bg-background [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
-                                    hasError && "border-destructive ring-destructive"
+                                    "w-20 h-10 px-2 text-sm bg-background [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                 )}
                                 {...register(`sizes.${idx}.quantity`, { valueAsNumber: true })}
                             />
@@ -563,8 +561,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                         } else {
                                                             return (
                                                                 <div className={cn(
-                                                                    "inline-flex items-center rounded-full h-8 pl-3 pr-1 gap-2 shadow-sm transition-colors",
-                                                                    hasError ? "bg-destructive text-destructive-foreground" : "bg-primary text-primary-foreground"
+                                                                    "inline-flex items-center rounded-full h-8 pl-3 pr-1 gap-2 shadow-sm transition-colors bg-primary text-primary-foreground"
                                                                 )}>
                                                                     <span className="text-xs font-medium cursor-pointer" onClick={() => field.onChange(false)}>
                                                                         {addon.name}

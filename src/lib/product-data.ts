@@ -50,6 +50,11 @@ export const productCatalog: Product[] = [
       { id: 'physical', name: 'Physical', type: 'physical_quantity', rateKey: 'menu_card_rate', softConstraints: [{ type: 'min', value: 25, message: 'MOQ is 25.' }] },
       { id: 'food_art', name: 'Food/Drink Art', type: 'numeric', rateKey: 'food_art_rate', visibleIfVariant: 'Custom', softConstraints: [{ type: 'min', value: 1, message: 'Min 1' }] }
   ]},
+  { id: 21, name: 'Menu Board', configType: 'C', basePrice: 0, variants: ['Catalogue', 'Custom'], addons: [
+      { id: 'a4', name: 'A4', type: 'physical_quantity', rateKey: 'menu_board_a4_rate', softConstraints: [{ type: 'min', value: 1, message: 'Min 1.' }] },
+      { id: 'a3', name: 'A3', type: 'physical_quantity', rateKey: 'menu_board_a3_rate', softConstraints: [{ type: 'min', value: 1, message: 'Min 1.' }] },
+      { id: '2x3ft', name: '2x3 ft', type: 'physical_quantity', rateKey: 'menu_board_2x3_rate', softConstraints: [{ type: 'min', value: 1, message: 'Min 1.' }] }
+  ]},
   { id: 23, name: 'Playing Cards', configType: 'C', basePrice: 0, variants: ['Catalogue', 'Custom'], addons: [
       { id: 'physical', name: 'Physical', type: 'physical_quantity', rateKey: 'playing_cards_rate', softConstraints: [{ type: 'min', value: 50, message: 'MOQ is 50.' }] },
       { id: 'custom_numbers', name: 'Custom Numbers', type: 'checkbox', rateKey: 'custom_numbers_rate'}
@@ -57,6 +62,11 @@ export const productCatalog: Product[] = [
   { id: 25, name: 'Bhajan Book', configType: 'C', basePrice: 0, addons: [{ id: 'physical', name: 'Physical', type: 'physical_quantity', rateKey: 'bhajan_book_rate', softConstraints: [{ type: 'min', value: 25, message: 'MOQ is 25.' }] }] },
   { id: 26, name: 'Paper Cups', configType: 'C', basePrice: 0, variants: ['Catalogue', 'Custom'], addons: [{ id: 'physical', name: 'Physical', type: 'physical_quantity', rateKey: 'paper_cup_rate', softConstraints: [{ type: 'min', value: 500, message: 'MOQ is 500.' }] }] },
   { id: 27, name: 'Information Card', configType: 'C', basePrice: 0, variants: ['Catalogue', 'Custom'], addons: [{ id: 'physical', name: 'Physical', type: 'physical_quantity', rateKey: 'info_card_rate', softConstraints: [{ type: 'min', value: 25, message: 'MOQ is 25.' }] }] },
+  { id: 28, name: 'Airport Pickup Board', configType: 'C', basePrice: 0, variants: ['Catalogue', 'Custom'], addons: [
+      { id: 'a4', name: 'A4', type: 'physical_quantity', rateKey: 'pickup_board_a4_rate', softConstraints: [{ type: 'min', value: 1, message: 'Min 1.' }] },
+      { id: 'a3', name: 'A3', type: 'physical_quantity', rateKey: 'pickup_board_a3_rate', softConstraints: [{ type: 'min', value: 1, message: 'Min 1.' }] },
+      { id: '2x3ft', name: '2x3 ft', type: 'physical_quantity', rateKey: 'pickup_board_2x3_rate', softConstraints: [{ type: 'min', value: 1, message: 'Min 1.' }] }
+  ]},
   { id: 30, name: 'Badges', configType: 'C', basePrice: 0, variants: ['Catalogue', 'Custom'], specialLogic: 'BadgesCustom', addons: [
       { id: 'physical', name: 'Physical', type: 'physical_quantity', rateKey: 'badge_rate', softConstraints: [{ type: 'min', value: 25, message: 'MOQ is 25.' }] },
       { id: 'extra_bg', name: 'Extra BG', type: 'numeric', rateKey: 'extra_bg_rate', visibleIfVariant: 'Custom', softConstraints: [{ type: 'min', value: 1, message: 'Min 1' }] }
@@ -104,21 +114,9 @@ export const productCatalog: Product[] = [
       { id: 'small', name: 'Small', rateKey: 'paper_bag_small_rate', softConstraints: [{ type: 'min', value: 100, message: 'MOQ is 100.' }] }
     ]
   },
-  { id: 21, name: 'Menu Board', configType: 'E', basePrice: 0, sizes: [
-      { id: 'a4', name: 'A4', rateKey: 'menu_board_a4_rate', softConstraints: [{ type: 'min', value: 1, message: 'Min 1.' }] },
-      { id: 'a3', name: 'A3', rateKey: 'menu_board_a3_rate', softConstraints: [{ type: 'min', value: 1, message: 'Min 1.' }] },
-      { id: '2x3ft', name: '2x3 ft', rateKey: 'menu_board_2x3_rate', softConstraints: [{ type: 'min', value: 1, message: 'Min 1.' }] }
-    ]
-  },
   { id: 22, name: 'Contract Board', configType: 'E', basePrice: 0, sizes: [
       { id: 'a3', name: 'A3', rateKey: 'contract_board_a3_rate', softConstraints: [{ type: 'min', value: 1, message: 'Min 1.' }] },
       { id: '2x3ft', name: '2x3 ft', rateKey: 'contract_board_2x3_rate', softConstraints: [{ type: 'min', value: 1, message: 'Min 1.' }] }
-    ]
-  },
-  { id: 28, name: 'Airport Pickup Board', configType: 'E', basePrice: 0, sizes: [
-      { id: 'a4', name: 'A4', rateKey: 'pickup_board_a4_rate', softConstraints: [{ type: 'min', value: 1, message: 'Min 1.' }] },
-      { id: 'a3', name: 'A3', rateKey: 'pickup_board_a3_rate', softConstraints: [{ type: 'min', value: 1, message: 'Min 1.' }] },
-      { id: '2x3ft', name: '2x3 ft', rateKey: 'pickup_board_2x3_rate', softConstraints: [{ type: 'min', value: 1, message: 'Min 1.' }] }
     ]
   },
   { id: 31, name: 'Hangover Kits', configType: 'E', basePrice: 0, sizes: [
