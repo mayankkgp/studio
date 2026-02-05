@@ -58,7 +58,6 @@ export default function DeliverablesPage() {
     }, []);
 
     // Split items into Action Required vs Order List
-    // Logic: Item stays in active if it is invalid OR currently expanded
     const { activeItems, orderListItems } = useMemo(() => {
         const active: any[] = [];
         const list: any[] = [];
@@ -68,6 +67,7 @@ export default function DeliverablesPage() {
             const isExpanded = openItems.includes(item.id);
             const isValid = status?.isValid ?? false;
             
+            // Item stays in active if it is invalid OR currently expanded
             if (!isValid || isExpanded) {
                 active.push(item);
             } else {

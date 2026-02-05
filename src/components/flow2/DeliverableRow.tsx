@@ -29,7 +29,6 @@ import { Badge } from "@/components/ui/badge";
 import {
     AccordionItem,
     AccordionContent,
-    AccordionTrigger
 } from "@/components/ui/accordion";
 import {
     Tooltip,
@@ -197,6 +196,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         }
     }, [showNotes, watchedValues.specialRequest, adjustHeight]);
 
+    // Reactive validity reporting
     React.useEffect(() => {
         onValidityChange(item.id, isValid);
     }, [item.id, isValid, onValidityChange]);
