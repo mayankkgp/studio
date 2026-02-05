@@ -185,15 +185,15 @@ export function EventDetailsForm() {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col h-screen">
-      <header className="sticky top-0 z-10 flex h-20 items-center gap-4 border-b bg-background/80 backdrop-blur-sm px-4 md:px-6">
+      <header className="flex h-16 shrink-0 items-center gap-4 border-b px-4 md:px-6 bg-background z-50">
         <MobileNav />
-        <div className="flex-1">
-          <h1 className="font-semibold text-lg md:text-xl font-headline truncate" title={headerSummary}>
+        <div className="flex-1 overflow-hidden">
+          <h1 className="font-semibold text-base md:text-lg font-headline truncate" title={headerSummary}>
             {headerSummary}
           </h1>
-           <p className="text-sm text-muted-foreground">Event Details</p>
+           <p className="text-xs text-muted-foreground uppercase tracking-wider font-bold">Event Details</p>
         </div>
-        <div className="hidden lg:block font-mono text-sm">
+        <div className="hidden lg:block font-mono text-xs opacity-50">
             {order.orderId}
         </div>
       </header>

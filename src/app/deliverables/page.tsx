@@ -102,15 +102,15 @@ export default function DeliverablesPage() {
     return (
         <AppLayout>
             <div className="flex flex-col h-screen overflow-hidden">
-                <header className="sticky top-0 z-40 flex h-20 shrink-0 items-center gap-4 border-b bg-background px-4 md:px-6">
+                <header className="flex h-16 shrink-0 items-center gap-4 border-b px-4 md:px-6 bg-background z-50">
                     <MobileNav />
-                    <div className="flex-1">
-                        <h1 className="font-semibold text-lg md:text-xl font-headline truncate" title={headerSummary}>
+                    <div className="flex-1 overflow-hidden">
+                        <h1 className="font-semibold text-base md:text-lg font-headline truncate" title={headerSummary}>
                             {headerSummary}
                         </h1>
-                        <p className="text-sm text-muted-foreground">Deliverables</p>
+                        <p className="text-xs text-muted-foreground uppercase tracking-wider font-bold">Deliverables</p>
                     </div>
-                    <div className="hidden lg:block font-mono text-sm">{order.orderId}</div>
+                    <div className="hidden lg:block font-mono text-xs opacity-50">{order.orderId}</div>
                 </header>
 
                 <main className="flex-1 overflow-y-auto bg-background">
