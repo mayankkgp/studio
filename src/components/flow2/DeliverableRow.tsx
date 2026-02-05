@@ -58,7 +58,11 @@ const getValidationSchema = (product: Product | null) => {
             schemaObject.customFieldValues = z.object(
                 product.customFields.reduce((acc, field) => ({
                     ...acc,
-                    [field.id]: z.union([z.number(), z.null(), z.undefined()])
+                    // Preprocess to handle NaN (from empty input with valueAsNumber)
+                    [field.id]: z.preprocess(
+                        (val) => (val === "" || val === null || (typeof val === 'number' && isNaN(val)) ? undefined : val),
+                        z.number().optional()
+                    )
                 }), {})
             ).refine((vals: any) => {
                 return Object.values(vals).some(v => typeof v === 'number' && v > 0);
@@ -238,7 +242,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         if (product.customFields && watchedValues.customFieldValues) {
             product.customFields.forEach(field => {
                 const val = (watchedValues.customFieldValues as any)[field.id];
-                if (val !== undefined && val !== null && val !== '') {
+                if (val !== undefined && val !== null && val !== '' && !isNaN(val)) {
                     const warning = getLogicWarning(val, field.softConstraints);
                     parts.push(
                         <span key={field.id} className={cn(warning && "text-[#FA7315] font-bold")}>
@@ -434,7 +438,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                 {product.customFields.map((field) => (
                                     <div key={field.id} className="flex items-center gap-3">
                                         <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap">
-                                            {field.name} *
+                                            {field.name} {product.id !== 5 && "*"}
                                         </Label>
                                         <Input 
                                             type="number" 
