@@ -135,7 +135,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         if (!el) return;
         el.style.height = '0px'; 
         const scrollHeight = el.scrollHeight;
-        // Base height is 40px, it only grows if content is larger
         el.style.height = `${Math.max(40, scrollHeight)}px`;
     }, []);
 
@@ -332,7 +331,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                             {!isExpanded && (
                                 <div className="text-xs text-muted-foreground truncate flex-1">
                                     {getSummaryText() === 'Setup Required' ? (
-                                        <Badge variant="destructive" className="bg-destructive text-destructive-foreground text-[10px] h-4 py-0">Setup Required</Badge>
+                                        <Badge variant="destructive" className="bg-destructive text-destructive-foreground text-[10px] h-4 py-0 font-bold tracking-wide">Setup Required</Badge>
                                     ) : getSummaryText()}
                                 </div>
                             )}
