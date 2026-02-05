@@ -43,8 +43,7 @@ export default function DeliverablesPage() {
 
     const handleValidityChange = useCallback((id: string, isValid: boolean) => {
         setRowStatus(prev => {
-            const current = prev[id];
-            if (current?.isValid === isValid) return prev;
+            if (prev[id]?.isValid === isValid) return prev;
             return { ...prev, [id]: { isValid } };
         });
     }, []);
@@ -57,17 +56,16 @@ export default function DeliverablesPage() {
         setOpenItems(prev => prev.filter(itemId => itemId !== id));
     }, []);
 
-    // Split items into Action Required vs Order List
+    // Split items based on current validity and expansion state
     const { activeItems, orderListItems } = useMemo(() => {
         const active: any[] = [];
         const list: any[] = [];
 
         order.deliverables.forEach(item => {
-            const status = rowStatus[item.id];
+            const isValid = rowStatus[item.id]?.isValid ?? false;
             const isExpanded = openItems.includes(item.id);
-            const isValid = status?.isValid ?? false;
             
-            // Item stays in active if it is invalid OR currently expanded
+            // If it's invalid OR currently open, it belongs in Action Required
             if (!isValid || isExpanded) {
                 active.push(item);
             } else {
@@ -90,9 +88,7 @@ export default function DeliverablesPage() {
                 title: "Incomplete Items",
                 description: "Please complete all required fields before moving to commercials."
             });
-            if (!openItems.includes(firstInvalidItem.id)) {
-                setOpenItems(prev => [...prev, firstInvalidItem.id]);
-            }
+            setOpenItems(prev => Array.from(new Set([...prev, firstInvalidItem.id])));
             scrollToItem(firstInvalidItem.id);
             return;
         }
@@ -103,7 +99,7 @@ export default function DeliverablesPage() {
         }
 
         router.push('/commercials');
-    }, [rowStatus, openItems, order.deliverables, router, toast, scrollToItem]);
+    }, [rowStatus, order.deliverables, router, toast, scrollToItem]);
 
     return (
         <AppLayout>
@@ -125,39 +121,37 @@ export default function DeliverablesPage() {
                             <CommandBar />
                         </section>
 
-                        <div className="space-y-12 pb-12">
+                        <Accordion type="multiple" value={openItems} onValueChange={setOpenItems} className="space-y-12 pb-12">
                             <section className="space-y-4">
                                 <h2 className="text-xs font-bold uppercase tracking-widest text-primary flex items-center gap-2">
                                     <AlertCircle className="h-4 w-4" />
                                     Action Required ({activeItems.length})
                                 </h2>
                                 
-                                <Accordion type="multiple" value={openItems} onValueChange={setOpenItems} className="space-y-4">
-                                    {activeItems.length === 0 && orderListItems.length === 0 ? (
-                                        <div className="flex flex-col items-center justify-center py-20 border-2 border-dashed rounded-xl bg-card/50">
-                                            <Package className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                                            <p className="text-muted-foreground font-medium">Your queue is empty</p>
-                                        </div>
-                                    ) : activeItems.length === 0 ? (
-                                        <div className="py-8 text-center border rounded-xl bg-muted/20 border-dashed">
-                                            <CheckCircle2 className="h-8 w-8 text-green-500 mx-auto mb-2" />
-                                            <p className="text-sm text-muted-foreground font-medium">No items require attention</p>
-                                        </div>
-                                    ) : (
-                                        activeItems.map((item) => (
-                                            <DeliverableRow 
-                                                key={item.id} 
-                                                item={item} 
-                                                isExpanded={openItems.includes(item.id)}
-                                                onEdit={handleEdit}
-                                                onDone={handleDone}
-                                                onValidityChange={handleValidityChange}
-                                                onUpdate={updateDeliverable}
-                                                onRemove={removeDeliverable}
-                                            />
-                                        ))
-                                    )}
-                                </Accordion>
+                                {activeItems.length === 0 && orderListItems.length === 0 ? (
+                                    <div className="flex flex-col items-center justify-center py-20 border-2 border-dashed rounded-xl bg-card/50">
+                                        <Package className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                                        <p className="text-muted-foreground font-medium">Your queue is empty</p>
+                                    </div>
+                                ) : activeItems.length === 0 ? (
+                                    <div className="py-8 text-center border rounded-xl bg-muted/20 border-dashed">
+                                        <CheckCircle2 className="h-8 w-8 text-green-500 mx-auto mb-2" />
+                                        <p className="text-sm text-muted-foreground font-medium">No items require attention</p>
+                                    </div>
+                                ) : (
+                                    activeItems.map((item) => (
+                                        <DeliverableRow 
+                                            key={item.id} 
+                                            item={item} 
+                                            isExpanded={openItems.includes(item.id)}
+                                            onEdit={handleEdit}
+                                            onDone={handleDone}
+                                            onValidityChange={handleValidityChange}
+                                            onUpdate={updateDeliverable}
+                                            onRemove={removeDeliverable}
+                                        />
+                                    ))
+                                )}
                             </section>
 
                             {orderListItems.length > 0 && (
@@ -166,12 +160,12 @@ export default function DeliverablesPage() {
                                         <CheckCircle2 className="h-4 w-4" />
                                         Order List ({orderListItems.length})
                                     </h2>
-                                    <Accordion type="multiple" value={openItems} onValueChange={setOpenItems} className="space-y-2">
+                                    <div className="space-y-2">
                                         {orderListItems.map((item) => (
                                             <DeliverableRow 
                                                 key={item.id} 
                                                 item={item} 
-                                                isExpanded={openItems.includes(item.id)}
+                                                isExpanded={false}
                                                 onEdit={handleEdit}
                                                 onDone={handleDone}
                                                 onValidityChange={handleValidityChange}
@@ -179,10 +173,10 @@ export default function DeliverablesPage() {
                                                 onRemove={removeDeliverable}
                                             />
                                         ))}
-                                    </Accordion>
+                                    </div>
                                 </section>
                             )}
-                        </div>
+                        </Accordion>
                     </div>
                 </main>
 

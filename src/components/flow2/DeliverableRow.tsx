@@ -88,22 +88,20 @@ const getValidationSchema = (product: Product | null) => {
         })).superRefine((addons, ctx) => {
             addons.forEach((addon, idx) => {
                 const addonDef = product.addons?.find(a => a.id === addon.id);
-                if (addon.value !== undefined && addon.value !== false) {
-                    if (addonDef && (addonDef.type === 'numeric' || addonDef.type === 'physical_quantity')) {
-                        if (addon.value === null || addon.value === '') {
-                             ctx.addIssue({ code: z.ZodIssueCode.custom, message: "REQUIRED", path: [idx, 'value'] });
-                        } else if (typeof addon.value !== 'number' || isNaN(addon.value)) {
-                             ctx.addIssue({ code: z.ZodIssueCode.custom, message: "REQUIRED", path: [idx, 'value'] });
-                        } else if (addonDef.softConstraints) {
-                            addonDef.softConstraints.forEach(constraint => {
-                                if (constraint.type === 'min' && (addon.value as number) < constraint.value) {
-                                    ctx.addIssue({ code: z.ZodIssueCode.custom, message: constraint.message.toUpperCase(), path: [idx, 'value'] });
-                                }
-                                if (constraint.type === 'max' && (addon.value as number) > constraint.value) {
-                                    ctx.addIssue({ code: z.ZodIssueCode.custom, message: constraint.message.toUpperCase(), path: [idx, 'value'] });
-                                }
-                            });
-                        }
+                const isSelected = addon.value !== undefined && addon.value !== false;
+                
+                if (isSelected && addonDef && (addonDef.type === 'numeric' || addonDef.type === 'physical_quantity')) {
+                    if (addon.value === null || addon.value === '' || isNaN(Number(addon.value))) {
+                         ctx.addIssue({ code: z.ZodIssueCode.custom, message: "REQUIRED", path: [idx, 'value'] });
+                    } else if (addonDef.softConstraints) {
+                        addonDef.softConstraints.forEach(constraint => {
+                            if (constraint.type === 'min' && Number(addon.value) < constraint.value) {
+                                ctx.addIssue({ code: z.ZodIssueCode.custom, message: constraint.message.toUpperCase(), path: [idx, 'value'] });
+                            }
+                            if (constraint.type === 'max' && Number(addon.value) > constraint.value) {
+                                ctx.addIssue({ code: z.ZodIssueCode.custom, message: constraint.message.toUpperCase(), path: [idx, 'value'] });
+                            }
+                        });
                     }
                 }
             });
@@ -180,7 +178,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         mode: 'onChange'
     });
 
-    const { register, control, watch, formState: { errors, isValid }, trigger, getValues } = form;
+    const { register, control, watch, formState: { errors, isValid }, trigger, getValues, setValue } = form;
     const watchedValues = watch();
 
     const adjustHeight = React.useCallback((el: HTMLTextAreaElement | null) => {
@@ -196,7 +194,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         }
     }, [showNotes, watchedValues.specialRequest, adjustHeight]);
 
-    // Reactive validity reporting
+    // Update parent about validity
     React.useEffect(() => {
         onValidityChange(item.id, isValid);
     }, [item.id, isValid, onValidityChange]);
@@ -213,7 +211,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
     React.useEffect(() => {
         const timer = setTimeout(() => {
             performSyncUpdate();
-            trigger();
         }, 300);
         return () => clearTimeout(timer);
     }, [
@@ -224,8 +221,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         watchedValues.addons, 
         watchedValues.variant,
         watchedValues.sizes,
-        performSyncUpdate,
-        trigger
+        performSyncUpdate
     ]);
 
     const handleDoneClick = async (e: React.MouseEvent) => {
@@ -277,6 +273,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         if (qError?.message && qError.message.toUpperCase() !== 'REQUIRED') return qError.message.toUpperCase();
         const pError = errors.pages as any;
         if (pError?.message && pError.message.toUpperCase() !== 'REQUIRED') return pError.message.toUpperCase();
+        
         if (errors.customFieldValues) {
             const cfErrors = errors.customFieldValues as Record<string, any>;
             for (const key in cfErrors) {
@@ -284,6 +281,13 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                 if (msg && String(msg).toUpperCase() !== 'REQUIRED') return String(msg).toUpperCase();
             }
         }
+        
+        if (errors.addons) {
+            const addonErrors = errors.addons as any[];
+            const foundError = addonErrors.find(e => e?.value?.message && e.value.message.toUpperCase() !== 'REQUIRED');
+            if (foundError) return foundError.value.message.toUpperCase();
+        }
+
         return 'SETUP REQUIRED';
     }, [isValid, errors]);
 
@@ -320,7 +324,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                         {...register('quantity', { valueAsNumber: true })}
                         className={cn(
                             "w-24 h-10 text-lg bg-background",
-                            hasConstraintError(errors.quantity) && "border-destructive ring-destructive"
+                            hasConstraintError(errors.quantity) && "border-destructive ring-destructive border-2"
                         )}
                     />
                 </div>
@@ -336,7 +340,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                         {...register('pages', { valueAsNumber: true })}
                         className={cn(
                             "w-24 h-10 text-lg bg-background",
-                            hasConstraintError(errors.pages) && "border-destructive ring-destructive"
+                            hasConstraintError(errors.pages) && "border-destructive ring-destructive border-2"
                         )}
                     />
                 </div>
@@ -361,7 +365,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                 "h-9 rounded-full px-4",
                                 watchedValues.variant === v ? "shadow-sm" : "hover:bg-accent"
                             )}
-                            onClick={() => form.setValue('variant', v, { shouldValidate: true })}
+                            onClick={() => setValue('variant', v, { shouldValidate: true })}
                         >
                             {v}
                         </Button>
@@ -423,7 +427,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                 <Pencil className="h-3.5 w-3.5" /> Edit
                             </Button>
                         ) : (
-                            <Button size="sm" onClick={handleDoneClick} className="gap-2 h-8" disabled={!isValid}>
+                            <Button size="sm" onClick={handleDoneClick} className="gap-2 h-8">
                                 <Check className="h-4 w-4" /> Done
                             </Button>
                         )}
@@ -451,7 +455,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                 type="number" 
                                                 className={cn(
                                                     "w-16 h-10 px-2 text-sm bg-background",
-                                                    hasError && "border-destructive ring-destructive"
+                                                    hasError && "border-destructive ring-destructive border-2"
                                                 )}
                                                 {...register(`customFieldValues.${field.id}`, { valueAsNumber: true })} 
                                             />
