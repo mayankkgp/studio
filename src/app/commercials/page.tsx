@@ -172,7 +172,8 @@ export default function CommercialsPage() {
 
                     {/* Right Panel: Summary & Actions (Sticky) */}
                     <aside className="w-80 lg:w-96 shrink-0 border-l bg-card/50 flex flex-col p-6 z-40">
-                        <div className="space-y-6">
+                        {/* Top Navigation */}
+                        <div className="mb-6">
                             <Button 
                                 variant="ghost" 
                                 size="sm" 
@@ -182,42 +183,39 @@ export default function CommercialsPage() {
                                 <ChevronLeft className="h-4 w-4 mr-1" />
                                 Back to Deliverables
                             </Button>
-                            
-                            <div className="space-y-2">
-                                <h2 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Financial Summary</h2>
-                                
-                                <div className="space-y-4 pt-2">
-                                    {/* Financial Calculation Unit */}
-                                    <div className="space-y-0.5">
-                                        <div className="text-[10px] font-bold uppercase text-muted-foreground">Total Order Value</div>
-                                        <div className="text-5xl font-bold font-headline text-primary tracking-tight">
-                                            {formatCurrency(totalValue)}
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-3">
-                                        <div className="space-y-1">
-                                            <Label htmlFor="payment" className="text-[10px] font-bold uppercase text-muted-foreground">
-                                                Payment Received
-                                            </Label>
-                                            <div className="relative">
-                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">₹</span>
-                                                <Input 
-                                                    id="payment" 
-                                                    type="number" 
-                                                    placeholder="0"
-                                                    value={order.paymentReceived || ''}
-                                                    onChange={(e) => setPaymentReceived(Number(e.target.value))}
-                                                    className="pl-7 h-11 text-lg font-semibold bg-background border-primary/20"
-                                                />
-                                            </div>
-                                        </div>
-                                        
-                                        <div>
-                                            {balanceDisplay}
-                                        </div>
-                                    </div>
+                        </div>
+                        
+                        {/* Financial Calculation Unit */}
+                        <div className="space-y-6">
+                            {/* Total Order Value */}
+                            <div className="space-y-0.5">
+                                <div className="text-[10px] font-bold uppercase text-muted-foreground">Total Order Value</div>
+                                <div className="text-5xl font-bold font-headline text-primary tracking-tight">
+                                    {formatCurrency(totalValue)}
                                 </div>
+                            </div>
+
+                            {/* Payment Input Block */}
+                            <div className="space-y-2">
+                                <Label htmlFor="payment" className="text-[10px] font-bold uppercase text-muted-foreground">
+                                    Payment Received
+                                </Label>
+                                <div className="relative">
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">₹</span>
+                                    <Input 
+                                        id="payment" 
+                                        type="number" 
+                                        placeholder="0"
+                                        value={order.paymentReceived || ''}
+                                        onChange={(e) => setPaymentReceived(Number(e.target.value))}
+                                        className="pl-7 h-11 text-lg font-semibold bg-background border-input"
+                                    />
+                                </div>
+                            </div>
+                            
+                            {/* Balance/Status Block */}
+                            <div>
+                                {balanceDisplay}
                             </div>
                         </div>
 
@@ -225,14 +223,11 @@ export default function CommercialsPage() {
                         <div className="mt-auto space-y-3 pt-12">
                             <Button 
                                 variant="outline" 
-                                className="w-full h-10 justify-between px-4 group bg-background/50" 
+                                className="w-full h-10 group bg-background/50" 
                                 onClick={saveAsDraft}
                             >
-                                <span className="flex items-center gap-2">
-                                    <Save className="h-4 w-4" />
-                                    Save as Draft
-                                </span>
-                                <span className="text-[10px] opacity-0 group-hover:opacity-50 transition-opacity">Session</span>
+                                <Save className="h-4 w-4 mr-2" />
+                                Save as Draft
                             </Button>
                             <Button 
                                 className="w-full h-14 text-base font-bold gap-2 shadow-lg shadow-primary/20" 
