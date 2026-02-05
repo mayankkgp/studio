@@ -52,22 +52,43 @@ const getValidationSchema = (product: Product | null) => {
     if (!product) return z.object({});
     
     let schemaObject: any = {
-        variant: z.string().optional(),
+        variant: product.variants && product.variants.length > 0 ? z.string().min(1, "REQUIRED") : z.string().optional(),
         specialRequest: z.string().optional(),
     };
 
     if (product.configType === 'A') {
-        schemaObject.quantity = z.number({ required_error: "Required", invalid_type_error: "Required" });
+        schemaObject.quantity = z.number({ required_error: "REQUIRED", invalid_type_error: "REQUIRED" })
+            .min(product.softConstraints?.find(c => c.type === 'min')?.value || 1, product.softConstraints?.find(c => c.type === 'min')?.message.toUpperCase() || "REQUIRED");
     }
     
     if (product.configType === 'B') {
-        schemaObject.pages = z.number({ required_error: "Required", invalid_type_error: "Required" });
+        schemaObject.pages = z.number({ required_error: "REQUIRED", invalid_type_error: "REQUIRED" })
+            .min(product.softConstraints?.find(c => c.type === 'min')?.value || 1, product.softConstraints?.find(c => c.type === 'min')?.message.toUpperCase() || "REQUIRED");
+    }
+
+    if (product.configType === 'E' && product.sizes) {
+        schemaObject.sizes = z.array(z.object({
+            id: z.string(),
+            name: z.string(),
+            quantity: z.number().nullable()
+        })).superRefine((sizes, ctx) => {
+            sizes.forEach((s, idx) => {
+                const sDef = product.sizes?.find(sd => sd.id === s.id);
+                if (s.quantity !== null && s.quantity !== undefined && sDef?.softConstraints) {
+                    sDef.softConstraints.forEach(c => {
+                        if (c.type === 'min' && s.quantity! < c.value) {
+                            ctx.addIssue({ code: z.ZodIssueCode.custom, message: c.message.toUpperCase(), path: [idx, 'quantity'] });
+                        }
+                    });
+                }
+            });
+        });
     }
     
     if (product.customFields) {
         schemaObject.customFieldValues = z.object(
             product.customFields.reduce((acc, field) => {
-                let fSchema = z.number({ required_error: "Required", invalid_type_error: "Required" });
+                let fSchema = z.number({ required_error: "REQUIRED", invalid_type_error: "REQUIRED" });
                 if (field.softConstraints) {
                     field.softConstraints.forEach(constraint => {
                         if (constraint.type === 'min') fSchema = fSchema.min(constraint.value, constraint.message.toUpperCase());
@@ -87,35 +108,19 @@ const getValidationSchema = (product: Product | null) => {
         })).superRefine((addons, ctx) => {
             addons.forEach((addon, idx) => {
                 const addonDef = product.addons?.find(a => a.id === addon.id);
-                if (addon.value !== undefined && addon.value !== null) {
+                if (addon.value !== undefined && addon.value !== null && addon.value !== false) {
                     if (addonDef && (addonDef.type === 'numeric' || addonDef.type === 'physical_quantity')) {
                         if (addon.value === '') {
-                             ctx.addIssue({
-                                code: z.ZodIssueCode.custom,
-                                message: "REQUIRED",
-                                path: [idx, 'value']
-                            });
+                             ctx.addIssue({ code: z.ZodIssueCode.custom, message: "REQUIRED", path: [idx, 'value'] });
                         } else if (typeof addon.value !== 'number') {
-                             ctx.addIssue({
-                                code: z.ZodIssueCode.custom,
-                                message: "REQUIRED",
-                                path: [idx, 'value']
-                            });
+                             ctx.addIssue({ code: z.ZodIssueCode.custom, message: "REQUIRED", path: [idx, 'value'] });
                         } else if (addonDef.softConstraints) {
                             addonDef.softConstraints.forEach(constraint => {
                                 if (constraint.type === 'min' && (addon.value as number) < constraint.value) {
-                                    ctx.addIssue({
-                                        code: z.ZodIssueCode.custom,
-                                        message: constraint.message.toUpperCase(),
-                                        path: [idx, 'value']
-                                    });
+                                    ctx.addIssue({ code: z.ZodIssueCode.custom, message: constraint.message.toUpperCase(), path: [idx, 'value'] });
                                 }
                                 if (constraint.type === 'max' && (addon.value as number) > constraint.value) {
-                                    ctx.addIssue({
-                                        code: z.ZodIssueCode.custom,
-                                        message: constraint.message.toUpperCase(),
-                                        path: [idx, 'value']
-                                    });
+                                    ctx.addIssue({ code: z.ZodIssueCode.custom, message: constraint.message.toUpperCase(), path: [idx, 'value'] });
                                 }
                             });
                         }
@@ -125,34 +130,7 @@ const getValidationSchema = (product: Product | null) => {
         });
     }
 
-    return z.object(schemaObject).superRefine((data: any, ctx) => {
-        const val = product.configType === 'A' ? data.quantity : data.pages;
-        const fieldKey = product.configType === 'A' ? 'quantity' : 'pages';
-
-        if (val !== undefined && val !== null && val !== '') {
-            if (product.softConstraints) {
-                product.softConstraints.forEach(c => {
-                    if (c.type === 'min' && val < c.value) {
-                        ctx.addIssue({ code: z.ZodIssueCode.custom, path: [fieldKey], message: c.message.toUpperCase() });
-                    }
-                    if (c.type === 'max' && val > c.value) {
-                        ctx.addIssue({ code: z.ZodIssueCode.custom, path: [fieldKey], message: c.message.toUpperCase() });
-                    }
-                });
-            }
-
-            if (data.variant && product.variantConstraints && product.variantConstraints[data.variant]) {
-                product.variantConstraints[data.variant].forEach(c => {
-                    if (c.type === 'min' && val < c.value) {
-                        ctx.addIssue({ code: z.ZodIssueCode.custom, path: [fieldKey], message: c.message.toUpperCase() });
-                    }
-                    if (c.type === 'max' && val > c.value) {
-                        ctx.addIssue({ code: z.ZodIssueCode.custom, path: [fieldKey], message: c.message.toUpperCase() });
-                    }
-                });
-            }
-        }
-    });
+    return z.object(schemaObject);
 };
 
 export const DeliverableRow = React.memo(function DeliverableRow({ 
@@ -179,6 +157,10 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             pages: item.pages,
             specialRequest: item.specialRequest || '',
             customFieldValues: item.customFieldValues || {},
+            sizes: product?.configType === 'E' ? product.sizes?.map(s => {
+                const existing = item.sizes?.find(es => es.id === s.id);
+                return { id: s.id, name: s.name, quantity: existing?.quantity ?? null };
+            }) : [],
             addons: product?.addons?.map(addon => {
                 const existingAddon = item.addons?.find(a => a.id === addon.id);
                 return { 
@@ -214,17 +196,11 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         });
     }, [trigger, item.id, onValidityChange]);
 
-    React.useEffect(() => {
-        if (hasValidated.current) {
-            onValidityChange(item.id, isValid);
-        }
-    }, [isValid, item.id, onValidityChange]);
-
     const performSyncUpdate = React.useCallback(() => {
         const currentValues = getValues();
         onUpdate(item.id, {
             ...currentValues,
-            addons: (currentValues.addons || []).filter((a: any) => a.value !== undefined) as any
+            addons: (currentValues.addons || []).filter((a: any) => a.value !== undefined && a.value !== false) as any
         });
     }, [getValues, item.id, onUpdate]);
 
@@ -241,6 +217,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         watchedValues.customFieldValues, 
         watchedValues.addons, 
         watchedValues.variant, 
+        watchedValues.sizes,
         performSyncUpdate,
         trigger
     ]);
@@ -283,6 +260,9 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             parts.push(`Qty: ${watchedValues.quantity}`);
         } else if (product.configType === 'B' && typeof watchedValues.pages === 'number') {
             parts.push(`${watchedValues.pages} Pages`);
+        } else if (product.configType === 'E' && watchedValues.sizes) {
+            const count = watchedValues.sizes.filter((s: any) => !!s.quantity).length;
+            if (count > 0) parts.push(`${count} Sizes`);
         }
         return parts.join(' • ');
     };
@@ -290,12 +270,22 @@ export const DeliverableRow = React.memo(function DeliverableRow({
     const getPriorityWarning = React.useCallback(() => {
         if (isValid) return null;
 
+        // Check primary fields
         const qError = errors.quantity as any;
         if (qError?.message && qError.message.toUpperCase() !== 'REQUIRED') return qError.message.toUpperCase();
         
         const pError = errors.pages as any;
         if (pError?.message && pError.message.toUpperCase() !== 'REQUIRED') return pError.message.toUpperCase();
 
+        // Check sizes
+        if (errors.sizes && Array.isArray(errors.sizes)) {
+            for (const sErr of errors.sizes) {
+                const msg = sErr?.quantity?.message;
+                if (msg && String(msg).toUpperCase() !== 'REQUIRED') return String(msg).toUpperCase();
+            }
+        }
+
+        // Check custom fields
         if (errors.customFieldValues) {
             const cfErrors = errors.customFieldValues as Record<string, any>;
             for (const key in cfErrors) {
@@ -304,6 +294,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             }
         }
 
+        // Check addons
         if (errors.addons && Array.isArray(errors.addons)) {
             for (const err of (errors.addons as any[])) {
                 const msg = err?.value?.message || err?.message;
@@ -320,6 +311,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             case 'B': return Clapperboard;
             case 'C': return FileText;
             case 'D': return MailOpen;
+            case 'E': return Frame;
             default: return Package;
         }
     };
@@ -337,7 +329,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
 
     const renderPromotedInput = () => {
         if (product?.configType === 'A') {
-            const hasError = hasConstraintError(errors.quantity);
             return (
                 <div className="flex items-center gap-4">
                     <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap min-w-[40px]">QTY *</Label>
@@ -347,14 +338,13 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                         {...register('quantity', { valueAsNumber: true })}
                         className={cn(
                             "w-24 h-10 text-lg bg-background [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
-                            hasError && "border-destructive ring-destructive focus-visible:ring-destructive"
+                            hasConstraintError(errors.quantity) && "border-destructive ring-destructive focus-visible:ring-destructive"
                         )}
                     />
                 </div>
             );
         }
         if (product?.configType === 'B') {
-            const hasError = hasConstraintError(errors.pages);
             return (
                 <div className="flex items-center gap-4">
                     <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap min-w-[40px]">PAGES *</Label>
@@ -364,7 +354,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                         {...register('pages', { valueAsNumber: true })}
                         className={cn(
                             "w-24 h-10 text-lg bg-background [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
-                            hasError && "border-destructive ring-destructive focus-visible:ring-destructive"
+                            hasConstraintError(errors.pages) && "border-destructive ring-destructive focus-visible:ring-destructive"
                         )}
                     />
                 </div>
@@ -376,7 +366,8 @@ export const DeliverableRow = React.memo(function DeliverableRow({
     const renderVariantSelection = () => {
         if (!product?.variants || product.variants.length === 0) return null;
         return (
-            <div className="flex items-start gap-2 flex-1">
+            <div className="flex items-start gap-4">
+                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground pt-3 whitespace-nowrap">VARIANT *</Label>
                 <div className="flex flex-wrap gap-2">
                     {product.variants!.map(v => (
                         <Button
@@ -398,7 +389,32 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         );
     };
 
-    const isComplexProduct = item.productId === 4 || item.productId === 5; 
+    const renderSizes = () => {
+        if (product?.configType !== 'E' || !product.sizes) return null;
+        return (
+            <div className="flex flex-wrap items-center gap-x-8 gap-y-4">
+                {product.sizes.map((s, idx) => {
+                    const hasError = hasConstraintError((errors.sizes as any)?.[idx]?.quantity);
+                    return (
+                        <div key={s.id} className="flex items-center gap-4">
+                            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap">{s.name} QTY</Label>
+                            <Input
+                                id={`size-input-${item.id}-${s.id}`}
+                                type="number"
+                                className={cn(
+                                    "w-20 h-10 px-2 text-sm bg-background [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
+                                    hasError && "border-destructive ring-destructive"
+                                )}
+                                {...register(`sizes.${idx}.quantity`, { valueAsNumber: true })}
+                            />
+                        </div>
+                    );
+                })}
+            </div>
+        );
+    }
+
+    const isComplexProduct = product?.configType === 'D' || product?.specialLogic === 'RitualCardBlossom'; 
     const warningText = getPriorityWarning();
 
     return (
@@ -466,6 +482,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                         <div className="flex flex-wrap items-start justify-between gap-6">
                             {renderVariantSelection()}
                             {isBranchA && renderPromotedInput()}
+                            {renderSizes()}
                         </div>
 
                         {product?.customFields && product.customFields.length > 0 && (
@@ -482,7 +499,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                 type="number" 
                                                 className={cn(
                                                     "w-16 h-10 px-2 text-sm bg-background [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
-                                                    hasError && "border-destructive ring-destructive focus-visible:ring-destructive"
+                                                    hasError && "border-destructive ring-destructive"
                                                 )}
                                                 {...register(`customFieldValues.${field.id}`, { valueAsNumber: true })} 
                                             />
@@ -498,7 +515,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                     {product.addons.map((addon, index) => {
                                         const parentIndex = addon.dependsOn ? product.addons!.findIndex(a => a.id === addon.dependsOn) : -1;
                                         const parentValue = parentIndex !== -1 ? watchedValues.addons?.[parentIndex]?.value : undefined;
-                                        const isParentActive = parentValue !== undefined ? (typeof parentValue === 'number' || parentValue === null ? true : !!parentValue) : true;
+                                        const isParentActive = parentValue !== undefined && parentValue !== false ? true : false;
                                         
                                         if (!((!addon.dependsOn || isParentActive) && (!addon.visibleIfVariant || watchedValues.variant === addon.visibleIfVariant))) return null;
                                         
@@ -508,7 +525,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                 name={`addons.${index}.value`}
                                                 control={control}
                                                 render={({ field }) => {
-                                                    const isChecked = field.value !== undefined;
+                                                    const isChecked = field.value !== undefined && field.value !== false;
                                                     const hasError = (errors.addons as any)?.[index]?.value;
                                                     
                                                     if (addon.type === 'checkbox') {
@@ -518,7 +535,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                                 variant={field.value ? "default" : "outline"}
                                                                 size="sm"
                                                                 className="h-8 rounded-full px-3 gap-1.5 transition-all text-xs"
-                                                                onClick={() => field.onChange(field.value ? undefined : true)}
+                                                                onClick={() => field.onChange(field.value ? false : true)}
                                                             >
                                                                 {field.value ? <Check className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
                                                                 {addon.name}
@@ -549,7 +566,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                                     "inline-flex items-center rounded-full h-8 pl-3 pr-1 gap-2 shadow-sm transition-colors",
                                                                     hasError ? "bg-destructive text-destructive-foreground" : "bg-primary text-primary-foreground"
                                                                 )}>
-                                                                    <span className="text-xs font-medium cursor-pointer" onClick={() => field.onChange(undefined)}>
+                                                                    <span className="text-xs font-medium cursor-pointer" onClick={() => field.onChange(false)}>
                                                                         {addon.name}
                                                                     </span>
                                                                     <Input
