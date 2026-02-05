@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { productCatalog } from '@/lib/product-data';
-import type { Product, ConfiguredProduct, SoftConstraint } from '@/lib/types';
+import type { Product, ConfiguredProduct, SoftConstraint, CustomField } from '@/lib/types';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -263,7 +263,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
     const IconComponent = getIcon();
 
     const isLocked = isExpanded && !isValid;
-    const isSimpleTypeA = product?.configType === 'A' && (!product?.variants || product.variants.length === 0);
+    const isBranchA = product?.configType === 'A' && (!product?.variants || product.variants.length === 0);
 
     const iconStatusClasses = isExpanded 
         ? "text-blue-600 bg-blue-50" 
@@ -271,22 +271,25 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             ? "text-green-600 bg-green-100" 
             : "text-destructive bg-destructive/10";
 
-    const renderNotesArea = () => {
+    const renderNotesArea = (fullWidth: boolean = false) => {
         if (showNotes) {
             return (
-                <Textarea 
-                    {...register('specialRequest')} 
-                    className="min-h-[40px] bg-background/50 overflow-hidden resize-none py-2 px-3 leading-6 border border-input rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" 
-                    placeholder="Add special instructions..."
-                    ref={(e) => {
-                        register('specialRequest').ref(e);
-                        notesRef.current = e;
-                    }}
-                    onChange={(e) => {
-                        register('specialRequest').onChange(e);
-                        adjustHeight(e.target);
-                    }}
-                />
+                <div className={cn("flex flex-col gap-1.5", fullWidth && "w-full")}>
+                    {fullWidth && <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Special Request</Label>}
+                    <Textarea 
+                        {...register('specialRequest')} 
+                        className="min-h-[40px] bg-background/50 overflow-hidden resize-none py-2 px-3 leading-6 border border-input rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" 
+                        placeholder="Add special instructions..."
+                        ref={(e) => {
+                            register('specialRequest').ref(e);
+                            notesRef.current = e;
+                        }}
+                        onChange={(e) => {
+                            register('specialRequest').onChange(e);
+                            adjustHeight(e.target);
+                        }}
+                    />
+                </div>
             );
         }
         return (
@@ -300,6 +303,98 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                 <span className="text-xs font-medium uppercase tracking-wider">Add Note</span>
             </Button>
         );
+    };
+
+    // Requirement: Promoted Primary Input Logic
+    const promotedCustomField = React.useMemo(() => {
+        if (product?.configType === 'A' || product?.configType === 'B') return null;
+        if (product?.customFields?.length === 1) {
+            return product.customFields[0];
+        }
+        return null;
+    }, [product]);
+
+    const renderPromotedInput = () => {
+        if (product?.configType === 'A') {
+            return (
+                <div className="flex items-center gap-4">
+                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap min-w-[40px]">QTY</Label>
+                    <div className="flex items-center gap-2">
+                        <Input 
+                            type="number" 
+                            {...register('quantity', { valueAsNumber: true })}
+                            className={cn("w-24 h-10 text-lg bg-background", errors.quantity && "border-destructive")} 
+                            ref={(e) => {
+                                register('quantity').ref(e);
+                                // @ts-ignore
+                                qtyInputRef.current = e;
+                            }}
+                        />
+                        {errors.quantity && (
+                            <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <AlertCircle className="h-4 w-4 text-destructive shrink-0 cursor-help" />
+                                    </TooltipTrigger>
+                                    <TooltipContent><p>{errors.quantity.message}</p></TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+        if (product?.configType === 'B') {
+            return (
+                <div className="flex items-center gap-4">
+                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap min-w-[40px]">PAGES</Label>
+                    <div className="flex items-center gap-2">
+                        <Input 
+                            type="number" 
+                            {...register('pages', { valueAsNumber: true })}
+                            className={cn("w-24 h-10 text-lg bg-background", errors.pages && "border-destructive")} 
+                        />
+                        {errors.pages && (
+                            <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <AlertCircle className="h-4 w-4 text-destructive shrink-0 cursor-help" />
+                                    </TooltipTrigger>
+                                    <TooltipContent><p>{errors.pages.message}</p></TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+        if (promotedCustomField) {
+            return (
+                <div className="flex items-center gap-4">
+                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap min-w-[40px]">
+                        {promotedCustomField.name}
+                    </Label>
+                    <div className="flex items-center gap-2">
+                        <Input 
+                            type="number" 
+                            className={cn("w-24 h-10 text-lg bg-background", errors.customFieldValues?.[promotedCustomField.id] && "border-destructive")} 
+                            {...register(`customFieldValues.${promotedCustomField.id}`, { valueAsNumber: true })} 
+                        />
+                        {errors.customFieldValues?.[promotedCustomField.id] && (
+                            <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <AlertCircle className="h-4 w-4 text-destructive shrink-0 cursor-help" />
+                                    </TooltipTrigger>
+                                    <TooltipContent><p>{(errors.customFieldValues as any)?.[promotedCustomField.id]?.message || 'Required'}</p></TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+        return null;
     };
 
     return (
@@ -382,84 +477,21 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                 </div>
 
                 <AccordionContent className="px-4 pb-4 border-t bg-muted/5 relative">
-                    {isSimpleTypeA ? (
+                    {isBranchA ? (
+                        /* Branch A: Single-Line Mode */
                         <div className="flex flex-wrap items-center gap-8 pt-4 pb-2">
-                            <div className="flex items-center gap-4">
-                                <Label className={cn("text-xs font-bold uppercase tracking-wider whitespace-nowrap min-w-[40px]", errors.quantity ? "text-destructive" : "text-muted-foreground")}>
-                                    Qty
-                                </Label>
-                                <div className="flex items-center gap-2">
-                                    <Input 
-                                        type="number" 
-                                        {...register('quantity', { valueAsNumber: true })}
-                                        className={cn("w-24 h-10 text-lg bg-background", errors.quantity && "border-destructive")} 
-                                        ref={(e) => {
-                                            register('quantity').ref(e);
-                                            // @ts-ignore
-                                            qtyInputRef.current = e;
-                                        }}
-                                    />
-                                    {errors.quantity && (
-                                        <TooltipProvider>
-                                            <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                    <AlertCircle className="h-4 w-4 text-destructive shrink-0 cursor-help" />
-                                                </TooltipTrigger>
-                                                <TooltipContent>
-                                                    <p>{errors.quantity.message}</p>
-                                                </TooltipContent>
-                                            </Tooltip>
-                                        </TooltipProvider>
-                                    )}
-                                </div>
-                            </div>
+                            {renderPromotedInput()}
                             <div className="flex-1 min-w-[200px]">
                                 {renderNotesArea()}
                             </div>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
-                            <div className="space-y-6">
-                                {(product?.configType === 'A' || product?.configType === 'B') && (
-                                    <div className="flex items-center gap-4">
-                                        <Label className={cn("text-xs font-bold uppercase tracking-wider whitespace-nowrap min-w-[40px]", (errors.quantity || errors.pages) ? "text-destructive" : "text-muted-foreground")}>
-                                            {product.configType === 'A' ? 'Qty' : 'Pages'}
-                                        </Label>
-                                        <div className="flex items-center gap-2">
-                                            <Input 
-                                                type="number" 
-                                                {...register(product.configType === 'A' ? 'quantity' : 'pages', { 
-                                                    valueAsNumber: true 
-                                                })}
-                                                className={cn("w-24 h-10 text-lg bg-background", (errors.quantity || errors.pages) && "border-destructive")} 
-                                                ref={(e) => {
-                                                    if (product.configType === 'A') {
-                                                        register('quantity').ref(e);
-                                                        // @ts-ignore
-                                                        qtyInputRef.current = e;
-                                                    } else {
-                                                        register('pages').ref(e);
-                                                    }
-                                                }}
-                                            />
-                                            {(errors.quantity || errors.pages) && (
-                                                <TooltipProvider>
-                                                    <Tooltip>
-                                                        <TooltipTrigger asChild>
-                                                            <AlertCircle className="h-4 w-4 text-destructive shrink-0 cursor-help" />
-                                                        </TooltipTrigger>
-                                                        <TooltipContent>
-                                                            <p>{errors.quantity?.message || errors.pages?.message}</p>
-                                                        </TooltipContent>
-                                                    </Tooltip>
-                                                </TooltipProvider>
-                                            )}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {product?.variants && product.variants.length > 0 && (
-                                    <div className="flex items-start gap-4">
+                        /* Branch B: Stacked Mode */
+                        <div className="flex flex-col gap-6 pt-4">
+                            {/* Row 1: Header (Variants + Promoted Input) */}
+                            <div className="flex flex-wrap items-start justify-between gap-6">
+                                {product?.variants && product.variants.length > 0 ? (
+                                    <div className="flex items-start gap-4 flex-1">
                                         <Label className={cn("text-xs font-bold uppercase tracking-wider whitespace-nowrap min-w-[40px] mt-2.5", errors.variant ? "text-destructive" : "text-muted-foreground")}>
                                             Variant
                                         </Label>
@@ -493,162 +525,178 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                         <TooltipTrigger asChild>
                                                             <AlertCircle className="h-4 w-4 text-destructive shrink-0 cursor-help" />
                                                         </TooltipTrigger>
-                                                        <TooltipContent>
-                                                            <p>{errors.variant.message}</p>
-                                                        </TooltipContent>
+                                                        <TooltipContent><p>{errors.variant.message}</p></TooltipContent>
                                                     </Tooltip>
                                                 </TooltipProvider>
                                             )}
                                         </div>
                                     </div>
-                                )}
-
-                                <div className="pt-2">
-                                    {renderNotesArea()}
-                                </div>
+                                ) : <div className="flex-1" />}
+                                {renderPromotedInput()}
                             </div>
 
-                            <div className="space-y-4">
-                                {product?.addons && product.addons.length > 0 && (
-                                    <div className="flex flex-wrap gap-2 pt-2">
-                                        {product.addons.map((addon, index) => {
-                                            const parentIndex = addon.dependsOn ? product.addons!.findIndex(a => a.id === addon.dependsOn) : -1;
-                                            const parentValue = parentIndex !== -1 ? watchedValues.addons?.[parentIndex]?.value : undefined;
-                                            const isParentActive = parentValue !== undefined ? (typeof parentValue === 'number' ? parentValue > 0 : !!parentValue) : true;
-                                            
-                                            if (!((!addon.dependsOn || isParentActive) && (!addon.visibleIfVariant || watchedValues.variant === addon.visibleIfVariant))) return null;
-                                            
-                                            return (
-                                                <Controller
-                                                    key={addon.id}
-                                                    name={`addons.${index}.value`}
-                                                    control={control}
-                                                    render={({ field }) => {
-                                                        const isChecked = typeof field.value === 'number' ? field.value > 0 : !!field.value;
-                                                        
-                                                        if (addon.type === 'checkbox') {
-                                                            return (
-                                                                <Button
-                                                                    type="button"
-                                                                    variant={field.value ? "default" : "outline"}
-                                                                    size="sm"
-                                                                    className="h-8 rounded-full px-3 gap-1.5 transition-all text-xs"
-                                                                    onClick={() => field.onChange(!field.value)}
-                                                                >
-                                                                    {field.value ? <Check className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
-                                                                    {addon.name}
-                                                                </Button>
-                                                            );
-                                                        } else {
-                                                            if (!isChecked) {
-                                                                return (
-                                                                    <Button
-                                                                        type="button"
-                                                                        variant="outline"
-                                                                        size="sm"
-                                                                        className="h-8 rounded-full px-3 gap-1.5 transition-all text-xs"
-                                                                        onClick={() => {
-                                                                            field.onChange(1);
-                                                                            setTimeout(() => {
-                                                                                document.getElementById(`addon-input-${addon.id}`)?.focus();
-                                                                            }, 0);
-                                                                        }}
-                                                                    >
-                                                                        <Plus className="h-3 w-3" />
-                                                                        {addon.name}
-                                                                    </Button>
-                                                                );
-                                                            } else {
-                                                                return (
-                                                                    <div className="inline-flex items-center bg-primary text-primary-foreground rounded-full h-8 pl-3 pr-1 gap-2 shadow-sm">
-                                                                        <span className="text-xs font-medium">{addon.name}</span>
-                                                                        <Input
-                                                                            id={`addon-input-${addon.id}`}
-                                                                            type="number"
-                                                                            className="w-12 h-6 px-1.5 py-0 text-xs bg-primary-foreground text-primary border-none focus-visible:ring-0 focus-visible:ring-offset-0 rounded-md font-bold"
-                                                                            value={field.value as number}
-                                                                            onChange={(e) => field.onChange(Number(e.target.value))}
-                                                                            onBlur={() => {
-                                                                                if (Number(field.value) === 0) field.onChange(0);
-                                                                            }}
-                                                                        />
-                                                                    </div>
-                                                                );
-                                                            }
-                                                        }
-                                                    }}
-                                                />
-                                            );
-                                        })}
-                                    </div>
-                                )}
-
-                                {product?.sizes && product.sizes.length > 0 && (
-                                    <div className="flex flex-wrap gap-2 pt-2">
-                                        {product.sizes.map((size, index) => (
-                                            <Controller
-                                                key={size.name}
-                                                name={`sizes.${index}.quantity`}
-                                                control={control}
-                                                render={({ field }) => {
-                                                    const isChecked = field.value > 0;
-                                                    if (!isChecked) {
-                                                        return (
-                                                            <Button
-                                                                type="button"
-                                                                variant="outline"
-                                                                size="sm"
-                                                                className="h-8 rounded-full px-3 gap-1.5 transition-all text-xs"
-                                                                onClick={() => {
-                                                                    field.onChange(1);
-                                                                    setTimeout(() => {
-                                                                        document.getElementById(`size-input-${item.id}-${index}`)?.focus();
-                                                                    }, 0);
-                                                                }}
-                                                            >
-                                                                <Plus className="h-3 w-3" />
-                                                                {size.name}
-                                                            </Button>
-                                                        );
-                                                    } else {
-                                                        return (
-                                                            <div className="inline-flex items-center bg-primary text-primary-foreground rounded-full h-8 pl-3 pr-1 gap-2 shadow-sm">
-                                                                <span className="text-xs font-medium">{size.name}</span>
-                                                                <Input
-                                                                    id={`size-input-${item.id}-${index}`}
-                                                                    type="number"
-                                                                    className="w-12 h-6 px-1.5 py-0 text-xs bg-primary-foreground text-primary border-none focus-visible:ring-0 focus-visible:ring-offset-0 rounded-md font-bold"
-                                                                    value={field.value}
-                                                                    onChange={(e) => field.onChange(Number(e.target.value))}
-                                                                    onBlur={() => {
-                                                                        if (Number(field.value) === 0) field.onChange(0);
-                                                                    }}
-                                                                />
-                                                            </div>
-                                                        );
-                                                    }
-                                                }}
-                                            />
-                                        ))}
-                                    </div>
-                                )}
-
-                                {product?.customFields && product.customFields.length > 0 && (
-                                    <div className="flex flex-wrap items-center gap-x-6 gap-y-3 pt-2">
-                                        {product.customFields.map((field) => (
+                            {/* Row 2: Custom Fields (Remaining) */}
+                            {product?.customFields && product.customFields.length > (promotedCustomField ? 1 : 0) && (
+                                <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+                                    {product.customFields.map((field) => {
+                                        if (field.id === promotedCustomField?.id) return null;
+                                        return (
                                             <div key={field.id} className="flex items-center gap-3">
                                                 <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap">
                                                     {field.name}
                                                 </Label>
-                                                <Input 
-                                                    type="number" 
-                                                    className="w-16 h-10 px-2 text-sm bg-background" 
-                                                    {...register(`customFieldValues.${field.id}`, { valueAsNumber: true })} 
-                                                />
+                                                <div className="flex items-center gap-2">
+                                                    <Input 
+                                                        type="number" 
+                                                        className={cn("w-16 h-10 px-2 text-sm bg-background", errors.customFieldValues?.[field.id] && "border-destructive")} 
+                                                        {...register(`customFieldValues.${field.id}`, { valueAsNumber: true })} 
+                                                    />
+                                                    {errors.customFieldValues?.[field.id] && (
+                                                        <TooltipProvider>
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <AlertCircle className="h-4 w-4 text-destructive shrink-0 cursor-help" />
+                                                                </TooltipTrigger>
+                                                                <TooltipContent><p>{(errors.customFieldValues as any)?.[field.id]?.message || 'Required'}</p></TooltipContent>
+                                                            </Tooltip>
+                                                        </TooltipProvider>
+                                                    )}
+                                                </div>
                                             </div>
-                                        ))}
-                                    </div>
-                                )}
+                                        );
+                                    })}
+                                </div>
+                            )}
+
+                            {/* Row 3: Sizes Cluster */}
+                            {product?.sizes && product.sizes.length > 0 && (
+                                <div className="flex flex-wrap gap-2">
+                                    {product.sizes.map((size, index) => (
+                                        <Controller
+                                            key={size.name}
+                                            name={`sizes.${index}.quantity`}
+                                            control={control}
+                                            render={({ field }) => {
+                                                const isChecked = field.value > 0;
+                                                if (!isChecked) {
+                                                    return (
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="h-8 rounded-full px-3 gap-1.5 transition-all text-xs"
+                                                            onClick={() => {
+                                                                field.onChange(1);
+                                                                setTimeout(() => {
+                                                                    document.getElementById(`size-input-${item.id}-${index}`)?.focus();
+                                                                }, 0);
+                                                            }}
+                                                        >
+                                                            <Plus className="h-3 w-3" />
+                                                            {size.name}
+                                                        </Button>
+                                                    );
+                                                } else {
+                                                    return (
+                                                        <div className="inline-flex items-center bg-primary text-primary-foreground rounded-full h-8 pl-3 pr-1 gap-2 shadow-sm">
+                                                            <span className="text-xs font-medium">{size.name}</span>
+                                                            <Input
+                                                                id={`size-input-${item.id}-${index}`}
+                                                                type="number"
+                                                                className="w-12 h-6 px-1.5 py-0 text-xs bg-primary-foreground text-primary border-none focus-visible:ring-0 focus-visible:ring-offset-0 rounded-md font-bold"
+                                                                value={field.value}
+                                                                onChange={(e) => field.onChange(Number(e.target.value))}
+                                                                onBlur={() => {
+                                                                    if (Number(field.value) === 0) field.onChange(0);
+                                                                }}
+                                                            />
+                                                        </div>
+                                                    );
+                                                }
+                                            }}
+                                        />
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* Row 4: Add-ons Cluster */}
+                            {product?.addons && product.addons.length > 0 && (
+                                <div className="flex flex-wrap gap-2">
+                                    {product.addons.map((addon, index) => {
+                                        const parentIndex = addon.dependsOn ? product.addons!.findIndex(a => a.id === addon.dependsOn) : -1;
+                                        const parentValue = parentIndex !== -1 ? watchedValues.addons?.[parentIndex]?.value : undefined;
+                                        const isParentActive = parentValue !== undefined ? (typeof parentValue === 'number' ? parentValue > 0 : !!parentValue) : true;
+                                        
+                                        if (!((!addon.dependsOn || isParentActive) && (!addon.visibleIfVariant || watchedValues.variant === addon.visibleIfVariant))) return null;
+                                        
+                                        return (
+                                            <Controller
+                                                key={addon.id}
+                                                name={`addons.${index}.value`}
+                                                control={control}
+                                                render={({ field }) => {
+                                                    const isChecked = typeof field.value === 'number' ? field.value > 0 : !!field.value;
+                                                    
+                                                    if (addon.type === 'checkbox') {
+                                                        return (
+                                                            <Button
+                                                                type="button"
+                                                                variant={field.value ? "default" : "outline"}
+                                                                size="sm"
+                                                                className="h-8 rounded-full px-3 gap-1.5 transition-all text-xs"
+                                                                onClick={() => field.onChange(!field.value)}
+                                                            >
+                                                                {field.value ? <Check className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
+                                                                {addon.name}
+                                                            </Button>
+                                                        );
+                                                    } else {
+                                                        if (!isChecked) {
+                                                            return (
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    className="h-8 rounded-full px-3 gap-1.5 transition-all text-xs"
+                                                                    onClick={() => {
+                                                                        field.onChange(1);
+                                                                        setTimeout(() => {
+                                                                            document.getElementById(`addon-input-${addon.id}`)?.focus();
+                                                                        }, 0);
+                                                                    }}
+                                                                >
+                                                                    <Plus className="h-3 w-3" />
+                                                                    {addon.name}
+                                                                </Button>
+                                                            );
+                                                        } else {
+                                                            return (
+                                                                <div className="inline-flex items-center bg-primary text-primary-foreground rounded-full h-8 pl-3 pr-1 gap-2 shadow-sm">
+                                                                    <span className="text-xs font-medium">{addon.name}</span>
+                                                                    <Input
+                                                                        id={`addon-input-${addon.id}`}
+                                                                        type="number"
+                                                                        className="w-12 h-6 px-1.5 py-0 text-xs bg-primary-foreground text-primary border-none focus-visible:ring-0 focus-visible:ring-offset-0 rounded-md font-bold"
+                                                                        value={field.value as number}
+                                                                        onChange={(e) => field.onChange(Number(e.target.value))}
+                                                                        onBlur={() => {
+                                                                            if (Number(field.value) === 0) field.onChange(0);
+                                                                        }}
+                                                                    />
+                                                                </div>
+                                                            );
+                                                        }
+                                                    }
+                                                }}
+                                            />
+                                        );
+                                    })}
+                                </div>
+                            )}
+
+                            {/* Row 5: Footer (Special Request) */}
+                            <div className="w-full">
+                                {renderNotesArea(true)}
                             </div>
                         </div>
                     )}
