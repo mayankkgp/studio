@@ -23,12 +23,6 @@ export type Addon = {
   visibleIfVariant?: string; // Only show if product variant matches
 };
 
-export type ProductSize = {
-  name: string;
-  rateKey: string;
-  softConstraints?: SoftConstraint[];
-};
-
 export type CustomField = {
   id: string;
   name: string;
@@ -40,13 +34,14 @@ export type CustomField = {
 export type Product = {
   id: number;
   name: string;
-  configType: 'A' | 'B' | 'C' | 'D' | 'E';
+  configType: 'A' | 'B' | 'C' | 'D';
   basePrice: number;
   variants?: string[];
+  variantRateKeys?: Record<string, string>;
+  variantConstraints?: Record<string, SoftConstraint[]>;
   softConstraints?: SoftConstraint[];
   addons?: Addon[];
   customFields?: CustomField[];
-  sizes?: ProductSize[];
   specialLogic?: 'RitualCardBlossom' | 'MenuCardCustom' | 'BadgesCustom' | 'WaxSealCustomQty';
 };
 
@@ -56,13 +51,8 @@ export type ConfiguredProductAddon = {
   value: boolean | number | null;
 };
 
-export type ConfiguredProductSize = {
-  name: string;
-  quantity: number | null;
-};
-
 export type ConfiguredProduct = {
-  id: string; // Unique ID for this specific instance in the cart
+  id: string; 
   productId: number;
   productName: string;
   variant?: string;
@@ -70,7 +60,6 @@ export type ConfiguredProduct = {
   pages?: number | null;
   customFieldValues?: Record<string, number | null>;
   addons: ConfiguredProductAddon[];
-  sizes?: ConfiguredProductSize[];
   specialRequest?: string;
   warning?: string;
 };

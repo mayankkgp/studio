@@ -12,6 +12,12 @@ export function calculateBillableItems(deliverables: ConfiguredProduct[]): Billa
         const components: BillableComponent[] = [];
         const productName = `${item.productName}${item.variant ? ` (${item.variant})` : ''}`;
 
+        // Resolve rate: Use variant-specific rate key if it exists, otherwise use basePrice
+        let baseRate = product.basePrice;
+        if (item.variant && product.variantRateKeys && product.variantRateKeys[item.variant]) {
+            baseRate = getRate(product.variantRateKeys[item.variant]);
+        }
+
         // Handle base price based on config type
         switch (product.configType) {
             case 'A':
@@ -19,8 +25,8 @@ export function calculateBillableItems(deliverables: ConfiguredProduct[]): Billa
                     components.push({
                         label: 'Base Price',
                         multiplier: item.quantity,
-                        rate: product.basePrice,
-                        total: product.basePrice * item.quantity,
+                        rate: baseRate,
+                        total: baseRate * item.quantity,
                         isFixed: false,
                     });
                 }
@@ -30,22 +36,20 @@ export function calculateBillableItems(deliverables: ConfiguredProduct[]): Billa
                     components.push({
                         label: 'Base Price',
                         multiplier: item.pages,
-                        rate: product.basePrice,
-                        total: product.basePrice * item.pages,
+                        rate: baseRate,
+                        total: baseRate * item.pages,
                         isFixed: false,
                     });
                 }
                 break;
-            // For C, D, E, base price is 0 and cost is derived from addons/sizes/fields
             case 'C':
             case 'D':
-            case 'E':
-                if (product.basePrice > 0) {
+                if (baseRate > 0) {
                      components.push({
                         label: 'Design & Setup Fee',
                         multiplier: 1,
-                        rate: product.basePrice,
-                        total: product.basePrice,
+                        rate: baseRate,
+                        total: baseRate,
                         isFixed: true,
                     });
                 }
@@ -78,7 +82,7 @@ export function calculateBillableItems(deliverables: ConfiguredProduct[]): Billa
             let multiplier = 0;
 
             if (addonDef.type === 'checkbox' && addon.value === true) {
-                multiplier = item.quantity || 1; // Apply to each main product quantity if it exists
+                multiplier = item.quantity || 1; 
             } else if ((addonDef.type === 'numeric' || addonDef.type === 'physical_quantity') && typeof addon.value === 'number' && addon.value > 0) {
                 multiplier = addon.value;
             }
@@ -93,23 +97,6 @@ export function calculateBillableItems(deliverables: ConfiguredProduct[]): Billa
                 });
             }
         });
-
-        // Sizes (Type E)
-        if (item.sizes) {
-            item.sizes.forEach(size => {
-                const sizeDef = product.sizes?.find(s => s.name === size.name);
-                if (sizeDef && size.quantity > 0) {
-                    const rate = getRate(sizeDef.rateKey);
-                    components.push({
-                        label: `Size: ${size.name}`,
-                        multiplier: size.quantity,
-                        rate: rate,
-                        total: rate * size.quantity,
-                        isFixed: false,
-                    });
-                }
-            });
-        }
         
         return {
             productName,

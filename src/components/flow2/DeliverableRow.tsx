@@ -56,28 +56,16 @@ const getValidationSchema = (product: Product | null) => {
         specialRequest: z.string().optional(),
     };
 
+    // Primary Quantity/Pages with Variant-Aware Soft Constraints
     if (product.configType === 'A') {
-        let qSchema = z.number({ required_error: "Required", invalid_type_error: "Required" });
-        if (product.softConstraints) {
-            product.softConstraints.forEach(constraint => {
-                if (constraint.type === 'min') qSchema = qSchema.min(constraint.value, constraint.message.toUpperCase());
-                if (constraint.type === 'max') qSchema = qSchema.max(constraint.value, constraint.message.toUpperCase());
-            });
-        }
-        schemaObject.quantity = qSchema;
+        schemaObject.quantity = z.number({ required_error: "Required", invalid_type_error: "Required" });
     }
     
     if (product.configType === 'B') {
-        let pSchema = z.number({ required_error: "Required", invalid_type_error: "Required" });
-        if (product.softConstraints) {
-            product.softConstraints.forEach(constraint => {
-                if (constraint.type === 'min') pSchema = pSchema.min(constraint.value, constraint.message.toUpperCase());
-                if (constraint.type === 'max') pSchema = pSchema.max(constraint.value, constraint.message.toUpperCase());
-            });
-        }
-        schemaObject.pages = pSchema;
+        schemaObject.pages = z.number({ required_error: "Required", invalid_type_error: "Required" });
     }
     
+    // Custom Fields
     if (product.customFields) {
         schemaObject.customFieldValues = z.object(
             product.customFields.reduce((acc, field) => {
@@ -93,6 +81,7 @@ const getValidationSchema = (product: Product | null) => {
         ).optional();
     }
     
+    // Optional Addons: Mandatory values ONLY if selected
     if (product.addons) {
         schemaObject.addons = z.array(z.object({
             id: z.string(), 
@@ -139,36 +128,37 @@ const getValidationSchema = (product: Product | null) => {
         });
     }
 
-    if (product.sizes) {
-        schemaObject.sizes = z.array(z.object({
-            name: z.string(), 
-            quantity: z.union([z.number(), z.null(), z.undefined(), z.literal('')])
-        })).superRefine((sizes, ctx) => {
-            sizes.forEach((size, idx) => {
-                const sizeDef = product.sizes?.find(s => s.name === size.name);
-                if (sizeDef && sizeDef.softConstraints && size.quantity !== undefined && size.quantity !== null && size.quantity !== '') {
-                    sizeDef.softConstraints.forEach(constraint => {
-                        if (constraint.type === 'min' && (size.quantity as number) < constraint.value) {
-                            ctx.addIssue({
-                                code: z.ZodIssueCode.custom,
-                                message: constraint.message.toUpperCase(),
-                                path: [idx, 'quantity']
-                            });
-                        }
-                        if (constraint.type === 'max' && (size.quantity as number) > constraint.value) {
-                            ctx.addIssue({
-                                code: z.ZodIssueCode.custom,
-                                message: constraint.message.toUpperCase(),
-                                path: [idx, 'quantity']
-                            });
-                        }
-                    });
-                }
-            });
-        });
-    }
-    
-    return z.object(schemaObject);
+    // Wrap the base schema to apply variant-specific constraints to Quantity/Pages
+    return z.object(schemaObject).superRefine((data: any, ctx) => {
+        const val = product.configType === 'A' ? data.quantity : data.pages;
+        const fieldKey = product.configType === 'A' ? 'quantity' : 'pages';
+
+        if (val !== undefined && val !== null && val !== '') {
+            // Check global product constraints
+            if (product.softConstraints) {
+                product.softConstraints.forEach(c => {
+                    if (c.type === 'min' && val < c.value) {
+                        ctx.addIssue({ code: z.ZodIssueCode.custom, path: [fieldKey], message: c.message.toUpperCase() });
+                    }
+                    if (c.type === 'max' && val > c.value) {
+                        ctx.addIssue({ code: z.ZodIssueCode.custom, path: [fieldKey], message: c.message.toUpperCase() });
+                    }
+                });
+            }
+
+            // Check variant-specific constraints
+            if (data.variant && product.variantConstraints && product.variantConstraints[data.variant]) {
+                product.variantConstraints[data.variant].forEach(c => {
+                    if (c.type === 'min' && val < c.value) {
+                        ctx.addIssue({ code: z.ZodIssueCode.custom, path: [fieldKey], message: c.message.toUpperCase() });
+                    }
+                    if (c.type === 'max' && val > c.value) {
+                        ctx.addIssue({ code: z.ZodIssueCode.custom, path: [fieldKey], message: c.message.toUpperCase() });
+                    }
+                });
+            }
+        }
+    });
 };
 
 export const DeliverableRow = React.memo(function DeliverableRow({ 
@@ -181,7 +171,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
     onRemove
 }: DeliverableRowProps) {
     const product = productCatalog.find(p => p.id === item.productId) || null;
-    const isBranchA = product?.configType === 'A';
+    const isBranchA = product?.configType === 'A' || product?.configType === 'B';
     const hasValidated = React.useRef(false);
     
     const qtyInputRef = React.useRef<HTMLInputElement>(null);
@@ -204,10 +194,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                     name: addon.name, 
                     value: existingAddon?.value ?? undefined
                 };
-            }) || [],
-            sizes: product?.sizes?.map(size => {
-                const existingSize = item.sizes?.find(s => s.name === size.name);
-                return { name: size.name, quantity: existingSize?.quantity ?? undefined };
             }) || []
         },
         mode: 'onChange'
@@ -243,23 +229,11 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         }
     }, [isValid, item.id, onValidityChange]);
 
-    React.useEffect(() => {
-        if (isExpanded && !isValid) {
-            const timer = setTimeout(() => {
-                if (product?.configType === 'A') {
-                    qtyInputRef.current?.focus();
-                }
-            }, 100);
-            return () => clearTimeout(timer);
-        }
-    }, [isExpanded, isValid, product]);
-
     const performSyncUpdate = React.useCallback(() => {
         const currentValues = getValues();
         onUpdate(item.id, {
             ...currentValues,
-            addons: currentValues.addons?.filter((a: any) => a.value !== undefined) as any,
-            sizes: currentValues.sizes?.filter((s: any) => s.quantity !== undefined) as any
+            addons: currentValues.addons?.filter((a: any) => a.value !== undefined) as any
         });
     }, [getValues, item.id, onUpdate]);
 
@@ -275,7 +249,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         watchedValues.specialRequest, 
         watchedValues.customFieldValues, 
         watchedValues.addons, 
-        watchedValues.sizes, 
         watchedValues.variant, 
         performSyncUpdate,
         trigger
@@ -326,8 +299,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             parts.push(`${watchedValues.pages} Pages`);
         }
         
-        if (!hasVariants && parts.length === 0) return '';
-        
         return parts.join(' • ');
     };
 
@@ -355,12 +326,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             }
         }
 
-        if (errors.sizes && Array.isArray(errors.sizes)) {
-            for (const err of (errors.sizes as any[])) {
-                const msg = err?.quantity?.message || err?.message;
-                if (msg && String(msg).toUpperCase() !== 'REQUIRED') return String(msg).toUpperCase();
-            }
-        }
+        if (errors.variant && (errors.variant as any).message?.toUpperCase() !== 'REQUIRED') return (errors.variant as any).message?.toUpperCase();
 
         return 'SETUP REQUIRED';
     }, [isValid, errors]);
@@ -371,7 +337,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             case 'B': return Clapperboard;
             case 'C': return FileText;
             case 'D': return MailOpen;
-            case 'E': return Frame;
             default: return Package;
         }
     };
@@ -415,14 +380,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             </Button>
         );
     };
-
-    const promotedCustomField = React.useMemo(() => {
-        if (product?.configType === 'A' || product?.configType === 'B') return null;
-        if (product?.customFields?.length === 1) {
-            return product.customFields[0];
-        }
-        return null;
-    }, [product]);
 
     const hasConstraintError = (error: any) => {
         return error?.message && error.message.toUpperCase() !== 'REQUIRED';
@@ -468,30 +425,38 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                 </div>
             );
         }
-        if (promotedCustomField) {
-            const hasError = hasConstraintError((errors.customFieldValues as any)?.[promotedCustomField.id]);
-            return (
-                <div className="flex items-center gap-4">
-                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap min-w-[40px]">
-                        {promotedCustomField.name} *
-                    </Label>
-                    <Input 
-                        id={`custom-input-${item.id}-${promotedCustomField.id}`}
-                        type="number" 
-                        className={cn(
-                            "w-24 h-10 text-lg bg-background [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
-                            hasError && "border-destructive ring-destructive focus-visible:ring-destructive"
-                        )}
-                        {...register(`customFieldValues.${promotedCustomField.id}`, { valueAsNumber: true })} 
-                    />
-                </div>
-            );
-        }
         return null;
     };
 
+    const renderVariantSelection = () => {
+        if (!product?.variants || product.variants.length === 0) return null;
+        return (
+            <div className="flex items-start gap-4 flex-1">
+                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap min-w-[40px] mt-2.5">
+                    Variant *
+                </Label>
+                <div className="flex flex-wrap gap-2">
+                    {product.variants!.map(v => (
+                        <Button
+                            key={v}
+                            type="button"
+                            variant={watchedValues.variant === v ? "default" : "outline"}
+                            size="sm"
+                            className={cn(
+                                "h-9 rounded-full px-4 transition-all",
+                                watchedValues.variant === v ? "shadow-sm" : "hover:bg-accent hover:text-accent-foreground"
+                            )}
+                            onClick={() => form.setValue('variant', v, { shouldValidate: true })}
+                        >
+                            {v}
+                        </Button>
+                    ))}
+                </div>
+            </div>
+        );
+    };
+
     const isComplexProduct = item.productId === 4 || item.productId === 5; 
-    const showHeader = (product?.variants && product.variants.length > 0) || renderPromotedInput() !== null;
     const warningText = getPriorityWarning();
 
     return (
@@ -566,222 +531,141 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                 </div>
 
                 <AccordionContent className="px-4 pb-4 border-t bg-muted/5 relative">
-                    {isBranchA ? (
-                        <div className="flex flex-wrap items-center gap-8 pt-4 pb-2">
-                            {renderPromotedInput()}
-                            <div className="flex-1 min-w-[250px]">
-                                {renderNotesArea()}
+                    <div className="flex flex-col gap-6 pt-4">
+                        {isBranchA && (
+                            <div className="flex flex-wrap items-start justify-between gap-6">
+                                {renderVariantSelection()}
+                                {renderPromotedInput()}
                             </div>
-                        </div>
-                    ) : (
-                        <div className="flex flex-col gap-6 pt-4">
-                            {showHeader && (
-                                <div className="flex flex-wrap items-start justify-between gap-6">
-                                    {product?.variants && product.variants.length > 0 ? (
-                                        <div className="flex items-start gap-4 flex-1">
-                                            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap min-w-[40px] mt-2.5">
-                                                Variant *
-                                            </Label>
-                                            <div className="flex flex-wrap gap-2">
-                                                {product.variants!.map(v => (
-                                                    <Button
-                                                        key={v}
-                                                        type="button"
-                                                        variant={watchedValues.variant === v ? "default" : "outline"}
-                                                        size="sm"
-                                                        className={cn(
-                                                            "h-9 rounded-full px-4 transition-all",
-                                                            watchedValues.variant === v ? "shadow-sm" : "hover:bg-accent hover:text-accent-foreground"
-                                                        )}
-                                                        onClick={() => form.setValue('variant', v, { shouldValidate: true })}
-                                                    >
-                                                        {v}
-                                                    </Button>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    ) : <div className="flex-1" />}
-                                    {renderPromotedInput()}
-                                </div>
-                            )}
+                        )}
 
-                            {product?.customFields && product.customFields.length > (promotedCustomField ? 1 : 0) && (
-                                <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-                                    {product.customFields.map((field) => {
-                                        if (field.id === promotedCustomField?.id) return null;
-                                        const hasError = hasConstraintError((errors.customFieldValues as any)?.[field.id]);
+                        {!isBranchA && product?.variants && product.variants.length > 0 && (
+                             <div className="flex flex-wrap items-start justify-between gap-6">
+                                {renderVariantSelection()}
+                             </div>
+                        )}
+
+                        {product?.customFields && product.customFields.length > 0 && (
+                            <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+                                {product.customFields.map((field) => {
+                                    const hasError = hasConstraintError((errors.customFieldValues as any)?.[field.id]);
+                                    return (
+                                        <div key={field.id} className="flex items-center gap-3">
+                                            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap">
+                                                {field.name} *
+                                            </Label>
+                                            <Input 
+                                                id={`custom-input-${item.id}-${field.id}`}
+                                                type="number" 
+                                                className={cn(
+                                                    "w-16 h-10 px-2 text-sm bg-background [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
+                                                    hasError && "border-destructive ring-destructive focus-visible:ring-destructive"
+                                                )}
+                                                {...register(`customFieldValues.${field.id}`, { valueAsNumber: true })} 
+                                            />
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+
+                        <div className={cn("flex", isComplexProduct ? "flex-col items-stretch gap-4" : "flex-wrap items-start gap-6")}>
+                            {product?.addons && product.addons.length > 0 && (
+                                <div className="flex flex-wrap gap-2">
+                                    {product.addons.map((addon, index) => {
+                                        const parentIndex = addon.dependsOn ? product.addons!.findIndex(a => a.id === addon.dependsOn) : -1;
+                                        const parentValue = parentIndex !== -1 ? watchedValues.addons?.[parentIndex]?.value : undefined;
+                                        const isParentActive = parentValue !== undefined ? (typeof parentValue === 'number' || parentValue === null ? true : !!parentValue) : true;
+                                        
+                                        if (!((!addon.dependsOn || isParentActive) && (!addon.visibleIfVariant || watchedValues.variant === addon.visibleIfVariant))) return null;
+                                        
                                         return (
-                                            <div key={field.id} className="flex items-center gap-3">
-                                                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap">
-                                                    {field.name} *
-                                                </Label>
-                                                <Input 
-                                                    id={`custom-input-${item.id}-${field.id}`}
-                                                    type="number" 
-                                                    className={cn(
-                                                        "w-16 h-10 px-2 text-sm bg-background [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
-                                                        hasError && "border-destructive ring-destructive focus-visible:ring-destructive"
-                                                    )}
-                                                    {...register(`customFieldValues.${field.id}`, { valueAsNumber: true })} 
-                                                />
-                                            </div>
+                                            <Controller
+                                                key={addon.id}
+                                                name={`addons.${index}.value`}
+                                                control={control}
+                                                render={({ field }) => {
+                                                    const isChecked = field.value !== undefined;
+                                                    const hasError = (errors.addons as any)?.[index]?.value;
+                                                    
+                                                    if (addon.type === 'checkbox') {
+                                                        return (
+                                                            <Button
+                                                                type="button"
+                                                                variant={field.value ? "default" : "outline"}
+                                                                size="sm"
+                                                                className="h-8 rounded-full px-3 gap-1.5 transition-all text-xs"
+                                                                onClick={() => field.onChange(field.value ? undefined : true)}
+                                                            >
+                                                                {field.value ? <Check className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
+                                                                {addon.name}
+                                                            </Button>
+                                                        );
+                                                    } else {
+                                                        if (!isChecked) {
+                                                            return (
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    className="h-8 rounded-full px-3 gap-1.5 transition-all text-xs"
+                                                                    onClick={() => {
+                                                                        field.onChange(null); 
+                                                                        setTimeout(() => {
+                                                                            document.getElementById(`addon-input-${item.id}-${addon.id}`)?.focus();
+                                                                        }, 0);
+                                                                    }}
+                                                                >
+                                                                    <Plus className="h-3 w-3" />
+                                                                    {addon.name}
+                                                                </Button>
+                                                            );
+                                                        } else {
+                                                            return (
+                                                                <div className={cn(
+                                                                    "inline-flex items-center rounded-full h-8 pl-3 pr-1 gap-2 shadow-sm transition-colors",
+                                                                    hasError ? "bg-destructive text-destructive-foreground" : "bg-primary text-primary-foreground"
+                                                                )}>
+                                                                    <span className="text-xs font-medium cursor-pointer" onClick={() => field.onChange(undefined)}>
+                                                                        {addon.name}
+                                                                    </span>
+                                                                    <Input
+                                                                        id={`addon-input-${item.id}-${addon.id}`}
+                                                                        type="number"
+                                                                        className="h-6 px-2 py-0 text-xs bg-white border-none focus-visible:ring-0 focus-visible:ring-offset-0 rounded-md font-bold text-black [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                                        style={{ width: `${Math.max(2, String(field.value ?? '').length + 2)}ch` }}
+                                                                        value={field.value ?? ''}
+                                                                        onChange={(e) => field.onChange(e.target.value === '' ? null : Number(e.target.value))}
+                                                                        onKeyDown={(e) => { 
+                                                                            if (e.key === 'Enter') e.currentTarget.blur(); 
+                                                                        }}
+                                                                    />
+                                                                    {hasError && (
+                                                                        <TooltipProvider>
+                                                                            <Tooltip>
+                                                                                <TooltipTrigger asChild>
+                                                                                    <AlertCircle className="h-3 w-3 shrink-0" />
+                                                                                </TooltipTrigger>
+                                                                                <TooltipContent><p>{hasError.message}</p></TooltipContent>
+                                                                            </Tooltip>
+                                                                        </TooltipProvider>
+                                                                    )}
+                                                                </div>
+                                                            );
+                                                        }
+                                                    }
+                                                }}
+                                            />
                                         );
                                     })}
                                 </div>
                             )}
 
-                            {product?.sizes && product.sizes.length > 0 && (
-                                <div className="flex flex-wrap gap-2">
-                                    {product.sizes.map((size, index) => (
-                                        <Controller
-                                            key={size.name}
-                                            name={`sizes.${index}.quantity`}
-                                            control={control}
-                                            render={({ field }) => {
-                                                const isChecked = field.value !== undefined;
-                                                
-                                                if (!isChecked) {
-                                                    return (
-                                                        <Button
-                                                            type="button"
-                                                            variant="outline"
-                                                            size="sm"
-                                                            className="h-8 rounded-full px-3 gap-1.5 transition-all text-xs"
-                                                            onClick={() => {
-                                                                field.onChange(null); 
-                                                                setTimeout(() => {
-                                                                    document.getElementById(`size-input-${item.id}-${size.name.replace(/\s+/g, '-')}`)?.focus();
-                                                                }, 0);
-                                                            }}
-                                                        >
-                                                            <Plus className="h-3 w-3" />
-                                                            {size.name}
-                                                        </Button>
-                                                    );
-                                                } else {
-                                                    return (
-                                                        <div className="inline-flex items-center rounded-full h-8 pl-3 pr-1 gap-2 shadow-sm transition-colors bg-primary text-primary-foreground">
-                                                            <span className="text-xs font-medium cursor-pointer" onClick={() => field.onChange(undefined)}>
-                                                                {size.name}
-                                                            </span>
-                                                            <Input
-                                                                id={`size-input-${item.id}-${size.name.replace(/\s+/g, '-')}`}
-                                                                type="number"
-                                                                className="h-6 px-2 py-0 text-xs bg-white border-none focus-visible:ring-0 focus-visible:ring-offset-0 rounded-md font-bold text-black [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                                                style={{ width: `${Math.max(2, String(field.value ?? '').length + 2)}ch` }}
-                                                                value={field.value ?? ''}
-                                                                onChange={(e) => field.onChange(e.target.value === '' ? null : Number(e.target.value))}
-                                                                onKeyDown={(e) => { 
-                                                                    if (e.key === 'Enter') e.currentTarget.blur(); 
-                                                                }}
-                                                            />
-                                                        </div>
-                                                    );
-                                                }
-                                            }}
-                                        />
-                                    ))}
-                                </div>
-                            )}
-
-                            <div className={cn("flex", isComplexProduct ? "flex-col items-stretch gap-4" : "flex-wrap items-start gap-6")}>
-                                {product?.addons && product.addons.length > 0 && (
-                                    <div className="flex flex-wrap gap-2">
-                                        {product.addons.map((addon, index) => {
-                                            const parentIndex = addon.dependsOn ? product.addons!.findIndex(a => a.id === addon.dependsOn) : -1;
-                                            const parentValue = parentIndex !== -1 ? watchedValues.addons?.[parentIndex]?.value : undefined;
-                                            const isParentActive = parentValue !== undefined ? (typeof parentValue === 'number' || parentValue === null ? true : !!parentValue) : true;
-                                            
-                                            if (!((!addon.dependsOn || isParentActive) && (!addon.visibleIfVariant || watchedValues.variant === addon.visibleIfVariant))) return null;
-                                            
-                                            return (
-                                                <Controller
-                                                    key={addon.id}
-                                                    name={`addons.${index}.value`}
-                                                    control={control}
-                                                    render={({ field }) => {
-                                                        const isChecked = field.value !== undefined;
-                                                        const hasError = (errors.addons as any)?.[index]?.value;
-                                                        
-                                                        if (addon.type === 'checkbox') {
-                                                            return (
-                                                                <Button
-                                                                    type="button"
-                                                                    variant={field.value ? "default" : "outline"}
-                                                                    size="sm"
-                                                                    className="h-8 rounded-full px-3 gap-1.5 transition-all text-xs"
-                                                                    onClick={() => field.onChange(field.value ? undefined : true)}
-                                                                >
-                                                                    {field.value ? <Check className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
-                                                                    {addon.name}
-                                                                </Button>
-                                                            );
-                                                        } else {
-                                                            if (!isChecked) {
-                                                                return (
-                                                                    <Button
-                                                                        type="button"
-                                                                        variant="outline"
-                                                                        size="sm"
-                                                                        className="h-8 rounded-full px-3 gap-1.5 transition-all text-xs"
-                                                                        onClick={() => {
-                                                                            field.onChange(null); 
-                                                                            setTimeout(() => {
-                                                                                document.getElementById(`addon-input-${item.id}-${addon.id}`)?.focus();
-                                                                            }, 0);
-                                                                        }}
-                                                                    >
-                                                                        <Plus className="h-3 w-3" />
-                                                                        {addon.name}
-                                                                    </Button>
-                                                                );
-                                                            } else {
-                                                                return (
-                                                                    <div className={cn(
-                                                                        "inline-flex items-center rounded-full h-8 pl-3 pr-1 gap-2 shadow-sm transition-colors",
-                                                                        hasError ? "bg-destructive text-destructive-foreground" : "bg-primary text-primary-foreground"
-                                                                    )}>
-                                                                        <span className="text-xs font-medium cursor-pointer" onClick={() => field.onChange(undefined)}>
-                                                                            {addon.name}
-                                                                        </span>
-                                                                        <Input
-                                                                            id={`addon-input-${item.id}-${addon.id}`}
-                                                                            type="number"
-                                                                            className="h-6 px-2 py-0 text-xs bg-white border-none focus-visible:ring-0 focus-visible:ring-offset-0 rounded-md font-bold text-black [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                                                            style={{ width: `${Math.max(2, String(field.value ?? '').length + 2)}ch` }}
-                                                                            value={field.value ?? ''}
-                                                                            onChange={(e) => field.onChange(e.target.value === '' ? null : Number(e.target.value))}
-                                                                            onKeyDown={(e) => { 
-                                                                                if (e.key === 'Enter') e.currentTarget.blur(); 
-                                                                            }}
-                                                                        />
-                                                                        {hasError && (
-                                                                            <TooltipProvider>
-                                                                                <Tooltip>
-                                                                                    <TooltipTrigger asChild>
-                                                                                        <AlertCircle className="h-3 w-3 shrink-0" />
-                                                                                    </TooltipTrigger>
-                                                                                    <TooltipContent><p>{hasError.message}</p></TooltipContent>
-                                                                                </Tooltip>
-                                                                            </TooltipProvider>
-                                                                        )}
-                                                                    </div>
-                                                                );
-                                                            }
-                                                        }
-                                                    }}
-                                                />
-                                            );
-                                        })}
-                                    </div>
-                                )}
-
-                                <div className={cn(isComplexProduct ? "w-full" : "flex-1 min-w-[250px]")}>
-                                    {renderNotesArea(true)}
-                                </div>
+                            <div className={cn(isComplexProduct ? "w-full" : "flex-1 min-w-[250px]")}>
+                                {renderNotesArea(true)}
                             </div>
                         </div>
-                    )}
+                    </div>
                 </AccordionContent>
             </AccordionItem>
         </div>
