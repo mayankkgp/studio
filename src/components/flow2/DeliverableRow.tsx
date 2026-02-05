@@ -52,11 +52,10 @@ const getValidationSchema = (product: Product | null) => {
     if (!product) return z.object({});
     
     let schemaObject: any = {
-        variant: (product.variants && product.variants.length > 0) ? z.string().min(1, "Required") : z.string().optional(),
+        variant: z.string().optional(),
         specialRequest: z.string().optional(),
     };
 
-    // Primary Quantity/Pages with Variant-Aware Soft Constraints
     if (product.configType === 'A') {
         schemaObject.quantity = z.number({ required_error: "Required", invalid_type_error: "Required" });
     }
@@ -65,7 +64,6 @@ const getValidationSchema = (product: Product | null) => {
         schemaObject.pages = z.number({ required_error: "Required", invalid_type_error: "Required" });
     }
     
-    // Custom Fields
     if (product.customFields) {
         schemaObject.customFieldValues = z.object(
             product.customFields.reduce((acc, field) => {
@@ -81,7 +79,6 @@ const getValidationSchema = (product: Product | null) => {
         ).optional();
     }
     
-    // Optional Addons: Mandatory values ONLY if selected
     if (product.addons) {
         schemaObject.addons = z.array(z.object({
             id: z.string(), 
@@ -128,13 +125,11 @@ const getValidationSchema = (product: Product | null) => {
         });
     }
 
-    // Wrap the base schema to apply variant-specific constraints to Quantity/Pages
     return z.object(schemaObject).superRefine((data: any, ctx) => {
         const val = product.configType === 'A' ? data.quantity : data.pages;
         const fieldKey = product.configType === 'A' ? 'quantity' : 'pages';
 
         if (val !== undefined && val !== null && val !== '') {
-            // Check global product constraints
             if (product.softConstraints) {
                 product.softConstraints.forEach(c => {
                     if (c.type === 'min' && val < c.value) {
@@ -146,7 +141,6 @@ const getValidationSchema = (product: Product | null) => {
                 });
             }
 
-            // Check variant-specific constraints
             if (data.variant && product.variantConstraints && product.variantConstraints[data.variant]) {
                 product.variantConstraints[data.variant].forEach(c => {
                     if (c.type === 'min' && val < c.value) {
@@ -174,9 +168,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
     const isBranchA = product?.configType === 'A' || product?.configType === 'B';
     const hasValidated = React.useRef(false);
     
-    const qtyInputRef = React.useRef<HTMLInputElement>(null);
     const notesRef = React.useRef<HTMLTextAreaElement | null>(null);
-
     const [showNotes, setShowNotes] = React.useState(!!item.specialRequest);
 
     const form = useForm({
@@ -200,7 +192,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
     });
 
     const { register, control, watch, formState: { errors, isValid }, trigger, getValues } = form;
-    
     const watchedValues = watch();
 
     const adjustHeight = React.useCallback((el: HTMLTextAreaElement | null) => {
@@ -233,7 +224,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         const currentValues = getValues();
         onUpdate(item.id, {
             ...currentValues,
-            addons: currentValues.addons?.filter((a: any) => a.value !== undefined) as any
+            addons: (currentValues.addons || []).filter((a: any) => a.value !== undefined) as any
         });
     }, [getValues, item.id, onUpdate]);
 
@@ -287,18 +278,12 @@ export const DeliverableRow = React.memo(function DeliverableRow({
     const getSummaryText = () => {
         if (!product) return '';
         const parts: string[] = [];
-        const hasVariants = !!(product.variants && product.variants.length > 0);
-        
-        if (hasVariants && watchedValues.variant) {
-            parts.push(watchedValues.variant);
-        }
-        
+        if (watchedValues.variant) parts.push(watchedValues.variant);
         if (product.configType === 'A' && typeof watchedValues.quantity === 'number') {
             parts.push(`Qty: ${watchedValues.quantity}`);
         } else if (product.configType === 'B' && typeof watchedValues.pages === 'number') {
             parts.push(`${watchedValues.pages} Pages`);
         }
-        
         return parts.join(' • ');
     };
 
@@ -326,8 +311,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             }
         }
 
-        if (errors.variant && (errors.variant as any).message?.toUpperCase() !== 'REQUIRED') return (errors.variant as any).message?.toUpperCase();
-
         return 'SETUP REQUIRED';
     }, [isValid, errors]);
 
@@ -348,39 +331,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             ? "text-blue-600 bg-blue-50" 
             : "text-green-600 bg-green-100";
 
-    const renderNotesArea = (fullWidth: boolean = false) => {
-        if (showNotes) {
-            return (
-                <div className={cn("flex flex-col gap-1.5", fullWidth && "w-full min-w-[250px]")}>
-                    <Textarea 
-                        {...register('specialRequest')} 
-                        className="min-h-[40px] bg-background/50 overflow-hidden resize-none py-2 px-3 leading-6 border border-input rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" 
-                        placeholder="Add special instructions..."
-                        ref={(e) => {
-                            register('specialRequest').ref(e);
-                            notesRef.current = e;
-                        }}
-                        onChange={(e) => {
-                            register('specialRequest').onChange(e);
-                            adjustHeight(e.target);
-                        }}
-                    />
-                </div>
-            );
-        }
-        return (
-            <Button 
-                variant="ghost" 
-                size="sm" 
-                className="h-8 gap-2 text-muted-foreground hover:text-primary transition-colors p-0 hover:bg-transparent"
-                onClick={handleAddNote}
-            >
-                <MessageSquarePlus className="h-4 w-4" />
-                <span className="text-xs font-medium uppercase tracking-wider">Add Note</span>
-            </Button>
-        );
-    };
-
     const hasConstraintError = (error: any) => {
         return error?.message && error.message.toUpperCase() !== 'REQUIRED';
     };
@@ -399,11 +349,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                             "w-24 h-10 text-lg bg-background [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
                             hasError && "border-destructive ring-destructive focus-visible:ring-destructive"
                         )}
-                        ref={(e) => {
-                            register('quantity').ref(e);
-                            // @ts-ignore
-                            qtyInputRef.current = e;
-                        }}
                     />
                 </div>
             );
@@ -431,10 +376,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
     const renderVariantSelection = () => {
         if (!product?.variants || product.variants.length === 0) return null;
         return (
-            <div className="flex items-start gap-4 flex-1">
-                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap min-w-[40px] mt-2.5">
-                    Variant *
-                </Label>
+            <div className="flex items-start gap-2 flex-1">
                 <div className="flex flex-wrap gap-2">
                     {product.variants!.map(v => (
                         <Button
@@ -500,50 +442,31 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                     </div>
 
                     <div className="flex items-center gap-2 ml-4">
-                        <div className="flex items-center gap-2">
-                             <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="h-8 w-8 text-muted-foreground hover:text-destructive transition-colors"
-                                onClick={handleDelete}
-                            >
-                                <Trash2 className="h-4 w-4" />
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={handleDelete}>
+                            <Trash2 className="h-4 w-4" />
+                        </Button>
+                        {!isExpanded ? (
+                            <Button size="sm" variant="outline" onClick={handleEditClick} className="gap-2 h-8">
+                                <Pencil className="h-3.5 w-3.5" /> Edit
                             </Button>
-                            {!isExpanded ? (
-                                <Button size="sm" variant="outline" onClick={handleEditClick} className="gap-2 h-8">
-                                    <Pencil className="h-3.5 w-3.5" />
-                                    Edit
-                                </Button>
-                            ) : (
-                                <Button size="sm" onClick={handleDoneClick} className="gap-2 h-8" disabled={!isValid}>
-                                    <Check className="h-4 w-4" />
-                                    Done
-                                </Button>
-                            )}
-                        </div>
+                        ) : (
+                            <Button size="sm" onClick={handleDoneClick} className="gap-2 h-8" disabled={!isValid}>
+                                <Check className="h-4 w-4" /> Done
+                            </Button>
+                        )}
                     </div>
                 </div>
 
                 <div className="pointer-events-none absolute inset-0 -z-10">
-                    <AccordionTrigger className="invisible">
-                        Toggle
-                    </AccordionTrigger>
+                    <AccordionTrigger className="invisible">Toggle</AccordionTrigger>
                 </div>
 
                 <AccordionContent className="px-4 pb-4 border-t bg-muted/5 relative">
                     <div className="flex flex-col gap-6 pt-4">
-                        {isBranchA && (
-                            <div className="flex flex-wrap items-start justify-between gap-6">
-                                {renderVariantSelection()}
-                                {renderPromotedInput()}
-                            </div>
-                        )}
-
-                        {!isBranchA && product?.variants && product.variants.length > 0 && (
-                             <div className="flex flex-wrap items-start justify-between gap-6">
-                                {renderVariantSelection()}
-                             </div>
-                        )}
+                        <div className="flex flex-wrap items-start justify-between gap-6">
+                            {renderVariantSelection()}
+                            {isBranchA && renderPromotedInput()}
+                        </div>
 
                         {product?.customFields && product.customFields.length > 0 && (
                             <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
@@ -636,16 +559,11 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                                         style={{ width: `${Math.max(2, String(field.value ?? '').length + 2)}ch` }}
                                                                         value={field.value ?? ''}
                                                                         onChange={(e) => field.onChange(e.target.value === '' ? null : Number(e.target.value))}
-                                                                        onKeyDown={(e) => { 
-                                                                            if (e.key === 'Enter') e.currentTarget.blur(); 
-                                                                        }}
                                                                     />
                                                                     {hasError && (
                                                                         <TooltipProvider>
                                                                             <Tooltip>
-                                                                                <TooltipTrigger asChild>
-                                                                                    <AlertCircle className="h-3 w-3 shrink-0" />
-                                                                                </TooltipTrigger>
+                                                                                <TooltipTrigger asChild><AlertCircle className="h-3 w-3 shrink-0" /></TooltipTrigger>
                                                                                 <TooltipContent><p>{hasError.message}</p></TooltipContent>
                                                                             </Tooltip>
                                                                         </TooltipProvider>
@@ -662,7 +580,26 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                             )}
 
                             <div className={cn(isComplexProduct ? "w-full" : "flex-1 min-w-[250px]")}>
-                                {renderNotesArea(true)}
+                                {showNotes ? (
+                                    <Textarea 
+                                        {...register('specialRequest')} 
+                                        className="min-h-[40px] bg-background/50 overflow-hidden resize-none py-2 px-3 leading-6" 
+                                        placeholder="Add special instructions..."
+                                        ref={(e) => {
+                                            register('specialRequest').ref(e);
+                                            notesRef.current = e;
+                                        }}
+                                        onChange={(e) => {
+                                            register('specialRequest').onChange(e);
+                                            adjustHeight(e.target);
+                                        }}
+                                    />
+                                ) : (
+                                    <Button variant="ghost" size="sm" className="h-8 gap-2 text-muted-foreground hover:text-primary transition-colors p-0" onClick={handleAddNote}>
+                                        <MessageSquarePlus className="h-4 w-4" />
+                                        <span className="text-xs font-medium uppercase tracking-wider">Add Note</span>
+                                    </Button>
+                                )}
                             </div>
                         </div>
                     </div>
