@@ -10,7 +10,7 @@ import { CommandBar } from "@/components/flow2/CommandBar";
 import { DeliverableRow } from "@/components/flow2/DeliverableRow";
 import { Package, CheckCircle2, AlertCircle } from "lucide-react";
 import { Accordion } from "@/components/ui/accordion";
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function DeliverablesPage() {
@@ -85,12 +85,6 @@ export default function DeliverablesPage() {
         router.push('/commercials');
     }, [rowStatus, order.deliverables, router, toast]);
 
-    const handleAccordionChange = (newValues: string[]) => {
-        // Only allow changes for committed items
-        // Active items are always forced to be expanded in their own view logic
-        setOpenItems(newValues);
-    };
-
     return (
         <AppLayout>
             <div className="flex flex-col h-screen overflow-hidden">
@@ -124,12 +118,12 @@ export default function DeliverablesPage() {
                                         <p className="text-muted-foreground font-medium">Your queue is empty</p>
                                     </div>
                                 ) : (
-                                    <div className="space-y-2">
+                                    <Accordion type="multiple" value={activeItems.map(i => i.id)} className="space-y-2">
                                         {activeItems.map((item) => (
                                             <DeliverableRow 
                                                 key={item.id} 
                                                 item={item} 
-                                                isExpanded={true} // FORCE EXPANDED in Action Section
+                                                isExpanded={true}
                                                 onEdit={handleEdit}
                                                 onDone={handleDone}
                                                 onValidityChange={handleValidityChange}
@@ -137,7 +131,7 @@ export default function DeliverablesPage() {
                                                 onRemove={removeDeliverable}
                                             />
                                         ))}
-                                    </div>
+                                    </Accordion>
                                 )}
                             </section>
 
@@ -147,7 +141,7 @@ export default function DeliverablesPage() {
                                         <CheckCircle2 className="h-4 w-4" />
                                         Order List ({orderListItems.length})
                                     </h2>
-                                    <Accordion type="multiple" value={openItems} onValueChange={handleAccordionChange} className="space-y-2">
+                                    <Accordion type="multiple" value={openItems} onValueChange={setOpenItems} className="space-y-2">
                                         {orderListItems.map((item) => (
                                             <DeliverableRow 
                                                 key={item.id} 

@@ -34,7 +34,7 @@ export type CustomField = {
 export type Product = {
   id: number;
   name: string;
-  configType: 'A' | 'B' | 'C' | 'D'; // Removed Type E (Multi-Size)
+  configType: 'A' | 'B' | 'C' | 'D';
   basePrice: number;
   variants?: string[];
   variantRateKeys?: Record<string, string>;

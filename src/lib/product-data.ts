@@ -112,7 +112,6 @@ export const productCatalog: Product[] = [
     ]
   },
 
-  // Formerly Type E (Converted to C with Addons)
   { id: 18, name: 'Paper Bags', configType: 'C', basePrice: 0, variants: ['Catalogue', 'Custom'], addons: [
       { id: 'large', name: 'Large', type: 'physical_quantity', rateKey: 'paper_bag_large_rate', softConstraints: [{ type: 'min', value: 100, message: 'MOQ is 100.' }] },
       { id: 'medium', name: 'Medium', type: 'physical_quantity', rateKey: 'paper_bag_medium_rate', softConstraints: [{ type: 'min', value: 100, message: 'MOQ is 100.' }] },
