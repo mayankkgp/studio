@@ -135,7 +135,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         if (!el) return;
         el.style.height = '0px'; 
         const scrollHeight = el.scrollHeight;
-        // Base height is 40px (h-10), it only grows if content is larger
+        // Base height is 40px, it only grows if content is larger
         el.style.height = `${Math.max(40, scrollHeight)}px`;
     }, []);
 
@@ -245,10 +245,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             parts.push(`${watchedValues.pages} Pages`);
         }
         
-        // Simple products (no variants) are ready as long as quantity/pages is valid
         if (!hasVariants) return parts.join(' • ');
-
-        // Complex products require a variant to be selected
         if (!watchedValues.variant) return 'Setup Required';
         
         return parts.join(' • ');
@@ -514,153 +511,143 @@ export const DeliverableRow = React.memo(function DeliverableRow({
 
                             <div className="space-y-4">
                                 {product?.addons && product.addons.length > 0 && (
-                                    <div className="space-y-3">
-                                        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Add-ons</Label>
-                                        <div className="flex flex-wrap gap-2">
-                                            {product.addons.map((addon, index) => {
-                                                const parentIndex = addon.dependsOn ? product.addons!.findIndex(a => a.id === addon.dependsOn) : -1;
-                                                const parentValue = parentIndex !== -1 ? watchedValues.addons?.[parentIndex]?.value : undefined;
-                                                const isParentActive = parentValue !== undefined ? (typeof parentValue === 'number' ? parentValue > 0 : !!parentValue) : true;
-                                                
-                                                if (!((!addon.dependsOn || isParentActive) && (!addon.visibleIfVariant || watchedValues.variant === addon.visibleIfVariant))) return null;
-                                                
-                                                return (
-                                                    <Controller
-                                                        key={addon.id}
-                                                        name={`addons.${index}.value`}
-                                                        control={control}
-                                                        render={({ field }) => {
-                                                            const isChecked = typeof field.value === 'number' ? field.value > 0 : !!field.value;
-                                                            
-                                                            if (addon.type === 'checkbox') {
+                                    <div className="flex flex-wrap gap-2 pt-2">
+                                        {product.addons.map((addon, index) => {
+                                            const parentIndex = addon.dependsOn ? product.addons!.findIndex(a => a.id === addon.dependsOn) : -1;
+                                            const parentValue = parentIndex !== -1 ? watchedValues.addons?.[parentIndex]?.value : undefined;
+                                            const isParentActive = parentValue !== undefined ? (typeof parentValue === 'number' ? parentValue > 0 : !!parentValue) : true;
+                                            
+                                            if (!((!addon.dependsOn || isParentActive) && (!addon.visibleIfVariant || watchedValues.variant === addon.visibleIfVariant))) return null;
+                                            
+                                            return (
+                                                <Controller
+                                                    key={addon.id}
+                                                    name={`addons.${index}.value`}
+                                                    control={control}
+                                                    render={({ field }) => {
+                                                        const isChecked = typeof field.value === 'number' ? field.value > 0 : !!field.value;
+                                                        
+                                                        if (addon.type === 'checkbox') {
+                                                            return (
+                                                                <Button
+                                                                    type="button"
+                                                                    variant={field.value ? "default" : "outline"}
+                                                                    size="sm"
+                                                                    className="h-8 rounded-full px-3 gap-1.5 transition-all text-xs"
+                                                                    onClick={() => field.onChange(!field.value)}
+                                                                >
+                                                                    {field.value ? <Check className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
+                                                                    {addon.name}
+                                                                </Button>
+                                                            );
+                                                        } else {
+                                                            if (!isChecked) {
                                                                 return (
                                                                     <Button
                                                                         type="button"
-                                                                        variant={field.value ? "default" : "outline"}
+                                                                        variant="outline"
                                                                         size="sm"
                                                                         className="h-8 rounded-full px-3 gap-1.5 transition-all text-xs"
-                                                                        onClick={() => field.onChange(!field.value)}
+                                                                        onClick={() => {
+                                                                            field.onChange(1);
+                                                                            setTimeout(() => {
+                                                                                document.getElementById(`addon-input-${addon.id}`)?.focus();
+                                                                            }, 0);
+                                                                        }}
                                                                     >
-                                                                        {field.value ? <Check className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
+                                                                        <Plus className="h-3 w-3" />
                                                                         {addon.name}
                                                                     </Button>
                                                                 );
                                                             } else {
-                                                                // Numeric Addon
-                                                                if (!isChecked) {
-                                                                    return (
-                                                                        <Button
-                                                                            type="button"
-                                                                            variant="outline"
-                                                                            size="sm"
-                                                                            className="h-8 rounded-full px-3 gap-1.5 transition-all text-xs"
-                                                                            onClick={() => {
-                                                                                field.onChange(1);
-                                                                                // Small delay to allow render before focus
-                                                                                setTimeout(() => {
-                                                                                    const input = document.getElementById(`addon-input-${addon.id}`);
-                                                                                    input?.focus();
-                                                                                }, 0);
+                                                                return (
+                                                                    <div className="inline-flex items-center bg-primary text-primary-foreground rounded-full h-8 pl-3 pr-1 gap-2 shadow-sm">
+                                                                        <span className="text-xs font-medium">{addon.name}</span>
+                                                                        <Input
+                                                                            id={`addon-input-${addon.id}`}
+                                                                            type="number"
+                                                                            className="w-12 h-6 px-1.5 py-0 text-xs bg-primary-foreground text-primary border-none focus-visible:ring-0 focus-visible:ring-offset-0 rounded-md font-bold"
+                                                                            value={field.value as number}
+                                                                            onChange={(e) => field.onChange(Number(e.target.value))}
+                                                                            onBlur={() => {
+                                                                                if (Number(field.value) === 0) field.onChange(0);
                                                                             }}
-                                                                        >
-                                                                            <Plus className="h-3 w-3" />
-                                                                            {addon.name}
-                                                                        </Button>
-                                                                    );
-                                                                } else {
-                                                                    return (
-                                                                        <div className="inline-flex items-center bg-primary text-primary-foreground rounded-full h-8 pl-3 pr-1 gap-2 shadow-sm">
-                                                                            <span className="text-xs font-medium">{addon.name}</span>
-                                                                            <Input
-                                                                                id={`addon-input-${addon.id}`}
-                                                                                type="number"
-                                                                                className="w-12 h-6 px-1.5 py-0 text-xs bg-primary-foreground text-primary border-none focus-visible:ring-0 focus-visible:ring-offset-0 rounded-md font-bold"
-                                                                                value={field.value as number}
-                                                                                onChange={(e) => field.onChange(Number(e.target.value))}
-                                                                                onBlur={() => {
-                                                                                    if (Number(field.value) === 0) field.onChange(0);
-                                                                                }}
-                                                                            />
-                                                                        </div>
-                                                                    );
-                                                                }
+                                                                        />
+                                                                    </div>
+                                                                );
                                                             }
-                                                        }}
-                                                    />
-                                                );
-                                            })}
-                                        </div>
+                                                        }
+                                                    }}
+                                                />
+                                            );
+                                        })}
                                     </div>
                                 )}
 
                                 {product?.sizes && product.sizes.length > 0 && (
-                                    <div className="space-y-3">
-                                        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Sizes</Label>
-                                        <div className="flex flex-wrap gap-2">
-                                            {product.sizes.map((size, index) => (
-                                                <Controller
-                                                    key={size.name}
-                                                    name={`sizes.${index}.quantity`}
-                                                    control={control}
-                                                    render={({ field }) => {
-                                                        const isChecked = field.value > 0;
-                                                        if (!isChecked) {
-                                                            return (
-                                                                <Button
-                                                                    type="button"
-                                                                    variant="outline"
-                                                                    size="sm"
-                                                                    className="h-8 rounded-full px-3 gap-1.5 transition-all text-xs"
-                                                                    onClick={() => {
-                                                                        field.onChange(1);
-                                                                        setTimeout(() => {
-                                                                            document.getElementById(`size-input-${item.id}-${index}`)?.focus();
-                                                                        }, 0);
+                                    <div className="flex flex-wrap gap-2 pt-2">
+                                        {product.sizes.map((size, index) => (
+                                            <Controller
+                                                key={size.name}
+                                                name={`sizes.${index}.quantity`}
+                                                control={control}
+                                                render={({ field }) => {
+                                                    const isChecked = field.value > 0;
+                                                    if (!isChecked) {
+                                                        return (
+                                                            <Button
+                                                                type="button"
+                                                                variant="outline"
+                                                                size="sm"
+                                                                className="h-8 rounded-full px-3 gap-1.5 transition-all text-xs"
+                                                                onClick={() => {
+                                                                    field.onChange(1);
+                                                                    setTimeout(() => {
+                                                                        document.getElementById(`size-input-${item.id}-${index}`)?.focus();
+                                                                    }, 0);
+                                                                }}
+                                                            >
+                                                                <Plus className="h-3 w-3" />
+                                                                {size.name}
+                                                            </Button>
+                                                        );
+                                                    } else {
+                                                        return (
+                                                            <div className="inline-flex items-center bg-primary text-primary-foreground rounded-full h-8 pl-3 pr-1 gap-2 shadow-sm">
+                                                                <span className="text-xs font-medium">{size.name}</span>
+                                                                <Input
+                                                                    id={`size-input-${item.id}-${index}`}
+                                                                    type="number"
+                                                                    className="w-12 h-6 px-1.5 py-0 text-xs bg-primary-foreground text-primary border-none focus-visible:ring-0 focus-visible:ring-offset-0 rounded-md font-bold"
+                                                                    value={field.value}
+                                                                    onChange={(e) => field.onChange(Number(e.target.value))}
+                                                                    onBlur={() => {
+                                                                        if (Number(field.value) === 0) field.onChange(0);
                                                                     }}
-                                                                >
-                                                                    <Plus className="h-3 w-3" />
-                                                                    {size.name}
-                                                                </Button>
-                                                            );
-                                                        } else {
-                                                            return (
-                                                                <div className="inline-flex items-center bg-primary text-primary-foreground rounded-full h-8 pl-3 pr-1 gap-2 shadow-sm">
-                                                                    <span className="text-xs font-medium">{size.name}</span>
-                                                                    <Input
-                                                                        id={`size-input-${item.id}-${index}`}
-                                                                        type="number"
-                                                                        className="w-12 h-6 px-1.5 py-0 text-xs bg-primary-foreground text-primary border-none focus-visible:ring-0 focus-visible:ring-offset-0 rounded-md font-bold"
-                                                                        value={field.value}
-                                                                        onChange={(e) => field.onChange(Number(e.target.value))}
-                                                                        onBlur={() => {
-                                                                            if (Number(field.value) === 0) field.onChange(0);
-                                                                        }}
-                                                                    />
-                                                                </div>
-                                                            );
-                                                        }
-                                                    }}
-                                                />
-                                            ))}
-                                        </div>
+                                                                />
+                                                            </div>
+                                                        );
+                                                    }
+                                                }}
+                                            />
+                                        ))}
                                     </div>
                                 )}
 
                                 {product?.customFields && product.customFields.length > 0 && (
-                                    <div className="space-y-3">
-                                        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Additional Details</Label>
-                                        <div className="space-y-2 rounded-lg border bg-background/50 p-4">
-                                            {product.customFields.map((field) => (
-                                                <div key={field.id} className="flex items-center justify-between py-1">
-                                                    <span className="text-sm">{field.name}</span>
-                                                    <Input 
-                                                        type="number" 
-                                                        className="w-20 h-8" 
-                                                        {...register(`customFieldValues.${field.id}`, { valueAsNumber: true })} 
-                                                    />
-                                                </div>
-                                            ))}
-                                        </div>
+                                    <div className="flex flex-wrap items-center gap-x-6 gap-y-3 pt-2">
+                                        {product.customFields.map((field) => (
+                                            <div key={field.id} className="flex items-center gap-3">
+                                                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap">
+                                                    {field.name}
+                                                </Label>
+                                                <Input 
+                                                    type="number" 
+                                                    className="w-16 h-10 px-2 text-sm bg-background" 
+                                                    {...register(`customFieldValues.${field.id}`, { valueAsNumber: true })} 
+                                                />
+                                            </div>
+                                        ))}
                                     </div>
                                 )}
                             </div>
