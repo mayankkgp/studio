@@ -66,25 +66,6 @@ const getValidationSchema = (product: Product | null) => {
             .min(product.softConstraints?.find(c => c.type === 'min')?.value || 1, product.softConstraints?.find(c => c.type === 'min')?.message.toUpperCase() || "REQUIRED");
     }
 
-    if (product.configType === 'E' && product.sizes) {
-        schemaObject.sizes = z.array(z.object({
-            id: z.string(),
-            name: z.string(),
-            quantity: z.number().nullable()
-        })).superRefine((sizes, ctx) => {
-            sizes.forEach((s, idx) => {
-                const sDef = product.sizes?.find(sd => sd.id === s.id);
-                if (s.quantity !== null && s.quantity !== undefined && sDef?.softConstraints) {
-                    sDef.softConstraints.forEach(c => {
-                        if (c.type === 'min' && s.quantity! < c.value) {
-                            ctx.addIssue({ code: z.ZodIssueCode.custom, message: c.message.toUpperCase(), path: [idx, 'quantity'] });
-                        }
-                    });
-                }
-            });
-        });
-    }
-    
     if (product.customFields) {
         schemaObject.customFieldValues = z.object(
             product.customFields.reduce((acc, field) => {
@@ -108,11 +89,13 @@ const getValidationSchema = (product: Product | null) => {
         })).superRefine((addons, ctx) => {
             addons.forEach((addon, idx) => {
                 const addonDef = product.addons?.find(a => a.id === addon.id);
-                if (addon.value !== undefined && addon.value !== null && addon.value !== false) {
+                // Validate if it's selected (not undefined and not false)
+                if (addon.value !== undefined && addon.value !== false) {
                     if (addonDef && (addonDef.type === 'numeric' || addonDef.type === 'physical_quantity')) {
-                        if (addon.value === '') {
+                        // null or empty string means selected but no value provided
+                        if (addon.value === null || addon.value === '') {
                              ctx.addIssue({ code: z.ZodIssueCode.custom, message: "REQUIRED", path: [idx, 'value'] });
-                        } else if (typeof addon.value !== 'number') {
+                        } else if (typeof addon.value !== 'number' || isNaN(addon.value)) {
                              ctx.addIssue({ code: z.ZodIssueCode.custom, message: "REQUIRED", path: [idx, 'value'] });
                         } else if (addonDef.softConstraints) {
                             addonDef.softConstraints.forEach(constraint => {
@@ -157,10 +140,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             pages: item.pages,
             specialRequest: item.specialRequest || '',
             customFieldValues: item.customFieldValues || {},
-            sizes: product?.configType === 'E' ? product.sizes?.map(s => {
-                const existing = item.sizes?.find(es => es.id === s.id);
-                return { id: s.id, name: s.name, quantity: existing?.quantity ?? null };
-            }) : [],
             addons: product?.addons?.map(addon => {
                 const existingAddon = item.addons?.find(a => a.id === addon.id);
                 return { 
@@ -217,7 +196,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         watchedValues.customFieldValues, 
         watchedValues.addons, 
         watchedValues.variant, 
-        watchedValues.sizes,
         performSyncUpdate,
         trigger
     ]);
@@ -260,9 +238,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             parts.push(`Qty: ${watchedValues.quantity}`);
         } else if (product.configType === 'B' && typeof watchedValues.pages === 'number') {
             parts.push(`${watchedValues.pages} Pages`);
-        } else if (product.configType === 'E' && watchedValues.sizes) {
-            const count = watchedValues.sizes.filter((s: any) => !!s.quantity).length;
-            if (count > 0) parts.push(`${count} Sizes`);
         }
         return parts.join(' • ');
     };
@@ -277,14 +252,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         const pError = errors.pages as any;
         if (pError?.message && pError.message.toUpperCase() !== 'REQUIRED') return pError.message.toUpperCase();
 
-        // Check sizes
-        if (errors.sizes && Array.isArray(errors.sizes)) {
-            for (const sErr of errors.sizes) {
-                const msg = sErr?.quantity?.message;
-                if (msg && String(msg).toUpperCase() !== 'REQUIRED') return String(msg).toUpperCase();
-            }
-        }
-
         // Check custom fields
         if (errors.customFieldValues) {
             const cfErrors = errors.customFieldValues as Record<string, any>;
@@ -294,7 +261,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             }
         }
 
-        // Check addons
+        // Check addons for specific constraints (like MOQ)
         if (errors.addons && Array.isArray(errors.addons)) {
             for (const err of (errors.addons as any[])) {
                 const msg = err?.value?.message || err?.message;
@@ -389,29 +356,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         );
     };
 
-    const renderSizes = () => {
-        if (product?.configType !== 'E' || !product.sizes) return null;
-        return (
-            <div className="flex flex-wrap items-center gap-x-8 gap-y-4">
-                {product.sizes.map((s, idx) => {
-                    return (
-                        <div key={s.id} className="flex items-center gap-4">
-                            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap">{s.name} QTY</Label>
-                            <Input
-                                id={`size-input-${item.id}-${s.id}`}
-                                type="number"
-                                className={cn(
-                                    "w-20 h-10 px-2 text-sm bg-background [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                )}
-                                {...register(`sizes.${idx}.quantity`, { valueAsNumber: true })}
-                            />
-                        </div>
-                    );
-                })}
-            </div>
-        );
-    }
-
     const isComplexProduct = product?.configType === 'D' || product?.specialLogic === 'RitualCardBlossom'; 
     const warningText = getPriorityWarning();
 
@@ -480,7 +424,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                         <div className="flex flex-wrap items-start justify-between gap-6">
                             {renderVariantSelection()}
                             {isBranchA && renderPromotedInput()}
-                            {renderSizes()}
                         </div>
 
                         {product?.customFields && product.customFields.length > 0 && (
