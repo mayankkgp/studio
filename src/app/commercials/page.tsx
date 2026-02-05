@@ -91,11 +91,11 @@ export default function CommercialsPage() {
 
                 <div className="flex flex-1 overflow-hidden">
                     {/* Left Panel: Billable Items List (Expert Workflow) */}
-                    <main className="flex-1 flex flex-col overflow-hidden bg-background">
+                    <main className="flex-1 flex flex-col overflow-hidden bg-background pt-6 pb-6">
                         {/* Scroll Wrapper: Full width to dock scrollbar to edge */}
                         <div className="flex-1 overflow-y-auto custom-scrollbar">
                             {/* Centering Wrapper */}
-                            <div className="max-w-4xl mx-auto w-full pt-6 px-4 lg:px-6 pb-6">
+                            <div className="max-w-4xl mx-auto w-full px-4 lg:px-6">
                                 <div className="border rounded-lg bg-card shadow-sm">
                                     {billableItems.length === 0 ? (
                                         <div className="flex flex-col items-center justify-center py-24 text-muted-foreground bg-card">
