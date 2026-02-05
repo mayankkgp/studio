@@ -1,21 +1,21 @@
+
 'use client';
 
 import { AppLayout } from "@/components/layout/AppLayout";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useOrder } from "@/context/OrderContext";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { calculateBillableItems } from "@/lib/pricing";
-import type { BillableItem, ConfiguredProduct } from "@/lib/types";
-import { DollarSign } from "lucide-react";
+import type { BillableItem } from "@/lib/types";
+import { DollarSign, ChevronLeft, Save, Zap } from "lucide-react";
 import { useHeaderSummary } from "@/hooks/use-header-summary";
+import { Separator } from "@/components/ui/separator";
 
 export default function CommercialsPage() {
     const router = useRouter();
@@ -28,33 +28,12 @@ export default function CommercialsPage() {
         setBillableItems(calculateBillableItems(order.deliverables));
     }, [order.deliverables]);
 
-    const handleComponentChange = (itemIndex: number, compIndex: number, field: 'rate' | 'multiplier', value: number) => {
-        const item = billableItems[itemIndex];
-        const component = item.components[compIndex];
-        
-        // Find corresponding deliverable to update multiplier if needed
-        const deliverable = order.deliverables.find(d => d.id === item.configuredProductId);
+    const handleRateChange = (configuredProductId: string, label: string, value: number) => {
+        const deliverable = order.deliverables.find(d => d.id === configuredProductId);
         if (!deliverable) return;
 
-        if (field === 'rate') {
-            // Store rate override in deliverable
-            const rateOverrides = { ...deliverable.rateOverrides, [component.label]: value };
-            updateDeliverable(deliverable.id, { rateOverrides });
-        } else if (field === 'multiplier') {
-            // Update the underlying deliverable value based on component type
-            // This is complex as multiplier maps to different fields (quantity, pages, customFieldValues, addon values)
-            // For now, we update the local UI only as multipliers are primarily changed in Deliverables page
-            // and rates are primarily changed in Commercials page.
-            
-            const newBillableItems = [...billableItems];
-            const updatedItem = { ...newBillableItems[itemIndex] };
-            const updatedComponent = { ...updatedItem.components[compIndex] };
-            updatedComponent.multiplier = value;
-            updatedComponent.total = updatedComponent.rate * value;
-            updatedItem.components[compIndex] = updatedComponent;
-            newBillableItems[itemIndex] = updatedItem;
-            setBillableItems(newBillableItems);
-        }
+        const rateOverrides = { ...deliverable.rateOverrides, [label]: value };
+        updateDeliverable(deliverable.id, { rateOverrides });
     };
 
     const totalValue = useMemo(() => {
@@ -72,136 +51,181 @@ export default function CommercialsPage() {
     }
 
     const balanceStatus = useMemo(() => {
-        if (totalValue === 0 && payment === 0) {
-            return <Badge variant="secondary">No Items</Badge>;
-        }
-        if (balance > 0) {
-            return <Badge variant="destructive">Balance: {formatCurrency(balance)}</Badge>;
-        }
-        if (balance < 0) {
-            return <Badge variant="secondary">Excess: {formatCurrency(Math.abs(balance))}</Badge>;
-        }
-        return <Badge variant="default">Fully Paid</Badge>;
+        if (totalValue === 0 && payment === 0) return null;
+        if (balance > 0) return <Badge variant="destructive" className="w-full justify-center py-1">Balance: {formatCurrency(balance)}</Badge>;
+        if (balance < 0) return <Badge variant="secondary" className="w-full justify-center py-1">Excess: {formatCurrency(Math.abs(balance))}</Badge>;
+        return <Badge variant="default" className="w-full justify-center py-1">Fully Paid</Badge>;
     }, [totalValue, payment, balance]);
 
     return (
         <AppLayout>
-            <div className="flex flex-col h-screen">
-                 <header className="sticky top-0 z-10 flex flex-col items-stretch gap-2 border-b bg-background/80 backdrop-blur-sm px-4 md:px-6 py-3">
-                    <div className="flex items-center gap-4">
-                        <MobileNav />
-                        <div className="flex-1">
-                            <h1 className="font-semibold text-lg md:text-xl font-headline truncate" title={headerSummary}>
-                              {headerSummary}
-                            </h1>
-                            <p className="text-sm text-muted-foreground">Commercials</p>
-                        </div>
-                        <div className="hidden lg:block font-mono text-sm">
-                            {order.orderId}
-                        </div>
+            <div className="flex flex-col h-screen overflow-hidden bg-background">
+                {/* Header: Simplified for high-density view */}
+                <header className="flex h-16 shrink-0 items-center gap-4 border-b px-4 md:px-6">
+                    <MobileNav />
+                    <div className="flex-1 overflow-hidden">
+                        <h1 className="font-semibold text-base md:text-lg font-headline truncate" title={headerSummary}>
+                            {headerSummary}
+                        </h1>
+                        <p className="text-xs text-muted-foreground uppercase tracking-wider font-bold">Commercials</p>
                     </div>
-                    <div className="flex-1 grid grid-cols-2 gap-4 items-center pl-0 lg:pl-12">
-                        <div>
-                            <div className="text-sm text-muted-foreground">Total Value</div>
-                            <div className="text-2xl font-bold font-headline">{formatCurrency(totalValue)}</div>
-                        </div>
-                        <div className="flex items-center gap-4">
-                             <div className="w-48">
-                                <Label htmlFor="payment" className="text-sm text-muted-foreground">Payment Received</Label>
-                                <Input 
-                                    id="payment" 
-                                    type="number" 
-                                    placeholder="0"
-                                    value={order.paymentReceived || ''}
-                                    onChange={(e) => setPaymentReceived(Number(e.target.value))}
-                                    className="text-lg font-semibold"
-                                />
-                            </div>
-                            <div className="mt-4">{balanceStatus}</div>
-                        </div>
+                    <div className="hidden lg:block font-mono text-xs opacity-50">
+                        {order.orderId}
                     </div>
                 </header>
 
-                <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Order Pricing List</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                             {billableItems.length === 0 ? (
-                                <div className="text-center text-muted-foreground py-12">
-                                    <DollarSign className="mx-auto h-12 w-12" />
-                                    <p className="mt-4">No items from deliverables to price.</p>
-                                    <p className="text-sm">Go back to add products to the order.</p>
+                <div className="flex flex-1 overflow-hidden">
+                    {/* Left Panel: Billable Items (Scrollable) */}
+                    <main className="flex-1 overflow-y-auto p-4 lg:p-6 custom-scrollbar">
+                        <div className="max-w-4xl mx-auto space-y-6">
+                            {billableItems.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center py-24 text-muted-foreground border-2 border-dashed rounded-xl bg-muted/20">
+                                    <DollarSign className="h-12 w-12 opacity-20 mb-4" />
+                                    <p className="font-medium">No price rows generated.</p>
+                                    <p className="text-sm">Go back to configure deliverables.</p>
                                 </div>
-                             ) : (
-                                <Accordion type="single" collapsible className="w-full" defaultValue={billableItems[0]?.configuredProductId}>
-                                    {billableItems.map((item, itemIndex) => {
-                                        const itemTotal = item.components.reduce((acc, comp) => acc + comp.total, 0);
-                                        return (
-                                            <AccordionItem value={item.configuredProductId} key={item.configuredProductId}>
-                                                <AccordionTrigger>
-                                                    <div className="flex justify-between w-full pr-4">
-                                                        <span>{item.productName}</span>
-                                                        <span className="font-semibold">{formatCurrency(itemTotal)}</span>
-                                                    </div>
-                                                </AccordionTrigger>
-                                                <AccordionContent>
-                                                    <Table>
-                                                        <TableHeader>
-                                                            <TableRow>
-                                                                <TableHead>Component</TableHead>
-                                                                <TableHead>Multiplier</TableHead>
-                                                                <TableHead>Rate</TableHead>
-                                                                <TableHead className="text-right">Total</TableHead>
+                            ) : (
+                                <div className="border rounded-lg overflow-hidden bg-card shadow-sm">
+                                    <Table>
+                                        <TableHeader className="bg-muted/50">
+                                            <TableRow className="hover:bg-transparent border-b">
+                                                <TableHead className="h-10 text-xs font-bold uppercase">Line Item</TableHead>
+                                                <TableHead className="h-10 text-xs font-bold uppercase text-right w-24">Multiplier</TableHead>
+                                                <TableHead className="h-10 text-xs font-bold uppercase text-right w-32">Rate (₹)</TableHead>
+                                                <TableHead className="h-10 text-xs font-bold uppercase text-right w-32">Total</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {billableItems.map((item) => {
+                                                const itemTotal = item.components.reduce((acc, comp) => acc + comp.total, 0);
+                                                return (
+                                                    <React.Fragment key={item.configuredProductId}>
+                                                        {/* Product Header Row */}
+                                                        <TableRow className="bg-muted/30 border-b">
+                                                            <TableCell colSpan={3} className="py-2.5 font-bold text-sm">
+                                                                {item.productName}
+                                                            </TableCell>
+                                                            <TableCell className="py-2.5 text-right font-bold text-sm">
+                                                                {formatCurrency(itemTotal)}
+                                                            </TableCell>
+                                                        </TableRow>
+                                                        {/* Component Rows */}
+                                                        {item.components.map((comp, idx) => (
+                                                            <TableRow key={`${item.configuredProductId}-${idx}`} className="group h-10 border-b last:border-b-0">
+                                                                <TableCell className="py-0 pl-8 text-sm text-muted-foreground font-medium">
+                                                                    {comp.label}
+                                                                </TableCell>
+                                                                <TableCell className="py-0 text-right text-sm">
+                                                                    {comp.multiplier}
+                                                                </TableCell>
+                                                                <TableCell className="py-0 text-right">
+                                                                    <input
+                                                                        type="number"
+                                                                        defaultValue={comp.rate}
+                                                                        onBlur={(e) => handleRateChange(item.configuredProductId, comp.label, Number(e.target.value))}
+                                                                        onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+                                                                        className="w-full h-8 text-right bg-transparent border-none focus:ring-1 focus:ring-primary rounded px-2 transition-all hover:bg-accent/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none font-medium text-sm"
+                                                                    />
+                                                                </TableCell>
+                                                                <TableCell className="py-0 text-right text-sm font-semibold">
+                                                                    {formatCurrency(comp.total)}
+                                                                </TableCell>
                                                             </TableRow>
-                                                        </TableHeader>
-                                                        <TableBody>
-                                                            {item.components.map((comp, compIndex) => (
-                                                                <TableRow key={compIndex}>
-                                                                    <TableCell className="font-medium">{comp.label}</TableCell>
-                                                                    <TableCell>
-                                                                        <Input
-                                                                            type="number"
-                                                                            value={comp.multiplier}
-                                                                            onChange={(e) => handleComponentChange(itemIndex, compIndex, 'multiplier', Number(e.target.value))}
-                                                                            className="w-20"
-                                                                            disabled={comp.isFixed}
-                                                                        />
-                                                                    </TableCell>
-                                                                    <TableCell>
-                                                                        <Input
-                                                                            type="number"
-                                                                            value={comp.rate}
-                                                                            onChange={(e) => handleComponentChange(itemIndex, compIndex, 'rate', Number(e.target.value))}
-                                                                            className="w-24"
-                                                                        />
-                                                                    </TableCell>
-                                                                    <TableCell className="text-right">{formatCurrency(comp.total)}</TableCell>
-                                                                </TableRow>
-                                                            ))}
-                                                        </TableBody>
-                                                    </Table>
-                                                </AccordionContent>
-                                            </AccordionItem>
-                                        )
-                                    })}
-                                </Accordion>
-                             )}
-                        </CardContent>
-                    </Card>
-                </main>
+                                                        ))}
+                                                    </React.Fragment>
+                                                );
+                                            })}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                            )}
+                        </div>
+                    </main>
 
-                <footer className="sticky bottom-0 z-10 flex items-center justify-between gap-4 border-t bg-background px-4 md:px-6 h-20">
-                     <Button variant="outline" onClick={() => router.back()}>Back</Button>
-                    <div className="flex items-center gap-4">
-                        <Button variant="secondary" onClick={saveAsDraft}>Save as Draft</Button>
-                        <Button onClick={() => alert("Order Activated!")}>
-                            Activate Order
-                        </Button>
-                    </div>
-                </footer>
+                    {/* Right Panel: Summary & Actions (Sticky) */}
+                    <aside className="w-80 lg:w-96 shrink-0 border-l bg-card/50 flex flex-col p-6 space-y-8">
+                        <div>
+                            <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="mb-4 -ml-2 text-muted-foreground hover:text-foreground"
+                                onClick={() => router.back()}
+                            >
+                                <ChevronLeft className="h-4 w-4 mr-1" />
+                                Back to Deliverables
+                            </Button>
+                            
+                            <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-6">Commercial Summary</h2>
+                            
+                            <div className="space-y-6">
+                                <div className="space-y-1">
+                                    <div className="text-sm font-medium text-muted-foreground">Order Total</div>
+                                    <div className="text-4xl font-bold font-headline text-primary">
+                                        {formatCurrency(totalValue)}
+                                    </div>
+                                </div>
+
+                                <Separator />
+
+                                <div className="space-y-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="payment" className="text-xs font-bold uppercase text-muted-foreground">
+                                            Payment Received
+                                        </Label>
+                                        <div className="relative">
+                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">₹</span>
+                                            <Input 
+                                                id="payment" 
+                                                type="number" 
+                                                placeholder="0"
+                                                value={order.paymentReceived || ''}
+                                                onChange={(e) => setPaymentReceived(Number(e.target.value))}
+                                                className="pl-7 h-11 text-lg font-semibold bg-background"
+                                            />
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="pt-2">
+                                        {balanceStatus}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="mt-auto space-y-3">
+                            <Button variant="outline" className="w-full h-11 justify-between px-4 group" onClick={saveAsDraft}>
+                                <span className="flex items-center gap-2">
+                                    <Save className="h-4 w-4" />
+                                    Save as Draft
+                                </span>
+                                <span className="text-[10px] opacity-0 group-hover:opacity-50 transition-opacity">Session Only</span>
+                            </Button>
+                            <Button className="w-full h-12 text-base font-bold gap-2 shadow-lg shadow-primary/20" onClick={() => alert("Order Activated!")}>
+                                <Zap className="h-5 w-5 fill-current" />
+                                Activate Order
+                            </Button>
+                        </div>
+                    </aside>
+                </div>
             </div>
+
+            <style jsx global>{`
+                .custom-scrollbar::-webkit-scrollbar {
+                    width: 6px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-track {
+                    background: transparent;
+                }
+                .custom-scrollbar::-webkit-scrollbar-thumb {
+                    background: hsl(var(--muted));
+                    border-radius: 10px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+                    background: hsl(var(--muted-foreground) / 0.2);
+                }
+            `}</style>
         </AppLayout>
     );
 }
+
+import * as React from 'react';
