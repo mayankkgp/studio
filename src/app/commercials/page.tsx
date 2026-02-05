@@ -1,4 +1,3 @@
-
 'use client';
 
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -16,6 +15,7 @@ import type { BillableItem } from "@/lib/types";
 import { DollarSign, ChevronLeft, Save, Zap } from "lucide-react";
 import { useHeaderSummary } from "@/hooks/use-header-summary";
 import { Separator } from "@/components/ui/separator";
+import * as React from 'react';
 
 export default function CommercialsPage() {
     const router = useRouter();
@@ -115,7 +115,7 @@ export default function CommercialsPage() {
                                                                 <TableCell className="py-0 pl-8 text-sm text-muted-foreground font-medium">
                                                                     {comp.label}
                                                                 </TableCell>
-                                                                <TableCell className="py-0 text-right text-sm">
+                                                                <TableCell className="py-0 text-right text-sm cursor-default select-none">
                                                                     {comp.multiplier}
                                                                 </TableCell>
                                                                 <TableCell className="py-0 text-right">
@@ -227,5 +227,3 @@ export default function CommercialsPage() {
         </AppLayout>
     );
 }
-
-import * as React from 'react';
