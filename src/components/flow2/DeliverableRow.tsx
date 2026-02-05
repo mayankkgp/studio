@@ -101,9 +101,9 @@ const getValidationSchema = (product: Product | null) => {
         })).superRefine((addons, ctx) => {
             addons.forEach((addon, idx) => {
                 const addonDef = product.addons?.find(a => a.id === addon.id);
-                if (addon.value !== undefined) {
+                if (addon.value !== undefined && addon.value !== null) {
                     if (addonDef && (addonDef.type === 'numeric' || addonDef.type === 'physical_quantity')) {
-                        if (addon.value === null || addon.value === '') {
+                        if (addon.value === '') {
                              ctx.addIssue({
                                 code: z.ZodIssueCode.custom,
                                 message: "REQUIRED",
@@ -118,6 +118,13 @@ const getValidationSchema = (product: Product | null) => {
                         } else if (addonDef.softConstraints) {
                             addonDef.softConstraints.forEach(constraint => {
                                 if (constraint.type === 'min' && (addon.value as number) < constraint.value) {
+                                    ctx.addIssue({
+                                        code: z.ZodIssueCode.custom,
+                                        message: constraint.message.toUpperCase(),
+                                        path: [idx, 'value']
+                                    });
+                                }
+                                if (constraint.type === 'max' && (addon.value as number) > constraint.value) {
                                     ctx.addIssue({
                                         code: z.ZodIssueCode.custom,
                                         message: constraint.message.toUpperCase(),
@@ -142,6 +149,13 @@ const getValidationSchema = (product: Product | null) => {
                 if (sizeDef && sizeDef.softConstraints && size.quantity !== undefined && size.quantity !== null && size.quantity !== '') {
                     sizeDef.softConstraints.forEach(constraint => {
                         if (constraint.type === 'min' && (size.quantity as number) < constraint.value) {
+                            ctx.addIssue({
+                                code: z.ZodIssueCode.custom,
+                                message: constraint.message.toUpperCase(),
+                                path: [idx, 'quantity']
+                            });
+                        }
+                        if (constraint.type === 'max' && (size.quantity as number) > constraint.value) {
                             ctx.addIssue({
                                 code: z.ZodIssueCode.custom,
                                 message: constraint.message.toUpperCase(),
@@ -325,6 +339,14 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         const pError = errors.pages as any;
         if (pError?.message && pError.message.toUpperCase() !== 'REQUIRED') return pError.message.toUpperCase();
 
+        if (errors.customFieldValues) {
+            const cfErrors = errors.customFieldValues as Record<string, any>;
+            for (const key in cfErrors) {
+                const msg = cfErrors[key]?.message;
+                if (msg && String(msg).toUpperCase() !== 'REQUIRED') return String(msg).toUpperCase();
+            }
+        }
+
         if (errors.addons && Array.isArray(errors.addons)) {
             for (const err of (errors.addons as any[])) {
                 const msg = err?.value?.message || err?.message;
@@ -335,14 +357,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         if (errors.sizes && Array.isArray(errors.sizes)) {
             for (const err of (errors.sizes as any[])) {
                 const msg = err?.quantity?.message || err?.message;
-                if (msg && String(msg).toUpperCase() !== 'REQUIRED') return String(msg).toUpperCase();
-            }
-        }
-
-        if (errors.customFieldValues) {
-            const cfErrors = errors.customFieldValues as Record<string, any>;
-            for (const key in cfErrors) {
-                const msg = cfErrors[key]?.message;
                 if (msg && String(msg).toUpperCase() !== 'REQUIRED') return String(msg).toUpperCase();
             }
         }
@@ -637,7 +651,9 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                                 style={{ width: `${Math.max(2, String(field.value ?? '').length + 2)}ch` }}
                                                                 value={field.value ?? ''}
                                                                 onChange={(e) => field.onChange(e.target.value === '' ? null : Number(e.target.value))}
-                                                                onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                                                                onKeyDown={(e) => { 
+                                                                    if (e.key === 'Enter') e.currentTarget.blur(); 
+                                                                }}
                                                             />
                                                         </div>
                                                     );
@@ -715,7 +731,9 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                                             style={{ width: `${Math.max(2, String(field.value ?? '').length + 2)}ch` }}
                                                                             value={field.value ?? ''}
                                                                             onChange={(e) => field.onChange(e.target.value === '' ? null : Number(e.target.value))}
-                                                                            onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                                                                            onKeyDown={(e) => { 
+                                                                                if (e.key === 'Enter') e.currentTarget.blur(); 
+                                                                            }}
                                                                         />
                                                                         {hasError && (
                                                                             <TooltipProvider>
