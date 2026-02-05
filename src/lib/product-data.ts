@@ -90,6 +90,11 @@ export const productCatalog: Product[] = [
   { id: 57, name: 'Car Stickers', configType: 'C', basePrice: 0, addons: [{ id: 'physical', name: 'Physical', type: 'physical_quantity', rateKey: 'car_sticker_rate', softConstraints: [{ type: 'min', value: 5, message: 'MOQ is 5.' }] }] },
   { id: 58, name: 'Placecards', configType: 'C', basePrice: 0, addons: [{ id: 'physical', name: 'Physical', type: 'physical_quantity', rateKey: 'placecard_rate', softConstraints: [{ type: 'min', value: 25, message: 'MOQ is 25.' }] }] },
   { id: 60, name: 'Tote Bags', configType: 'C', basePrice: 0, variants: ['Catalogue', 'Custom'], addons: [{ id: 'physical', name: 'Physical', type: 'physical_quantity', rateKey: 'tote_bag_rate', softConstraints: [{ type: 'min', value: 25, message: 'MOQ is 25.' }] }] },
+  { id: 35, name: 'Luggage Tag', configType: 'C', basePrice: 0, variants: ['Catalogue', 'Custom'], addons: [
+      { id: 'paper', name: 'Paper', type: 'physical_quantity', rateKey: 'luggage_tag_paper_rate', softConstraints: [{ type: 'min', value: 25, message: 'MOQ is 25.' }] },
+      { id: 'plastic', name: 'Plastic', type: 'physical_quantity', rateKey: 'luggage_tag_plastic_rate', softConstraints: [{ type: 'min', value: 25, message: 'MOQ is 25.' }] }
+    ]
+  },
   
   // Type D
   { id: 5, name: 'Invite', configType: 'D', basePrice: 0, customFields: [
@@ -122,11 +127,6 @@ export const productCatalog: Product[] = [
   { id: 31, name: 'Hangover Kits', configType: 'E', basePrice: 0, sizes: [
       { id: 'small', name: '5x7 in', rateKey: 'hangover_kit_small_rate', softConstraints: [{ type: 'min', value: 50, message: 'MOQ is 50.' }] },
       { id: 'large', name: '10x11 in', rateKey: 'hangover_kit_large_rate', softConstraints: [{ type: 'min', value: 50, message: 'MOQ is 50.' }] }
-    ]
-  },
-  { id: 35, name: 'Luggage Tag', configType: 'E', basePrice: 0, sizes: [
-      { id: 'paper', name: 'Paper', rateKey: 'luggage_tag_paper_rate', softConstraints: [{ type: 'min', value: 25, message: 'MOQ is 25.' }] },
-      { id: 'plastic', name: 'Plastic', rateKey: 'luggage_tag_plastic_rate', softConstraints: [{ type: 'min', value: 25, message: 'MOQ is 25.' }] }
     ]
   },
 ];
