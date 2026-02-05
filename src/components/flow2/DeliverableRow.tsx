@@ -60,8 +60,8 @@ const getValidationSchema = (product: Product | null) => {
         let qSchema = z.number({ required_error: "Required", invalid_type_error: "Required" });
         if (product.softConstraints) {
             product.softConstraints.forEach(constraint => {
-                if (constraint.type === 'min') qSchema = qSchema.min(constraint.value, constraint.message);
-                if (constraint.type === 'max') qSchema = qSchema.max(constraint.value, constraint.message);
+                if (constraint.type === 'min') qSchema = qSchema.min(constraint.value, constraint.message.toUpperCase());
+                if (constraint.type === 'max') qSchema = qSchema.max(constraint.value, constraint.message.toUpperCase());
             });
         }
         schemaObject.quantity = qSchema;
@@ -71,8 +71,8 @@ const getValidationSchema = (product: Product | null) => {
         let pSchema = z.number({ required_error: "Required", invalid_type_error: "Required" });
         if (product.softConstraints) {
             product.softConstraints.forEach(constraint => {
-                if (constraint.type === 'min') pSchema = pSchema.min(constraint.value, constraint.message);
-                if (constraint.type === 'max') pSchema = pSchema.max(constraint.value, constraint.message);
+                if (constraint.type === 'min') pSchema = pSchema.min(constraint.value, constraint.message.toUpperCase());
+                if (constraint.type === 'max') pSchema = pSchema.max(constraint.value, constraint.message.toUpperCase());
             });
         }
         schemaObject.pages = pSchema;
@@ -84,8 +84,8 @@ const getValidationSchema = (product: Product | null) => {
                 let fSchema = z.number({ required_error: "Required", invalid_type_error: "Required" });
                 if (field.softConstraints) {
                     field.softConstraints.forEach(constraint => {
-                        if (constraint.type === 'min') fSchema = fSchema.min(constraint.value, constraint.message);
-                        if (constraint.type === 'max') fSchema = fSchema.max(constraint.value, constraint.message);
+                        if (constraint.type === 'min') fSchema = fSchema.min(constraint.value, constraint.message.toUpperCase());
+                        if (constraint.type === 'max') fSchema = fSchema.max(constraint.value, constraint.message.toUpperCase());
                     });
                 }
                 return { ...acc, [field.id]: fSchema };
@@ -101,19 +101,18 @@ const getValidationSchema = (product: Product | null) => {
         })).superRefine((addons, ctx) => {
             addons.forEach((addon, idx) => {
                 const addonDef = product.addons?.find(a => a.id === addon.id);
-                // If selected (value not undefined), mandatory check if it's numeric/physical
-                if (addonDef && (addonDef.type === 'numeric' || addonDef.type === 'physical_quantity')) {
-                    if (addon.value !== undefined) {
+                if (addon.value !== undefined) {
+                    if (addonDef && (addonDef.type === 'numeric' || addonDef.type === 'physical_quantity')) {
                         if (addon.value === null || addon.value === '') {
                              ctx.addIssue({
                                 code: z.ZodIssueCode.custom,
-                                message: "Required",
+                                message: "REQUIRED",
                                 path: [idx, 'value']
                             });
                         } else if (typeof addon.value !== 'number') {
-                            ctx.addIssue({
+                             ctx.addIssue({
                                 code: z.ZodIssueCode.custom,
-                                message: "Required",
+                                message: "REQUIRED",
                                 path: [idx, 'value']
                             });
                         } else if (addonDef.softConstraints) {
@@ -121,7 +120,7 @@ const getValidationSchema = (product: Product | null) => {
                                 if (constraint.type === 'min' && (addon.value as number) < constraint.value) {
                                     ctx.addIssue({
                                         code: z.ZodIssueCode.custom,
-                                        message: constraint.message,
+                                        message: constraint.message.toUpperCase(),
                                         path: [idx, 'value']
                                     });
                                 }
@@ -145,7 +144,7 @@ const getValidationSchema = (product: Product | null) => {
                         if (constraint.type === 'min' && (size.quantity as number) < constraint.value) {
                             ctx.addIssue({
                                 code: z.ZodIssueCode.custom,
-                                message: constraint.message,
+                                message: constraint.message.toUpperCase(),
                                 path: [idx, 'quantity']
                             });
                         }
@@ -271,7 +270,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         e.stopPropagation();
         const result = await trigger();
         if (result) {
-            // Immediate sync to avoid race conditions with global state updates
             performSyncUpdate();
             onDone(item.id);
         }
@@ -322,22 +320,22 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         if (isValid) return null;
 
         const qError = errors.quantity as any;
-        if (qError?.message && qError.message.toUpperCase() !== 'REQUIRED' && !qError.message.includes('expected number')) return qError.message.toUpperCase();
+        if (qError?.message && qError.message.toUpperCase() !== 'REQUIRED') return qError.message.toUpperCase();
         
         const pError = errors.pages as any;
-        if (pError?.message && pError.message.toUpperCase() !== 'REQUIRED' && !pError.message.includes('expected number')) return pError.message.toUpperCase();
+        if (pError?.message && pError.message.toUpperCase() !== 'REQUIRED') return pError.message.toUpperCase();
 
         if (errors.addons && Array.isArray(errors.addons)) {
             for (const err of (errors.addons as any[])) {
                 const msg = err?.value?.message || err?.message;
-                if (msg && String(msg).toUpperCase() !== 'REQUIRED' && !String(msg).includes('expected number')) return String(msg).toUpperCase();
+                if (msg && String(msg).toUpperCase() !== 'REQUIRED') return String(msg).toUpperCase();
             }
         }
 
         if (errors.sizes && Array.isArray(errors.sizes)) {
             for (const err of (errors.sizes as any[])) {
                 const msg = err?.quantity?.message || err?.message;
-                if (msg && String(msg).toUpperCase() !== 'REQUIRED' && !String(msg).includes('expected number')) return String(msg).toUpperCase();
+                if (msg && String(msg).toUpperCase() !== 'REQUIRED') return String(msg).toUpperCase();
             }
         }
 
@@ -345,7 +343,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             const cfErrors = errors.customFieldValues as Record<string, any>;
             for (const key in cfErrors) {
                 const msg = cfErrors[key]?.message;
-                if (msg && String(msg).toUpperCase() !== 'REQUIRED' && !String(msg).includes('expected number')) return String(msg).toUpperCase();
+                if (msg && String(msg).toUpperCase() !== 'REQUIRED') return String(msg).toUpperCase();
             }
         }
 
@@ -417,6 +415,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                 <div className="flex items-center gap-4">
                     <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap min-w-[40px]">QTY *</Label>
                     <Input 
+                        id={`qty-input-${item.id}`}
                         type="number" 
                         {...register('quantity', { valueAsNumber: true })}
                         className="w-24 h-10 text-lg bg-background [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" 
@@ -434,6 +433,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                 <div className="flex items-center gap-4">
                     <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap min-w-[40px]">PAGES *</Label>
                     <Input 
+                        id={`pages-input-${item.id}`}
                         type="number" 
                         {...register('pages', { valueAsNumber: true })}
                         className="w-24 h-10 text-lg bg-background [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" 
@@ -448,6 +448,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                         {promotedCustomField.name} *
                     </Label>
                     <Input 
+                        id={`custom-input-${item.id}-${promotedCustomField.id}`}
                         type="number" 
                         className="w-24 h-10 text-lg bg-background [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" 
                         {...register(`customFieldValues.${promotedCustomField.id}`, { valueAsNumber: true })} 
@@ -458,6 +459,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         return null;
     };
 
+    const isBranchA = product?.configType === 'A';
     const isComplexProduct = item.productId === 4 || item.productId === 5; 
     const showHeader = (product?.variants && product.variants.length > 0) || renderPromotedInput() !== null;
     const warningText = getPriorityWarning();
@@ -583,6 +585,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                     {field.name} *
                                                 </Label>
                                                 <Input 
+                                                    id={`custom-input-${item.id}-${field.id}`}
                                                     type="number" 
                                                     className="w-16 h-10 px-2 text-sm bg-background [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" 
                                                     {...register(`customFieldValues.${field.id}`, { valueAsNumber: true })} 
