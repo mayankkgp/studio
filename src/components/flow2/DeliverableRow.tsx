@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -19,7 +20,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { productCatalog } from '@/lib/product-data';
-import type { Product, ConfiguredProduct } from '@/lib/types';
+import type { Product, ConfiguredProduct, SoftConstraint } from '@/lib/types';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -36,17 +37,10 @@ import {
     TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-interface DeliverableRowProps {
-    item: ConfiguredProduct;
-    isExpanded: boolean;
-    onEdit: (id: string) => void;
-    onDone: (id: string) => void;
-    onValidityChange: (id: string, isValid: boolean) => void;
-    onUpdate: (id: string, updates: Partial<ConfiguredProduct>) => void;
-    onRemove: (id: string) => void;
-    isPersistent?: boolean;
-}
-
+/**
+ * Validates only mandatory presence (Required). 
+ * Soft constraints (min/max) are handled manually for non-blocking feedback.
+ */
 const getValidationSchema = (product: Product | null) => {
     if (!product) return z.object({});
     
@@ -56,27 +50,19 @@ const getValidationSchema = (product: Product | null) => {
     };
 
     if (product.configType === 'A') {
-        schemaObject.quantity = z.number({ required_error: "REQUIRED", invalid_type_error: "REQUIRED" })
-            .min(product.softConstraints?.find(c => c.type === 'min')?.value || 1, product.softConstraints?.find(c => c.type === 'min')?.message.toUpperCase() || "REQUIRED");
+        schemaObject.quantity = z.number({ required_error: "REQUIRED", invalid_type_error: "REQUIRED" });
     }
     
     if (product.configType === 'B') {
-        schemaObject.pages = z.number({ required_error: "REQUIRED", invalid_type_error: "REQUIRED" })
-            .min(product.softConstraints?.find(c => c.type === 'min')?.value || 1, product.softConstraints?.find(c => c.type === 'min')?.message.toUpperCase() || "REQUIRED");
+        schemaObject.pages = z.number({ required_error: "REQUIRED", invalid_type_error: "REQUIRED" });
     }
 
     if (product.customFields) {
         schemaObject.customFieldValues = z.object(
-            product.customFields.reduce((acc, field) => {
-                let fSchema = z.number({ required_error: "REQUIRED", invalid_type_error: "REQUIRED" });
-                if (field.softConstraints) {
-                    field.softConstraints.forEach(constraint => {
-                        if (constraint.type === 'min') fSchema = fSchema.min(constraint.value, constraint.message.toUpperCase());
-                        if (constraint.type === 'max') fSchema = fSchema.max(constraint.value, constraint.message.toUpperCase());
-                    });
-                }
-                return { ...acc, [field.id]: fSchema };
-            }, {})
+            product.customFields.reduce((acc, field) => ({
+                ...acc,
+                [field.id]: z.number({ required_error: "REQUIRED", invalid_type_error: "REQUIRED" })
+            }), {})
         ).optional();
     }
     
@@ -93,15 +79,6 @@ const getValidationSchema = (product: Product | null) => {
                 if (isSelected && addonDef && (addonDef.type === 'numeric' || addonDef.type === 'physical_quantity')) {
                     if (addon.value === null || addon.value === '' || isNaN(Number(addon.value))) {
                          ctx.addIssue({ code: z.ZodIssueCode.custom, message: "REQUIRED", path: [idx, 'value'] });
-                    } else if (addonDef.softConstraints) {
-                        addonDef.softConstraints.forEach(constraint => {
-                            if (constraint.type === 'min' && Number(addon.value) < constraint.value) {
-                                ctx.addIssue({ code: z.ZodIssueCode.custom, message: constraint.message.toUpperCase(), path: [idx, 'value'] });
-                            }
-                            if (constraint.type === 'max' && Number(addon.value) > constraint.value) {
-                                ctx.addIssue({ code: z.ZodIssueCode.custom, message: constraint.message.toUpperCase(), path: [idx, 'value'] });
-                            }
-                        });
                     }
                 }
             });
@@ -156,6 +133,17 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         el.style.height = '0px'; 
         const scrollHeight = el.scrollHeight;
         el.style.height = `${Math.max(40, scrollHeight)}px`;
+    }, []);
+
+    // Manual check for soft constraints (non-blocking)
+    const getLogicWarning = React.useCallback((fieldValue: any, constraints?: SoftConstraint[]) => {
+        if (fieldValue === undefined || fieldValue === null || fieldValue === '') return null;
+        if (!constraints) return null;
+        for (const c of constraints) {
+            if (c.type === 'min' && Number(fieldValue) < c.value) return c.message.toUpperCase();
+            if (c.type === 'max' && Number(fieldValue) > c.value) return c.message.toUpperCase();
+        }
+        return null;
     }, []);
 
     React.useEffect(() => {
@@ -214,10 +202,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         }
     }
 
-    const hasConstraintError = (error: any) => {
-        return error?.message && error.message.toUpperCase() !== 'REQUIRED';
-    };
-
     const getSummaryText = () => {
         if (!product) return '';
         const parts: string[] = [];
@@ -264,29 +248,45 @@ export const DeliverableRow = React.memo(function DeliverableRow({
     };
 
     const getPriorityWarning = React.useCallback(() => {
-        if (isValid) return null;
-        if (errors.variant) return 'VARIANT REQUIRED';
-        const qError = errors.quantity as any;
-        if (qError?.message && qError.message.toUpperCase() !== 'REQUIRED') return qError.message.toUpperCase();
-        const pError = errors.pages as any;
-        if (pError?.message && pError.message.toUpperCase() !== 'REQUIRED') return pError.message.toUpperCase();
-        
-        if (errors.customFieldValues) {
-            const cfErrors = errors.customFieldValues as Record<string, any>;
-            for (const key in cfErrors) {
-                const msg = cfErrors[key]?.message;
-                if (msg && String(msg).toUpperCase() !== 'REQUIRED') return String(msg).toUpperCase();
-            }
-        }
-        
-        if (errors.addons) {
-            const addonErrors = errors.addons as any[];
-            const foundError = addonErrors.find(e => e?.value?.message && e.value.message.toUpperCase() !== 'REQUIRED');
-            if (foundError) return foundError.value.message.toUpperCase();
+        // Hard errors (Blocking)
+        if (!isValid) {
+            if (errors.variant) return 'VARIANT REQUIRED';
+            if (errors.quantity || errors.pages) return 'REQUIRED';
+            if (errors.customFieldValues) return 'REQUIRED';
+            if (errors.addons) return 'REQUIRED';
+            return 'SETUP REQUIRED';
         }
 
-        return 'SETUP REQUIRED';
-    }, [isValid, errors]);
+        // Soft warnings (Non-blocking)
+        if (product?.configType === 'A') {
+            const warning = getLogicWarning(watchedValues.quantity, product.softConstraints);
+            if (warning) return warning;
+        }
+        if (product?.configType === 'B') {
+            const warning = getLogicWarning(watchedValues.pages, product.softConstraints);
+            if (warning) return warning;
+        }
+        if (product?.customFields) {
+            for (const field of product.customFields) {
+                const val = (watchedValues.customFieldValues as any)?.[field.id];
+                const warning = getLogicWarning(val, field.softConstraints);
+                if (warning) return warning;
+            }
+        }
+        if (watchedValues.addons) {
+            for (let i = 0; i < watchedValues.addons.length; i++) {
+                const addon = watchedValues.addons[i];
+                const addonDef = product?.addons?.find(a => a.id === addon.id);
+                const isSelected = addon.value !== undefined && addon.value !== false && addon.value !== null;
+                if (isSelected) {
+                    const warning = getLogicWarning(addon.value, addonDef?.softConstraints);
+                    if (warning) return warning;
+                }
+            }
+        }
+
+        return null;
+    }, [isValid, errors, watchedValues, product, getLogicWarning]);
 
     const getIcon = () => {
         switch (product?.configType) {
@@ -364,7 +364,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                     <div className="flex flex-wrap items-center justify-between gap-6">
                         {product?.variants && product.variants.length > 0 && (
                             <div className="flex items-center gap-4">
-                                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap min-w-[60px]">
+                                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap">
                                     Variant *
                                 </Label>
                                 <div className="flex flex-wrap gap-2">
@@ -389,7 +389,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
 
                         {isBranchA && (
                             <div className="flex items-center gap-4">
-                                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap min-w-[40px]">
+                                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap">
                                     {product?.configType === 'A' ? 'QTY *' : 'PAGES *'}
                                 </Label>
                                 <Input 
@@ -397,7 +397,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                     {...register(product?.configType === 'A' ? 'quantity' : 'pages', { valueAsNumber: true })}
                                     className={cn(
                                         "w-24 h-10 text-lg bg-background [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
-                                        hasConstraintError(product?.configType === 'A' ? errors.quantity : errors.pages) && "border-destructive ring-destructive border-2"
+                                        getLogicWarning(product?.configType === 'A' ? watchedValues.quantity : watchedValues.pages, product?.softConstraints) && "border-destructive ring-destructive border-2"
                                     )}
                                 />
                             </div>
@@ -415,7 +415,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                         type="number" 
                                         className={cn(
                                             "w-16 h-10 px-2 text-sm bg-background [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
-                                            hasConstraintError((errors.customFieldValues as any)?.[field.id]) && "border-destructive ring-destructive border-2"
+                                            getLogicWarning((watchedValues.customFieldValues as any)?.[field.id], field.softConstraints) && "border-destructive ring-destructive border-2"
                                         )}
                                         {...register(`customFieldValues.${field.id}`, { valueAsNumber: true })} 
                                     />
@@ -440,7 +440,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                             control={control}
                                             render={({ field }) => {
                                                 const isChecked = field.value !== undefined && field.value !== false;
-                                                const hasError = (errors.addons as any)?.[index]?.value;
+                                                const softWarning = getLogicWarning(field.value, addon.softConstraints);
                                                 
                                                 if (addon.type === 'checkbox') {
                                                     return (
@@ -473,7 +473,10 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                         const val = field.value ?? '';
                                                         const valueLength = val.toString().length;
                                                         return (
-                                                            <div className="inline-flex items-center rounded-full h-8 pl-4 pr-3 gap-2 bg-primary text-primary-foreground shadow-sm">
+                                                            <div className={cn(
+                                                                "inline-flex items-center rounded-full h-8 pl-4 pr-3 gap-2 bg-primary text-primary-foreground shadow-sm transition-colors",
+                                                                softWarning && "bg-destructive text-destructive-foreground"
+                                                            )}>
                                                                 <span className="text-xs font-medium cursor-pointer" onClick={() => field.onChange(false)}>
                                                                     {addon.name}
                                                                 </span>
@@ -489,11 +492,11 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                                         }
                                                                     }}
                                                                 />
-                                                                {hasError && (
+                                                                {softWarning && (
                                                                     <TooltipProvider>
                                                                         <Tooltip>
                                                                             <TooltipTrigger asChild><AlertCircle className="h-3 w-3 text-white" /></TooltipTrigger>
-                                                                            <TooltipContent><p>{hasError.message}</p></TooltipContent>
+                                                                            <TooltipContent><p>{softWarning}</p></TooltipContent>
                                                                         </Tooltip>
                                                                     </TooltipProvider>
                                                                 )}
@@ -510,19 +513,21 @@ export const DeliverableRow = React.memo(function DeliverableRow({
 
                         <div className="flex-1">
                             {showNotes ? (
-                                <Textarea 
-                                    {...register('specialRequest')} 
-                                    className="min-h-[40px] bg-background/50 overflow-hidden resize-none leading-6" 
-                                    placeholder="Add special instructions..."
-                                    ref={(e) => {
-                                        register('specialRequest').ref(e);
-                                        notesRef.current = e;
-                                    }}
-                                    onChange={(e) => {
-                                        register('specialRequest').onChange(e);
-                                        adjustHeight(e.target);
-                                    }}
-                                />
+                                <div className="relative group">
+                                    <Textarea 
+                                        {...register('specialRequest')} 
+                                        className="min-h-[40px] bg-background/50 overflow-hidden resize-none leading-6 px-3" 
+                                        placeholder="Add special instructions..."
+                                        ref={(e) => {
+                                            register('specialRequest').ref(e);
+                                            notesRef.current = e;
+                                        }}
+                                        onChange={(e) => {
+                                            register('specialRequest').onChange(e);
+                                            adjustHeight(e.target);
+                                        }}
+                                    />
+                                </div>
                             ) : (
                                 <Button variant="ghost" size="sm" className="h-8 gap-2 text-muted-foreground px-3" onClick={() => setShowNotes(true)}>
                                     <MessageSquarePlus className="h-4 w-4" />
@@ -536,3 +541,14 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         </AccordionItem>
     );
 });
+
+interface DeliverableRowProps {
+    item: ConfiguredProduct;
+    isExpanded: boolean;
+    onEdit: (id: string) => void;
+    onDone: (id: string) => void;
+    onValidityChange: (id: string, isValid: boolean) => void;
+    onUpdate: (id: string, updates: Partial<ConfiguredProduct>) => void;
+    onRemove: (id: string) => void;
+    isPersistent?: boolean;
+}

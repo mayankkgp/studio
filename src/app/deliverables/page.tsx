@@ -1,3 +1,4 @@
+
 'use client';
 
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -48,8 +49,11 @@ export default function DeliverablesPage() {
     }, [rowStatus, toast]);
 
     const { activeItems, orderListItems } = useMemo(() => {
+        // Active items are those NOT in committedItemIds
         const active = order.deliverables.filter(item => !committedItemIds.includes(item.id));
-        const list = committedItemIds
+        
+        // Order list items are those IN committedItemIds, maintaining the prepended order from the set
+        const list = [...committedItemIds]
             .map(id => order.deliverables.find(item => item.id === id))
             .filter(item => !!item);
 
