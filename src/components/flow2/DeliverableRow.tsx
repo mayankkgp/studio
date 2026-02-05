@@ -114,7 +114,6 @@ const getValidationSchema = (product: Product | null) => {
                             });
                         }
                     } else if (addon.value === null || addon.value === '') {
-                        // Selected but blank
                         ctx.addIssue({
                             code: z.ZodIssueCode.custom,
                             message: "Required",
@@ -233,23 +232,40 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         }
     }, [isExpanded, isValid, product]);
 
+    const performSyncUpdate = React.useCallback(() => {
+        const currentValues = getValues();
+        onUpdate(item.id, {
+            ...currentValues,
+            addons: currentValues.addons?.filter((a: any) => a.value !== undefined) as any,
+            sizes: currentValues.sizes?.filter((s: any) => s.quantity !== undefined) as any
+        });
+    }, [getValues, item.id, onUpdate]);
+
     React.useEffect(() => {
         const timer = setTimeout(() => {
-            const currentValues = getValues();
-            onUpdate(item.id, {
-                ...currentValues,
-                addons: currentValues.addons?.filter((a: any) => a.value !== undefined) as any,
-                sizes: currentValues.sizes?.filter((s: any) => s.quantity !== undefined) as any
-            });
+            performSyncUpdate();
             trigger();
         }, 300);
         return () => clearTimeout(timer);
-    }, [watchedValues.quantity, watchedValues.pages, watchedValues.specialRequest, watchedValues.customFieldValues, watchedValues.addons, watchedValues.sizes, watchedValues.variant, onUpdate, item.id, trigger, getValues]);
+    }, [
+        watchedValues.quantity, 
+        watchedValues.pages, 
+        watchedValues.specialRequest, 
+        watchedValues.customFieldValues, 
+        watchedValues.addons, 
+        watchedValues.sizes, 
+        watchedValues.variant, 
+        performSyncUpdate,
+        trigger
+    ]);
 
     const handleDoneClick = async (e: React.MouseEvent) => {
         e.stopPropagation();
         const result = await trigger();
-        if (result) onDone(item.id);
+        if (result) {
+            performSyncUpdate();
+            onDone(item.id);
+        }
     };
 
     const handleEditClick = (e: React.MouseEvent) => {
@@ -296,14 +312,12 @@ export const DeliverableRow = React.memo(function DeliverableRow({
     const getPriorityWarning = React.useCallback(() => {
         if (isValid) return null;
 
-        // 1. Check Main Product constraints
         const qError = errors.quantity as any;
         if (qError?.message && qError.message.toUpperCase() !== 'REQUIRED' && !qError.message.includes('expected number')) return qError.message.toUpperCase();
         
         const pError = errors.pages as any;
         if (pError?.message && pError.message.toUpperCase() !== 'REQUIRED' && !pError.message.includes('expected number')) return pError.message.toUpperCase();
 
-        // 2. Check Add-on constraints
         if (errors.addons && Array.isArray(errors.addons)) {
             for (const err of (errors.addons as any[])) {
                 const msg = err?.value?.message || err?.message;
@@ -311,7 +325,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             }
         }
 
-        // 3. Check Sizes
         if (errors.sizes && Array.isArray(errors.sizes)) {
             for (const err of (errors.sizes as any[])) {
                 const msg = err?.quantity?.message || err?.message;
@@ -319,7 +332,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             }
         }
 
-        // 4. Check Custom Fields
         if (errors.customFieldValues) {
             const cfErrors = errors.customFieldValues as Record<string, any>;
             for (const key in cfErrors) {
