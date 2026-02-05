@@ -78,6 +78,11 @@ export const productCatalog: Product[] = [
   { id: 334, name: 'Ritual Card - Blossom', configType: 'C', basePrice: 0, variants: ['Catalogue', 'Custom'], specialLogic: 'RitualCardBlossom', customFields: [{id: 'petals', name: 'Petals', type: 'numeric', rateKey: 'petal_rate', softConstraints: [{ type: 'min', value: 4, message: 'Min 4 petals.' }, { type: 'max', value: 12, message: 'Max 12 petals.' }] }], addons: [{ id: 'physical', name: 'Physical', type: 'physical_quantity', rateKey: 'ritual_card_blossom_rate', softConstraints: [{ type: 'min', value: 25, message: 'MOQ is 25.' }] }] },
   { id: 335, name: 'Ritual Card - Love', configType: 'C', basePrice: 0, variants: ['Catalogue', 'Custom'], addons: [{ id: 'physical', name: 'Physical', type: 'physical_quantity', rateKey: 'ritual_card_rate', softConstraints: [{ type: 'min', value: 25, message: 'MOQ is 25.' }] }] },
   { id: 34, name: 'Jute Bag', configType: 'C', basePrice: 0, variants: ['Catalogue', 'Custom'], addons: [{ id: 'physical', name: 'Physical', type: 'physical_quantity', rateKey: 'jute_bag_rate', softConstraints: [{ type: 'min', value: 50, message: 'MOQ is 50.' }] }] },
+  { id: 35, name: 'Luggage Tag', configType: 'C', basePrice: 0, variants: ['Catalogue', 'Custom'], addons: [
+      { id: 'paper', name: 'Paper', type: 'physical_quantity', rateKey: 'luggage_tag_paper_rate', softConstraints: [{ type: 'min', value: 25, message: 'MOQ is 25.' }] },
+      { id: 'plastic', name: 'Plastic', type: 'physical_quantity', rateKey: 'luggage_tag_plastic_rate', softConstraints: [{ type: 'min', value: 25, message: 'MOQ is 25.' }] }
+    ]
+  },
   { id: 36, name: 'Welcome Sign', configType: 'C', basePrice: 0, variants: ['Catalogue', 'Custom'], addons: [{ id: 'physical', name: 'Physical', type: 'physical_quantity', rateKey: 'welcome_sign_rate', softConstraints: [{ type: 'min', value: 1, message: 'Min 1.' }] }] },
   { id: 37, name: 'Petal Cone', configType: 'C', basePrice: 0, variants: ['Catalogue', 'Custom'], addons: [{ id: 'physical', name: 'Physical', type: 'physical_quantity', rateKey: 'petal_cone_rate', softConstraints: [{ type: 'min', value: 25, message: 'MOQ is 25.' }] }] },
   { id: 38, name: 'Scratch Card', configType: 'C', basePrice: 0, variants: ['Catalogue', 'Custom'], addons: [{ id: 'physical', name: 'Physical', type: 'physical_quantity', rateKey: 'scratch_card_rate', softConstraints: [{ type: 'min', value: 25, message: 'MOQ is 25.' }] }] },
@@ -90,11 +95,6 @@ export const productCatalog: Product[] = [
   { id: 57, name: 'Car Stickers', configType: 'C', basePrice: 0, addons: [{ id: 'physical', name: 'Physical', type: 'physical_quantity', rateKey: 'car_sticker_rate', softConstraints: [{ type: 'min', value: 5, message: 'MOQ is 5.' }] }] },
   { id: 58, name: 'Placecards', configType: 'C', basePrice: 0, addons: [{ id: 'physical', name: 'Physical', type: 'physical_quantity', rateKey: 'placecard_rate', softConstraints: [{ type: 'min', value: 25, message: 'MOQ is 25.' }] }] },
   { id: 60, name: 'Tote Bags', configType: 'C', basePrice: 0, variants: ['Catalogue', 'Custom'], addons: [{ id: 'physical', name: 'Physical', type: 'physical_quantity', rateKey: 'tote_bag_rate', softConstraints: [{ type: 'min', value: 25, message: 'MOQ is 25.' }] }] },
-  { id: 35, name: 'Luggage Tag', configType: 'C', basePrice: 0, variants: ['Catalogue', 'Custom'], addons: [
-      { id: 'paper', name: 'Paper', type: 'physical_quantity', rateKey: 'luggage_tag_paper_rate', softConstraints: [{ type: 'min', value: 25, message: 'MOQ is 25.' }] },
-      { id: 'plastic', name: 'Plastic', type: 'physical_quantity', rateKey: 'luggage_tag_plastic_rate', softConstraints: [{ type: 'min', value: 25, message: 'MOQ is 25.' }] }
-    ]
-  },
   
   // Type D
   { id: 5, name: 'Invite', configType: 'D', basePrice: 0, customFields: [

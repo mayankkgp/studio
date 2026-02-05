@@ -113,6 +113,30 @@ const getValidationSchema = (product: Product | null) => {
         });
     }
 
+    if (product.configType === 'E' && product.sizes) {
+        schemaObject.sizes = z.array(z.object({
+            id: z.string(),
+            name: z.string(),
+            quantity: z.number().nullable()
+        })).superRefine((sizes, ctx) => {
+            sizes.forEach((sizeEntry, idx) => {
+                const sizeDef = product.sizes?.find(s => s.id === sizeEntry.id);
+                if (sizeEntry.quantity !== null && sizeEntry.quantity !== undefined) {
+                    if (sizeDef?.softConstraints) {
+                        sizeDef.softConstraints.forEach(constraint => {
+                            if (constraint.type === 'min' && (sizeEntry.quantity as number) < constraint.value) {
+                                ctx.addIssue({ code: z.ZodIssueCode.custom, message: constraint.message.toUpperCase(), path: [idx, 'quantity'] });
+                            }
+                            if (constraint.type === 'max' && (sizeEntry.quantity as number) > constraint.value) {
+                                ctx.addIssue({ code: z.ZodIssueCode.custom, message: constraint.message.toUpperCase(), path: [idx, 'quantity'] });
+                            }
+                        });
+                    }
+                }
+            });
+        });
+    }
+
     return z.object(schemaObject);
 };
 
@@ -147,6 +171,14 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                     name: addon.name, 
                     value: existingAddon?.value ?? undefined
                 };
+            }) || [],
+            sizes: product?.sizes?.map(size => {
+                const existingSize = item.sizes?.find(s => s.id === size.id);
+                return {
+                    id: size.id,
+                    name: size.name,
+                    quantity: existingSize?.quantity ?? null
+                };
             }) || []
         },
         mode: 'onChange'
@@ -168,18 +200,17 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         }
     }, [showNotes, watchedValues.specialRequest, adjustHeight]);
 
+    // Reactive validity reporting
     React.useEffect(() => {
-        trigger().then((result) => {
-            hasValidated.current = true;
-            onValidityChange(item.id, result);
-        });
-    }, [trigger, item.id, onValidityChange]);
+        onValidityChange(item.id, isValid);
+    }, [item.id, isValid, onValidityChange]);
 
     const performSyncUpdate = React.useCallback(() => {
         const currentValues = getValues();
         onUpdate(item.id, {
             ...currentValues,
-            addons: (currentValues.addons || []).filter((a: any) => a.value !== undefined && a.value !== false) as any
+            addons: (currentValues.addons || []).filter((a: any) => a.value !== undefined && a.value !== false) as any,
+            sizes: (currentValues.sizes || []).filter((s: any) => s.quantity !== null) as any
         });
     }, [getValues, item.id, onUpdate]);
 
@@ -195,7 +226,8 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         watchedValues.specialRequest, 
         watchedValues.customFieldValues, 
         watchedValues.addons, 
-        watchedValues.variant, 
+        watchedValues.variant,
+        watchedValues.sizes,
         performSyncUpdate,
         trigger
     ]);
@@ -205,6 +237,8 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         const result = await trigger();
         if (result) {
             performSyncUpdate();
+            // Immediate validity sync before closing to ensure movement logic in parent triggers
+            onValidityChange(item.id, true);
             onDone(item.id);
         }
     };
@@ -238,6 +272,11 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             parts.push(`Qty: ${watchedValues.quantity}`);
         } else if (product.configType === 'B' && typeof watchedValues.pages === 'number') {
             parts.push(`${watchedValues.pages} Pages`);
+        } else if (product.configType === 'E' && watchedValues.sizes) {
+            const sizeParts = watchedValues.sizes
+                .filter((s: any) => s.quantity !== null && s.quantity > 0)
+                .map((s: any) => `${s.name}: ${s.quantity}`);
+            if (sizeParts.length > 0) parts.push(sizeParts.join(', '));
         }
         return parts.join(' • ');
     };
@@ -257,6 +296,14 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             const cfErrors = errors.customFieldValues as Record<string, any>;
             for (const key in cfErrors) {
                 const msg = cfErrors[key]?.message;
+                if (msg && String(msg).toUpperCase() !== 'REQUIRED') return String(msg).toUpperCase();
+            }
+        }
+
+        // Check sizes
+        if (errors.sizes && Array.isArray(errors.sizes)) {
+            for (const err of (errors.sizes as any[])) {
+                const msg = err?.quantity?.message || err?.message;
                 if (msg && String(msg).toUpperCase() !== 'REQUIRED') return String(msg).toUpperCase();
             }
         }
@@ -443,6 +490,26 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                     hasError && "border-destructive ring-destructive"
                                                 )}
                                                 {...register(`customFieldValues.${field.id}`, { valueAsNumber: true })} 
+                                            />
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+
+                        {product?.configType === 'E' && product.sizes && (
+                            <div className="flex flex-wrap items-center gap-6">
+                                {product.sizes.map((size, index) => {
+                                    return (
+                                        <div key={size.id} className="flex items-center gap-3">
+                                            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap">
+                                                {size.name}
+                                            </Label>
+                                            <Input 
+                                                id={`size-input-${item.id}-${size.id}`}
+                                                type="number" 
+                                                className="w-20 h-10 px-2 text-sm bg-background [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                {...register(`sizes.${index}.quantity`, { valueAsNumber: true })} 
                                             />
                                         </div>
                                     );
