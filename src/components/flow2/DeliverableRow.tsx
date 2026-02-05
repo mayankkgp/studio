@@ -5,7 +5,6 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { 
-    AlertTriangle, 
     AlertCircle,
     Trash2, 
     ShoppingBag,
@@ -21,7 +20,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { productCatalog } from '@/lib/product-data';
-import type { Product, ConfiguredProduct, SoftConstraint } from '@/lib/types';
+import type { Product, ConfiguredProduct } from '@/lib/types';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -53,7 +52,7 @@ const getValidationSchema = (product: Product | null) => {
     if (!product) return z.object({});
     
     let schemaObject: any = {
-        variant: (product.variants && product.variants.length > 0) ? z.string().min(1, "Variant required") : z.string().optional(),
+        variant: (product.variants && product.variants.length > 0) ? z.string().min(1, "Required") : z.string().optional(),
         specialRequest: z.string().optional(),
     };
 
@@ -117,17 +116,15 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             customFieldValues: item.customFieldValues || {},
             addons: product?.addons?.map(addon => {
                 const existingAddon = item.addons?.find(a => a.id === addon.id);
-                const initialValue = existingAddon?.value ?? undefined;
                 return { 
                     id: addon.id, 
                     name: addon.name, 
-                    value: initialValue
+                    value: existingAddon?.value ?? undefined
                 };
             }) || [],
             sizes: product?.sizes?.map(size => {
                 const existingSize = item.sizes?.find(s => s.name === size.name);
-                const initialValue = existingSize?.quantity ?? undefined;
-                return { name: size.name, quantity: initialValue };
+                return { name: size.name, quantity: existingSize?.quantity ?? undefined };
             }) || []
         },
         mode: 'onChange'
@@ -174,33 +171,11 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         }
     }, [isExpanded, isValid, product]);
 
-    const getWarnings = (data: any, product: Product | null): string | undefined => {
-        if (!product) return undefined;
-        const warnings: string[] = [];
-        const check = (value: number, constraints: SoftConstraint[]) => {
-            constraints.forEach(c => {
-                if (c.type === 'min' && value > 0 && value < c.value) warnings.push(c.message);
-                if (c.type === 'max' && value > c.value) warnings.push(c.message);
-            });
-        };
-        if (product.configType === 'A' && product.softConstraints && typeof data.quantity === 'number') {
-            let value = data.quantity;
-            if (product.specialLogic === 'WaxSealCustomQty' && data.variant === 'Custom') {
-                if (value > 0 && value < 25) warnings.push('MOQ for Custom is 25.');
-            } else {
-                 check(value, product.softConstraints);
-            }
-        }
-        return warnings.length > 0 ? warnings.join(' ') : undefined;
-    };
-
     React.useEffect(() => {
         const timer = setTimeout(() => {
             const currentValues = getValues();
-            const warning = getWarnings(currentValues, product);
             onUpdate(item.id, {
                 ...currentValues,
-                warning,
                 addons: currentValues.addons?.filter((a: any) => a.value !== undefined) as any,
                 sizes: currentValues.sizes?.filter((s: any) => s.quantity !== undefined) as any
             });
@@ -268,7 +243,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
     };
     const IconComponent = getIcon();
 
-    const isLocked = isExpanded && !isValid;
     const isBranchA = product?.configType === 'A' && (!product?.variants || product.variants.length === 0);
 
     const iconStatusClasses = isExpanded 
@@ -322,53 +296,29 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         if (product?.configType === 'A') {
             return (
                 <div className="flex items-center gap-4">
-                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap min-w-[40px]">QTY</Label>
-                    <div className="flex items-center gap-2">
-                        <Input 
-                            type="number" 
-                            {...register('quantity', { valueAsNumber: true })}
-                            className={cn("w-24 h-10 text-lg bg-background [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none", errors.quantity && "border-destructive")} 
-                            ref={(e) => {
-                                register('quantity').ref(e);
-                                // @ts-ignore
-                                qtyInputRef.current = e;
-                            }}
-                        />
-                        {errors.quantity && (
-                            <TooltipProvider>
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <AlertCircle className="h-4 w-4 text-destructive shrink-0 cursor-help" />
-                                    </TooltipTrigger>
-                                    <TooltipContent><p>{errors.quantity.message}</p></TooltipContent>
-                                </Tooltip>
-                            </TooltipProvider>
-                        )}
-                    </div>
+                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap min-w-[40px]">QTY *</Label>
+                    <Input 
+                        type="number" 
+                        {...register('quantity', { valueAsNumber: true })}
+                        className="w-24 h-10 text-lg bg-background [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" 
+                        ref={(e) => {
+                            register('quantity').ref(e);
+                            // @ts-ignore
+                            qtyInputRef.current = e;
+                        }}
+                    />
                 </div>
             );
         }
         if (product?.configType === 'B') {
             return (
                 <div className="flex items-center gap-4">
-                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap min-w-[40px]">PAGES</Label>
-                    <div className="flex items-center gap-2">
-                        <Input 
-                            type="number" 
-                            {...register('pages', { valueAsNumber: true })}
-                            className={cn("w-24 h-10 text-lg bg-background [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none", errors.pages && "border-destructive")} 
-                        />
-                        {errors.pages && (
-                            <TooltipProvider>
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <AlertCircle className="h-4 w-4 text-destructive shrink-0 cursor-help" />
-                                    </TooltipTrigger>
-                                    <TooltipContent><p>{errors.pages.message}</p></TooltipContent>
-                                </Tooltip>
-                            </TooltipProvider>
-                        )}
-                    </div>
+                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap min-w-[40px]">PAGES *</Label>
+                    <Input 
+                        type="number" 
+                        {...register('pages', { valueAsNumber: true })}
+                        className="w-24 h-10 text-lg bg-background [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" 
+                    />
                 </div>
             );
         }
@@ -376,25 +326,13 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             return (
                 <div className="flex items-center gap-4">
                     <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap min-w-[40px]">
-                        {promotedCustomField.name}
+                        {promotedCustomField.name} *
                     </Label>
-                    <div className="flex items-center gap-2">
-                        <Input 
-                            type="number" 
-                            className={cn("w-24 h-10 text-lg bg-background [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none", errors.customFieldValues?.[promotedCustomField.id] && "border-destructive")} 
-                            {...register(`customFieldValues.${promotedCustomField.id}`, { valueAsNumber: true })} 
-                        />
-                        {errors.customFieldValues?.[promotedCustomField.id] && (
-                            <TooltipProvider>
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <AlertCircle className="h-4 w-4 text-destructive shrink-0 cursor-help" />
-                                    </TooltipTrigger>
-                                    <TooltipContent><p>{(errors.customFieldValues as any)?.[promotedCustomField.id]?.message || 'Required'}</p></TooltipContent>
-                                </Tooltip>
-                            </TooltipProvider>
-                        )}
-                    </div>
+                    <Input 
+                        type="number" 
+                        className="w-24 h-10 text-lg bg-background [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" 
+                        {...register(`customFieldValues.${promotedCustomField.id}`, { valueAsNumber: true })} 
+                    />
                 </div>
             );
         }
@@ -441,18 +379,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                     </div>
 
                     <div className="flex items-center gap-2 ml-4">
-                        {item.warning && (
-                            <TooltipProvider>
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <div className="p-1.5 rounded-full bg-accent/10 text-accent cursor-help">
-                                            <AlertTriangle className="h-4 w-4" />
-                                        </div>
-                                    </TooltipTrigger>
-                                    <TooltipContent><p>{item.warning}</p></TooltipContent>
-                                </Tooltip>
-                            </TooltipProvider>
-                        )}
                         <div className="flex items-center gap-2">
                              <Button 
                                 variant="ghost" 
@@ -478,7 +404,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                 </div>
 
                 <div className="pointer-events-none absolute inset-0 -z-10">
-                    <AccordionTrigger className={cn("invisible", isLocked && "cursor-default [&>svg]:hidden")}>
+                    <AccordionTrigger className="invisible">
                         Toggle
                     </AccordionTrigger>
                 </div>
@@ -497,44 +423,32 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                 <div className="flex flex-wrap items-start justify-between gap-6">
                                     {product?.variants && product.variants.length > 0 ? (
                                         <div className="flex items-start gap-4 flex-1">
-                                            <Label className={cn("text-xs font-bold uppercase tracking-wider whitespace-nowrap min-w-[40px] mt-2.5", errors.variant ? "text-destructive" : "text-muted-foreground")}>
-                                                Variant
+                                            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap min-w-[40px] mt-2.5">
+                                                Variant *
                                             </Label>
-                                            <div className="flex items-center gap-2">
-                                                <Controller
-                                                    name="variant"
-                                                    control={control}
-                                                    render={({ field }) => (
-                                                        <div className="flex flex-wrap gap-2">
-                                                            {product.variants!.map(v => (
-                                                                <Button
-                                                                    key={v}
-                                                                    type="button"
-                                                                    variant={field.value === v ? "default" : "outline"}
-                                                                    size="sm"
-                                                                    className={cn(
-                                                                        "h-9 rounded-full px-4 transition-all",
-                                                                        field.value === v ? "shadow-sm" : "hover:bg-accent hover:text-accent-foreground"
-                                                                    )}
-                                                                    onClick={() => field.onChange(v)}
-                                                                >
-                                                                    {v}
-                                                                </Button>
-                                                            ))}
-                                                        </div>
-                                                    )}
-                                                />
-                                                {errors.variant && (
-                                                    <TooltipProvider>
-                                                        <Tooltip>
-                                                            <TooltipTrigger asChild>
-                                                                <AlertCircle className="h-4 w-4 text-destructive shrink-0 cursor-help" />
-                                                            </TooltipTrigger>
-                                                            <TooltipContent><p>{errors.variant.message}</p></TooltipContent>
-                                                        </Tooltip>
-                                                    </TooltipProvider>
+                                            <Controller
+                                                name="variant"
+                                                control={control}
+                                                render={({ field }) => (
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {product.variants!.map(v => (
+                                                            <Button
+                                                                key={v}
+                                                                type="button"
+                                                                variant={field.value === v ? "default" : "outline"}
+                                                                size="sm"
+                                                                className={cn(
+                                                                    "h-9 rounded-full px-4 transition-all",
+                                                                    field.value === v ? "shadow-sm" : "hover:bg-accent hover:text-accent-foreground"
+                                                                )}
+                                                                onClick={() => field.onChange(v)}
+                                                            >
+                                                                {v}
+                                                            </Button>
+                                                        ))}
+                                                    </div>
                                                 )}
-                                            </div>
+                                            />
                                         </div>
                                     ) : <div className="flex-1" />}
                                     {renderPromotedInput()}
@@ -548,25 +462,13 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                         return (
                                             <div key={field.id} className="flex items-center gap-3">
                                                 <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap">
-                                                    {field.name}
+                                                    {field.name} *
                                                 </Label>
-                                                <div className="flex items-center gap-2">
-                                                    <Input 
-                                                        type="number" 
-                                                        className={cn("w-16 h-10 px-2 text-sm bg-background [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none", errors.customFieldValues?.[field.id] && "border-destructive")} 
-                                                        {...register(`customFieldValues.${field.id}`, { valueAsNumber: true })} 
-                                                    />
-                                                    {errors.customFieldValues?.[field.id] && (
-                                                        <TooltipProvider>
-                                                            <Tooltip>
-                                                                <TooltipTrigger asChild>
-                                                                    <AlertCircle className="h-4 w-4 text-destructive shrink-0 cursor-help" />
-                                                                </TooltipTrigger>
-                                                                <TooltipContent><p>{(errors.customFieldValues as any)?.[field.id]?.message || 'Required'}</p></TooltipContent>
-                                                            </Tooltip>
-                                                        </TooltipProvider>
-                                                    )}
-                                                </div>
+                                                <Input 
+                                                    type="number" 
+                                                    className="w-16 h-10 px-2 text-sm bg-background [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" 
+                                                    {...register(`customFieldValues.${field.id}`, { valueAsNumber: true })} 
+                                                />
                                             </div>
                                         );
                                     })}
@@ -582,7 +484,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                             control={control}
                                             render={({ field }) => {
                                                 const isChecked = field.value !== undefined;
-                                                const hasError = (errors.sizes as any)?.[index]?.quantity;
                                                 
                                                 if (!isChecked) {
                                                     return (
@@ -604,39 +505,19 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                     );
                                                 } else {
                                                     return (
-                                                        <div className={cn(
-                                                            "inline-flex items-center rounded-full h-8 pl-3 pr-1 gap-2 shadow-sm transition-colors",
-                                                            hasError ? "bg-destructive text-destructive-foreground" : "bg-primary text-primary-foreground"
-                                                        )}>
+                                                        <div className="inline-flex items-center rounded-full h-8 pl-3 pr-1 gap-2 shadow-sm transition-colors bg-primary text-primary-foreground">
                                                             <span className="text-xs font-medium cursor-pointer" onClick={() => field.onChange(undefined)}>
                                                                 {size.name}
                                                             </span>
                                                             <Input
                                                                 id={`size-input-${item.id}-${index}`}
                                                                 type="number"
-                                                                className={cn(
-                                                                    "h-6 px-2 py-0 text-xs bg-white border-none focus-visible:ring-0 focus-visible:ring-offset-0 rounded-md font-bold text-black [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                                                )}
+                                                                className="h-6 px-2 py-0 text-xs bg-white border-none focus-visible:ring-0 focus-visible:ring-offset-0 rounded-md font-bold text-black [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                                                 style={{ width: `${Math.max(2, String(field.value ?? '').length + 2)}ch` }}
                                                                 value={field.value ?? ''}
-                                                                onChange={(e) => {
-                                                                    const val = e.target.value === '' ? null : Number(e.target.value);
-                                                                    field.onChange(val);
-                                                                }}
-                                                                onKeyDown={(e) => {
-                                                                    if (e.key === 'Enter') e.currentTarget.blur();
-                                                                }}
+                                                                onChange={(e) => field.onChange(e.target.value === '' ? null : Number(e.target.value))}
+                                                                onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
                                                             />
-                                                            {hasError && (
-                                                                <TooltipProvider>
-                                                                    <Tooltip>
-                                                                        <TooltipTrigger asChild>
-                                                                            <AlertCircle className="h-3 w-3 shrink-0" />
-                                                                        </TooltipTrigger>
-                                                                        <TooltipContent><p>{hasError.message}</p></TooltipContent>
-                                                                    </Tooltip>
-                                                                </TooltipProvider>
-                                                            )}
                                                         </div>
                                                     );
                                                 }
@@ -646,10 +527,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                 </div>
                             )}
 
-                            <div className={cn(
-                                "flex gap-6",
-                                isComplexProduct ? "flex-col items-stretch" : "flex-wrap items-start"
-                            )}>
+                            <div className={cn("flex gap-6", isComplexProduct ? "flex-col items-stretch" : "flex-wrap items-start")}>
                                 {product?.addons && product.addons.length > 0 && (
                                     <div className="flex flex-wrap gap-2">
                                         {product.addons.map((addon, index) => {
@@ -712,18 +590,11 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                                         <Input
                                                                             id={`addon-input-${addon.id}`}
                                                                             type="number"
-                                                                            className={cn(
-                                                                                "h-6 px-2 py-0 text-xs bg-white border-none focus-visible:ring-0 focus-visible:ring-offset-0 rounded-md font-bold text-black [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                                                            )}
+                                                                            className="h-6 px-2 py-0 text-xs bg-white border-none focus-visible:ring-0 focus-visible:ring-offset-0 rounded-md font-bold text-black [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                                                             style={{ width: `${Math.max(2, String(field.value ?? '').length + 2)}ch` }}
                                                                             value={field.value ?? ''}
-                                                                            onChange={(e) => {
-                                                                                const val = e.target.value === '' ? null : Number(e.target.value);
-                                                                                field.onChange(val);
-                                                                            }}
-                                                                            onKeyDown={(e) => {
-                                                                                if (e.key === 'Enter') e.currentTarget.blur();
-                                                                            }}
+                                                                            onChange={(e) => field.onChange(e.target.value === '' ? null : Number(e.target.value))}
+                                                                            onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
                                                                         />
                                                                         {hasError && (
                                                                             <TooltipProvider>

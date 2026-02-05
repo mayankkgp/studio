@@ -18,7 +18,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 
 import { eventDetailsSchema } from '@/lib/schemas';
@@ -29,29 +28,14 @@ import { MobileNav } from '../layout/MobileNav';
 import { useHeaderSummary } from '@/hooks/use-header-summary';
 import { CITIES } from '@/lib/cities';
 
-function FormError({ message }: { message?: string }) {
-  return (
-    <div className={cn(
-      "overflow-hidden transition-all duration-300 ease-in-out",
-      message ? "max-h-10 opacity-100 mt-1.5" : "max-h-0 opacity-0"
-    )}>
-      <p className="text-xs font-medium text-destructive animate-in fade-in slide-in-from-top-1">
-        {message}
-      </p>
-    </div>
-  );
-}
-
 function ComboboxCity({ 
   value, 
   onSelect, 
-  placeholder, 
-  error 
+  placeholder 
 }: { 
   value?: string, 
   onSelect: (val: string) => void, 
-  placeholder: string,
-  error?: string
+  placeholder: string
 }) {
   const [open, setOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
@@ -73,8 +57,7 @@ function ComboboxCity({
             aria-expanded={open}
             className={cn(
               "w-full justify-between font-normal text-left h-10 px-3 pr-14",
-              !value && "text-muted-foreground",
-              error && "border-destructive ring-1 ring-destructive"
+              !value && "text-muted-foreground"
             )}
           >
             <span className="truncate">{value || placeholder}</span>
@@ -158,7 +141,6 @@ export function EventDetailsForm() {
   const router = useRouter();
   const { order, setEventDetails, saveAsDraft, resetOrder, isLoaded } = useOrder();
   
-  // State for closing date popovers
   const [openEventDate, setOpenEventDate] = useState(false);
   const [openDueDate, setOpenDueDate] = useState(false);
   const [openWeddingDate, setOpenWeddingDate] = useState(false);
@@ -185,11 +167,6 @@ export function EventDetailsForm() {
       setValue('dateStatus', true);
     }
   }, [watchedFields.eventType, setValue]);
-
-  const dueDateWarning = (
-    watchedFields.orderDueDate && watchedFields.eventDate &&
-    new Date(watchedFields.orderDueDate) > new Date(watchedFields.eventDate)
-  );
 
   const onSubmit = (data: EventDetails) => {
     setEventDetails(data);
@@ -225,7 +202,7 @@ export function EventDetailsForm() {
         <div className="mx-auto max-w-3xl space-y-8">
           <Card>
             <CardHeader>
-              <CardTitle className="font-headline text-2xl">Event Type</CardTitle>
+              <CardTitle className="font-headline text-2xl">Event Type *</CardTitle>
             </CardHeader>
             <CardContent>
               <Controller
@@ -244,8 +221,7 @@ export function EventDetailsForm() {
                           htmlFor={option.value}
                           className={cn(
                             "flex flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent/20 hover:text-accent-foreground cursor-pointer transition-all",
-                            field.value === option.value && "border-primary ring-2 ring-primary bg-primary/5",
-                            errors.eventType && "border-destructive/50"
+                            field.value === option.value && "border-primary ring-2 ring-primary bg-primary/5"
                           )}
                         >
                           <option.icon className="mb-3 h-6 w-6" />
@@ -256,7 +232,6 @@ export function EventDetailsForm() {
                   </RadioGroup>
                 )}
               />
-              <FormError message={errors.eventType?.message} />
             </CardContent>
           </Card>
 
@@ -275,12 +250,10 @@ export function EventDetailsForm() {
                       <ComboboxCity 
                         value={field.value} 
                         onSelect={field.onChange} 
-                        placeholder="Select or enter venue" 
-                        error={errors.venueName?.message}
+                        placeholder="Select or enter venue"
                       />
                     )}
                   />
-                  <FormError message={errors.venueName?.message} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="shipToCity">Ship to City</Label>
@@ -295,12 +268,11 @@ export function EventDetailsForm() {
                       />
                     )}
                   />
-                  <FormError message={errors.shipToCity?.message} />
                 </div>
               </div>
               <div className="grid md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="eventDate">Event Date</Label>
+                  <Label htmlFor="eventDate">Event Date *</Label>
                    <Controller
                       name="eventDate"
                       control={control}
@@ -311,8 +283,7 @@ export function EventDetailsForm() {
                               variant={"outline"}
                               className={cn(
                                 "w-full justify-start text-left font-normal", 
-                                !field.value && "text-muted-foreground",
-                                errors.eventDate && "border-destructive ring-1 ring-destructive"
+                                !field.value && "text-muted-foreground"
                               )}
                             >
                               <CalendarIcon className="mr-2 h-4 w-4" />
@@ -349,10 +320,9 @@ export function EventDetailsForm() {
                         </Popover>
                       )}
                     />
-                  <FormError message={errors.eventDate?.message} />
                 </div>
                  <div className="space-y-2">
-                  <Label htmlFor="orderDueDate">Order Due Date</Label>
+                  <Label htmlFor="orderDueDate">Order Due Date *</Label>
                    <Controller
                       name="orderDueDate"
                       control={control}
@@ -363,8 +333,7 @@ export function EventDetailsForm() {
                               variant={"outline"}
                               className={cn(
                                 "w-full justify-start text-left font-normal", 
-                                !field.value && "text-muted-foreground",
-                                errors.orderDueDate && "border-destructive ring-1 ring-destructive"
+                                !field.value && "text-muted-foreground"
                               )}
                             >
                               <CalendarIcon className="mr-2 h-4 w-4" />
@@ -401,12 +370,6 @@ export function EventDetailsForm() {
                         </Popover>
                       )}
                     />
-                  <FormError message={errors.orderDueDate?.message} />
-                  {dueDateWarning && (
-                    <Alert variant="destructive" className="mt-2 bg-orange-100 border-orange-300 text-orange-800 animate-in fade-in slide-in-from-top-1">
-                      <AlertDescription>Due date is past the event.</AlertDescription>
-                    </Alert>
-                  )}
                 </div>
               </div>
             </CardContent>
@@ -422,14 +385,12 @@ export function EventDetailsForm() {
                 {watchedFields.eventType === 'Wedding' && (
                   <div className="grid md:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <Label htmlFor="brideName">Bride's Name</Label>
-                      <Input id="brideName" {...register('brideName')} className={cn(errors.brideName && "border-destructive")} />
-                      <FormError message={errors.brideName?.message} />
+                      <Label htmlFor="brideName">Bride's Name *</Label>
+                      <Input id="brideName" {...register('brideName')} />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="groomName">Groom's Name</Label>
-                      <Input id="groomName" {...register('groomName')} className={cn(errors.groomName && "border-destructive")} />
-                      <FormError message={errors.groomName?.message} />
+                      <Label htmlFor="groomName">Groom's Name *</Label>
+                      <Input id="groomName" {...register('groomName')} />
                     </div>
                   </div>
                 )}
@@ -439,19 +400,17 @@ export function EventDetailsForm() {
                   <>
                     <div className="grid md:grid-cols-2 gap-6">
                         <div className="space-y-2">
-                            <Label htmlFor="engagementBrideName">Bride's Name</Label>
-                            <Input id="engagementBrideName" {...register('engagementBrideName')} className={cn(errors.engagementBrideName && "border-destructive")} />
-                            <FormError message={errors.engagementBrideName?.message} />
+                            <Label htmlFor="engagementBrideName">Bride's Name *</Label>
+                            <Input id="engagementBrideName" {...register('engagementBrideName')} />
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="engagementGroomName">Groom's Name</Label>
-                            <Input id="engagementGroomName" {...register('engagementGroomName')} className={cn(errors.engagementGroomName && "border-destructive")} />
-                            <FormError message={errors.engagementGroomName?.message} />
+                            <Label htmlFor="engagementGroomName">Groom's Name *</Label>
+                            <Input id="engagementGroomName" {...register('engagementGroomName')} />
                         </div>
                     </div>
                      <div className="grid md:grid-cols-2 gap-6 items-start">
                         <div className="space-y-2">
-                            <Label htmlFor="weddingDate">Wedding Date</Label>
+                            <Label htmlFor="weddingDate">Wedding Date *</Label>
                             <Controller
                                 name="weddingDate"
                                 control={control}
@@ -462,8 +421,7 @@ export function EventDetailsForm() {
                                         variant={"outline"}
                                         className={cn(
                                           "w-full justify-start text-left font-normal", 
-                                          !field.value && "text-muted-foreground",
-                                          errors.weddingDate && "border-destructive ring-1 ring-destructive"
+                                          !field.value && "text-muted-foreground"
                                         )}
                                         >
                                         <CalendarIcon className="mr-2 h-4 w-4" />
@@ -500,10 +458,9 @@ export function EventDetailsForm() {
                                     </Popover>
                                 )}
                             />
-                            <FormError message={errors.weddingDate?.message} />
                         </div>
                         <div className="space-y-2">
-                           <Label className={cn(errors.dateStatus && "text-destructive")}>Wedding Date Status</Label>
+                           <Label>Wedding Date Status *</Label>
                            <Controller
                               name="dateStatus"
                               control={control}
@@ -513,17 +470,13 @@ export function EventDetailsForm() {
                                   onValueChange={(val) => field.onChange(val === 'fixed')}
                                   className="w-full"
                                 >
-                                  <TabsList className={cn(
-                                    "grid w-full grid-cols-2 h-10",
-                                    errors.dateStatus && "border-destructive ring-1 ring-destructive"
-                                  )}>
+                                  <TabsList className="grid w-full grid-cols-2 h-10">
                                     <TabsTrigger value="tentative">Tentative</TabsTrigger>
                                     <TabsTrigger value="fixed">Fixed</TabsTrigger>
                                   </TabsList>
                                 </Tabs>
                               )}
                             />
-                            <FormError message={errors.dateStatus?.message} />
                         </div>
                     </div>
                   </>
@@ -533,19 +486,16 @@ export function EventDetailsForm() {
                 {watchedFields.eventType === 'Anniversary' && (
                   <div className="grid md:grid-cols-3 gap-6">
                     <div className="space-y-2">
-                      <Label htmlFor="wifeName">Wife's Name</Label>
-                      <Input id="wifeName" {...register('wifeName')} className={cn(errors.wifeName && "border-destructive")} />
-                      <FormError message={errors.wifeName?.message} />
+                      <Label htmlFor="wifeName">Wife's Name *</Label>
+                      <Input id="wifeName" {...register('wifeName')} />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="husbandName">Husband's Name</Label>
-                      <Input id="husbandName" {...register('husbandName')} className={cn(errors.husbandName && "border-destructive")} />
-                      <FormError message={errors.husbandName?.message} />
+                      <Label htmlFor="husbandName">Husband's Name *</Label>
+                      <Input id="husbandName" {...register('husbandName')} />
                     </div>
                      <div className="space-y-2">
-                      <Label htmlFor="milestoneYears">Milestone Years</Label>
-                      <Input id="milestoneYears" type="number" {...register('milestoneYears', { valueAsNumber: true })} className={cn(errors.milestoneYears && "border-destructive")} />
-                      <FormError message={errors.milestoneYears?.message} />
+                      <Label htmlFor="milestoneYears">Milestone Years *</Label>
+                      <Input id="milestoneYears" type="number" {...register('milestoneYears', { valueAsNumber: true })} />
                     </div>
                   </div>
                 )}
@@ -554,18 +504,17 @@ export function EventDetailsForm() {
                 {watchedFields.eventType === 'Birthday' && (
                   <div className="grid md:grid-cols-3 gap-6">
                     <div className="space-y-2">
-                      <Label htmlFor="honoreeNameBirthday">Honoree Name</Label>
-                      <Input id="honoreeNameBirthday" {...register('honoreeNameBirthday')} className={cn(errors.honoreeNameBirthday && "border-destructive")} />
-                      <FormError message={errors.honoreeNameBirthday?.message} />
+                      <Label htmlFor="honoreeNameBirthday">Honoree Name *</Label>
+                      <Input id="honoreeNameBirthday" {...register('honoreeNameBirthday')} />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="gender">Gender</Label>
+                      <Label htmlFor="gender">Gender *</Label>
                        <Controller
                           name="gender"
                           control={control}
                           render={({ field }) => (
                             <Select onValueChange={field.onChange} defaultValue={field.value}>
-                              <SelectTrigger className={cn(errors.gender && "border-destructive")}>
+                              <SelectTrigger>
                                 <SelectValue placeholder="Select gender" />
                               </SelectTrigger>
                               <SelectContent>
@@ -576,12 +525,10 @@ export function EventDetailsForm() {
                             </Select>
                           )}
                         />
-                      <FormError message={errors.gender?.message} />
                     </div>
                      <div className="space-y-2">
-                      <Label htmlFor="ageMilestone">Age / Milestone</Label>
-                      <Input id="ageMilestone" type="number" {...register('ageMilestone', { valueAsNumber: true })} className={cn(errors.ageMilestone && "border-destructive")} />
-                      <FormError message={errors.ageMilestone?.message} />
+                      <Label htmlFor="ageMilestone">Age / Milestone *</Label>
+                      <Input id="ageMilestone" type="number" {...register('ageMilestone', { valueAsNumber: true })} />
                     </div>
                   </div>
                 )}
@@ -590,14 +537,12 @@ export function EventDetailsForm() {
                 {watchedFields.eventType === 'Others' && (
                   <div className="grid md:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <Label htmlFor="eventName">Event Name</Label>
-                      <Input id="eventName" {...register('eventName')} className={cn(errors.eventName && "border-destructive")} />
-                      <FormError message={errors.eventName?.message} />
+                      <Label htmlFor="eventName">Event Name *</Label>
+                      <Input id="eventName" {...register('eventName')} />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="honoreeNameOther">Honoree Name</Label>
-                      <Input id="honoreeNameOther" {...register('honoreeNameOther')} className={cn(errors.honoreeNameOther && "border-destructive")} />
-                      <FormError message={errors.honoreeNameOther?.message} />
+                      <Label htmlFor="honoreeNameOther">Honoree Name *</Label>
+                      <Input id="honoreeNameOther" {...register('honoreeNameOther')} />
                     </div>
                   </div>
                 )}
