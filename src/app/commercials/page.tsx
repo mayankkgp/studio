@@ -90,9 +90,9 @@ export default function CommercialsPage() {
                                 </div>
                             ) : (
                                 <div className="border rounded-lg overflow-hidden bg-card shadow-sm border-separate border-spacing-0">
-                                    <Table>
+                                    <Table className="border-collapse">
                                         <TableHeader className="bg-background">
-                                            <TableRow className="hover:bg-transparent">
+                                            <TableRow className="hover:bg-transparent border-b-0">
                                                 <TableHead className="sticky top-4 lg:top-6 z-20 bg-background h-10 text-xs font-bold uppercase border-b shadow-[0_1px_0_0_rgba(0,0,0,0.1)]">Line Item</TableHead>
                                                 <TableHead className="sticky top-4 lg:top-6 z-20 bg-background h-10 text-xs font-bold uppercase text-center w-24 border-b shadow-[0_1px_0_0_rgba(0,0,0,0.1)]">Multiplier</TableHead>
                                                 <TableHead className="sticky top-4 lg:top-6 z-20 bg-background h-10 text-xs font-bold uppercase text-right w-32 border-b shadow-[0_1px_0_0_rgba(0,0,0,0.1)]">Rate (₹)</TableHead>
