@@ -44,13 +44,14 @@ interface DeliverableRowProps {
     onValidityChange: (id: string, isValid: boolean) => void;
     onUpdate: (id: string, updates: Partial<ConfiguredProduct>) => void;
     onRemove: (id: string) => void;
+    isPersistent?: boolean;
 }
 
 const getValidationSchema = (product: Product | null) => {
     if (!product) return z.object({});
     
     let schemaObject: any = {
-        variant: z.string().optional(),
+        variant: product.variants && product.variants.length > 0 ? z.string().min(1, "REQUIRED") : z.string().optional(),
         specialRequest: z.string().optional(),
     };
 
@@ -117,7 +118,8 @@ export const DeliverableRow = React.memo(function DeliverableRow({
     onDone, 
     onValidityChange,
     onUpdate,
-    onRemove
+    onRemove,
+    isPersistent = false
 }: DeliverableRowProps) {
     const product = React.useMemo(() => productCatalog.find(p => p.id === item.productId) || null, [item.productId]);
     const isBranchA = product?.configType === 'A' || product?.configType === 'B';
@@ -230,6 +232,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
 
     const getPriorityWarning = React.useCallback(() => {
         if (isValid) return null;
+        if (errors.variant) return 'VARIANT REQUIRED';
         const qError = errors.quantity as any;
         if (qError?.message && qError.message.toUpperCase() !== 'REQUIRED') return qError.message.toUpperCase();
         const pError = errors.pages as any;
@@ -327,7 +330,10 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                 <div className="flex flex-col gap-6 pt-4">
                     <div className="flex flex-wrap items-start justify-between gap-6">
                         {product?.variants && product.variants.length > 0 && (
-                            <div className="flex items-start gap-4">
+                            <div className="flex flex-col gap-2">
+                                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                                    Variant *
+                                </Label>
                                 <div className="flex flex-wrap gap-2">
                                     {product.variants.map(v => (
                                         <Button
@@ -431,17 +437,18 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                             </Button>
                                                         );
                                                     } else {
-                                                        const valueLength = (field.value?.toString().length || 0);
+                                                        const val = field.value ?? '';
+                                                        const valueLength = val.toString().length;
                                                         return (
-                                                            <div className="inline-flex items-center rounded-full h-8 pl-3 pr-3.5 gap-2 bg-primary text-primary-foreground shadow-sm">
+                                                            <div className="inline-flex items-center rounded-full h-8 pl-4 pr-4 gap-2 bg-primary text-primary-foreground shadow-sm">
                                                                 <span className="text-xs font-medium cursor-pointer" onClick={() => field.onChange(false)}>
                                                                     {addon.name}
                                                                 </span>
                                                                 <Input
                                                                     type="number"
-                                                                    className="h-6 px-2 py-0 text-xs bg-white border-none focus-visible:ring-0 rounded-md font-bold text-black [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none min-w-[3rem]"
+                                                                    className="h-6 px-2 py-0 text-xs bg-white border-none focus-visible:ring-0 rounded-md font-bold text-black [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                                                     style={{ width: `${Math.max(2, valueLength) + 3}ch` }}
-                                                                    value={field.value ?? ''}
+                                                                    value={val}
                                                                     onChange={(e) => field.onChange(e.target.value === '' ? null : Number(e.target.value))}
                                                                     onKeyDown={(e) => {
                                                                         if (e.key === 'Enter') {

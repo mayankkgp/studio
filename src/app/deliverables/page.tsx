@@ -48,7 +48,10 @@ export default function DeliverablesPage() {
     }, [rowStatus, toast]);
 
     const { activeItems, orderListItems } = useMemo(() => {
+        // Active items are those NOT in committedItemIds
         const active = order.deliverables.filter(item => !committedItemIds.includes(item.id));
+        
+        // Order list items follow the order of committedItemIds (newest committed on top)
         const list = committedItemIds
             .map(id => order.deliverables.find(item => item.id === id))
             .filter(item => !!item);
@@ -112,7 +115,11 @@ export default function DeliverablesPage() {
                                         <p className="text-muted-foreground font-medium">Your queue is empty</p>
                                     </div>
                                 ) : (
-                                    <Accordion type="multiple" value={activeItems.map(i => i.id)} className="space-y-2 pointer-events-none">
+                                    <Accordion 
+                                        type="multiple" 
+                                        value={activeItems.map(i => i.id)} 
+                                        className="space-y-2 pointer-events-none"
+                                    >
                                         {activeItems.map((item) => (
                                             <div key={item.id} className="pointer-events-auto">
                                                 <DeliverableRow 
@@ -147,6 +154,7 @@ export default function DeliverablesPage() {
                                                 onValidityChange={handleValidityChange}
                                                 onUpdate={updateDeliverable}
                                                 onRemove={removeDeliverable}
+                                                isPersistent={true}
                                             />
                                         ))}
                                     </Accordion>
