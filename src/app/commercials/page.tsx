@@ -14,6 +14,7 @@ import type { BillableItem } from "@/lib/types";
 import { DollarSign, ChevronLeft, Save, Zap, Star } from "lucide-react";
 import { useHeaderSummary } from "@/hooks/use-header-summary";
 import * as React from 'react';
+import { cn } from "@/lib/utils";
 
 export default function CommercialsPage() {
     const router = useRouter();
@@ -96,46 +97,56 @@ export default function CommercialsPage() {
                         <div className="flex-1 overflow-y-auto custom-scrollbar">
                             {/* Centering Wrapper */}
                             <div className="max-w-4xl mx-auto w-full px-4 lg:px-6">
-                                <div className="border-b border-x rounded-b-lg bg-card shadow-sm">
+                                <div className="w-full">
                                     {billableItems.length === 0 ? (
-                                        <div className="flex flex-col items-center justify-center py-24 text-muted-foreground bg-card">
+                                        <div className="flex flex-col items-center justify-center py-24 text-muted-foreground bg-card border rounded-lg shadow-sm">
                                             <DollarSign className="h-12 w-12 opacity-20 mb-4" />
                                             <p className="font-medium">No price rows generated.</p>
                                             <p className="text-sm">Go back to configure deliverables.</p>
                                         </div>
                                     ) : (
-                                        <table className="w-full caption-bottom text-sm border-collapse">
+                                        <table className="w-full caption-bottom text-sm border-separate border-spacing-0">
                                             <TableHeader className="relative z-30">
                                                 <TableRow className="hover:bg-transparent border-none">
-                                                    <TableHead className="bg-white h-10 text-xs font-bold uppercase sticky top-0 z-30 border-b-2 border-stone-200 rounded-tl-lg border-t border-l">Line Item</TableHead>
-                                                    <TableHead className="bg-white h-10 text-xs font-bold uppercase text-center w-24 sticky top-0 z-30 border-b-2 border-stone-200 border-t">Multiplier</TableHead>
-                                                    <TableHead className="bg-white h-10 text-xs font-bold uppercase text-right w-32 sticky top-0 z-30 border-b-2 border-stone-200 border-t">Rate (₹)</TableHead>
-                                                    <TableHead className="bg-white h-10 text-xs font-bold uppercase text-right w-32 sticky top-0 z-30 border-b-2 border-stone-200 rounded-tr-lg border-t border-r">Total</TableHead>
+                                                    <TableHead className="bg-white h-10 text-xs font-bold uppercase sticky top-0 z-30 border-t border-b-2 border-l border-stone-200">Line Item</TableHead>
+                                                    <TableHead className="bg-white h-10 text-xs font-bold uppercase text-center w-24 sticky top-0 z-30 border-t border-b-2 border-stone-200">Multiplier</TableHead>
+                                                    <TableHead className="bg-white h-10 text-xs font-bold uppercase text-right w-32 sticky top-0 z-30 border-t border-b-2 border-stone-200">Rate (₹)</TableHead>
+                                                    <TableHead className="bg-white h-10 text-xs font-bold uppercase text-right w-32 sticky top-0 z-30 border-t border-b-2 border-r border-stone-200">Total</TableHead>
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
-                                                {billableItems.map((item) => {
+                                                {billableItems.map((item, itemIdx) => {
                                                     const itemTotal = item.components.reduce((acc, comp) => acc + comp.total, 0);
+                                                    const isLastItem = itemIdx === billableItems.length - 1;
+
                                                     return (
                                                         <React.Fragment key={item.configuredProductId}>
                                                             {/* Product Header Row */}
-                                                            <TableRow className="bg-[#5C4B35] hover:bg-[#5C4B35] border-t-2 border-primary/20 transition-none z-10 relative">
-                                                                <TableCell colSpan={3} className="py-2.5 font-bold text-sm text-[#FFFFFF]">
+                                                            <TableRow className="bg-[#5C4B35] hover:bg-[#5C4B35] transition-none z-10 relative">
+                                                                <TableCell colSpan={3} className="py-2.5 font-bold text-sm text-[#FFFFFF] border-l border-r border-stone-200">
                                                                     {item.productName}
                                                                 </TableCell>
-                                                                <TableCell className="py-2.5 text-right font-bold text-sm text-[#FFFFFF]">
+                                                                <TableCell className="py-2.5 text-right font-bold text-sm text-[#FFFFFF] border-r border-stone-200">
                                                                     {formatCurrency(itemTotal)}
                                                                 </TableCell>
                                                             </TableRow>
                                                             {/* Component Rows */}
-                                                            {item.components.map((comp, idx) => {
+                                                            {item.components.map((comp, compIdx) => {
                                                                 const isSpecialRequest = comp.label === 'Special Request' || comp.description !== undefined;
+                                                                const isAbsoluteLastRow = isLastItem && compIdx === item.components.length - 1;
+                                                                
                                                                 return (
                                                                     <TableRow 
-                                                                        key={`${item.configuredProductId}-${idx}`} 
-                                                                        className="group h-10 border-b last:border-b-0 bg-[#F9F2DC] hover:bg-[#E6DEBC] transition-colors"
+                                                                        key={`${item.configuredProductId}-${compIdx}`} 
+                                                                        className={cn(
+                                                                            "group h-10 bg-[#F9F2DC] hover:bg-[#E6DEBC] transition-colors",
+                                                                            "border-stone-200"
+                                                                        )}
                                                                     >
-                                                                        <TableCell className="py-0 pl-8 text-sm text-[#2E261F] font-medium relative">
+                                                                        <TableCell className={cn(
+                                                                            "py-0 pl-8 text-sm text-[#2E261F] font-medium relative border-l border-stone-200",
+                                                                            isAbsoluteLastRow && "border-b rounded-bl-lg"
+                                                                        )}>
                                                                             {isSpecialRequest ? (
                                                                                 <React.Fragment>
                                                                                     <Star className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 shrink-0 text-amber-500 fill-amber-500" />
@@ -147,10 +158,16 @@ export default function CommercialsPage() {
                                                                                 comp.label
                                                                             )}
                                                                         </TableCell>
-                                                                        <TableCell className="py-0 text-center text-sm text-[#2E261F] cursor-default select-none">
+                                                                        <TableCell className={cn(
+                                                                            "py-0 text-center text-sm text-[#2E261F] cursor-default select-none border-stone-200",
+                                                                            isAbsoluteLastRow && "border-b"
+                                                                        )}>
                                                                             {comp.isFixed ? "-" : comp.multiplier}
                                                                         </TableCell>
-                                                                        <TableCell className="py-0 text-right">
+                                                                        <TableCell className={cn(
+                                                                            "py-0 text-right border-stone-200",
+                                                                            isAbsoluteLastRow && "border-b"
+                                                                        )}>
                                                                             <input
                                                                                 type="number"
                                                                                 defaultValue={comp.rate}
@@ -159,7 +176,10 @@ export default function CommercialsPage() {
                                                                                 className="w-full h-8 text-right bg-transparent border-none focus:ring-1 focus:ring-primary rounded px-2 transition-all hover:bg-black/5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none font-semibold text-sm text-[#2E261F]"
                                                                             />
                                                                         </TableCell>
-                                                                        <TableCell className="py-0 text-right text-sm font-bold text-[#2E261F]">
+                                                                        <TableCell className={cn(
+                                                                            "py-0 text-right text-sm font-bold text-[#2E261F] border-r border-stone-200",
+                                                                            isAbsoluteLastRow && "border-b rounded-br-lg"
+                                                                        )}>
                                                                             {formatCurrency(comp.total)}
                                                                         </TableCell>
                                                                     </TableRow>
