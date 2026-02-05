@@ -58,19 +58,23 @@ const getValidationSchema = (product: Product | null) => {
 
     if (product.configType === 'A') {
         let qSchema = z.number({ required_error: "Required", invalid_type_error: "Required" });
-        product.softConstraints?.forEach(constraint => {
-            if (constraint.type === 'min') qSchema = qSchema.min(constraint.value, constraint.message);
-            if (constraint.type === 'max') qSchema = qSchema.max(constraint.value, constraint.message);
-        });
+        if (product.softConstraints) {
+            product.softConstraints.forEach(constraint => {
+                if (constraint.type === 'min') qSchema = qSchema.min(constraint.value, constraint.message);
+                if (constraint.type === 'max') qSchema = qSchema.max(constraint.value, constraint.message);
+            });
+        }
         schemaObject.quantity = qSchema;
     }
     
     if (product.configType === 'B') {
         let pSchema = z.number({ required_error: "Required", invalid_type_error: "Required" });
-        product.softConstraints?.forEach(constraint => {
-            if (constraint.type === 'min') pSchema = pSchema.min(constraint.value, constraint.message);
-            if (constraint.type === 'max') pSchema = pSchema.max(constraint.value, constraint.message);
-        });
+        if (product.softConstraints) {
+            product.softConstraints.forEach(constraint => {
+                if (constraint.type === 'min') pSchema = pSchema.min(constraint.value, constraint.message);
+                if (constraint.type === 'max') pSchema = pSchema.max(constraint.value, constraint.message);
+            });
+        }
         schemaObject.pages = pSchema;
     }
     
@@ -91,8 +95,8 @@ const getValidationSchema = (product: Product | null) => {
             addons.forEach((addon, idx) => {
                 const addonDef = product.addons?.find(a => a.id === addon.id);
                 if (addonDef && (addonDef.type === 'numeric' || addonDef.type === 'physical_quantity')) {
-                    if (addon.value !== undefined) {
-                        if (addon.value === null || typeof addon.value !== 'number') {
+                    if (addon.value !== undefined && addon.value !== null) {
+                        if (typeof addon.value !== 'number') {
                             ctx.addIssue({
                                 code: z.ZodIssueCode.custom,
                                 message: "Required",
@@ -109,6 +113,13 @@ const getValidationSchema = (product: Product | null) => {
                                 }
                             });
                         }
+                    } else if (addon.value === null) {
+                        // If selected but explicitly null (cleared), make it mandatory
+                        ctx.addIssue({
+                            code: z.ZodIssueCode.custom,
+                            message: "Required",
+                            path: [idx, 'value']
+                        });
                     }
                 }
             });
@@ -119,7 +130,22 @@ const getValidationSchema = (product: Product | null) => {
         schemaObject.sizes = z.array(z.object({
             name: z.string(), 
             quantity: z.union([z.number(), z.null(), z.undefined()])
-        })).optional();
+        })).superRefine((sizes, ctx) => {
+            sizes.forEach((size, idx) => {
+                const sizeDef = product.sizes?.find(s => s.name === size.name);
+                if (sizeDef && sizeDef.softConstraints && size.quantity !== undefined && size.quantity !== null) {
+                    sizeDef.softConstraints.forEach(constraint => {
+                        if (constraint.type === 'min' && (size.quantity as number) < constraint.value) {
+                            ctx.addIssue({
+                                code: z.ZodIssueCode.custom,
+                                message: constraint.message,
+                                path: [idx, 'quantity']
+                            });
+                        }
+                    });
+                }
+            });
+        });
     }
     
     return z.object(schemaObject);
@@ -300,7 +326,18 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             }
         }
 
-        // 4. Fallback for generic missing mandatory data
+        // 4. Check Sizes (Type E MOQ)
+        if (errors.sizes && Array.isArray(errors.sizes)) {
+            for (const err of (errors.sizes as any[])) {
+                const msg = err?.quantity?.message || err?.message;
+                if (msg) {
+                    const upperMsg = String(msg).toUpperCase();
+                    if (upperMsg !== 'REQUIRED' && !upperMsg.includes('EXPECTED NUMBER')) return upperMsg;
+                }
+            }
+        }
+
+        // 5. Fallback for generic missing mandatory data
         return 'SETUP REQUIRED';
     }, [isValid, errors]);
 
