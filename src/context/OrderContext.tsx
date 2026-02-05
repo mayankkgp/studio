@@ -21,50 +21,61 @@ const OrderContext = createContext<OrderContextType | undefined>(undefined);
 // Sample Data Generators for "Random Suitable Default Values"
 const SAMPLE_DELIVERABLES: ConfiguredProduct[] = [
   {
-    id: `1-${Date.now()}-sample`,
+    id: `1-${Date.now()}-sample-1`,
     productId: 1,
     productName: "Logo",
     variant: "Custom",
     quantity: 1,
     addons: [],
     customFieldValues: {},
-    specialRequest: "Make it look premium",
+    specialRequest: "Make it look premium and modern",
   },
   {
-    id: `5-${Date.now()}-sample`,
+    id: `5-${Date.now()}-sample-2`,
     productId: 5,
     productName: "Invite",
     variant: undefined,
     addons: [
-      { id: 'name_swap', name: 'Name Swap', value: true }
+      { id: 'name_swap', name: 'Name Swap', value: true },
+      { id: 'video_main', name: 'Video Main', value: 1 }
     ],
     customFieldValues: {
-      event_page_cat: 3,
+      event_page_cat: 4,
       cover_page_custom: 1
     },
     specialRequest: "",
   },
   {
-    id: `334-${Date.now()}-sample`,
+    id: `334-${Date.now()}-sample-3`,
     productId: 334,
     productName: "Ritual Card - Blossom",
     variant: "Catalogue",
     addons: [
-      { id: 'physical', name: 'Physical', value: 50 }
+      { id: 'physical', name: 'Physical', value: 75 }
     ],
     customFieldValues: {
-      petals: 8
+      petals: 10
     },
     specialRequest: "",
   },
   {
-    id: `9-${Date.now()}-sample`,
+    id: `9-${Date.now()}-sample-4`,
     productId: 9,
     productName: "Welcome Note",
-    variant: "Custom",
+    variant: "Catalogue",
     addons: [
-      { id: 'physical', name: 'Physical', value: 100 }
+      { id: 'physical', name: 'Physical', value: 150 }
     ],
+    customFieldValues: {},
+    specialRequest: "Include guest names on each note",
+  },
+  {
+    id: `41-${Date.now()}-sample-5`,
+    productId: 41,
+    productName: "Sticker",
+    variant: "3in",
+    quantity: 100,
+    addons: [],
     customFieldValues: {},
     specialRequest: "",
   }
@@ -76,13 +87,13 @@ const initialOrderState: Order = {
     eventType: 'Wedding',
     brideName: 'Riya',
     groomName: 'Arjun',
-    eventDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    eventDate: new Date(Date.now() + 45 * 24 * 60 * 60 * 1000),
     orderDueDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
-    venueName: 'Taj Palace, Mumbai',
+    venueName: 'The Oberoi, Mumbai',
     shipToCity: 'Mumbai'
   },
   deliverables: SAMPLE_DELIVERABLES,
-  paymentReceived: 5000,
+  paymentReceived: 7500,
 };
 
 export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ children }: { children: React.ReactNode }) => {
