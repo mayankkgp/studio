@@ -95,7 +95,7 @@ const getValidationSchema = (product: Product | null) => {
             addons.forEach((addon, idx) => {
                 const addonDef = product.addons?.find(a => a.id === addon.id);
                 if (addonDef && (addonDef.type === 'numeric' || addonDef.type === 'physical_quantity')) {
-                    if (addon.value !== undefined && addon.value !== null) {
+                    if (addon.value !== undefined && addon.value !== null && addon.value !== '') {
                         if (typeof addon.value !== 'number') {
                             ctx.addIssue({
                                 code: z.ZodIssueCode.custom,
@@ -113,8 +113,8 @@ const getValidationSchema = (product: Product | null) => {
                                 }
                             });
                         }
-                    } else if (addon.value === null) {
-                        // If selected but explicitly null (cleared), make it mandatory
+                    } else if (addon.value === null || addon.value === '') {
+                        // Selected but blank
                         ctx.addIssue({
                             code: z.ZodIssueCode.custom,
                             message: "Required",
@@ -129,11 +129,11 @@ const getValidationSchema = (product: Product | null) => {
     if (product.sizes) {
         schemaObject.sizes = z.array(z.object({
             name: z.string(), 
-            quantity: z.union([z.number(), z.null(), z.undefined()])
+            quantity: z.union([z.number(), z.null(), z.undefined(), z.literal('')])
         })).superRefine((sizes, ctx) => {
             sizes.forEach((size, idx) => {
                 const sizeDef = product.sizes?.find(s => s.name === size.name);
-                if (sizeDef && sizeDef.softConstraints && size.quantity !== undefined && size.quantity !== null) {
+                if (sizeDef && sizeDef.softConstraints && size.quantity !== undefined && size.quantity !== null && size.quantity !== '') {
                     sizeDef.softConstraints.forEach(constraint => {
                         if (constraint.type === 'min' && (size.quantity as number) < constraint.value) {
                             ctx.addIssue({
@@ -241,7 +241,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                 addons: currentValues.addons?.filter((a: any) => a.value !== undefined) as any,
                 sizes: currentValues.sizes?.filter((s: any) => s.quantity !== undefined) as any
             });
-            // Ensure validation state is fresh for warning text calculations
             trigger();
         }, 300);
         return () => clearTimeout(timer);
@@ -297,47 +296,38 @@ export const DeliverableRow = React.memo(function DeliverableRow({
     const getPriorityWarning = React.useCallback(() => {
         if (isValid) return null;
 
-        // 1. Check Main Product constraints (MOQ etc)
-        const mainError = (errors.quantity || errors.pages) as any;
-        if (mainError?.message) {
-            const msg = String(mainError.message).toUpperCase();
-            if (msg !== 'REQUIRED' && !msg.includes('EXPECTED NUMBER')) return msg;
-        }
+        // 1. Check Main Product constraints
+        const qError = errors.quantity as any;
+        if (qError?.message && qError.message.toUpperCase() !== 'REQUIRED' && !qError.message.includes('expected number')) return qError.message.toUpperCase();
+        
+        const pError = errors.pages as any;
+        if (pError?.message && pError.message.toUpperCase() !== 'REQUIRED' && !pError.message.includes('expected number')) return pError.message.toUpperCase();
 
-        // 2. Check Add-on constraints (Specific MOQs)
+        // 2. Check Add-on constraints
         if (errors.addons && Array.isArray(errors.addons)) {
             for (const err of (errors.addons as any[])) {
                 const msg = err?.value?.message || err?.message;
-                if (msg) {
-                    const upperMsg = String(msg).toUpperCase();
-                    if (upperMsg !== 'REQUIRED' && !upperMsg.includes('EXPECTED NUMBER')) return upperMsg;
-                }
+                if (msg && String(msg).toUpperCase() !== 'REQUIRED' && !String(msg).includes('expected number')) return String(msg).toUpperCase();
             }
         }
 
-        // 3. Check Custom Fields
-        if (errors.customFieldValues) {
-            const cfErrors = errors.customFieldValues as Record<string, any>;
-            for (const key in cfErrors) {
-                if (cfErrors[key]?.message) {
-                    const msg = String(cfErrors[key].message).toUpperCase();
-                    if (msg !== 'REQUIRED' && !msg.includes('EXPECTED NUMBER')) return msg;
-                }
-            }
-        }
-
-        // 4. Check Sizes (Type E MOQ)
+        // 3. Check Sizes
         if (errors.sizes && Array.isArray(errors.sizes)) {
             for (const err of (errors.sizes as any[])) {
                 const msg = err?.quantity?.message || err?.message;
-                if (msg) {
-                    const upperMsg = String(msg).toUpperCase();
-                    if (upperMsg !== 'REQUIRED' && !upperMsg.includes('EXPECTED NUMBER')) return upperMsg;
-                }
+                if (msg && String(msg).toUpperCase() !== 'REQUIRED' && !String(msg).includes('expected number')) return String(msg).toUpperCase();
             }
         }
 
-        // 5. Fallback for generic missing mandatory data
+        // 4. Check Custom Fields
+        if (errors.customFieldValues) {
+            const cfErrors = errors.customFieldValues as Record<string, any>;
+            for (const key in cfErrors) {
+                const msg = cfErrors[key]?.message;
+                if (msg && String(msg).toUpperCase() !== 'REQUIRED' && !String(msg).includes('expected number')) return String(msg).toUpperCase();
+            }
+        }
+
         return 'SETUP REQUIRED';
     }, [isValid, errors]);
 
@@ -604,7 +594,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                             onClick={() => {
                                                                 field.onChange(null); 
                                                                 setTimeout(() => {
-                                                                    document.getElementById(`size-input-${item.id}-${index}`)?.focus();
+                                                                    document.getElementById(`size-input-${item.id}-${size.name}`)?.focus();
                                                                 }, 0);
                                                             }}
                                                         >
@@ -619,7 +609,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                                 {size.name}
                                                             </span>
                                                             <Input
-                                                                id={`size-input-${item.id}-${index}`}
+                                                                id={`size-input-${item.id}-${size.name}`}
                                                                 type="number"
                                                                 className="h-6 px-2 py-0 text-xs bg-white border-none focus-visible:ring-0 focus-visible:ring-offset-0 rounded-md font-bold text-black [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                                                 style={{ width: `${Math.max(2, String(field.value ?? '').length + 2)}ch` }}
@@ -679,7 +669,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                                         onClick={() => {
                                                                             field.onChange(null); 
                                                                             setTimeout(() => {
-                                                                                document.getElementById(`addon-input-${addon.id}`)?.focus();
+                                                                                document.getElementById(`addon-input-${item.id}-${addon.id}`)?.focus();
                                                                             }, 0);
                                                                         }}
                                                                     >
@@ -697,7 +687,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                                             {addon.name}
                                                                         </span>
                                                                         <Input
-                                                                            id={`addon-input-${addon.id}`}
+                                                                            id={`addon-input-${item.id}-${addon.id}`}
                                                                             type="number"
                                                                             className="h-6 px-2 py-0 text-xs bg-white border-none focus-visible:ring-0 focus-visible:ring-offset-0 rounded-md font-bold text-black [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                                                             style={{ width: `${Math.max(2, String(field.value ?? '').length + 2)}ch` }}
