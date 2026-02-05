@@ -276,7 +276,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             return (
                 <Textarea 
                     {...register('specialRequest')} 
-                    className="min-h-[40px] bg-background/50 overflow-hidden resize-none py-2 px-3 leading-6" 
+                    className="min-h-[40px] bg-background/50 overflow-hidden resize-none py-2 px-3 leading-6 border border-input rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" 
                     placeholder="Add special instructions..."
                     ref={(e) => {
                         register('specialRequest').ref(e);
@@ -435,28 +435,32 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                 )}
 
                                 {product?.variants && product.variants.length > 0 && (
-                                    <div className="space-y-1.5">
+                                    <div className="space-y-3">
                                         <Label className={cn("text-xs font-semibold uppercase tracking-wider", errors.variant ? "text-destructive" : "text-muted-foreground")}>Variant</Label>
                                         <Controller
                                             name="variant"
                                             control={control}
                                             render={({ field }) => (
-                                                <Select 
-                                                    onValueChange={field.onChange} 
-                                                    value={field.value || ""}
-                                                >
-                                                    <SelectTrigger className={cn("h-10", errors.variant && "border-destructive")}>
-                                                        <SelectValue placeholder="Select variant" />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        {product.variants!.map(v => (
-                                                            <SelectItem key={v} value={v}>{v}</SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {product.variants!.map(v => (
+                                                        <Button
+                                                            key={v}
+                                                            type="button"
+                                                            variant={field.value === v ? "default" : "outline"}
+                                                            size="sm"
+                                                            className={cn(
+                                                                "h-9 rounded-full px-4 transition-all",
+                                                                field.value === v ? "shadow-sm" : "hover:bg-accent hover:text-accent-foreground"
+                                                            )}
+                                                            onClick={() => field.onChange(v)}
+                                                        >
+                                                            {v}
+                                                        </Button>
+                                                    ))}
+                                                </div>
                                             )}
                                         />
-                                        {errors.variant && <p className="text-xs text-destructive">{errors.variant.message}</p>}
+                                        {errors.variant && <p className="text-xs text-destructive font-medium">{errors.variant.message}</p>}
                                     </div>
                                 )}
 
