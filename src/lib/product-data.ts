@@ -120,8 +120,6 @@ export const productCatalog: Product[] = [
   { id: 31, name: 'Hangover Kits', configType: 'E', basePrice: 0, variants: ['Catalogue', 'Custom'], sizes: [
       { name: '5x7 in', rateKey: 'hangover_kit_small_rate', softConstraints: [{ type: 'min', value: 50, message: 'MOQ is 50.' }] },
       { name: '10x11 in', rateKey: 'hangover_kit_large_rate', softConstraints: [{ type: 'min', value: 50, message: 'MOQ is 50.' }] },
-  ], addons: [
-      { id: 'content', name: 'Content', type: 'checkbox', rateKey: 'hangover_kit_content_rate' }
   ]},
   { id: 35, name: 'Luggage Tag', configType: 'E', basePrice: 0, variants: ['Catalogue', 'Custom'], sizes: [
       { name: 'Paper', rateKey: 'luggage_tag_paper_rate', softConstraints: [{ type: 'min', value: 25, message: 'MOQ is 25.' }] },
