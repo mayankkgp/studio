@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { productCatalog } from '@/lib/product-data';
-import type { Product, ConfiguredProduct, SoftConstraint, CustomField } from '@/lib/types';
+import type { Product, ConfiguredProduct, SoftConstraint } from '@/lib/types';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -127,7 +127,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         mode: 'onChange'
     });
 
-    const { register, control, watch, formState: { errors, isValid }, trigger, getValues, setValue } = form;
+    const { register, control, watch, formState: { errors, isValid }, trigger, getValues } = form;
     
     const watchedValues = watch();
 
@@ -274,7 +274,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
     const renderNotesArea = (fullWidth: boolean = false) => {
         if (showNotes) {
             return (
-                <div className={cn("flex flex-col gap-1.5", fullWidth && "w-full")}>
+                <div className={cn("flex flex-col gap-1.5", fullWidth && "w-full min-w-[250px]")}>
                     {fullWidth && <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Special Request</Label>}
                     <Textarea 
                         {...register('specialRequest')} 
@@ -305,7 +305,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         );
     };
 
-    // Requirement: Promoted Primary Input Logic
     const promotedCustomField = React.useMemo(() => {
         if (product?.configType === 'A' || product?.configType === 'B') return null;
         if (product?.customFields?.length === 1) {
@@ -397,6 +396,8 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         return null;
     };
 
+    const isComplexProduct = item.productId === 4 || item.productId === 5; // Save the Date or Invite
+
     return (
         <div className="group relative">
             <AccordionItem 
@@ -478,62 +479,62 @@ export const DeliverableRow = React.memo(function DeliverableRow({
 
                 <AccordionContent className="px-4 pb-4 border-t bg-muted/5 relative">
                     {isBranchA ? (
-                        /* Branch A: Single-Line Mode */
                         <div className="flex flex-wrap items-center gap-8 pt-4 pb-2">
                             {renderPromotedInput()}
-                            <div className="flex-1 min-w-[200px]">
+                            <div className="flex-1 min-w-[250px]">
                                 {renderNotesArea()}
                             </div>
                         </div>
                     ) : (
-                        /* Branch B: Stacked Mode */
                         <div className="flex flex-col gap-6 pt-4">
                             {/* Row 1: Header (Variants + Promoted Input) */}
-                            <div className="flex flex-wrap items-start justify-between gap-6">
-                                {product?.variants && product.variants.length > 0 ? (
-                                    <div className="flex items-start gap-4 flex-1">
-                                        <Label className={cn("text-xs font-bold uppercase tracking-wider whitespace-nowrap min-w-[40px] mt-2.5", errors.variant ? "text-destructive" : "text-muted-foreground")}>
-                                            Variant
-                                        </Label>
-                                        <div className="flex items-center gap-2">
-                                            <Controller
-                                                name="variant"
-                                                control={control}
-                                                render={({ field }) => (
-                                                    <div className="flex flex-wrap gap-2">
-                                                        {product.variants!.map(v => (
-                                                            <Button
-                                                                key={v}
-                                                                type="button"
-                                                                variant={field.value === v ? "default" : "outline"}
-                                                                size="sm"
-                                                                className={cn(
-                                                                    "h-9 rounded-full px-4 transition-all",
-                                                                    field.value === v ? "shadow-sm" : "hover:bg-accent hover:text-accent-foreground"
-                                                                )}
-                                                                onClick={() => field.onChange(v)}
-                                                            >
-                                                                {v}
-                                                            </Button>
-                                                        ))}
-                                                    </div>
+                            {((product?.variants && product.variants.length > 0) || renderPromotedInput() !== null) && (
+                                <div className="flex flex-wrap items-start justify-between gap-6">
+                                    {product?.variants && product.variants.length > 0 ? (
+                                        <div className="flex items-start gap-4 flex-1">
+                                            <Label className={cn("text-xs font-bold uppercase tracking-wider whitespace-nowrap min-w-[40px] mt-2.5", errors.variant ? "text-destructive" : "text-muted-foreground")}>
+                                                Variant
+                                            </Label>
+                                            <div className="flex items-center gap-2">
+                                                <Controller
+                                                    name="variant"
+                                                    control={control}
+                                                    render={({ field }) => (
+                                                        <div className="flex flex-wrap gap-2">
+                                                            {product.variants!.map(v => (
+                                                                <Button
+                                                                    key={v}
+                                                                    type="button"
+                                                                    variant={field.value === v ? "default" : "outline"}
+                                                                    size="sm"
+                                                                    className={cn(
+                                                                        "h-9 rounded-full px-4 transition-all",
+                                                                        field.value === v ? "shadow-sm" : "hover:bg-accent hover:text-accent-foreground"
+                                                                    )}
+                                                                    onClick={() => field.onChange(v)}
+                                                                >
+                                                                    {v}
+                                                                </Button>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                />
+                                                {errors.variant && (
+                                                    <TooltipProvider>
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild>
+                                                                <AlertCircle className="h-4 w-4 text-destructive shrink-0 cursor-help" />
+                                                            </TooltipTrigger>
+                                                            <TooltipContent><p>{errors.variant.message}</p></TooltipContent>
+                                                        </Tooltip>
+                                                    </TooltipProvider>
                                                 )}
-                                            />
-                                            {errors.variant && (
-                                                <TooltipProvider>
-                                                    <Tooltip>
-                                                        <TooltipTrigger asChild>
-                                                            <AlertCircle className="h-4 w-4 text-destructive shrink-0 cursor-help" />
-                                                        </TooltipTrigger>
-                                                        <TooltipContent><p>{errors.variant.message}</p></TooltipContent>
-                                                    </Tooltip>
-                                                </TooltipProvider>
-                                            )}
+                                            </div>
                                         </div>
-                                    </div>
-                                ) : <div className="flex-1" />}
-                                {renderPromotedInput()}
-                            </div>
+                                    ) : <div className="flex-1" />}
+                                    {renderPromotedInput()}
+                                </div>
+                            )}
 
                             {/* Row 2: Custom Fields (Remaining) */}
                             {product?.customFields && product.customFields.length > (promotedCustomField ? 1 : 0) && (
@@ -619,84 +620,90 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                 </div>
                             )}
 
-                            {/* Row 4: Add-ons Cluster */}
-                            {product?.addons && product.addons.length > 0 && (
-                                <div className="flex flex-wrap gap-2">
-                                    {product.addons.map((addon, index) => {
-                                        const parentIndex = addon.dependsOn ? product.addons!.findIndex(a => a.id === addon.dependsOn) : -1;
-                                        const parentValue = parentIndex !== -1 ? watchedValues.addons?.[parentIndex]?.value : undefined;
-                                        const isParentActive = parentValue !== undefined ? (typeof parentValue === 'number' ? parentValue > 0 : !!parentValue) : true;
-                                        
-                                        if (!((!addon.dependsOn || isParentActive) && (!addon.visibleIfVariant || watchedValues.variant === addon.visibleIfVariant))) return null;
-                                        
-                                        return (
-                                            <Controller
-                                                key={addon.id}
-                                                name={`addons.${index}.value`}
-                                                control={control}
-                                                render={({ field }) => {
-                                                    const isChecked = typeof field.value === 'number' ? field.value > 0 : !!field.value;
-                                                    
-                                                    if (addon.type === 'checkbox') {
-                                                        return (
-                                                            <Button
-                                                                type="button"
-                                                                variant={field.value ? "default" : "outline"}
-                                                                size="sm"
-                                                                className="h-8 rounded-full px-3 gap-1.5 transition-all text-xs"
-                                                                onClick={() => field.onChange(!field.value)}
-                                                            >
-                                                                {field.value ? <Check className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
-                                                                {addon.name}
-                                                            </Button>
-                                                        );
-                                                    } else {
-                                                        if (!isChecked) {
+                            {/* Row 4: Unified Footer (Add-ons + Notes) */}
+                            <div className={cn(
+                                "flex gap-6",
+                                isComplexProduct ? "flex-col items-stretch" : "flex-wrap items-start"
+                            )}>
+                                {/* Add-ons cluster */}
+                                {product?.addons && product.addons.length > 0 && (
+                                    <div className="flex flex-wrap gap-2">
+                                        {product.addons.map((addon, index) => {
+                                            const parentIndex = addon.dependsOn ? product.addons!.findIndex(a => a.id === addon.dependsOn) : -1;
+                                            const parentValue = parentIndex !== -1 ? watchedValues.addons?.[parentIndex]?.value : undefined;
+                                            const isParentActive = parentValue !== undefined ? (typeof parentValue === 'number' ? parentValue > 0 : !!parentValue) : true;
+                                            
+                                            if (!((!addon.dependsOn || isParentActive) && (!addon.visibleIfVariant || watchedValues.variant === addon.visibleIfVariant))) return null;
+                                            
+                                            return (
+                                                <Controller
+                                                    key={addon.id}
+                                                    name={`addons.${index}.value`}
+                                                    control={control}
+                                                    render={({ field }) => {
+                                                        const isChecked = typeof field.value === 'number' ? field.value > 0 : !!field.value;
+                                                        
+                                                        if (addon.type === 'checkbox') {
                                                             return (
                                                                 <Button
                                                                     type="button"
-                                                                    variant="outline"
+                                                                    variant={field.value ? "default" : "outline"}
                                                                     size="sm"
                                                                     className="h-8 rounded-full px-3 gap-1.5 transition-all text-xs"
-                                                                    onClick={() => {
-                                                                        field.onChange(1);
-                                                                        setTimeout(() => {
-                                                                            document.getElementById(`addon-input-${addon.id}`)?.focus();
-                                                                        }, 0);
-                                                                    }}
+                                                                    onClick={() => field.onChange(!field.value)}
                                                                 >
-                                                                    <Plus className="h-3 w-3" />
+                                                                    {field.value ? <Check className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
                                                                     {addon.name}
                                                                 </Button>
                                                             );
                                                         } else {
-                                                            return (
-                                                                <div className="inline-flex items-center bg-primary text-primary-foreground rounded-full h-8 pl-3 pr-1 gap-2 shadow-sm">
-                                                                    <span className="text-xs font-medium">{addon.name}</span>
-                                                                    <Input
-                                                                        id={`addon-input-${addon.id}`}
-                                                                        type="number"
-                                                                        className="w-12 h-6 px-1.5 py-0 text-xs bg-primary-foreground text-primary border-none focus-visible:ring-0 focus-visible:ring-offset-0 rounded-md font-bold"
-                                                                        value={field.value as number}
-                                                                        onChange={(e) => field.onChange(Number(e.target.value))}
-                                                                        onBlur={() => {
-                                                                            if (Number(field.value) === 0) field.onChange(0);
+                                                            if (!isChecked) {
+                                                                return (
+                                                                    <Button
+                                                                        type="button"
+                                                                        variant="outline"
+                                                                        size="sm"
+                                                                        className="h-8 rounded-full px-3 gap-1.5 transition-all text-xs"
+                                                                        onClick={() => {
+                                                                            field.onChange(1);
+                                                                            setTimeout(() => {
+                                                                                document.getElementById(`addon-input-${addon.id}`)?.focus();
+                                                                            }, 0);
                                                                         }}
-                                                                    />
-                                                                </div>
-                                                            );
+                                                                    >
+                                                                        <Plus className="h-3 w-3" />
+                                                                        {addon.name}
+                                                                    </Button>
+                                                                );
+                                                            } else {
+                                                                return (
+                                                                    <div className="inline-flex items-center bg-primary text-primary-foreground rounded-full h-8 pl-3 pr-1 gap-2 shadow-sm">
+                                                                        <span className="text-xs font-medium">{addon.name}</span>
+                                                                        <Input
+                                                                            id={`addon-input-${addon.id}`}
+                                                                            type="number"
+                                                                            className="w-12 h-6 px-1.5 py-0 text-xs bg-primary-foreground text-primary border-none focus-visible:ring-0 focus-visible:ring-offset-0 rounded-md font-bold"
+                                                                            value={field.value as number}
+                                                                            onChange={(e) => field.onChange(Number(e.target.value))}
+                                                                            onBlur={() => {
+                                                                                if (Number(field.value) === 0) field.onChange(0);
+                                                                            }}
+                                                                        />
+                                                                    </div>
+                                                                );
+                                                            }
                                                         }
-                                                    }
-                                                }}
-                                            />
-                                        );
-                                    })}
-                                </div>
-                            )}
+                                                    }}
+                                                />
+                                            );
+                                        })}
+                                    </div>
+                                )}
 
-                            {/* Row 5: Footer (Special Request) */}
-                            <div className="w-full">
-                                {renderNotesArea(true)}
+                                {/* Special Request (Notes) */}
+                                <div className={cn(isComplexProduct ? "w-full" : "flex-1 min-w-[250px]")}>
+                                    {renderNotesArea(true)}
+                                </div>
                             </div>
                         </div>
                     )}
