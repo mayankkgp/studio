@@ -330,8 +330,8 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                 <div className="flex flex-col gap-6 pt-4">
                     <div className="flex flex-wrap items-start justify-between gap-6">
                         {product?.variants && product.variants.length > 0 && (
-                            <div className="flex flex-col gap-2">
-                                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                            <div className="flex items-center gap-4">
+                                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap min-w-[60px]">
                                     Variant *
                                 </Label>
                                 <div className="flex flex-wrap gap-2">
@@ -440,7 +440,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                         const val = field.value ?? '';
                                                         const valueLength = val.toString().length;
                                                         return (
-                                                            <div className="inline-flex items-center rounded-full h-8 pl-4 pr-4 gap-2 bg-primary text-primary-foreground shadow-sm">
+                                                            <div className="inline-flex items-center rounded-full h-8 px-4 gap-2 bg-primary text-primary-foreground shadow-sm">
                                                                 <span className="text-xs font-medium cursor-pointer" onClick={() => field.onChange(false)}>
                                                                     {addon.name}
                                                                 </span>
