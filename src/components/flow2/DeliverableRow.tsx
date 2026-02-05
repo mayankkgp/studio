@@ -16,7 +16,8 @@ import {
     Package,
     Check,
     Pencil,
-    MessageSquarePlus
+    MessageSquarePlus,
+    Plus
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { productCatalog } from '@/lib/product-data';
@@ -24,7 +25,6 @@ import type { Product, ConfiguredProduct, SoftConstraint } from '@/lib/types';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -127,16 +127,14 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         mode: 'onChange'
     });
 
-    const { register, control, watch, formState: { errors, isValid }, trigger, getValues } = form;
+    const { register, control, watch, formState: { errors, isValid }, trigger, getValues, setValue } = form;
     
     const watchedValues = watch();
 
     const adjustHeight = React.useCallback((el: HTMLTextAreaElement | null) => {
         if (!el) return;
-        // Reset height to allow shrinking
         el.style.height = '0px'; 
         const scrollHeight = el.scrollHeight;
-        // Force minimum height of 40px to match standard inputs
         el.style.height = `${Math.max(40, scrollHeight)}px`;
     }, []);
 
@@ -234,7 +232,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
     const getSummaryText = () => {
         if (!product) return '';
         const parts: string[] = [];
-        const hasVariants = product.variants && product.variants.length > 0;
+        const hasVariants = !!(product.variants && product.variants.length > 0);
         
         if (hasVariants && watchedValues.variant) {
             parts.push(watchedValues.variant);
@@ -394,7 +392,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                     <Input 
                                         type="number" 
                                         {...register('quantity', { valueAsNumber: true })}
-                                        className={cn("w-24 h-10 text-lg font-bold bg-background", errors.quantity && "border-destructive")} 
+                                        className={cn("w-24 h-10 text-lg bg-background", errors.quantity && "border-destructive")} 
                                         ref={(e) => {
                                             register('quantity').ref(e);
                                             // @ts-ignore
@@ -433,7 +431,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                 {...register(product.configType === 'A' ? 'quantity' : 'pages', { 
                                                     valueAsNumber: true 
                                                 })}
-                                                className={cn("w-24 h-10 text-lg font-bold bg-background", (errors.quantity || errors.pages) && "border-destructive")} 
+                                                className={cn("w-24 h-10 text-lg bg-background", (errors.quantity || errors.pages) && "border-destructive")} 
                                                 ref={(e) => {
                                                     if (product.configType === 'A') {
                                                         register('quantity').ref(e);
@@ -514,35 +512,77 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                 {product?.addons && product.addons.length > 0 && (
                                     <div className="space-y-3">
                                         <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Add-ons</Label>
-                                        <div className="space-y-2 rounded-lg border bg-background/50 p-4">
+                                        <div className="flex flex-wrap gap-2">
                                             {product.addons.map((addon, index) => {
                                                 const parentIndex = addon.dependsOn ? product.addons!.findIndex(a => a.id === addon.dependsOn) : -1;
                                                 const parentValue = parentIndex !== -1 ? watchedValues.addons?.[parentIndex]?.value : undefined;
                                                 const isParentActive = parentValue !== undefined ? (typeof parentValue === 'number' ? parentValue > 0 : !!parentValue) : true;
+                                                
                                                 if (!((!addon.dependsOn || isParentActive) && (!addon.visibleIfVariant || watchedValues.variant === addon.visibleIfVariant))) return null;
-                                                const isChecked = typeof watchedValues.addons?.[index]?.value === 'number' ? watchedValues.addons?.[index]?.value > 0 : !!watchedValues.addons?.[index]?.value;
+                                                
                                                 return (
-                                                    <div key={addon.id} className="flex items-center justify-between py-1">
-                                                        <div className="flex items-center gap-3">
-                                                            <Controller
-                                                                name={`addons.${index}.value`}
-                                                                control={control}
-                                                                render={({ field }) => (
-                                                                    <Checkbox 
-                                                                        checked={addon.type === 'checkbox' ? !!field.value : isChecked} 
-                                                                        onCheckedChange={(checked) => {
-                                                                            if (addon.type === 'checkbox') field.onChange(checked);
-                                                                            else field.onChange(checked ? 1 : 0);
-                                                                        }} 
-                                                                    />
-                                                                )}
-                                                            />
-                                                            <span className="text-sm">{addon.name}</span>
-                                                        </div>
-                                                        {addon.type !== 'checkbox' && isChecked && (
-                                                            <Input type="number" className="w-20 h-8" {...register(`addons.${index}.value`, { valueAsNumber: true })} />
-                                                        )}
-                                                    </div>
+                                                    <Controller
+                                                        key={addon.id}
+                                                        name={`addons.${index}.value`}
+                                                        control={control}
+                                                        render={({ field }) => {
+                                                            const isChecked = typeof field.value === 'number' ? field.value > 0 : !!field.value;
+                                                            
+                                                            if (addon.type === 'checkbox') {
+                                                                return (
+                                                                    <Button
+                                                                        type="button"
+                                                                        variant={field.value ? "default" : "outline"}
+                                                                        size="sm"
+                                                                        className="h-8 rounded-full px-3 gap-1.5 transition-all text-xs"
+                                                                        onClick={() => field.onChange(!field.value)}
+                                                                    >
+                                                                        {field.value ? <Check className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
+                                                                        {addon.name}
+                                                                    </Button>
+                                                                );
+                                                            } else {
+                                                                // Numeric Addon
+                                                                if (!isChecked) {
+                                                                    return (
+                                                                        <Button
+                                                                            type="button"
+                                                                            variant="outline"
+                                                                            size="sm"
+                                                                            className="h-8 rounded-full px-3 gap-1.5 transition-all text-xs"
+                                                                            onClick={() => {
+                                                                                field.onChange(1);
+                                                                                // Small delay to allow render before focus
+                                                                                setTimeout(() => {
+                                                                                    const input = document.getElementById(`addon-input-${addon.id}`);
+                                                                                    input?.focus();
+                                                                                }, 0);
+                                                                            }}
+                                                                        >
+                                                                            <Plus className="h-3 w-3" />
+                                                                            {addon.name}
+                                                                        </Button>
+                                                                    );
+                                                                } else {
+                                                                    return (
+                                                                        <div className="inline-flex items-center bg-primary text-primary-foreground rounded-full h-8 pl-3 pr-1 gap-2 shadow-sm">
+                                                                            <span className="text-xs font-medium">{addon.name}</span>
+                                                                            <Input
+                                                                                id={`addon-input-${addon.id}`}
+                                                                                type="number"
+                                                                                className="w-12 h-6 px-1.5 py-0 text-xs bg-primary-foreground text-primary border-none focus-visible:ring-0 focus-visible:ring-offset-0 rounded-md font-bold"
+                                                                                value={field.value as number}
+                                                                                onChange={(e) => field.onChange(Number(e.target.value))}
+                                                                                onBlur={() => {
+                                                                                    if (Number(field.value) === 0) field.onChange(0);
+                                                                                }}
+                                                                            />
+                                                                        </div>
+                                                                    );
+                                                                }
+                                                            }
+                                                        }}
+                                                    />
                                                 );
                                             })}
                                         </div>
