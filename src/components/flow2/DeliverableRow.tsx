@@ -91,7 +91,6 @@ const getValidationSchema = (product: Product | null) => {
             addons.forEach((addon, idx) => {
                 const addonDef = product.addons?.find(a => a.id === addon.id);
                 if (addonDef && (addonDef.type === 'numeric' || addonDef.type === 'physical_quantity')) {
-                    // Numeric add-ons are mandatory IF selected (value is not undefined)
                     if (addon.value !== undefined) {
                         if (addon.value === null || typeof addon.value !== 'number') {
                             ctx.addIssue({
@@ -273,45 +272,37 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         if (isValid) return null;
 
         // 1. Check Main Product constraints (MOQ etc)
-        const quantityError = errors.quantity as any;
-        const pagesError = errors.pages as any;
-        const mainError = quantityError || pagesError;
-        
+        const mainError = (errors.quantity || errors.pages) as any;
         if (mainError?.message) {
-            const msg = mainError.message.toUpperCase();
-            // Ignore generic type errors or "Required" for the badge if we want specific constraints
+            const msg = String(mainError.message).toUpperCase();
             if (msg !== 'REQUIRED' && !msg.includes('EXPECTED NUMBER')) return msg;
         }
 
-        // 2. Check Custom Fields
+        // 2. Check Add-on constraints (Specific MOQs)
+        if (errors.addons && Array.isArray(errors.addons)) {
+            for (const err of (errors.addons as any[])) {
+                const msg = err?.value?.message || err?.message;
+                if (msg) {
+                    const upperMsg = String(msg).toUpperCase();
+                    if (upperMsg !== 'REQUIRED' && !upperMsg.includes('EXPECTED NUMBER')) return upperMsg;
+                }
+            }
+        }
+
+        // 3. Check Custom Fields
         if (errors.customFieldValues) {
             const cfErrors = errors.customFieldValues as Record<string, any>;
             for (const key in cfErrors) {
                 if (cfErrors[key]?.message) {
-                    const msg = cfErrors[key].message.toUpperCase();
-                    if (msg !== 'REQUIRED') return msg;
+                    const msg = String(cfErrors[key].message).toUpperCase();
+                    if (msg !== 'REQUIRED' && !msg.includes('EXPECTED NUMBER')) return msg;
                 }
             }
         }
 
-        // 3. Check Add-on constraints
-        if (errors.addons) {
-            const addonErrors = errors.addons as any[];
-            for (let err of addonErrors) {
-                if (err?.value?.message) {
-                    const msg = err.value.message.toUpperCase();
-                    if (msg !== 'REQUIRED') return msg;
-                }
-            }
-        }
-
-        // 4. Fallback for missing mandatory fields
-        if (product?.variants?.length && !watchedValues.variant) return 'SETUP REQUIRED';
-        if (product?.configType === 'A' && (watchedValues.quantity === null || watchedValues.quantity === undefined)) return 'SETUP REQUIRED';
-        if (product?.configType === 'B' && (watchedValues.pages === null || watchedValues.pages === undefined)) return 'SETUP REQUIRED';
-
+        // 4. Fallback for generic missing mandatory data
         return 'SETUP REQUIRED';
-    }, [isValid, errors, product, watchedValues]);
+    }, [isValid, errors]);
 
     const getIcon = () => {
         switch (product?.configType) {
