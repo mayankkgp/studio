@@ -201,7 +201,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             onUpdate(item.id, {
                 ...currentValues,
                 warning,
-                addons: currentValues.addons?.filter((a: any) => a.value !== undefined && a.value !== false) as any,
+                addons: currentValues.addons?.filter((a: any) => a.value !== undefined) as any,
                 sizes: currentValues.sizes?.filter((s: any) => s.quantity !== undefined) as any
             });
         }, 300);
@@ -433,7 +433,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                             {!isExpanded && (
                                 <div className="text-xs text-muted-foreground truncate flex-1">
                                     {getSummaryText() === 'Setup Required' ? (
-                                        <Badge variant="destructive" className="bg-destructive text-destructive-foreground text-[10px] h-4 py-0 font-bold tracking-wide">Setup Required</Badge>
+                                        <Badge variant="destructive" className="bg-destructive text-destructive-foreground text-[10px] h-4 py-0 font-bold tracking-wide">SETUP REQUIRED</Badge>
                                     ) : getSummaryText()}
                                 </div>
                             )}
@@ -623,6 +623,9 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                                     const val = e.target.value === '' ? null : Number(e.target.value);
                                                                     field.onChange(val);
                                                                 }}
+                                                                onKeyDown={(e) => {
+                                                                    if (e.key === 'Enter') e.currentTarget.blur();
+                                                                }}
                                                             />
                                                             {hasError && (
                                                                 <TooltipProvider>
@@ -717,6 +720,9 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                                             onChange={(e) => {
                                                                                 const val = e.target.value === '' ? null : Number(e.target.value);
                                                                                 field.onChange(val);
+                                                                            }}
+                                                                            onKeyDown={(e) => {
+                                                                                if (e.key === 'Enter') e.currentTarget.blur();
                                                                             }}
                                                                         />
                                                                         {hasError && (
