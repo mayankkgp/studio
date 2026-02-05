@@ -275,7 +275,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         if (showNotes) {
             return (
                 <div className={cn("flex flex-col gap-1.5", fullWidth && "w-full min-w-[250px]")}>
-                    {fullWidth && <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Special Request</Label>}
                     <Textarea 
                         {...register('specialRequest')} 
                         className="min-h-[40px] bg-background/50 overflow-hidden resize-none py-2 px-3 leading-6 border border-input rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" 
