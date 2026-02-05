@@ -1,4 +1,3 @@
-
 'use client';
 
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -32,7 +31,7 @@ export default function DeliverablesPage() {
     }, []);
 
     const handleDone = useCallback(async (id: string, forceValid: boolean = false) => {
-        // Only block if HARD validation fails (e.g. missing variant or mandatory empty addon)
+        // Only block if HARD validation fails (e.g. missing mandatory fields)
         const isValid = forceValid || rowStatus[id]?.isValid;
         
         if (isValid) {
@@ -66,6 +65,7 @@ export default function DeliverablesPage() {
             .filter(item => !!item);
 
         // Active items follow the deliverables order (Context prepends new items)
+        // These are items NOT in the committedItemIds list
         const active = order.deliverables.filter(item => !committedItemIds.includes(item.id));
 
         return { 

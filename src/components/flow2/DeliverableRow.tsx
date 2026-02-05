@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -41,7 +40,7 @@ const getValidationSchema = (product: Product | null) => {
     if (!product) return z.object({});
     
     let schemaObject: any = {
-        variant: product.variants && product.variants.length > 0 ? z.string().min(1, "VARIANT REQUIRED") : z.string().optional(),
+        variant: product.variants && product.variants.length > 0 ? z.string().min(1, "REQUIRED") : z.string().optional(),
         specialRequest: z.string().optional(),
     };
 
@@ -264,24 +263,24 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         return parts.reduce((prev, curr, i) => [prev, <span key={`sep-${i}`} className="mx-1 text-muted-foreground/50">•</span>, curr]);
     };
 
-    const getPriorityWarning = React.useCallback(() => {
+    const getWarningData = React.useCallback((): { type: 'hard' | 'soft' | null, message: string | null } => {
         if (!isValid) {
-            return 'SETUP REQUIRED';
+            return { type: 'hard', message: 'SETUP REQUIRED' };
         }
 
         if (product?.configType === 'A') {
             const warning = getLogicWarning(watchedValues.quantity, product.softConstraints);
-            if (warning) return warning;
+            if (warning) return { type: 'soft', message: warning };
         }
         if (product?.configType === 'B') {
             const warning = getLogicWarning(watchedValues.pages, product.softConstraints);
-            if (warning) return warning;
+            if (warning) return { type: 'soft', message: warning };
         }
         if (product?.customFields) {
             for (const field of product.customFields) {
                 const val = (watchedValues.customFieldValues as any)?.[field.id];
                 const warning = getLogicWarning(val, field.softConstraints);
-                if (warning) return warning;
+                if (warning) return { type: 'soft', message: warning };
             }
         }
         if (watchedValues.addons) {
@@ -291,12 +290,12 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                 const isSelected = addon.value !== undefined && addon.value !== false && addon.value !== null;
                 if (isSelected) {
                     const warning = getLogicWarning(addon.value, addonDef?.softConstraints);
-                    if (warning) return warning;
+                    if (warning) return { type: 'soft', message: warning };
                 }
             }
         }
 
-        return null;
+        return { type: null, message: null };
     }, [isValid, watchedValues, product, getLogicWarning]);
 
     const getIcon = () => {
@@ -310,8 +309,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
     };
     const IconComponent = getIcon();
 
-    const warningMessage = getPriorityWarning();
-    const showWarningBadge = warningMessage && !isPersistent;
+    const warningData = getWarningData();
 
     return (
         <AccordionItem 
@@ -339,11 +337,15 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                         <h3 className={cn("font-semibold leading-none shrink-0", isExpanded ? "text-base" : "text-sm")}>
                             {item.productName}
                         </h3>
-                        {showWarningBadge ? (
-                            <Badge variant="destructive" className="text-[10px] h-4 py-0 font-bold uppercase shrink-0">
-                                {warningMessage}
+                        {warningData.message && !isPersistent && (
+                            <Badge 
+                                variant={warningData.type === 'hard' ? 'destructive' : 'secondary'} 
+                                className="text-[10px] h-4 py-0 font-bold uppercase shrink-0"
+                            >
+                                {warningData.message}
                             </Badge>
-                        ) : !isExpanded && (
+                        )}
+                        {!isExpanded && (
                             <div className="text-xs text-muted-foreground truncate flex-1 min-w-0 flex items-center">
                                 {getSummaryText()}
                             </div>
