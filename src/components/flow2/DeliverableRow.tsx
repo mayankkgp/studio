@@ -133,7 +133,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         mode: 'onChange'
     });
 
-    const { register, control, watch, formState: { errors, isValid }, trigger, getValues, setValue } = form;
+    const { register, control, watch, formState: { errors, isValid }, trigger, getValues } = form;
     
     const watchedValues = watch();
 
@@ -615,9 +615,9 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                                 id={`size-input-${item.id}-${index}`}
                                                                 type="number"
                                                                 className={cn(
-                                                                    "h-6 px-1.5 py-0 text-xs bg-white border-none focus-visible:ring-0 focus-visible:ring-offset-0 rounded-md font-bold text-black [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                                    "h-6 px-2 py-0 text-xs bg-white border-none focus-visible:ring-0 focus-visible:ring-offset-0 rounded-md font-bold text-black [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                                                 )}
-                                                                style={{ width: `${Math.max(2, String(field.value ?? '').length + 1)}ch` }}
+                                                                style={{ width: `${Math.max(2, String(field.value ?? '').length + 2)}ch` }}
                                                                 value={field.value ?? ''}
                                                                 onChange={(e) => {
                                                                     const val = e.target.value === '' ? null : Number(e.target.value);
@@ -710,9 +710,9 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                                             id={`addon-input-${addon.id}`}
                                                                             type="number"
                                                                             className={cn(
-                                                                                "h-6 px-1.5 py-0 text-xs bg-white border-none focus-visible:ring-0 focus-visible:ring-offset-0 rounded-md font-bold text-black [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                                                "h-6 px-2 py-0 text-xs bg-white border-none focus-visible:ring-0 focus-visible:ring-offset-0 rounded-md font-bold text-black [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                                                             )}
-                                                                            style={{ width: `${Math.max(2, String(field.value ?? '').length + 1)}ch` }}
+                                                                            style={{ width: `${Math.max(2, String(field.value ?? '').length + 2)}ch` }}
                                                                             value={field.value ?? ''}
                                                                             onChange={(e) => {
                                                                                 const val = e.target.value === '' ? null : Number(e.target.value);
