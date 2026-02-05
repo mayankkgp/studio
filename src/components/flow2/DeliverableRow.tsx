@@ -181,6 +181,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
     onRemove
 }: DeliverableRowProps) {
     const product = productCatalog.find(p => p.id === item.productId) || null;
+    const isBranchA = product?.configType === 'A';
     const hasValidated = React.useRef(false);
     
     const qtyInputRef = React.useRef<HTMLInputElement>(null);
@@ -423,8 +424,13 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         return null;
     }, [product]);
 
+    const hasConstraintError = (error: any) => {
+        return error?.message && error.message.toUpperCase() !== 'REQUIRED';
+    };
+
     const renderPromotedInput = () => {
         if (product?.configType === 'A') {
+            const hasError = hasConstraintError(errors.quantity);
             return (
                 <div className="flex items-center gap-4">
                     <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap min-w-[40px]">QTY *</Label>
@@ -432,7 +438,10 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                         id={`qty-input-${item.id}`}
                         type="number" 
                         {...register('quantity', { valueAsNumber: true })}
-                        className="w-24 h-10 text-lg bg-background [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" 
+                        className={cn(
+                            "w-24 h-10 text-lg bg-background [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
+                            hasError && "border-destructive ring-destructive focus-visible:ring-destructive"
+                        )}
                         ref={(e) => {
                             register('quantity').ref(e);
                             // @ts-ignore
@@ -443,6 +452,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             );
         }
         if (product?.configType === 'B') {
+            const hasError = hasConstraintError(errors.pages);
             return (
                 <div className="flex items-center gap-4">
                     <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap min-w-[40px]">PAGES *</Label>
@@ -450,12 +460,16 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                         id={`pages-input-${item.id}`}
                         type="number" 
                         {...register('pages', { valueAsNumber: true })}
-                        className="w-24 h-10 text-lg bg-background [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" 
+                        className={cn(
+                            "w-24 h-10 text-lg bg-background [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
+                            hasError && "border-destructive ring-destructive focus-visible:ring-destructive"
+                        )}
                     />
                 </div>
             );
         }
         if (promotedCustomField) {
+            const hasError = hasConstraintError((errors.customFieldValues as any)?.[promotedCustomField.id]);
             return (
                 <div className="flex items-center gap-4">
                     <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap min-w-[40px]">
@@ -464,7 +478,10 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                     <Input 
                         id={`custom-input-${item.id}-${promotedCustomField.id}`}
                         type="number" 
-                        className="w-24 h-10 text-lg bg-background [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" 
+                        className={cn(
+                            "w-24 h-10 text-lg bg-background [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
+                            hasError && "border-destructive ring-destructive focus-visible:ring-destructive"
+                        )}
                         {...register(`customFieldValues.${promotedCustomField.id}`, { valueAsNumber: true })} 
                     />
                 </div>
@@ -473,7 +490,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         return null;
     };
 
-    const isBranchA = product?.configType === 'A';
     const isComplexProduct = item.productId === 4 || item.productId === 5; 
     const showHeader = (product?.variants && product.variants.length > 0) || renderPromotedInput() !== null;
     const warningText = getPriorityWarning();
@@ -593,6 +609,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                 <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
                                     {product.customFields.map((field) => {
                                         if (field.id === promotedCustomField?.id) return null;
+                                        const hasError = hasConstraintError((errors.customFieldValues as any)?.[field.id]);
                                         return (
                                             <div key={field.id} className="flex items-center gap-3">
                                                 <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap">
@@ -601,7 +618,10 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                 <Input 
                                                     id={`custom-input-${item.id}-${field.id}`}
                                                     type="number" 
-                                                    className="w-16 h-10 px-2 text-sm bg-background [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" 
+                                                    className={cn(
+                                                        "w-16 h-10 px-2 text-sm bg-background [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
+                                                        hasError && "border-destructive ring-destructive focus-visible:ring-destructive"
+                                                    )}
                                                     {...register(`customFieldValues.${field.id}`, { valueAsNumber: true })} 
                                                 />
                                             </div>
