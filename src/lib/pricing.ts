@@ -10,54 +10,41 @@ export function calculateBillableItems(deliverables: ConfiguredProduct[]): Billa
         if (!product) return null;
 
         const components: BillableComponent[] = [];
-        const productName = `${item.productName}${item.variant ? ` (${item.variant})` : ''}`;
-
+        
+        // 1. RESOLVE VARIANT / BASE PRICE ROW
+        // Rule: If no variant in product, treat product name as variant name
+        const variantLabel = item.variant || item.productName;
+        
         // Resolve rate: Use variant-specific rate key if it exists, otherwise use basePrice
         let baseRate = product.basePrice;
         if (item.variant && product.variantRateKeys && product.variantRateKeys[item.variant]) {
             baseRate = getRate(product.variantRateKeys[item.variant]);
         }
 
-        // Handle base price based on config type
-        switch (product.configType) {
-            case 'A':
-                if (item.quantity && item.quantity > 0) {
-                    components.push({
-                        label: 'Base Price',
-                        multiplier: item.quantity,
-                        rate: baseRate,
-                        total: baseRate * item.quantity,
-                        isFixed: false,
-                    });
-                }
-                break;
-            case 'B':
-                 if (item.pages && item.pages > 0) {
-                    components.push({
-                        label: 'Base Price',
-                        multiplier: item.pages,
-                        rate: baseRate,
-                        total: baseRate * item.pages,
-                        isFixed: false,
-                    });
-                }
-                break;
-            case 'C':
-            case 'D':
-                // For Type C products (Stationery, Games, Boards), Base Price is a one-time "Design & Setup Fee"
-                if (baseRate > 0) {
-                     components.push({
-                        label: product.configType === 'D' ? 'Design Fee' : 'Design & Setup Fee',
-                        multiplier: 1, // Rule: Type C Base Price is a Fixed Setup Fee
-                        rate: baseRate,
-                        total: baseRate,
-                        isFixed: true,
-                    });
-                }
-                break;
+        // Rule: Determine if Fixed or Variable based on presence of main quantity/pages input
+        let baseMultiplier = 1;
+        let isBaseFixed = true;
+
+        if (product.configType === 'A') {
+            baseMultiplier = item.quantity || 0;
+            isBaseFixed = false;
+        } else if (product.configType === 'B') {
+            baseMultiplier = item.pages || 0;
+            isBaseFixed = false;
         }
 
-        // Custom Fields
+        // Only add base row if it has value or is a fixed setup fee
+        if (baseRate > 0 || isBaseFixed) {
+            components.push({
+                label: variantLabel,
+                multiplier: baseMultiplier,
+                rate: baseRate,
+                total: baseRate * baseMultiplier,
+                isFixed: isBaseFixed,
+            });
+        }
+
+        // 2. CUSTOM FIELD ROWS
         if (product.customFields && item.customFieldValues) {
             product.customFields.forEach(field => {
                 const value = item.customFieldValues?.[field.id];
@@ -68,47 +55,63 @@ export function calculateBillableItems(deliverables: ConfiguredProduct[]): Billa
                         multiplier: value,
                         rate: rate,
                         total: rate * value,
-                        isFixed: true,
+                        isFixed: false,
                     });
                 }
             });
         }
         
-        // Addons
+        // 3. SELECTED ADD-ON ROWS
         item.addons?.forEach(addon => {
             const addonDef = product.addons?.find(a => a.id === addon.id);
-            if (!addonDef || !addon.value) return;
+            if (!addonDef || addon.value === undefined || addon.value === false || addon.value === null) return;
 
             let rate = getRate(addonDef.rateKey);
             let multiplier = 0;
+            let isFixed = false;
 
-            // Rule: "Ritual Card - Blossom" Dynamic Rate (Product ID 334)
+            // Rule: Ritual Card - Blossom Dynamic Rate
             if (product.id === 334 && addonDef.id === 'physical') {
                 const petals = item.customFieldValues?.petals || 0;
                 const surchargeRate = rates['physical_petal_surcharge'] || 10;
                 rate = petals * surchargeRate;
             }
 
-            // Rule: Checkbox Add-ons are Fixed Costs
-            if (addonDef.type === 'checkbox' && (addon.value === true || addon.value === 1)) {
-                multiplier = 1; 
-            } else if ((addonDef.type === 'numeric' || addonDef.type === 'physical_quantity') && typeof addon.value === 'number' && addon.value > 0) {
+            // Rule: Checkbox = Fixed, Numeric = Variable
+            if (addonDef.type === 'checkbox') {
+                multiplier = 1;
+                isFixed = true;
+            } else if (typeof addon.value === 'number' && addon.value > 0) {
                 multiplier = addon.value;
+                isFixed = false;
             }
 
-            if (multiplier > 0) {
+            if (multiplier > 0 || isFixed) {
                 components.push({
                     label: addon.name,
                     multiplier,
                     rate,
                     total: rate * multiplier,
-                    isFixed: addonDef.type === 'checkbox',
+                    isFixed: isFixed,
                 });
             }
         });
+
+        // 4. PROVIDED SPECIAL REQUEST ROW
+        // Rule: Always a fixed price row if note is provided
+        if (item.specialRequest && item.specialRequest.trim().length > 0) {
+            components.push({
+                label: 'Special Request',
+                description: item.specialRequest,
+                multiplier: 1,
+                rate: 0, // Default 0, editable in commercials
+                total: 0,
+                isFixed: true,
+            });
+        }
         
         return {
-            productName,
+            productName: item.productName,
             configuredProductId: item.id,
             components,
         }
