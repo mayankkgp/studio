@@ -96,7 +96,7 @@ export default function CommercialsPage() {
                         <div className="flex-1 overflow-y-auto custom-scrollbar">
                             {/* Centering Wrapper */}
                             <div className="max-w-4xl mx-auto w-full px-4 lg:px-6">
-                                <div className="border rounded-lg bg-card shadow-sm">
+                                <div className="border-b border-x rounded-b-lg bg-card shadow-sm">
                                     {billableItems.length === 0 ? (
                                         <div className="flex flex-col items-center justify-center py-24 text-muted-foreground bg-card">
                                             <DollarSign className="h-12 w-12 opacity-20 mb-4" />
@@ -107,10 +107,10 @@ export default function CommercialsPage() {
                                         <table className="w-full caption-bottom text-sm border-collapse">
                                             <TableHeader className="relative z-30">
                                                 <TableRow className="hover:bg-transparent border-none">
-                                                    <TableHead className="bg-white h-10 text-xs font-bold uppercase sticky top-0 z-30 border-b-2 border-stone-200">Line Item</TableHead>
-                                                    <TableHead className="bg-white h-10 text-xs font-bold uppercase text-center w-24 sticky top-0 z-30 border-b-2 border-stone-200">Multiplier</TableHead>
-                                                    <TableHead className="bg-white h-10 text-xs font-bold uppercase text-right w-32 sticky top-0 z-30 border-b-2 border-stone-200">Rate (₹)</TableHead>
-                                                    <TableHead className="bg-white h-10 text-xs font-bold uppercase text-right w-32 sticky top-0 z-30 border-b-2 border-stone-200">Total</TableHead>
+                                                    <TableHead className="bg-white h-10 text-xs font-bold uppercase sticky top-0 z-30 border-b-2 border-stone-200 rounded-tl-lg border-t border-l">Line Item</TableHead>
+                                                    <TableHead className="bg-white h-10 text-xs font-bold uppercase text-center w-24 sticky top-0 z-30 border-b-2 border-stone-200 border-t">Multiplier</TableHead>
+                                                    <TableHead className="bg-white h-10 text-xs font-bold uppercase text-right w-32 sticky top-0 z-30 border-b-2 border-stone-200 border-t">Rate (₹)</TableHead>
+                                                    <TableHead className="bg-white h-10 text-xs font-bold uppercase text-right w-32 sticky top-0 z-30 border-b-2 border-stone-200 rounded-tr-lg border-t border-r">Total</TableHead>
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
