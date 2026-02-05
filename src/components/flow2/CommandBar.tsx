@@ -50,8 +50,8 @@ export function CommandBar() {
             productId: product.id,
             productName: productName,
             variant: undefined, // Forced Intent: No default variant
-            quantity: product.configType === 'A' ? 1 : undefined,
-            pages: product.configType === 'B' ? 1 : undefined,
+            quantity: product.configType === 'A' ? null : undefined, // Start as blank
+            pages: product.configType === 'B' ? null : undefined, // Start as blank
             addons: [],
             customFieldValues: {},
             sizes: [],

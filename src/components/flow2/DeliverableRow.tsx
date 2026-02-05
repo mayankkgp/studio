@@ -57,13 +57,17 @@ const getValidationSchema = (product: Product | null) => {
         specialRequest: z.string().optional(),
     };
 
-    if (product.configType === 'A') schemaObject.quantity = z.number().min(1, "Qty required").default(1);
-    if (product.configType === 'B') schemaObject.pages = z.number().min(1, "Pages required").default(1);
+    if (product.configType === 'A') {
+        schemaObject.quantity = z.number({ required_error: "Required", invalid_type_error: "Required" }).min(1, "Required");
+    }
+    if (product.configType === 'B') {
+        schemaObject.pages = z.number({ required_error: "Required", invalid_type_error: "Required" }).min(1, "Required");
+    }
     
     if (product.customFields) {
         schemaObject.customFieldValues = z.object(
             product.customFields.reduce((acc, field) => ({
-                ...acc, [field.id]: z.number().min(0).default(0)
+                ...acc, [field.id]: z.number({ required_error: "Required", invalid_type_error: "Required" }).min(0, "Required")
             }), {})
         ).optional();
     }
@@ -72,14 +76,14 @@ const getValidationSchema = (product: Product | null) => {
         schemaObject.addons = z.array(z.object({
             id: z.string(), 
             name: z.string(),
-            value: z.union([z.boolean(), z.number()]).default(false)
+            value: z.union([z.boolean(), z.number({ required_error: "Required", invalid_type_error: "Required" }), z.null()]).refine(val => val !== null, "Required")
         })).optional();
     }
 
     if (product.sizes) {
         schemaObject.sizes = z.array(z.object({
             name: z.string(), 
-            quantity: z.number().min(0).default(0)
+            quantity: z.union([z.number({ required_error: "Required", invalid_type_error: "Required" }), z.null()]).refine(val => val !== null, "Required")
         })).optional();
     }
     
@@ -113,21 +117,24 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             customFieldValues: item.customFieldValues || {},
             addons: product?.addons?.map(addon => {
                 const existingAddon = item.addons?.find(a => a.id === addon.id);
+                // expert users: don't default to unselected if it was already selected but blank
+                const initialValue = existingAddon?.value ?? undefined;
                 return { 
                     id: addon.id, 
                     name: addon.name, 
-                    value: existingAddon?.value ?? (addon.type === 'checkbox' ? false : 0) 
+                    value: initialValue
                 };
             }) || [],
             sizes: product?.sizes?.map(size => {
                 const existingSize = item.sizes?.find(s => s.name === size.name);
-                return { name: size.name, quantity: existingSize?.quantity || 0 };
+                const initialValue = existingSize?.quantity ?? undefined;
+                return { name: size.name, quantity: initialValue };
             }) || []
         },
         mode: 'onChange'
     });
 
-    const { register, control, watch, formState: { errors, isValid }, trigger, getValues } = form;
+    const { register, control, watch, formState: { errors, isValid }, trigger, getValues, setValue } = form;
     
     const watchedValues = watch();
 
@@ -177,7 +184,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                 if (c.type === 'max' && value > c.value) warnings.push(c.message);
             });
         };
-        if (product.configType === 'A' && product.softConstraints) {
+        if (product.configType === 'A' && product.softConstraints && typeof data.quantity === 'number') {
             let value = data.quantity;
             if (product.specialLogic === 'WaxSealCustomQty' && data.variant === 'Custom') {
                 if (value > 0 && value < 25) warnings.push('MOQ for Custom is 25.');
@@ -195,8 +202,9 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             onUpdate(item.id, {
                 ...currentValues,
                 warning,
-                addons: currentValues.addons?.filter((a: any) => a.value !== false && a.value !== 0) as any,
-                sizes: currentValues.sizes?.filter((s: any) => s.quantity > 0) as any
+                // Only filter out undefined/false. null/NaN stay in the state as "selected but empty" to show errors
+                addons: currentValues.addons?.filter((a: any) => a.value !== undefined && a.value !== false) as any,
+                sizes: currentValues.sizes?.filter((s: any) => s.quantity !== undefined) as any
             });
         }, 300);
         return () => clearTimeout(timer);
@@ -238,9 +246,9 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             parts.push(watchedValues.variant);
         }
         
-        if (product.configType === 'A' && watchedValues.quantity) {
+        if (product.configType === 'A' && typeof watchedValues.quantity === 'number') {
             parts.push(`Qty: ${watchedValues.quantity}`);
-        } else if (product.configType === 'B' && watchedValues.pages) {
+        } else if (product.configType === 'B' && typeof watchedValues.pages === 'number') {
             parts.push(`${watchedValues.pages} Pages`);
         }
         
@@ -578,7 +586,9 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                             name={`sizes.${index}.quantity`}
                                             control={control}
                                             render={({ field }) => {
-                                                const isChecked = field.value > 0;
+                                                const isChecked = field.value !== undefined;
+                                                const hasError = (errors.sizes as any)?.[index]?.quantity;
+                                                
                                                 if (!isChecked) {
                                                     return (
                                                         <Button
@@ -587,7 +597,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                             size="sm"
                                                             className="h-8 rounded-full px-3 gap-1.5 transition-all text-xs"
                                                             onClick={() => {
-                                                                field.onChange(1);
+                                                                field.onChange(null); // Explicit selection but blank
                                                                 setTimeout(() => {
                                                                     document.getElementById(`size-input-${item.id}-${index}`)?.focus();
                                                                 }, 0);
@@ -599,19 +609,37 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                     );
                                                 } else {
                                                     return (
-                                                        <div className="inline-flex items-center bg-primary text-primary-foreground rounded-full h-8 pl-3 pr-1 gap-2 shadow-sm">
-                                                            <span className="text-xs font-medium">{size.name}</span>
+                                                        <div className={cn(
+                                                            "inline-flex items-center rounded-full h-8 pl-3 pr-1 gap-2 shadow-sm transition-colors",
+                                                            hasError ? "bg-destructive text-destructive-foreground" : "bg-primary text-primary-foreground"
+                                                        )}>
+                                                            <span className="text-xs font-medium cursor-pointer" onClick={() => field.onChange(undefined)}>
+                                                                {size.name}
+                                                            </span>
                                                             <Input
                                                                 id={`size-input-${item.id}-${index}`}
                                                                 type="number"
-                                                                className="h-6 px-1.5 py-0 text-xs bg-primary-foreground text-primary border-none focus-visible:ring-0 focus-visible:ring-offset-0 rounded-md font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                                                style={{ width: `${Math.max(2, String(field.value).length + 1)}ch` }}
-                                                                value={field.value}
-                                                                onChange={(e) => field.onChange(Number(e.target.value))}
-                                                                onBlur={() => {
-                                                                    if (Number(field.value) === 0) field.onChange(0);
+                                                                className={cn(
+                                                                    "h-6 px-1.5 py-0 text-xs bg-white border-none focus-visible:ring-0 focus-visible:ring-offset-0 rounded-md font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
+                                                                    hasError ? "text-destructive" : "text-primary"
+                                                                )}
+                                                                style={{ width: `${Math.max(2, String(field.value ?? '').length + 1)}ch` }}
+                                                                value={field.value ?? ''}
+                                                                onChange={(e) => {
+                                                                    const val = e.target.value === '' ? null : Number(e.target.value);
+                                                                    field.onChange(val);
                                                                 }}
                                                             />
+                                                            {hasError && (
+                                                                <TooltipProvider>
+                                                                    <Tooltip>
+                                                                        <TooltipTrigger asChild>
+                                                                            <AlertCircle className="h-3 w-3 shrink-0" />
+                                                                        </TooltipTrigger>
+                                                                        <TooltipContent><p>{hasError.message}</p></TooltipContent>
+                                                                    </Tooltip>
+                                                                </TooltipProvider>
+                                                            )}
                                                         </div>
                                                     );
                                                 }
@@ -632,7 +660,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                         {product.addons.map((addon, index) => {
                                             const parentIndex = addon.dependsOn ? product.addons!.findIndex(a => a.id === addon.dependsOn) : -1;
                                             const parentValue = parentIndex !== -1 ? watchedValues.addons?.[parentIndex]?.value : undefined;
-                                            const isParentActive = parentValue !== undefined ? (typeof parentValue === 'number' ? parentValue > 0 : !!parentValue) : true;
+                                            const isParentActive = parentValue !== undefined ? (typeof parentValue === 'number' || parentValue === null ? true : !!parentValue) : true;
                                             
                                             if (!((!addon.dependsOn || isParentActive) && (!addon.visibleIfVariant || watchedValues.variant === addon.visibleIfVariant))) return null;
                                             
@@ -642,7 +670,8 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                     name={`addons.${index}.value`}
                                                     control={control}
                                                     render={({ field }) => {
-                                                        const isChecked = typeof field.value === 'number' ? field.value > 0 : !!field.value;
+                                                        const isChecked = field.value !== undefined;
+                                                        const hasError = (errors.addons as any)?.[index]?.value;
                                                         
                                                         if (addon.type === 'checkbox') {
                                                             return (
@@ -651,7 +680,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                                     variant={field.value ? "default" : "outline"}
                                                                     size="sm"
                                                                     className="h-8 rounded-full px-3 gap-1.5 transition-all text-xs"
-                                                                    onClick={() => field.onChange(!field.value)}
+                                                                    onClick={() => field.onChange(field.value ? undefined : true)}
                                                                 >
                                                                     {field.value ? <Check className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
                                                                     {addon.name}
@@ -666,7 +695,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                                         size="sm"
                                                                         className="h-8 rounded-full px-3 gap-1.5 transition-all text-xs"
                                                                         onClick={() => {
-                                                                            field.onChange(1);
+                                                                            field.onChange(null); // Explicit selection but blank
                                                                             setTimeout(() => {
                                                                                 document.getElementById(`addon-input-${addon.id}`)?.focus();
                                                                             }, 0);
@@ -678,19 +707,37 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                                 );
                                                             } else {
                                                                 return (
-                                                                    <div className="inline-flex items-center bg-primary text-primary-foreground rounded-full h-8 pl-3 pr-1 gap-2 shadow-sm">
-                                                                        <span className="text-xs font-medium">{addon.name}</span>
+                                                                    <div className={cn(
+                                                                        "inline-flex items-center rounded-full h-8 pl-3 pr-1 gap-2 shadow-sm transition-colors",
+                                                                        hasError ? "bg-destructive text-destructive-foreground" : "bg-primary text-primary-foreground"
+                                                                    )}>
+                                                                        <span className="text-xs font-medium cursor-pointer" onClick={() => field.onChange(undefined)}>
+                                                                            {addon.name}
+                                                                        </span>
                                                                         <Input
                                                                             id={`addon-input-${addon.id}`}
                                                                             type="number"
-                                                                            className="h-6 px-1.5 py-0 text-xs bg-primary-foreground text-primary border-none focus-visible:ring-0 focus-visible:ring-offset-0 rounded-md font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                                                            style={{ width: `${Math.max(2, String(field.value).length + 1)}ch` }}
-                                                                            value={field.value as number}
-                                                                            onChange={(e) => field.onChange(Number(e.target.value))}
-                                                                            onBlur={() => {
-                                                                                if (Number(field.value) === 0) field.onChange(0);
+                                                                            className={cn(
+                                                                                "h-6 px-1.5 py-0 text-xs bg-white border-none focus-visible:ring-0 focus-visible:ring-offset-0 rounded-md font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
+                                                                                hasError ? "text-destructive" : "text-primary"
+                                                                            )}
+                                                                            style={{ width: `${Math.max(2, String(field.value ?? '').length + 1)}ch` }}
+                                                                            value={field.value ?? ''}
+                                                                            onChange={(e) => {
+                                                                                const val = e.target.value === '' ? null : Number(e.target.value);
+                                                                                field.onChange(val);
                                                                             }}
                                                                         />
+                                                                        {hasError && (
+                                                                            <TooltipProvider>
+                                                                                <Tooltip>
+                                                                                    <TooltipTrigger asChild>
+                                                                                        <AlertCircle className="h-3 w-3 shrink-0" />
+                                                                                    </TooltipTrigger>
+                                                                                    <TooltipContent><p>{hasError.message}</p></TooltipContent>
+                                                                                </Tooltip>
+                                                                            </TooltipProvider>
+                                                                        )}
                                                                     </div>
                                                                 );
                                                             }

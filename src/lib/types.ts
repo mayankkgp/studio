@@ -52,12 +52,12 @@ export type Product = {
 export type ConfiguredProductAddon = {
   id: string;
   name: string;
-  value: boolean | number;
+  value: boolean | number | null;
 };
 
 export type ConfiguredProductSize = {
   name: string;
-  quantity: number;
+  quantity: number | null;
 };
 
 export type ConfiguredProduct = {
@@ -65,9 +65,9 @@ export type ConfiguredProduct = {
   productId: number;
   productName: string;
   variant?: string;
-  quantity?: number;
-  pages?: number;
-  customFieldValues?: Record<string, number>;
+  quantity?: number | null;
+  pages?: number | null;
+  customFieldValues?: Record<string, number | null>;
   addons: ConfiguredProductAddon[];
   sizes?: ConfiguredProductSize[];
   specialRequest?: string;
