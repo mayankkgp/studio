@@ -135,6 +135,25 @@ export const rates: Record<string, number> = {
   rattles_rate: 250,
   bhajan_book_rate: 120,
 
+  // Missing Link Fixes for Physical Add-ons
+  ritual_card_rate: 50,
+  key_card_rate: 50,
+  room_itinerary_rate: 50,
+  passport_itinerary_rate: 50,
+  welcome_note_rate: 50,
+  tent_card_rate: 50,
+  thank_you_tag_rate: 50,
+  door_dangler_rate: 50,
+  tambola_rate: 50,
+  money_envelope_rate: 50,
+  menu_card_rate: 50,
+  playing_cards_rate: 50,
+  info_card_rate: 50,
+  badge_rate: 50,
+  bells_tags_rate: 50,
+  welcome_sign_rate: 50,
+  board_game_rate: 50,
+
   // Custom Fields & Sizes
   petal_rate: 15,
   physical_petal_surcharge: 10,

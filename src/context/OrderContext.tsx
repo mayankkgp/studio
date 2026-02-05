@@ -54,7 +54,7 @@ const SAMPLE_DELIVERABLES: ConfiguredProduct[] = [
       { id: 'physical', name: 'Physical', value: 75 }
     ],
     customFieldValues: {
-      petals: 10
+      petals: 8
     },
     specialRequest: "",
   },
