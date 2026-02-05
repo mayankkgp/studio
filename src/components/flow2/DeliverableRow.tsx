@@ -233,7 +233,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         const result = await trigger();
         if (result) {
             performSyncUpdate();
-            // Critical: Force an immediate validity report before collapsing to ensure movement in parent
             onValidityChange(item.id, true);
             onDone(item.id);
         }
@@ -268,11 +267,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             parts.push(`Qty: ${watchedValues.quantity}`);
         } else if (product.configType === 'B' && typeof watchedValues.pages === 'number') {
             parts.push(`${watchedValues.pages} Pages`);
-        } else if (product.configType === 'E' && watchedValues.sizes) {
-            const sizeParts = watchedValues.sizes
-                .filter((s: any) => s.quantity !== null && s.quantity > 0)
-                .map((s: any) => `${s.name}: ${s.quantity}`);
-            if (sizeParts.length > 0) parts.push(sizeParts.join(', '));
         }
         return parts.join(' • ');
     };
@@ -287,18 +281,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             const cfErrors = errors.customFieldValues as Record<string, any>;
             for (const key in cfErrors) {
                 const msg = cfErrors[key]?.message;
-                if (msg && String(msg).toUpperCase() !== 'REQUIRED') return String(msg).toUpperCase();
-            }
-        }
-        if (errors.sizes && Array.isArray(errors.sizes)) {
-            for (const err of (errors.sizes as any[])) {
-                const msg = err?.quantity?.message || err?.message;
-                if (msg && String(msg).toUpperCase() !== 'REQUIRED') return String(msg).toUpperCase();
-            }
-        }
-        if (errors.addons && Array.isArray(errors.addons)) {
-            for (const err of (errors.addons as any[])) {
-                const msg = err?.value?.message || err?.message;
                 if (msg && String(msg).toUpperCase() !== 'REQUIRED') return String(msg).toUpperCase();
             }
         }

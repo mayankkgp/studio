@@ -23,9 +23,6 @@ export default function DeliverablesPage() {
     const [rowStatus, setRowStatus] = useState<Record<string, { isValid: boolean }>>({});
     const prevCount = useRef(order.deliverables.length);
 
-    // Persist "Active" status for items while they are being edited
-    const activeIdsRef = useRef<Set<string>>(new Set());
-
     const scrollToItem = useCallback((id: string) => {
         setTimeout(() => {
             const el = document.getElementById(`deliverable-${id}`);
@@ -54,19 +51,13 @@ export default function DeliverablesPage() {
 
     const handleEdit = useCallback((id: string) => {
         setOpenItems(prev => Array.from(new Set([...prev, id])));
-        scrollToItem(id);
-    }, [scrollToItem]);
+    }, []);
 
     const handleDone = useCallback((id: string) => {
         setOpenItems(prev => prev.filter(itemId => itemId !== id));
     }, []);
 
-    // Controlled Accordion prevents random toggles
-    const handleValueChange = useCallback((newValues: string[]) => {
-        // No-op for header clicks
-    }, []);
-
-    // Movement Logic: Divide deliverables into "Action Required" and "Order List"
+    // Split items into Action Required vs Order List
     const { activeItems, orderListItems } = useMemo(() => {
         const active: any[] = [];
         const list: any[] = [];
@@ -74,27 +65,15 @@ export default function DeliverablesPage() {
         order.deliverables.forEach(item => {
             const status = rowStatus[item.id];
             const isExpanded = openItems.includes(item.id);
+            const isValid = status?.isValid ?? false;
             
-            // 1. Keep it in Action Required if it's currently open (Pinned)
-            const isPinnedActive = activeIdsRef.current.has(item.id) && isExpanded;
-            
-            // 2. Add to Action Required if it's invalid (New/Edited Task)
-            const isInvalid = status ? !status.isValid : true;
-            
-            // 3. Brand new items are always active
-            const isBrandNew = !status;
-
-            const shouldBeActive = isBrandNew || isInvalid || isPinnedActive;
-
-            if (shouldBeActive) {
+            // Movement Logic: Item stays in active if it is invalid OR currently expanded
+            if (!isValid || isExpanded) {
                 active.push(item);
             } else {
                 list.push(item);
             }
         });
-
-        // Update tracking for the next cycle
-        activeIdsRef.current = new Set(active.map(i => i.id));
 
         return { 
             activeItems: active, 
@@ -103,18 +82,18 @@ export default function DeliverablesPage() {
     }, [order.deliverables, rowStatus, openItems]);
 
     const handleNextStep = useCallback(() => {
-        const firstInvalidId = order.deliverables.find(item => rowStatus[item.id]?.isValid === false)?.id;
+        const firstInvalidItem = order.deliverables.find(item => rowStatus[item.id]?.isValid === false);
         
-        if (firstInvalidId) {
+        if (firstInvalidItem) {
             toast({
                 variant: "destructive",
                 title: "Incomplete Items",
                 description: "Please complete all required fields before moving to commercials."
             });
-            if (!openItems.includes(firstInvalidId)) {
-                setOpenItems(prev => [...prev, firstInvalidId]);
+            if (!openItems.includes(firstInvalidItem.id)) {
+                setOpenItems(prev => [...prev, firstInvalidItem.id]);
             }
-            scrollToItem(firstInvalidId);
+            scrollToItem(firstInvalidItem.id);
             return;
         }
 
@@ -147,7 +126,6 @@ export default function DeliverablesPage() {
                         </section>
 
                         <div className="space-y-12 pb-12">
-                            {/* Action Required Section */}
                             <section className="space-y-4">
                                 <h2 className="text-xs font-bold uppercase tracking-widest text-primary flex items-center gap-2">
                                     <AlertCircle className="h-4 w-4" />
@@ -165,7 +143,7 @@ export default function DeliverablesPage() {
                                         <p className="text-sm text-muted-foreground font-medium">No items require attention</p>
                                     </div>
                                 ) : (
-                                    <Accordion type="multiple" value={openItems} onValueChange={handleValueChange} className="space-y-4">
+                                    <Accordion type="multiple" value={openItems} onValueChange={setOpenItems} className="space-y-4">
                                         {activeItems.map((item) => (
                                             <DeliverableRow 
                                                 key={item.id} 
@@ -182,14 +160,13 @@ export default function DeliverablesPage() {
                                 )}
                             </section>
 
-                            {/* Order List Section */}
                             {orderListItems.length > 0 && (
                                 <section className="space-y-4">
                                     <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
                                         <CheckCircle2 className="h-4 w-4" />
                                         Order List ({orderListItems.length})
                                     </h2>
-                                    <Accordion type="multiple" value={openItems} onValueChange={handleValueChange} className="space-y-2">
+                                    <Accordion type="multiple" value={openItems} onValueChange={setOpenItems} className="space-y-2">
                                         {orderListItems.map((item) => (
                                             <DeliverableRow 
                                                 key={item.id} 
