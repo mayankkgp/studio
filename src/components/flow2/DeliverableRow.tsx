@@ -414,7 +414,10 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                         )}
 
                         {product?.customFields && product.customFields.length > 0 && (
-                            <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+                            <div className={cn(
+                                "flex flex-wrap items-center gap-x-6 gap-y-3",
+                                product.id === 5 && "grid grid-cols-1 sm:grid-cols-2 gap-x-12 w-full max-w-2xl"
+                            )}>
                                 {product.customFields.map((field) => (
                                     <div key={field.id} className="flex items-center gap-3">
                                         <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap">
