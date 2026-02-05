@@ -57,16 +57,37 @@ const getValidationSchema = (product: Product | null) => {
     };
 
     if (product.configType === 'A') {
-        schemaObject.quantity = z.number({ required_error: "Required", invalid_type_error: "Required" }).min(1, "Required");
+        let qSchema = z.number({ required_error: "Required", invalid_type_error: "Required" });
+        if (product.softConstraints) {
+            qSchema = qSchema.superRefine((val, ctx) => {
+                product.softConstraints?.forEach(constraint => {
+                    if (constraint.type === 'min' && val < constraint.value) {
+                        ctx.addIssue({ code: z.ZodIssueCode.custom, message: constraint.message });
+                    }
+                });
+            });
+        }
+        schemaObject.quantity = qSchema;
     }
+    
     if (product.configType === 'B') {
-        schemaObject.pages = z.number({ required_error: "Required", invalid_type_error: "Required" }).min(1, "Required");
+        let pSchema = z.number({ required_error: "Required", invalid_type_error: "Required" });
+        if (product.softConstraints) {
+            pSchema = pSchema.superRefine((val, ctx) => {
+                product.softConstraints?.forEach(constraint => {
+                    if (constraint.type === 'min' && val < constraint.value) {
+                        ctx.addIssue({ code: z.ZodIssueCode.custom, message: constraint.message });
+                    }
+                });
+            });
+        }
+        schemaObject.pages = pSchema;
     }
     
     if (product.customFields) {
         schemaObject.customFieldValues = z.object(
             product.customFields.reduce((acc, field) => ({
-                ...acc, [field.id]: z.number({ required_error: "Required", invalid_type_error: "Required" }).min(0, "Required")
+                ...acc, [field.id]: z.number({ required_error: "Required", invalid_type_error: "Required" })
             }), {})
         ).optional();
     }
@@ -80,7 +101,6 @@ const getValidationSchema = (product: Product | null) => {
             addons.forEach((addon, idx) => {
                 const addonDef = product.addons?.find(a => a.id === addon.id);
                 if (addonDef && (addonDef.type === 'numeric' || addonDef.type === 'physical_quantity')) {
-                    // Mandatory if selected
                     if (addon.value !== undefined) {
                         if (addon.value === null || typeof addon.value !== 'number') {
                             ctx.addIssue({
@@ -89,7 +109,6 @@ const getValidationSchema = (product: Product | null) => {
                                 path: [idx, 'value']
                             });
                         } else if (addonDef.softConstraints) {
-                            // Check MOQ/Constraints for Add-on
                             addonDef.softConstraints.forEach(constraint => {
                                 if (constraint.type === 'min' && (addon.value as number) < constraint.value) {
                                     ctx.addIssue({
@@ -111,27 +130,6 @@ const getValidationSchema = (product: Product | null) => {
             name: z.string(), 
             quantity: z.union([z.number(), z.null(), z.undefined()])
         })).optional();
-    }
-    
-    // Main product soft constraints (MOQ)
-    if (product.softConstraints) {
-        if (product.configType === 'A') {
-            schemaObject.quantity = z.number({ required_error: "Required" }).superRefine((val, ctx) => {
-                product.softConstraints?.forEach(constraint => {
-                    if (constraint.type === 'min' && val < constraint.value) {
-                        ctx.addIssue({ code: z.ZodIssueCode.custom, message: constraint.message });
-                    }
-                });
-            });
-        } else if (product.configType === 'B') {
-            schemaObject.pages = z.number({ required_error: "Required" }).superRefine((val, ctx) => {
-                product.softConstraints?.forEach(constraint => {
-                    if (constraint.type === 'min' && val < constraint.value) {
-                        ctx.addIssue({ code: z.ZodIssueCode.custom, message: constraint.message });
-                    }
-                });
-            });
-        }
     }
     
     return z.object(schemaObject);
@@ -281,22 +279,31 @@ export const DeliverableRow = React.memo(function DeliverableRow({
     const getPriorityWarning = () => {
         if (isValid) return null;
 
-        // 1. Primary missing fields
-        if (product?.variants?.length && !watchedValues.variant) return 'SETUP REQUIRED';
-        if (product?.configType === 'A' && watchedValues.quantity === null) return 'SETUP REQUIRED';
-        if (product?.configType === 'B' && watchedValues.pages === null) return 'SETUP REQUIRED';
+        // 1. Specific MOQ / Soft Constraint Warnings (Main Product)
+        if (product?.configType === 'A' && (errors as any).quantity?.message) {
+            const msg = (errors as any).quantity.message.toUpperCase();
+            if (msg !== 'REQUIRED') return msg;
+        }
+        if (product?.configType === 'B' && (errors as any).pages?.message) {
+            const msg = (errors as any).pages.message.toUpperCase();
+            if (msg !== 'REQUIRED') return msg;
+        }
 
-        // 2. MOQ / Soft Constraint Warnings (Main Product)
-        if (product?.configType === 'A' && errors.quantity?.message) return errors.quantity.message.toUpperCase();
-        if (product?.configType === 'B' && errors.pages?.message) return errors.pages.message.toUpperCase();
-
-        // 3. Add-on Warnings (including MOQ)
+        // 2. Add-on Warnings (including MOQ)
         if (errors.addons) {
             const addonErrors = errors.addons as any[];
             for (let err of addonErrors) {
-                if (err?.value?.message) return err.value.message.toUpperCase();
+                if (err?.value?.message) {
+                    const msg = err.value.message.toUpperCase();
+                    if (msg !== 'REQUIRED') return msg;
+                }
             }
         }
+
+        // 3. Falling back to primary missing fields
+        if (product?.variants?.length && !watchedValues.variant) return 'SETUP REQUIRED';
+        if (product?.configType === 'A' && watchedValues.quantity === null) return 'SETUP REQUIRED';
+        if (product?.configType === 'B' && watchedValues.pages === null) return 'SETUP REQUIRED';
 
         return 'SETUP REQUIRED';
     }
