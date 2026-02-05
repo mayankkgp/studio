@@ -133,11 +133,8 @@ export const DeliverableRow = React.memo(function DeliverableRow({
 
     const adjustHeight = React.useCallback((el: HTMLTextAreaElement | null) => {
         if (!el) return;
-        // Reset height to allow measuring the true scrollHeight
         el.style.height = '0px'; 
         const scrollHeight = el.scrollHeight;
-        // Standard single-line height for ShadCN inputs is 40px (h-10)
-        // We ensure a minimum of 40px and allow it to grow without scrollbars.
         el.style.height = `${Math.max(40, scrollHeight)}px`;
     }, []);
 
@@ -394,7 +391,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                 <Input 
                                     type="number" 
                                     {...register('quantity', { valueAsNumber: true })}
-                                    className={cn("w-20 h-10 text-lg font-bold bg-background", errors.quantity && "border-destructive")} 
+                                    className={cn("w-24 h-10 text-lg font-bold bg-background", errors.quantity && "border-destructive")} 
                                     ref={(e) => {
                                         register('quantity').ref(e);
                                         // @ts-ignore
@@ -409,29 +406,31 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
-                            <div className="space-y-4">
+                            <div className="space-y-6">
                                 {(product?.configType === 'A' || product?.configType === 'B') && (
-                                    <div className="space-y-1.5 p-4 rounded-lg border-2 border-primary/20 bg-primary/5 shadow-sm">
-                                        <Label className={cn("text-xs font-bold uppercase tracking-wider", errors.quantity || errors.pages ? "text-destructive" : "text-primary")}>
-                                            {product.configType === 'A' ? 'Base Quantity' : 'Number of Pages'}
+                                    <div className="flex items-center gap-4">
+                                        <Label className={cn("text-xs font-bold uppercase tracking-wider whitespace-nowrap min-w-[40px]", (errors.quantity || errors.pages) ? "text-destructive" : "text-muted-foreground")}>
+                                            {product.configType === 'A' ? 'Qty' : 'Pages'}
                                         </Label>
-                                        <Input 
-                                            type="number" 
-                                            {...register(product.configType === 'A' ? 'quantity' : 'pages', { 
-                                                valueAsNumber: true 
-                                            })}
-                                            className={cn("h-12 text-xl font-bold bg-background", (errors.quantity || errors.pages) && "border-destructive")} 
-                                            ref={(e) => {
-                                                if (product.configType === 'A') {
-                                                    register('quantity').ref(e);
-                                                    // @ts-ignore
-                                                    qtyInputRef.current = e;
-                                                } else {
-                                                    register('pages').ref(e);
-                                                }
-                                            }}
-                                        />
-                                        {(errors.quantity || errors.pages) && <p className="text-xs text-destructive font-medium">{errors.quantity?.message || errors.pages?.message}</p>}
+                                        <div className="flex flex-col gap-1">
+                                            <Input 
+                                                type="number" 
+                                                {...register(product.configType === 'A' ? 'quantity' : 'pages', { 
+                                                    valueAsNumber: true 
+                                                })}
+                                                className={cn("w-24 h-10 text-lg font-bold bg-background", (errors.quantity || errors.pages) && "border-destructive")} 
+                                                ref={(e) => {
+                                                    if (product.configType === 'A') {
+                                                        register('quantity').ref(e);
+                                                        // @ts-ignore
+                                                        qtyInputRef.current = e;
+                                                    } else {
+                                                        register('pages').ref(e);
+                                                    }
+                                                }}
+                                            />
+                                            {(errors.quantity || errors.pages) && <p className="text-xs text-destructive font-medium whitespace-nowrap">{errors.quantity?.message || errors.pages?.message}</p>}
+                                        </div>
                                     </div>
                                 )}
 
