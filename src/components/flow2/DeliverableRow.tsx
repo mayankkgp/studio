@@ -199,8 +199,10 @@ export const DeliverableRow = React.memo(function DeliverableRow({
     const handleDoneClick = async (e: React.MouseEvent) => {
         e.stopPropagation();
         const res = await trigger();
-        performSyncUpdate();
-        onDone(item.id, res);
+        if (res) {
+            performSyncUpdate();
+            onDone(item.id, res);
+        }
     };
 
     const handleEditClick = (e: React.MouseEvent) => {
@@ -379,7 +381,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                             <Pencil className="h-3.5 w-3.5" /> Edit
                         </Button>
                     ) : (
-                        <Button size="sm" onClick={handleDoneClick} className="gap-2 h-8">
+                        <Button size="sm" onClick={handleDoneClick} className="gap-2 h-8" disabled={!isValid}>
                             <Check className="h-4 w-4" /> Done
                         </Button>
                     )}
