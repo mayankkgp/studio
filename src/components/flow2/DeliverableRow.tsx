@@ -259,15 +259,13 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             parts.push(<span key="notes" className="text-muted-foreground italic">Notes: {snippet}{suffix}</span>);
         }
 
+        if (parts.length === 0) return null;
+
         return parts.reduce((prev, curr, i) => [prev, <span key={`sep-${i}`} className="mx-1 text-muted-foreground/50">•</span>, curr]);
     };
 
     const getPriorityWarning = React.useCallback(() => {
         if (!isValid) {
-            if (errors.variant) return 'VARIANT REQUIRED';
-            if (errors.quantity || errors.pages) return 'REQUIRED';
-            if (errors.customFieldValues) return 'REQUIRED';
-            if (errors.addons) return 'REQUIRED';
             return 'SETUP REQUIRED';
         }
 
@@ -299,7 +297,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         }
 
         return null;
-    }, [isValid, errors, watchedValues, product, getLogicWarning]);
+    }, [isValid, watchedValues, product, getLogicWarning]);
 
     const getIcon = () => {
         switch (product?.configType) {
