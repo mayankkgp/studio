@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import { useHeaderSummary } from '@/hooks/use-header-summary';
 import { CommandBar } from "@/components/flow2/CommandBar";
 import { DeliverableRow } from "@/components/flow2/DeliverableRow";
-import { Package, CheckCircle2, AlertCircle } from "lucide-react";
+import { Package, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import { Accordion } from "@/components/ui/accordion";
 import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -20,6 +20,7 @@ export default function DeliverablesPage() {
     const headerSummary = useHeaderSummary(order.eventDetails);
     
     const [rowStatus, setRowStatus] = useState<Record<string, { isValid: boolean }>>({});
+    const [isNavigating, setIsNavigating] = useState(false);
     
     // Initialize committedItemIds with existing deliverables on mount
     const [committedItemIds, setCommittedItemIds] = useState<string[]>(() => 
@@ -99,11 +100,19 @@ export default function DeliverablesPage() {
         return hasItems && allConfirmed && allCollapsed && allValid;
     }, [order.deliverables, activeItems.length, openOrderListItems.length, rowStatus]);
 
-    const handleNextStep = useCallback(() => {
+    const handleNextStep = useCallback(async () => {
         if (isNextStepActive) {
-            router.push('/commercials');
+            setIsNavigating(true);
+            try {
+                await saveAsDraft(); // Implicit save before navigation
+                router.push('/commercials');
+            } catch (err) {
+                // Save failure toast is handled inside saveAsDraft, 
+                // but we should stop navigation if critical.
+                setIsNavigating(false);
+            }
         }
-    }, [isNextStepActive, router]);
+    }, [isNextStepActive, router, saveAsDraft]);
 
     return (
         <AppLayout>
@@ -198,10 +207,13 @@ export default function DeliverablesPage() {
                 </main>
 
                 <footer className="sticky bottom-0 z-40 flex h-20 shrink-0 items-center justify-between gap-4 border-t bg-background px-4 md:px-6">
-                    <Button variant="outline" onClick={() => router.back()}>Back</Button>
+                    <Button variant="outline" onClick={() => router.back()} disabled={isNavigating}>Back</Button>
                     <div className="flex items-center gap-4">
-                        <Button variant="secondary" onClick={saveAsDraft}>Save as Draft</Button>
-                        <Button onClick={handleNextStep} disabled={!isNextStepActive}>
+                        <Button variant="secondary" onClick={saveAsDraft} disabled={isNavigating}>
+                            {isNavigating ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save as Draft'}
+                        </Button>
+                        <Button onClick={handleNextStep} disabled={!isNextStepActive || isNavigating}>
+                            {isNavigating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                             Next Step (Commercials)
                         </Button>
                     </div>

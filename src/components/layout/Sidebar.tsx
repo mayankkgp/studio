@@ -2,16 +2,16 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Package, DollarSign } from 'lucide-react';
+import { Home, Package, DollarSign, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Logo } from '@/components/icons/Logo';
 import { useOrder } from '@/context/OrderContext';
-import { Button } from '../ui/button';
 
 const navItems = [
   { href: '/', label: 'Event Details', icon: Home },
   { href: '/deliverables', label: 'Deliverables', icon: Package },
   { href: '/commercials', label: 'Commercials', icon: DollarSign },
+  { href: '/drafts', label: 'My Drafts', icon: FileText },
 ];
 
 export function Sidebar() {

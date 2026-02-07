@@ -3,6 +3,8 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { Order, EventDetails, ConfiguredProduct } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
+import { db } from '@/lib/firebase';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 
 type OrderContextType = {
   order: Order;
@@ -11,14 +13,14 @@ type OrderContextType = {
   updateDeliverable: (id: string, updates: Partial<ConfiguredProduct>) => void;
   removeDeliverable: (id: string) => void;
   setPaymentReceived: (amount: number) => void;
-  saveAsDraft: () => void;
+  saveAsDraft: () => Promise<void>;
+  loadDraft: (draftOrder: Order) => void;
   resetOrder: () => void;
   isLoaded: boolean;
 };
 
 const OrderContext = createContext<OrderContextType | undefined>(undefined);
 
-// Sample Data Generators for "Random Suitable Default Values"
 const SAMPLE_DELIVERABLES: ConfiguredProduct[] = [
   {
     id: `1-${Date.now()}-sample-1`,
@@ -29,55 +31,6 @@ const SAMPLE_DELIVERABLES: ConfiguredProduct[] = [
     addons: [],
     customFieldValues: {},
     specialRequest: "Make it look premium and modern",
-  },
-  {
-    id: `5-${Date.now()}-sample-2`,
-    productId: 5,
-    productName: "Invite",
-    variant: undefined,
-    addons: [
-      { id: 'name_swap', name: 'Name Swap', value: true },
-      { id: 'video_main', name: 'Video Main', value: 1 }
-    ],
-    customFieldValues: {
-      event_page_cat: 4,
-      cover_page_custom: 1
-    },
-    specialRequest: "",
-  },
-  {
-    id: `334-${Date.now()}-sample-3`,
-    productId: 334,
-    productName: "Ritual Card - Blossom",
-    variant: "Catalogue",
-    addons: [
-      { id: 'physical', name: 'Physical', value: 75 }
-    ],
-    customFieldValues: {
-      petals: 8
-    },
-    specialRequest: "",
-  },
-  {
-    id: `9-${Date.now()}-sample-4`,
-    productId: 9,
-    productName: "Welcome Note",
-    variant: "Catalogue",
-    addons: [
-      { id: 'physical', name: 'Physical', value: 150 }
-    ],
-    customFieldValues: {},
-    specialRequest: "Include guest names on each note",
-  },
-  {
-    id: `41-${Date.now()}-sample-5`,
-    productId: 41,
-    productName: "Sticker",
-    variant: "3in",
-    quantity: 100,
-    addons: [],
-    customFieldValues: {},
-    specialRequest: "",
   }
 ];
 
@@ -103,16 +56,53 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   
   useEffect(() => {
     const newOrderId = `#ORD-${Math.floor(1000 + Math.random() * 9000)}`;
-    setOrder((prev) => ({ ...prev, orderId: newOrderId }));
+    setOrder((prev) => ({ ...prev, orderId: prev.orderId || newOrderId }));
     setIsLoaded(true);
   }, []);
 
-  const saveAsDraft = useCallback(() => {
+  const saveAsDraft = useCallback(async () => {
+    try {
+      const draftRef = doc(db, 'drafts', order.orderId);
+      
+      // Clean dates for Firestore
+      const serializedOrder = {
+        ...order,
+        lastSavedAt: serverTimestamp(),
+      };
+
+      await setDoc(draftRef, serializedOrder, { merge: true });
+
+      toast({
+        title: 'Draft Saved',
+        description: `Order ${order.orderId} has been persisted to the cloud.`,
+      });
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Save Failed',
+        description: error.message || 'Could not save draft to Firestore.',
+      });
+    }
+  }, [order, toast]);
+
+  const loadDraft = useCallback((draftOrder: Order) => {
+    // Ensure dates are correctly hydrated if they come back as Firestore timestamps
+    const hydratedOrder = {
+      ...draftOrder,
+      eventDetails: {
+        ...draftOrder.eventDetails,
+        eventDate: (draftOrder.eventDetails?.eventDate as any)?.toDate?.() || draftOrder.eventDetails?.eventDate,
+        orderDueDate: (draftOrder.eventDetails?.orderDueDate as any)?.toDate?.() || draftOrder.eventDetails?.orderDueDate,
+        weddingDate: (draftOrder.eventDetails?.weddingDate as any)?.toDate?.() || draftOrder.eventDetails?.weddingDate,
+      }
+    };
+
+    setOrder(hydratedOrder);
     toast({
-      title: 'Draft Saved (Session Only)',
-      description: `Your order ${order.orderId} is active for this session. Persistence is disabled.`,
+      title: 'Order Resumed',
+      description: `Draft ${draftOrder.orderId} is now active.`,
     });
-  }, [order.orderId, toast]);
+  }, [toast]);
 
   const setEventDetails = useCallback((details: EventDetails) => {
     setOrder((prev) => ({ ...prev, eventDetails: details }));
@@ -160,6 +150,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         removeDeliverable,
         setPaymentReceived,
         saveAsDraft,
+        loadDraft,
         resetOrder,
         isLoaded,
       }}
