@@ -64,7 +64,6 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setIsLoaded(true);
   }, []);
 
-  // Defined simple setters first to ensure they are initialized before complex callbacks
   const resetOrder = useCallback(() => {
     setOrder(initialOrderState);
   }, []);
@@ -136,8 +135,8 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       await withTimeout(setDoc(draftRef, orderToSave, { merge: true }));
       
       toast({
-        title: 'Cloud Sync Success',
-        description: `Draft ${currentOrderId} is now safely stored.`,
+        title: 'Draft Saved',
+        description: `Order ${currentOrderId} synced to cloud.`,
       });
       
       return true;
@@ -157,13 +156,6 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       } satisfies SecurityRuleContext);
 
       errorEmitter.emit('permission-error', permissionError);
-      
-      toast({
-        variant: 'destructive',
-        title: 'Sync Failed',
-        description: 'Database rules are updating. Please try again in a few seconds.',
-      });
-      
       return false;
     }
   }, [order, toast, pathname, db]);
@@ -172,8 +164,8 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (!db || !order.orderId) {
         toast({
             variant: 'destructive',
-            title: 'Unsaved Changes',
-            description: 'Save your draft before activating.',
+            title: 'Action Denied',
+            description: 'Order ID missing. Save as draft first.',
         });
         return false;
     }
@@ -190,12 +182,15 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const draftRef = doc(db, 'drafts', order.orderId);
 
     try {
+      // Step 1: Create active order
       await withTimeout(setDoc(activeRef, orderToActivate));
+      
+      // Step 2: Delete draft (background)
       deleteDoc(draftRef).catch(() => {});
       
       toast({
-        title: 'Order Activated',
-        description: `Order ${order.orderId} moved to active list.`,
+        title: 'Success!',
+        description: `Order ${order.orderId} has been activated.`,
       });
       
       resetOrder();
@@ -208,13 +203,6 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         requestResourceData: orderToActivate,
       } satisfies SecurityRuleContext);
       errorEmitter.emit('permission-error', permissionError);
-      
-      toast({
-        variant: 'destructive',
-        title: 'Activation Failed',
-        description: 'Permissions denied. Rules are still propagating.',
-      });
-      
       return false;
     }
   }, [order, db, toast, router, resetOrder]);

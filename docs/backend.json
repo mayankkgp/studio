@@ -39,11 +39,11 @@
   "firestore": {
     "/drafts/{orderId}": {
       "schema": "OrderDraft",
-      "description": "Store for partially completed order drafts. (Deployment Version: v7 - Resilience Fix)"
+      "description": "Store for partially completed order drafts. (Deployment Version: v8 - Permission Resilience)"
     },
     "/active-orders/{orderId}": {
       "schema": "ActiveOrder",
-      "description": "Store for confirmed and activated orders. (Deployment Version: v7 - Resilience Fix)"
+      "description": "Store for confirmed and activated orders. (Deployment Version: v8 - Permission Resilience)"
     }
   }
 }
