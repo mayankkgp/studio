@@ -10,9 +10,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useOrder } from '@/context/OrderContext';
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
-import { FileText, Play, Trash2, Loader2, Search } from 'lucide-react';
+import { FileText, Trash2, Loader2, Search } from 'lucide-react';
 import { calculateBillableItems } from '@/lib/pricing';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 
 export default function DraftsPage() {
   const [drafts, setDrafts] = useState<any[]>([]);
@@ -69,6 +70,26 @@ export default function DraftsPage() {
     getClientName(draft.eventDetails).toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const formatDate = (dateValue: any) => {
+    if (!dateValue) return '-';
+    try {
+      const date = dateValue.toDate ? dateValue.toDate() : new Date(dateValue);
+      return format(date, 'dd MMM yyyy');
+    } catch (e) {
+      return '-';
+    }
+  };
+
+  const formatDateTime = (dateValue: any) => {
+    if (!dateValue) return 'Just now';
+    try {
+      const date = dateValue.toDate ? dateValue.toDate() : new Date(dateValue);
+      return format(date, 'dd MMM, HH:mm');
+    } catch (e) {
+      return 'Recently';
+    }
+  };
+
   return (
     <AppLayout>
       <div className="flex flex-col h-screen overflow-hidden bg-background">
@@ -81,7 +102,7 @@ export default function DraftsPage() {
         </header>
 
         <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
-          <div className="mx-auto max-w-6xl space-y-6">
+          <div className="mx-auto max-w-7xl space-y-6">
             <div className="flex items-center gap-4 max-w-sm">
               <div className="relative w-full">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -107,45 +128,59 @@ export default function DraftsPage() {
                 </p>
               </div>
             ) : (
-              <div className="rounded-md border bg-card">
+              <div className="rounded-md border bg-card overflow-hidden">
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[150px]">Order ID</TableHead>
-                      <TableHead>Client Name</TableHead>
-                      <TableHead>Event Date</TableHead>
-                      <TableHead className="text-right">Total (₹)</TableHead>
-                      <TableHead>Last Saved</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead className="w-[140px]">Order ID</TableHead>
+                      <TableHead className="w-[120px]">Event Type</TableHead>
+                      <TableHead className="min-w-[200px]">Client Name</TableHead>
+                      <TableHead className="w-[100px] text-center">Items</TableHead>
+                      <TableHead className="w-[120px]">Due Date</TableHead>
+                      <TableHead className="w-[120px] text-right">Total (₹)</TableHead>
+                      <TableHead className="w-[140px]">Last Saved</TableHead>
+                      <TableHead className="w-[60px] text-right"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredDrafts.map((draft) => (
-                      <TableRow key={draft.id} className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => handleResume(draft)}>
-                        <TableCell className="font-mono font-bold text-primary">{draft.orderId}</TableCell>
-                        <TableCell className="font-medium">{getClientName(draft.eventDetails)}</TableCell>
-                        <TableCell>
-                          {draft.eventDetails?.eventDate ? 
-                            format(new Date(draft.eventDetails.eventDate.toDate ? draft.eventDetails.eventDate.toDate() : draft.eventDetails.eventDate), 'dd MMM yyyy') 
-                            : '-'}
+                      <TableRow 
+                        key={draft.id} 
+                        className="cursor-pointer hover:bg-muted/50 transition-colors group" 
+                        onClick={() => handleResume(draft)}
+                      >
+                        <TableCell className="font-mono font-bold text-primary">
+                          {draft.orderId}
                         </TableCell>
-                        <TableCell className="text-right font-bold">
+                        <TableCell>
+                          <Badge variant="secondary" className="font-semibold text-[10px] uppercase">
+                            {draft.eventDetails?.eventType || 'Other'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          {getClientName(draft.eventDetails)}
+                        </TableCell>
+                        <TableCell className="text-center text-muted-foreground text-xs font-bold">
+                          {draft.deliverables?.length || 0} Items
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {formatDate(draft.eventDetails?.orderDueDate)}
+                        </TableCell>
+                        <TableCell className="text-right font-bold tabular-nums">
                           {getOrderTotal(draft.deliverables).toLocaleString('en-IN')}
                         </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
-                          {draft.lastSavedAt ? 
-                            format(new Date(draft.lastSavedAt.toDate ? draft.lastSavedAt.toDate() : draft.lastSavedAt), 'dd MMM, HH:mm') 
-                            : 'Just now'}
+                        <TableCell className="text-[11px] text-muted-foreground">
+                          {formatDateTime(draft.lastSavedAt)}
                         </TableCell>
                         <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button size="sm" variant="outline" className="h-8 gap-2" onClick={(e) => { e.stopPropagation(); handleResume(draft); }}>
-                              <Play className="h-3.5 w-3.5 fill-current" /> Resume
-                            </Button>
-                            <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={(e) => handleDelete(e, draft.id)}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
+                          <Button 
+                            size="icon" 
+                            variant="ghost" 
+                            className="h-8 w-8 text-destructive opacity-0 group-hover:opacity-100 transition-opacity hover:text-destructive hover:bg-destructive/10" 
+                            onClick={(e) => handleDelete(e, draft.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}
