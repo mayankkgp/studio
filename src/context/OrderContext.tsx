@@ -55,6 +55,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const currentOrderId = order.orderId;
     if (!currentOrderId) return false;
 
+    // Prepare data
     const orderToSave = {
       ...order,
       eventDetails: manualDetails || order.eventDetails,
@@ -64,11 +65,10 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     const draftRef = doc(db, 'drafts', currentOrderId);
 
-    // CRITICAL: We do NOT await the setDoc call. 
-    // This initiates the write and updates the local cache immediately (Optimistic UI).
+    // OPTIMISTIC SYNC: We fire the request and immediately return true to the UI.
+    // Firestore's internal SDK handles queuing and local cache updates instantly.
     setDoc(draftRef, orderToSave, { merge: true })
       .catch(async (serverError) => {
-        // If the write fails (e.g. permission denied), we emit a specialized contextual error.
         const permissionError = new FirestorePermissionError({
           path: draftRef.path,
           operation: 'write',
@@ -78,11 +78,9 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         errorEmitter.emit('permission-error', permissionError);
       });
 
-    // We return true immediately to allow the UI to proceed.
-    // If there is a permission error, it will surface in the dev overlay shortly after.
     toast({
-      title: 'Syncing Draft...',
-      description: `Order ${currentOrderId} is being saved to cloud.`,
+      title: 'Draft Synced',
+      description: `Progress for ${currentOrderId} saved locally and syncing.`,
     });
     
     return true;

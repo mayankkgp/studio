@@ -13,15 +13,18 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 
-// Initialize Firestore with settings (ignore undefined values from forms)
+// Initialize Firestore with settings
+// experimentalForceLongPolling: true is critical for stability in cloud IDE environments
 let db: any;
+const firestoreSettings = {
+  ignoreUndefinedProperties: true,
+  experimentalForceLongPolling: true
+};
+
 try {
-    // Attempt to initialize with custom settings
-    db = initializeFirestore(app, { 
-      ignoreUndefinedProperties: true 
-    });
+    db = initializeFirestore(app, firestoreSettings);
 } catch (e) {
-    // Fallback if already initialized (common in hot-reloading)
+    // If already initialized, we get the instance
     db = getFirestore(app);
 }
 
