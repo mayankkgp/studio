@@ -12,9 +12,9 @@
         "deliverables": { "type": "array" },
         "paymentReceived": { "type": "number" },
         "currentStep": { "type": "string" },
-        "lastSavedAt": { "type": "object", "description": "Firestore Server Timestamp" }
+        "lastSavedAt": { "type": ["object", "null"], "description": "Firestore Server Timestamp" }
       },
-      "required": ["orderId", "eventDetails", "currentStep"]
+      "required": ["orderId", "eventDetails"]
     },
     "ActiveOrder": {
       "title": "Active Order",
@@ -39,11 +39,11 @@
   "firestore": {
     "/drafts/{orderId}": {
       "schema": "OrderDraft",
-      "description": "Store for partially completed order drafts. (Deployment Version: v6 - Expanded Metadata)"
+      "description": "Store for partially completed order drafts. (Deployment Version: v7 - Resilience Fix)"
     },
     "/active-orders/{orderId}": {
       "schema": "ActiveOrder",
-      "description": "Store for confirmed and activated orders. (Deployment Version: v6 - Expanded Metadata)"
+      "description": "Store for confirmed and activated orders. (Deployment Version: v7 - Resilience Fix)"
     }
   }
 }

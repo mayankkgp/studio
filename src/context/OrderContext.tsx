@@ -64,128 +64,10 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setIsLoaded(true);
   }, []);
 
-  const saveAsDraft = useCallback(async (manualDetails?: EventDetails): Promise<boolean> => {
-    if (!db) return false;
-
-    let currentOrderId = order.orderId;
-    if (!currentOrderId) {
-      currentOrderId = `ORD-${Math.floor(1000 + Math.random() * 9000)}`;
-      setOrder(prev => ({ ...prev, orderId: currentOrderId }));
-    }
-
-    const orderToSave = {
-      ...order,
-      orderId: currentOrderId,
-      eventDetails: manualDetails || order.eventDetails,
-      currentStep: pathname || '/',
-      lastSavedAt: serverTimestamp(),
-    };
-
-    const draftRef = doc(db, 'drafts', currentOrderId);
-
-    try {
-      // Use setDoc and wait for the server confirmation or local timeout
-      await withTimeout(setDoc(draftRef, orderToSave, { merge: true }));
-      
-      toast({
-        title: 'Cloud Sync Success',
-        description: `Draft ${currentOrderId} is now safely stored.`,
-      });
-      
-      return true;
-    } catch (serverError: any) {
-      if (serverError.message === 'DATABASE_TIMEOUT') {
-         toast({
-          title: 'Syncing in Background',
-          description: 'Connection is slow, but your data is being sent.',
-        });
-        return true; // Assume success for UI flow, let background sync handle it
-      }
-
-      // Create the rich, contextual error for the dev overlay
-      const permissionError = new FirestorePermissionError({
-        path: draftRef.path,
-        operation: 'write',
-        requestResourceData: orderToSave,
-      } satisfies SecurityRuleContext);
-
-      errorEmitter.emit('permission-error', permissionError);
-      
-      toast({
-        variant: 'destructive',
-        title: 'Sync Failed',
-        description: 'Database rules are refreshing. Please try once more.',
-      });
-      
-      return false;
-    }
-  }, [order, toast, pathname, db]);
-
-  const activateOrder = useCallback(async (): Promise<boolean> => {
-    if (!db || !order.orderId) {
-        toast({
-            variant: 'destructive',
-            title: 'Unsaved Changes',
-            description: 'Save your draft before activating.',
-        });
-        return false;
-    }
-
-    const orderToActivate = {
-      ...order,
-      activatedAt: serverTimestamp(),
-    };
-
-    const activeRef = doc(db, 'active-orders', order.orderId);
-    const draftRef = doc(db, 'drafts', order.orderId);
-
-    try {
-      await withTimeout(setDoc(activeRef, orderToActivate));
-      // Non-blocking cleanup
-      deleteDoc(draftRef).catch(() => {});
-      
-      toast({
-        title: 'Order Activated',
-        description: `Order ${order.orderId} moved to active list.`,
-      });
-      
-      resetOrder();
-      router.push('/active-orders');
-      return true;
-    } catch (serverError: any) {
-      const permissionError = new FirestorePermissionError({
-        path: activeRef.path,
-        operation: 'create',
-        requestResourceData: orderToActivate,
-      } satisfies SecurityRuleContext);
-      errorEmitter.emit('permission-error', permissionError);
-      
-      toast({
-        variant: 'destructive',
-        title: 'Activation Failed',
-        description: 'Permissions denied. Rules are still propagating.',
-      });
-      
-      return false;
-    }
-  }, [order, db, toast, router]);
-
-  const loadDraft = useCallback((draftOrder: Order) => {
-    const hydratedOrder = {
-      ...draftOrder,
-      eventDetails: {
-        ...draftOrder.eventDetails,
-        eventDate: (draftOrder.eventDetails?.eventDate as any)?.toDate?.() || draftOrder.eventDetails?.eventDate,
-        orderDueDate: (draftOrder.eventDetails?.orderDueDate as any)?.toDate?.() || draftOrder.eventDetails?.orderDueDate,
-        weddingDate: (draftOrder.eventDetails?.weddingDate as any)?.toDate?.() || draftOrder.eventDetails?.weddingDate,
-      }
-    };
-    setOrder(hydratedOrder);
-    toast({
-      title: 'Draft Restored',
-      description: `Order ${draftOrder.orderId} is now active.`,
-    });
-  }, [toast]);
+  // Defined simple setters first to ensure they are initialized before complex callbacks
+  const resetOrder = useCallback(() => {
+    setOrder(initialOrderState);
+  }, []);
 
   const setEventDetails = useCallback((details: EventDetails) => {
     setOrder((prev) => ({ ...prev, eventDetails: details }));
@@ -213,9 +95,129 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setOrder((prev) => ({ ...prev, paymentReceived: amount }));
   }, []);
 
-  const resetOrder = useCallback(() => {
-    setOrder(initialOrderState);
-  }, []);
+  const loadDraft = useCallback((draftOrder: Order) => {
+    const hydratedOrder = {
+      ...draftOrder,
+      eventDetails: {
+        ...draftOrder.eventDetails,
+        eventDate: (draftOrder.eventDetails?.eventDate as any)?.toDate?.() || draftOrder.eventDetails?.eventDate,
+        orderDueDate: (draftOrder.eventDetails?.orderDueDate as any)?.toDate?.() || draftOrder.eventDetails?.orderDueDate,
+        weddingDate: (draftOrder.eventDetails?.weddingDate as any)?.toDate?.() || draftOrder.eventDetails?.weddingDate,
+      }
+    };
+    setOrder(hydratedOrder);
+    toast({
+      title: 'Draft Restored',
+      description: `Order ${draftOrder.orderId} is now active.`,
+    });
+  }, [toast]);
+
+  const saveAsDraft = useCallback(async (manualDetails?: EventDetails): Promise<boolean> => {
+    if (!db) return false;
+
+    let currentOrderId = order.orderId;
+    if (!currentOrderId) {
+      currentOrderId = `ORD-${Math.floor(1000 + Math.random() * 9000)}`;
+      setOrder(prev => ({ ...prev, orderId: currentOrderId }));
+    }
+
+    const orderToSave = {
+      ...order,
+      orderId: currentOrderId,
+      id: currentOrderId,
+      eventDetails: manualDetails || order.eventDetails,
+      currentStep: pathname || '/',
+      lastSavedAt: serverTimestamp(),
+    };
+
+    const draftRef = doc(db, 'drafts', currentOrderId);
+
+    try {
+      await withTimeout(setDoc(draftRef, orderToSave, { merge: true }));
+      
+      toast({
+        title: 'Cloud Sync Success',
+        description: `Draft ${currentOrderId} is now safely stored.`,
+      });
+      
+      return true;
+    } catch (serverError: any) {
+      if (serverError.message === 'DATABASE_TIMEOUT') {
+         toast({
+          title: 'Syncing in Background',
+          description: 'Connection is slow, but your data is being sent.',
+        });
+        return true; 
+      }
+
+      const permissionError = new FirestorePermissionError({
+        path: draftRef.path,
+        operation: 'write',
+        requestResourceData: orderToSave,
+      } satisfies SecurityRuleContext);
+
+      errorEmitter.emit('permission-error', permissionError);
+      
+      toast({
+        variant: 'destructive',
+        title: 'Sync Failed',
+        description: 'Database rules are updating. Please try again in a few seconds.',
+      });
+      
+      return false;
+    }
+  }, [order, toast, pathname, db]);
+
+  const activateOrder = useCallback(async (): Promise<boolean> => {
+    if (!db || !order.orderId) {
+        toast({
+            variant: 'destructive',
+            title: 'Unsaved Changes',
+            description: 'Save your draft before activating.',
+        });
+        return false;
+    }
+
+    const orderToActivate = {
+      ...order,
+      id: order.orderId,
+      currentStep: '/active-orders',
+      activatedAt: serverTimestamp(),
+      lastSavedAt: order.lastSavedAt || null,
+    };
+
+    const activeRef = doc(db, 'active-orders', order.orderId);
+    const draftRef = doc(db, 'drafts', order.orderId);
+
+    try {
+      await withTimeout(setDoc(activeRef, orderToActivate));
+      deleteDoc(draftRef).catch(() => {});
+      
+      toast({
+        title: 'Order Activated',
+        description: `Order ${order.orderId} moved to active list.`,
+      });
+      
+      resetOrder();
+      router.push('/active-orders');
+      return true;
+    } catch (serverError: any) {
+      const permissionError = new FirestorePermissionError({
+        path: activeRef.path,
+        operation: 'create',
+        requestResourceData: orderToActivate,
+      } satisfies SecurityRuleContext);
+      errorEmitter.emit('permission-error', permissionError);
+      
+      toast({
+        variant: 'destructive',
+        title: 'Activation Failed',
+        description: 'Permissions denied. Rules are still propagating.',
+      });
+      
+      return false;
+    }
+  }, [order, db, toast, router, resetOrder]);
 
   return (
     <OrderContext.Provider
