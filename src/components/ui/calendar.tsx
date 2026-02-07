@@ -59,6 +59,9 @@ function Calendar({
         caption_label: "text-sm font-medium hidden",
         dropdowns: "flex justify-center gap-1 items-center z-10",
         
+        // SAFETY: Hide default nav container if it attempts to render
+        nav: "hidden",
+
         month_grid: "w-auto mx-auto border-collapse space-y-1",
         weekdays: "flex w-fit mx-auto",
         weekday: "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem] text-center",
@@ -90,7 +93,6 @@ function Calendar({
       captionLayout="dropdown"
       fromYear={1900}
       toYear={2100}
-      hideNavigation
       {...props}
     />
   )
