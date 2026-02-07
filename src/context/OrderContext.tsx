@@ -41,7 +41,9 @@ const initialOrderState: Order = {
   paymentReceived: 0,
 };
 
-const withTimeout = <T>(promise: Promise<T>, ms: number = 10000): Promise<T> => {
+const SYNC_TIMEOUT = 10000;
+
+const withTimeout = <T>(promise: Promise<T>, ms: number = SYNC_TIMEOUT): Promise<T> => {
   return Promise.race([
     promise,
     new Promise<T>((_, reject) => 
@@ -92,6 +94,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       
       return true;
     } catch (serverError: any) {
+      // Create the rich, contextual error for the dev overlay
       const permissionError = new FirestorePermissionError({
         path: draftRef.path,
         operation: 'write',
@@ -103,7 +106,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       toast({
         variant: 'destructive',
         title: 'Sync Failed',
-        description: 'Permissions or network error. Check connection and retry.',
+        description: 'Permissions error or timeout. Database rules are refreshing.',
       });
       
       return false;
@@ -115,7 +118,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         toast({
             variant: 'destructive',
             title: 'Error',
-            description: 'Please save your order as a draft before activating.',
+            description: 'Order ID missing. Save as draft first.',
         });
         return false;
     }
@@ -130,11 +133,12 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     try {
       await withTimeout(setDoc(activeRef, orderToActivate));
-      await deleteDoc(draftRef).catch(() => {});
+      // Delete draft after successful activation (background)
+      deleteDoc(draftRef).catch(() => {});
       
       toast({
         title: 'Order Activated!',
-        description: `Order ${order.orderId} is now active.`,
+        description: `Order ${order.orderId} is now live.`,
       });
       
       resetOrder();
@@ -152,7 +156,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       toast({
         variant: 'destructive',
         title: 'Activation Failed',
-        description: 'Could not move order to active state.',
+        description: 'Check database permissions.',
       });
       
       return false;
@@ -171,8 +175,8 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
     setOrder(hydratedOrder);
     toast({
-      title: 'Order Resumed',
-      description: `Draft ${draftOrder.orderId} loaded.`,
+      title: 'Order Loaded',
+      description: `Draft ${draftOrder.orderId} is active.`,
     });
   }, [toast]);
 

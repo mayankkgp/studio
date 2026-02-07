@@ -11,7 +11,7 @@
         "deliverables": { "type": "array" },
         "paymentReceived": { "type": "number" },
         "currentStep": { "type": "string" },
-        "lastSavedAt": { "type": "string", "format": "date-time" }
+        "lastSavedAt": { "type": "object", "description": "Firestore Server Timestamp" }
       },
       "required": ["orderId", "eventDetails"]
     },
@@ -24,7 +24,7 @@
         "eventDetails": { "type": "object" },
         "deliverables": { "type": "array" },
         "paymentReceived": { "type": "number" },
-        "activatedAt": { "type": "string", "format": "date-time" }
+        "activatedAt": { "type": "object", "description": "Firestore Server Timestamp" }
       },
       "required": ["orderId", "eventDetails"]
     }
