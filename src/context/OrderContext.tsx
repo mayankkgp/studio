@@ -65,25 +65,33 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     const draftRef = doc(db, 'drafts', currentOrderId);
 
-    // OPTIMISTIC SYNC: We fire the request and immediately return true to the UI.
-    // Firestore's internal SDK handles queuing and local cache updates instantly.
-    setDoc(draftRef, orderToSave, { merge: true })
-      .catch(async (serverError) => {
-        const permissionError = new FirestorePermissionError({
-          path: draftRef.path,
-          operation: 'write',
-          requestResourceData: orderToSave,
-        } satisfies SecurityRuleContext);
-
-        errorEmitter.emit('permission-error', permissionError);
+    try {
+      // Await the write to ensure we only resolve when synced with DB
+      await setDoc(draftRef, orderToSave, { merge: true });
+      
+      toast({
+        title: 'Draft Synced',
+        description: `Progress for ${currentOrderId} saved successfully to cloud.`,
       });
+      
+      return true;
+    } catch (serverError: any) {
+      const permissionError = new FirestorePermissionError({
+        path: draftRef.path,
+        operation: 'write',
+        requestResourceData: orderToSave,
+      } satisfies SecurityRuleContext);
 
-    toast({
-      title: 'Draft Synced',
-      description: `Progress for ${currentOrderId} saved locally and syncing.`,
-    });
-    
-    return true;
+      errorEmitter.emit('permission-error', permissionError);
+      
+      toast({
+        variant: 'destructive',
+        title: 'Sync Failed',
+        description: 'Could not save draft to the database. Please check your connection.',
+      });
+      
+      return false;
+    }
   }, [order, toast, pathname]);
 
   const loadDraft = useCallback((draftOrder: Order) => {

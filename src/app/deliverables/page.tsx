@@ -22,6 +22,7 @@ export default function DeliverablesPage() {
     // Row validation status
     const [rowStatus, setRowStatus] = useState<Record<string, { isValid: boolean }>>({});
     const [isNavigating, setIsNavigating] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
     
     // Track items that are "Done" (in the Order List)
     // Initialize with all items so they start in the "Done" list when resuming a draft
@@ -120,14 +121,21 @@ export default function DeliverablesPage() {
                     // Allow state to settle before navigation
                     await new Promise(resolve => setTimeout(resolve, 100));
                     router.push('/commercials');
+                } else {
+                    setIsNavigating(false);
                 }
             } catch (err) {
                 console.error("Navigation error:", err);
-            } finally {
                 setIsNavigating(false);
             }
         }
     }, [isNextStepActive, router, saveAsDraft]);
+
+    const handleManualSave = async () => {
+        setIsSaving(true);
+        await saveAsDraft();
+        setIsSaving(false);
+    };
 
     return (
         <AppLayout>
@@ -222,12 +230,13 @@ export default function DeliverablesPage() {
                 </main>
 
                 <footer className="sticky bottom-0 z-40 flex h-20 shrink-0 items-center justify-between gap-4 border-t bg-background px-4 md:px-6">
-                    <Button variant="outline" onClick={() => router.back()} disabled={isNavigating}>Back</Button>
+                    <Button variant="outline" onClick={() => router.back()} disabled={isNavigating || isSaving}>Back</Button>
                     <div className="flex items-center gap-4">
-                        <Button variant="secondary" onClick={() => saveAsDraft()} disabled={isNavigating}>
-                            {isNavigating ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save as Draft'}
+                        <Button variant="secondary" onClick={handleManualSave} disabled={isNavigating || isSaving}>
+                            {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                            Save as Draft
                         </Button>
-                        <Button onClick={handleNextStep} disabled={!isNextStepActive || isNavigating}>
+                        <Button onClick={handleNextStep} disabled={!isNextStepActive || isNavigating || isSaving}>
                             {isNavigating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                             Next Step (Commercials)
                         </Button>

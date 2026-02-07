@@ -11,7 +11,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { calculateBillableItems } from "@/lib/pricing";
 import type { BillableItem } from "@/lib/types";
-import { DollarSign, ChevronLeft, Save, Zap, Star } from "lucide-react";
+import { DollarSign, ChevronLeft, Save, Zap, Star, Loader2 } from "lucide-react";
 import { useHeaderSummary } from "@/hooks/use-header-summary";
 import * as React from 'react';
 import { cn } from "@/lib/utils";
@@ -22,6 +22,7 @@ export default function CommercialsPage() {
     const headerSummary = useHeaderSummary(order.eventDetails);
     
     const [billableItems, setBillableItems] = useState<BillableItem[]>([]);
+    const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
         if (order.deliverables) {
@@ -50,6 +51,12 @@ export default function CommercialsPage() {
     const formatCurrency = (value: number) => {
         return value.toLocaleString('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0, maximumFractionDigits: 0 });
     }
+
+    const handleSave = async () => {
+        setIsSaving(true);
+        await saveAsDraft();
+        setIsSaving(false);
+    };
 
     const balanceDisplay = useMemo(() => {
         if (totalValue === 0 && payment === 0) return null;
@@ -243,14 +250,16 @@ export default function CommercialsPage() {
                             <Button 
                                 variant="outline" 
                                 className="w-full h-10 group bg-background/50" 
-                                onClick={() => saveAsDraft()}
+                                onClick={handleSave}
+                                disabled={isSaving}
                             >
-                                <Save className="h-4 w-4 mr-2" />
+                                {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
                                 Save as Draft
                             </Button>
                             <Button 
                                 className="w-full h-14 text-base font-bold gap-2 shadow-lg shadow-primary/20" 
                                 onClick={() => alert("Order Activated!")}
+                                disabled={isSaving}
                             >
                                 <Zap className="h-5 w-5 fill-current" />
                                 Activate Order

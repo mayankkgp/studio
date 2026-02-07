@@ -6,7 +6,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
 import { format, isValid as isValidDate } from 'date-fns';
-import { CalendarIcon, Users, Star, PartyPopper, Cake, Milestone, Check, ChevronsUpDown, X, MapPin } from 'lucide-react';
+import { CalendarIcon, Users, Star, PartyPopper, Cake, Milestone, Check, ChevronsUpDown, X, MapPin, Loader2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -152,6 +152,8 @@ export function EventDetailsForm() {
   const [openEventDate, setOpenEventDate] = useState(false);
   const [openDueDate, setOpenDueDate] = useState(false);
   const [openWeddingDate, setOpenWeddingDate] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
 
   const form = useForm<EventDetails>({
     resolver: zodResolver(eventDetailsSchema),
@@ -176,15 +178,22 @@ export function EventDetailsForm() {
     }
   }, [watchedFields.eventType, setValue]);
 
-  const onSubmit = (data: EventDetails) => {
+  const onSubmit = async (data: EventDetails) => {
+    setIsNavigating(true);
     setEventDetails(data);
-    router.push('/deliverables');
+    const success = await saveAsDraft(data);
+    if (success) {
+      router.push('/deliverables');
+    } else {
+      setIsNavigating(false);
+    }
   };
 
-  const handleSaveDraft = () => {
+  const handleSaveDraft = async () => {
+    setIsSaving(true);
     const currentDetails = getValues();
-    // Save draft with current form values to ensure persistence matches input
-    saveAsDraft(currentDetails);
+    await saveAsDraft(currentDetails);
+    setIsSaving(false);
   };
 
   const handleCancel = () => {
@@ -590,8 +599,14 @@ export function EventDetailsForm() {
       <footer className="sticky bottom-0 z-10 flex items-center justify-between gap-4 border-t bg-background px-4 md:px-6 h-20">
         <Button variant="outline" type="button" onClick={handleCancel}>Cancel</Button>
         <div className="flex items-center gap-4">
-          <Button variant="secondary" type="button" onClick={handleSaveDraft}>Save as Draft</Button>
-          <Button type="submit" disabled={!isValid}>Next Step</Button>
+          <Button variant="secondary" type="button" onClick={handleSaveDraft} disabled={isSaving || isNavigating}>
+            {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+            Save as Draft
+          </Button>
+          <Button type="submit" disabled={!isValid || isSaving || isNavigating}>
+            {isNavigating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+            Next Step
+          </Button>
         </div>
       </footer>
     </form>
