@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useOrder } from "@/context/OrderContext";
-import { useRouter } from "next/navigation";
+import { useRouter } from "navigation";
 import { useEffect, useMemo, useState } from "react";
 import { calculateBillableItems } from "@/lib/pricing";
 import type { BillableItem } from "@/lib/types";
@@ -241,7 +241,7 @@ export default function CommercialsPage() {
                             <Button 
                                 variant="outline" 
                                 className="w-full h-10 group bg-background/50" 
-                                onClick={saveAsDraft}
+                                onClick={() => saveAsDraft()}
                             >
                                 <Save className="h-4 w-4 mr-2" />
                                 Save as Draft

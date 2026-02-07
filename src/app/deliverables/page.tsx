@@ -209,7 +209,7 @@ export default function DeliverablesPage() {
                 <footer className="sticky bottom-0 z-40 flex h-20 shrink-0 items-center justify-between gap-4 border-t bg-background px-4 md:px-6">
                     <Button variant="outline" onClick={() => router.back()} disabled={isNavigating}>Back</Button>
                     <div className="flex items-center gap-4">
-                        <Button variant="secondary" onClick={saveAsDraft} disabled={isNavigating}>
+                        <Button variant="secondary" onClick={() => saveAsDraft()} disabled={isNavigating}>
                             {isNavigating ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save as Draft'}
                         </Button>
                         <Button onClick={handleNextStep} disabled={!isNextStepActive || isNavigating}>
