@@ -50,6 +50,16 @@ const initialOrderState: Order = {
   paymentReceived: 7500,
 };
 
+// Helper to force a timeout
+const withTimeout = (promise: Promise<any>, ms: number) => {
+    return Promise.race([
+        promise,
+        new Promise((_, reject) => 
+            setTimeout(() => reject(new Error("Request timed out")), ms)
+        )
+    ]);
+};
+
 export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ children }: { children: React.ReactNode }) => {
   const [order, setOrder] = useState<Order>(initialOrderState);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -76,7 +86,11 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         lastSavedAt: serverTimestamp(),
       };
 
-      await setDoc(draftRef, orderToSave, { merge: true });
+      // Force fail if it takes longer than 10 seconds (10000ms)
+      await withTimeout(
+        setDoc(draftRef, orderToSave, { merge: true }), 
+        10000 
+      );
 
       toast({
         title: 'Draft Saved',
