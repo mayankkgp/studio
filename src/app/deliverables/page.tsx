@@ -10,7 +10,7 @@ import { CommandBar } from "@/components/flow2/CommandBar";
 import { DeliverableRow } from "@/components/flow2/DeliverableRow";
 import { Package, CheckCircle2, AlertCircle } from "lucide-react";
 import { Accordion } from "@/components/ui/accordion";
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function DeliverablesPage() {
@@ -22,7 +22,6 @@ export default function DeliverablesPage() {
     const [rowStatus, setRowStatus] = useState<Record<string, { isValid: boolean }>>({});
     
     // Initialize committedItemIds with existing deliverables on mount
-    // This ensures that navigating back from Commercials moves everything to Order List
     const [committedItemIds, setCommittedItemIds] = useState<string[]>(() => 
         order.deliverables.map(item => item.id)
     );
@@ -37,14 +36,12 @@ export default function DeliverablesPage() {
     }, []);
 
     const handleDone = useCallback(async (id: string, forceValid: boolean = false) => {
-        // Move to top of Order List (committedItemIds)
-        // Hard validation (missing variant/mandatory) blocks, soft constraints don't
         const isValid = forceValid || rowStatus[id]?.isValid;
         
         if (isValid) {
             setCommittedItemIds(prev => {
                 const filtered = prev.filter(itemId => itemId !== id);
-                return [id, ...filtered]; // Prepend recently completed to top
+                return [id, ...filtered]; 
             });
             setOpenOrderListItems(prev => prev.filter(itemId => itemId !== id));
         } else {
@@ -66,12 +63,10 @@ export default function DeliverablesPage() {
     }, [removeDeliverable]);
 
     const { activeItems, orderListItems } = useMemo(() => {
-        // Order list items follow committed order (most recent at top)
         const list = committedItemIds
             .map(id => order.deliverables.find(item => item.id === id))
             .filter(item => !!item);
 
-        // Active items follow deliverables order (Newest added by CommandBar is prepended to deliverables array)
         const active = order.deliverables.filter(item => !committedItemIds.includes(item.id));
 
         return { 
@@ -80,10 +75,21 @@ export default function DeliverablesPage() {
         };
     }, [order.deliverables, committedItemIds]);
 
-    // CTA activation conditions:
-    // 1. All product cards must be valid
-    // 2. All product cards must be in closed/collapsed state (openOrderListItems.length === 0)
-    // 3. The 'action' section must be empty (activeItems.length === 0)
+    // Autoscroll logic for newly added items
+    const lastActiveCount = useRef(activeItems.length);
+    const actionSectionRef = useRef<HTMLHeadingElement>(null);
+
+    useEffect(() => {
+        if (activeItems.length > lastActiveCount.current) {
+            // New item was added via CommandBar
+            actionSectionRef.current?.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'start' 
+            });
+        }
+        lastActiveCount.current = activeItems.length;
+    }, [activeItems.length]);
+
     const isNextStepActive = useMemo(() => {
         const hasItems = order.deliverables.length > 0;
         const allConfirmed = activeItems.length === 0;
@@ -120,10 +126,12 @@ export default function DeliverablesPage() {
                         </section>
 
                         <div className="space-y-12">
-                            {/* Action Required: Only shown if there are active items */}
                             {activeItems.length > 0 && (
                                 <section className="space-y-4">
-                                    <h2 className="text-xs font-bold uppercase tracking-widest text-primary flex items-center gap-2">
+                                    <h2 
+                                        ref={actionSectionRef}
+                                        className="text-xs font-bold uppercase tracking-widest text-primary flex items-center gap-2 scroll-mt-48"
+                                    >
                                         <AlertCircle className="h-4 w-4" />
                                         Action Required ({activeItems.length})
                                     </h2>
@@ -150,7 +158,6 @@ export default function DeliverablesPage() {
                                 </section>
                             )}
 
-                            {/* Order List: Collapsed by Default */}
                             {orderListItems.length > 0 && (
                                 <section className="space-y-4">
                                     <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
@@ -180,7 +187,6 @@ export default function DeliverablesPage() {
                                 </section>
                             )}
                             
-                            {/* Empty State: Only shown if absolutely nothing is present */}
                             {order.deliverables.length === 0 && (
                                 <div className="flex flex-col items-center justify-center py-24 border-2 border-dashed rounded-xl bg-card/50">
                                     <Package className="h-12 w-12 text-muted-foreground/30 mb-4" />
