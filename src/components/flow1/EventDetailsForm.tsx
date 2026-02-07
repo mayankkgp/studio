@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -180,20 +181,25 @@ export function EventDetailsForm() {
 
   const onSubmit = async (data: EventDetails) => {
     setIsNavigating(true);
-    setEventDetails(data);
-    const success = await saveAsDraft(data);
-    if (success) {
-      router.push('/deliverables');
-    } else {
+    try {
+      setEventDetails(data);
+      const success = await saveAsDraft(data);
+      if (success) {
+        router.push('/deliverables');
+      }
+    } finally {
       setIsNavigating(false);
     }
   };
 
   const handleSaveDraft = async () => {
     setIsSaving(true);
-    const currentDetails = getValues();
-    await saveAsDraft(currentDetails);
-    setIsSaving(false);
+    try {
+      const currentDetails = getValues();
+      await saveAsDraft(currentDetails);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleCancel = () => {

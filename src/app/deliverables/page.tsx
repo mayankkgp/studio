@@ -1,3 +1,4 @@
+
 'use client';
 
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -91,15 +92,11 @@ export default function DeliverablesPage() {
         try {
             const success = await saveAsDraft();
             if (success) {
-                // Short timeout to ensure state settles before push
-                await new Promise(r => setTimeout(r, 100));
                 router.push('/commercials');
             }
-        } catch (err) {
-            console.error("Navigation error:", err);
         } finally {
-            // Only stop loader if we didn't navigate away
-            setTimeout(() => setIsNavigating(false), 2000);
+            // Safety timeout to reset navigation state if router takes too long
+            setTimeout(() => setIsNavigating(false), 5000);
         }
     }, [isNextStepActive, router, saveAsDraft]);
 

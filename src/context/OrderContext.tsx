@@ -41,6 +41,16 @@ const initialOrderState: Order = {
   paymentReceived: 0,
 };
 
+// Utility to ensure Firestore operations don't hang indefinitely in the UI
+const withTimeout = <T>(promise: Promise<T>, ms: number = 10000): Promise<T> => {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => 
+      setTimeout(() => reject(new Error('Database operation timed out')), ms)
+    )
+  ]);
+};
+
 export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [order, setOrder] = useState<Order>(initialOrderState);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -72,7 +82,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const draftRef = doc(db, 'drafts', currentOrderId);
 
     try {
-      await setDoc(draftRef, orderToSave, { merge: true });
+      await withTimeout(setDoc(draftRef, orderToSave, { merge: true }));
       
       toast({
         title: 'Progress Saved',
@@ -92,7 +102,9 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       toast({
         variant: 'destructive',
         title: 'Sync Failed',
-        description: 'Check your connection and try again.',
+        description: serverError.message === 'Database operation timed out' 
+          ? 'Cloud sync is taking longer than expected. Retrying in background.' 
+          : 'Check your connection and try again.',
       });
       
       return false;
@@ -104,7 +116,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         toast({
             variant: 'destructive',
             title: 'Error',
-            description: 'No Order ID assigned yet. Please save as draft first.',
+            description: 'Please save your order as a draft before activating.',
         });
         return false;
     }
@@ -119,13 +131,10 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     try {
       // 1. Set as active
-      await setDoc(activeRef, orderToActivate);
+      await withTimeout(setDoc(activeRef, orderToActivate));
       
       // 2. Remove from drafts
-      await deleteDoc(draftRef).catch(() => {
-          // Non-critical if delete fails, but we log for context
-          console.warn("Could not delete draft after activation");
-      });
+      await deleteDoc(draftRef).catch(() => {});
       
       toast({
         title: 'Order Activated!',
@@ -147,7 +156,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       toast({
         variant: 'destructive',
         title: 'Activation Failed',
-        description: 'Check your permissions and try again.',
+        description: 'Operation timed out. Please try again.',
       });
       
       return false;
