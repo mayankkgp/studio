@@ -1,9 +1,9 @@
+
 'use client';
 
 import { AppLayout } from "@/components/layout/AppLayout";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useOrder } from "@/context/OrderContext";
@@ -18,11 +18,12 @@ import { cn } from "@/lib/utils";
 
 export default function CommercialsPage() {
     const router = useRouter();
-    const { order, setPaymentReceived, saveAsDraft, updateDeliverable } = useOrder();
+    const { order, setPaymentReceived, saveAsDraft, activateOrder, updateDeliverable } = useOrder();
     const headerSummary = useHeaderSummary(order.eventDetails);
     
     const [billableItems, setBillableItems] = useState<BillableItem[]>([]);
     const [isSaving, setIsSaving] = useState(false);
+    const [isActivating, setIsActivating] = useState(false);
 
     useEffect(() => {
         if (order.deliverables) {
@@ -54,8 +55,20 @@ export default function CommercialsPage() {
 
     const handleSave = async () => {
         setIsSaving(true);
-        await saveAsDraft();
-        setIsSaving(false);
+        try {
+            await saveAsDraft();
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const handleActivate = async () => {
+        setIsActivating(true);
+        try {
+            await activateOrder();
+        } finally {
+            setIsActivating(false);
+        }
     };
 
     const balanceDisplay = useMemo(() => {
@@ -95,16 +108,14 @@ export default function CommercialsPage() {
                         <p className="text-xs text-muted-foreground uppercase tracking-wider font-bold">Commercials</p>
                     </div>
                     <div className="hidden lg:block font-mono text-xs opacity-50">
-                        {order.orderId}
+                        {order.orderId || 'NOT ASSIGNED'}
                     </div>
                 </header>
 
                 <div className="flex flex-1 overflow-hidden">
-                    {/* Left Panel: Billable Items List (Expert Workflow) */}
+                    {/* Left Panel: Billable Items List */}
                     <main className="flex-1 flex flex-col overflow-hidden bg-background pt-6 pb-6">
-                        {/* Scroll Wrapper: Full width to dock scrollbar to edge */}
                         <div className="flex-1 overflow-y-auto custom-scrollbar w-full">
-                            {/* Centering Wrapper */}
                             <div className="max-w-4xl mx-auto w-full px-4 lg:px-6">
                                 <div className="w-full">
                                     {billableItems.length === 0 ? (
@@ -130,7 +141,6 @@ export default function CommercialsPage() {
 
                                                     return (
                                                         <React.Fragment key={item.configuredProductId}>
-                                                            {/* Product Header Row */}
                                                             <TableRow className="bg-[#5C4B35] hover:bg-[#5C4B35] transition-none z-10 relative">
                                                                 <TableCell colSpan={3} className="py-2.5 font-bold text-sm text-[#FFFFFF] border-l border-stone-200">
                                                                     {item.productName}
@@ -139,7 +149,6 @@ export default function CommercialsPage() {
                                                                     {formatCurrency(itemTotal)}
                                                                 </TableCell>
                                                             </TableRow>
-                                                            {/* Component Rows */}
                                                             {item.components.map((comp, compIdx) => {
                                                                 const isSpecialRequest = comp.label === 'Special Request' || comp.description !== undefined;
                                                                 const isAbsoluteLastRow = isLastItem && compIdx === item.components.length - 1;
@@ -196,9 +205,8 @@ export default function CommercialsPage() {
                         </div>
                     </main>
 
-                    {/* Right Panel: Summary & Actions (Sticky) */}
+                    {/* Right Panel: Summary & Actions */}
                     <aside className="w-80 lg:w-96 shrink-0 border-l bg-card/50 flex flex-col p-6 z-40">
-                        {/* Top Navigation */}
                         <div className="mb-6">
                             <Button 
                                 variant="ghost" 
@@ -211,9 +219,7 @@ export default function CommercialsPage() {
                             </Button>
                         </div>
                         
-                        {/* Financial Calculation Unit */}
                         <div className="space-y-6">
-                            {/* Total Order Value */}
                             <div className="space-y-0.5">
                                 <div className="text-[10px] font-bold uppercase text-muted-foreground">Total Order Value</div>
                                 <div className="text-5xl font-bold text-foreground tracking-tight">
@@ -221,7 +227,6 @@ export default function CommercialsPage() {
                                 </div>
                             </div>
 
-                            {/* Payment Input Block */}
                             <div className="space-y-2">
                                 <Label htmlFor="payment" className="text-[10px] font-bold uppercase text-muted-foreground">
                                     Payment Received
@@ -234,34 +239,32 @@ export default function CommercialsPage() {
                                         placeholder="0"
                                         value={order.paymentReceived || ''}
                                         onChange={(e) => setPaymentReceived(Number(e.target.value))}
-                                        className="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 pl-7 text-lg font-semibold ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                        className="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 pl-7 text-lg font-semibold ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                                     />
                                 </div>
                             </div>
                             
-                            {/* Balance/Status Block */}
                             <div>
                                 {balanceDisplay}
                             </div>
                         </div>
 
-                        {/* Action Buttons Pushed to Bottom */}
                         <div className="mt-auto space-y-3">
                             <Button 
                                 variant="outline" 
                                 className="w-full h-10 group bg-background/50" 
                                 onClick={handleSave}
-                                disabled={isSaving}
+                                disabled={isSaving || isActivating}
                             >
                                 {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
                                 Save as Draft
                             </Button>
                             <Button 
                                 className="w-full h-14 text-base font-bold gap-2 shadow-lg shadow-primary/20" 
-                                onClick={() => alert("Order Activated!")}
-                                disabled={isSaving}
+                                onClick={handleActivate}
+                                disabled={isSaving || isActivating}
                             >
-                                <Zap className="h-5 w-5 fill-current" />
+                                {isActivating ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <Zap className="h-5 w-5 fill-current" />}
                                 Activate Order
                             </Button>
                         </div>
@@ -270,19 +273,10 @@ export default function CommercialsPage() {
             </div>
 
             <style jsx global>{`
-                .custom-scrollbar::-webkit-scrollbar {
-                    width: 6px;
-                }
-                .custom-scrollbar::-webkit-scrollbar-track {
-                    background: transparent;
-                }
-                .custom-scrollbar::-webkit-scrollbar-thumb {
-                    background: hsl(var(--muted));
-                    border-radius: 10px;
-                }
-                .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-                    background: hsl(var(--muted-foreground) / 0.2);
-                }
+                .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+                .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+                .custom-scrollbar::-webkit-scrollbar-thumb { background: hsl(var(--muted)); border-radius: 10px; }
+                .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground) / 0.2); }
             `}</style>
         </AppLayout>
     );

@@ -14,6 +14,19 @@
         "lastSavedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["orderId", "eventDetails"]
+    },
+    "ActiveOrder": {
+      "title": "Active Order",
+      "description": "A finalized and activated order.",
+      "type": "object",
+      "properties": {
+        "orderId": { "type": "string" },
+        "eventDetails": { "type": "object" },
+        "deliverables": { "type": "array" },
+        "paymentReceived": { "type": "number" },
+        "activatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["orderId", "eventDetails"]
     }
   },
   "auth": {
@@ -23,6 +36,10 @@
     "/drafts/{orderId}": {
       "schema": "OrderDraft",
       "description": "Collection of order drafts indexed by their unique order ID."
+    },
+    "/active-orders/{orderId}": {
+      "schema": "ActiveOrder",
+      "description": "Collection of finalized active orders."
     }
   }
 }

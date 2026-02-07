@@ -1,10 +1,11 @@
+
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { Order, EventDetails, ConfiguredProduct } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { usePathname } from 'next/navigation';
+import { doc, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { usePathname, useRouter } from 'next/navigation';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 import { useFirestore } from '@/firebase';
@@ -17,6 +18,7 @@ type OrderContextType = {
   removeDeliverable: (id: string) => void;
   setPaymentReceived: (amount: number) => void;
   saveAsDraft: (manualDetails?: EventDetails) => Promise<boolean>;
+  activateOrder: () => Promise<boolean>;
   loadDraft: (draftOrder: Order) => void;
   resetOrder: () => void;
   isLoaded: boolean;
@@ -44,6 +46,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [isLoaded, setIsLoaded] = useState(false);
   const { toast } = useToast();
   const pathname = usePathname();
+  const router = useRouter();
   const db = useFirestore();
   
   useEffect(() => {
@@ -69,12 +72,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const draftRef = doc(db, 'drafts', currentOrderId);
 
     try {
-      const savePromise = setDoc(draftRef, orderToSave, { merge: true });
-      
-      await Promise.race([
-        savePromise,
-        new Promise((resolve) => setTimeout(resolve, 5000))
-      ]);
+      await setDoc(draftRef, orderToSave, { merge: true });
       
       toast({
         title: 'Progress Saved',
@@ -100,6 +98,61 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       return false;
     }
   }, [order, toast, pathname, db]);
+
+  const activateOrder = useCallback(async (): Promise<boolean> => {
+    if (!order.orderId) {
+        toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'No Order ID assigned yet. Please save as draft first.',
+        });
+        return false;
+    }
+
+    const orderToActivate = {
+      ...order,
+      activatedAt: serverTimestamp(),
+    };
+
+    const activeRef = doc(db, 'active-orders', order.orderId);
+    const draftRef = doc(db, 'drafts', order.orderId);
+
+    try {
+      // 1. Set as active
+      await setDoc(activeRef, orderToActivate);
+      
+      // 2. Remove from drafts
+      await deleteDoc(draftRef).catch(() => {
+          // Non-critical if delete fails, but we log for context
+          console.warn("Could not delete draft after activation");
+      });
+      
+      toast({
+        title: 'Order Activated!',
+        description: `Order ${order.orderId} is now active.`,
+      });
+      
+      resetOrder();
+      router.push('/active-orders');
+      return true;
+    } catch (serverError: any) {
+      const permissionError = new FirestorePermissionError({
+        path: activeRef.path,
+        operation: 'create',
+        requestResourceData: orderToActivate,
+      } satisfies SecurityRuleContext);
+
+      errorEmitter.emit('permission-error', permissionError);
+      
+      toast({
+        variant: 'destructive',
+        title: 'Activation Failed',
+        description: 'Check your permissions and try again.',
+      });
+      
+      return false;
+    }
+  }, [order, db, toast, router]);
 
   const loadDraft = useCallback((draftOrder: Order) => {
     const hydratedOrder = {
@@ -158,6 +211,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         removeDeliverable,
         setPaymentReceived,
         saveAsDraft,
+        activateOrder,
         loadDraft,
         resetOrder,
         isLoaded,

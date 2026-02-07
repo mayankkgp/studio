@@ -1,8 +1,9 @@
+
 'use client';
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, Package, DollarSign, FileText, PanelLeft, PlusCircle } from 'lucide-react';
+import { Home, Package, DollarSign, FileText, PanelLeft, PlusCircle, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Logo } from '@/components/icons/Logo';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger } from '@/components/ui/sheet';
@@ -14,6 +15,7 @@ const navItems = [
   { href: '/deliverables', label: 'Deliverables', icon: Package },
   { href: '/commercials', label: 'Commercials', icon: DollarSign },
   { href: '/drafts', label: 'My Drafts', icon: FileText },
+  { href: '/active-orders', label: 'Active Orders', icon: Zap },
 ];
 
 export function MobileNav() {

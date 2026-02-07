@@ -1,8 +1,9 @@
+
 'use client';
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, Package, DollarSign, FileText, PlusCircle } from 'lucide-react';
+import { Home, Package, DollarSign, FileText, PlusCircle, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Logo } from '@/components/icons/Logo';
 import { useOrder } from '@/context/OrderContext';
@@ -13,6 +14,7 @@ const navItems = [
   { href: '/deliverables', label: 'Deliverables', icon: Package },
   { href: '/commercials', label: 'Commercials', icon: DollarSign },
   { href: '/drafts', label: 'My Drafts', icon: FileText },
+  { href: '/active-orders', label: 'Active Orders', icon: Zap },
 ];
 
 export function Sidebar() {
