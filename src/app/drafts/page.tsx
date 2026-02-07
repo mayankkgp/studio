@@ -90,6 +90,19 @@ export default function DraftsPage() {
     }
   };
 
+  const renderStageBadge = (step: string) => {
+    switch (step) {
+      case '/':
+        return <Badge variant="outline" className="font-semibold text-[10px] uppercase">Event Details</Badge>;
+      case '/deliverables':
+        return <Badge variant="default" className="font-semibold text-[10px] uppercase">Deliverables</Badge>;
+      case '/commercials':
+        return <Badge variant="secondary" className="font-semibold text-[10px] uppercase">Commercials</Badge>;
+      default:
+        return <Badge variant="outline" className="font-semibold text-[10px] uppercase">Draft</Badge>;
+    }
+  };
+
   return (
     <AppLayout>
       <div className="flex flex-col h-screen overflow-hidden bg-background">
@@ -134,6 +147,7 @@ export default function DraftsPage() {
                     <TableRow className="hover:bg-transparent">
                       <TableHead className="w-[140px]">Order ID</TableHead>
                       <TableHead className="w-[120px]">Event Type</TableHead>
+                      <TableHead className="w-[140px]">Stage</TableHead>
                       <TableHead className="min-w-[200px]">Client Name</TableHead>
                       <TableHead className="w-[100px] text-center">Items</TableHead>
                       <TableHead className="w-[120px]">Due Date</TableHead>
@@ -156,6 +170,9 @@ export default function DraftsPage() {
                           <Badge variant="secondary" className="font-semibold text-[10px] uppercase">
                             {draft.eventDetails?.eventType || 'Other'}
                           </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {renderStageBadge(draft.currentStep)}
                         </TableCell>
                         <TableCell className="font-medium">
                           {getClientName(draft.eventDetails)}

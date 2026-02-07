@@ -5,6 +5,7 @@ import type { Order, EventDetails, ConfiguredProduct } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { db } from '@/lib/firebase';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { usePathname } from 'next/navigation';
 
 type OrderContextType = {
   order: Order;
@@ -53,6 +54,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [order, setOrder] = useState<Order>(initialOrderState);
   const [isLoaded, setIsLoaded] = useState(false);
   const { toast } = useToast();
+  const pathname = usePathname();
   
   useEffect(() => {
     const newOrderId = `#ORD-${Math.floor(1000 + Math.random() * 9000)}`;
@@ -67,10 +69,10 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       const draftRef = doc(db, 'drafts', currentOrderId);
       
-      // Use manualDetails if provided (useful for syncing forms before save state updates)
       const orderToSave = {
         ...order,
         eventDetails: manualDetails || order.eventDetails,
+        currentStep: pathname,
         lastSavedAt: serverTimestamp(),
       };
 
@@ -87,7 +89,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         description: error.message || 'Could not save draft to Firestore.',
       });
     }
-  }, [order, toast]);
+  }, [order, toast, pathname]);
 
   const loadDraft = useCallback((draftOrder: Order) => {
     const hydratedOrder = {
