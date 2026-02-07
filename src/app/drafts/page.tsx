@@ -1,20 +1,15 @@
-
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
-import { collection, query, orderBy, onSnapshot, doc, deleteDoc } from 'firebase/firestore';
+import { useEffect, useState, useCallback } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { MobileNav } from '@/components/layout/MobileNav';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useOrder } from '@/context/OrderContext';
 import { useRouter } from 'next/navigation';
-import { format } from 'date-fns';
-import { FileText, Trash2, Loader2, Search, Database, HardDrive } from 'lucide-react';
+import { FileText, Trash2, Loader2, Search, HardDrive } from 'lucide-react';
 import { calculateBillableItems } from '@/lib/pricing';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { useFirestore } from '@/firebase';
 
 export default function DraftsPage() {
   const [drafts, setDrafts] = useState<any[]>([]);
@@ -22,89 +17,43 @@ export default function DraftsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const { loadDraft } = useOrder();
   const router = useRouter();
-  const db = useFirestore();
 
   const loadAllDrafts = useCallback(() => {
-    // 1. Get from LocalStorage
-    let localData: any[] = [];
+    setLoading(true);
     try {
       const raw = localStorage.getItem('srishbish_drafts_v1');
       if (raw) {
         const parsed = JSON.parse(raw);
-        localData = Object.values(parsed).map((d: any) => ({ ...d, storage: 'local' }));
+        const data = Object.values(parsed).map((d: any) => ({ ...d }));
+        setDrafts(data.sort((a: any, b: any) => new Date(b.lastSavedAt).getTime() - new Date(a.lastSavedAt).getTime()));
+      } else {
+        setDrafts([]);
       }
-    } catch (e) {}
-
-    // 2. Fetch from Cloud
-    if (!db) {
-      setDrafts(localData);
+    } catch (e) {
+      console.error('Failed to load drafts', e);
+    } finally {
       setLoading(false);
-      return;
     }
-
-    const q = query(collection(db, 'drafts'), orderBy('lastSavedAt', 'desc'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const cloudData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        storage: 'cloud'
-      }));
-
-      // Merge: Cloud data wins if ID matches, but keep local-only items
-      const merged = [...cloudData];
-      localData.forEach(localItem => {
-        if (!merged.find(cloudItem => cloudItem.orderId === localItem.orderId)) {
-          merged.push(localItem);
-        }
-      });
-
-      setDrafts(merged.sort((a: any, b: any) => {
-        const dateA = a.lastSavedAt?.toDate ? a.lastSavedAt.toDate() : new Date(a.lastSavedAt);
-        const dateB = b.lastSavedAt?.toDate ? b.lastSavedAt.toDate() : new Date(b.lastSavedAt);
-        return dateB.getTime() - dateA.getTime();
-      }));
-      setLoading(false);
-    }, () => {
-      // If cloud fails (permission), just use local
-      setDrafts(localData);
-      setLoading(false);
-    });
-
-    return unsubscribe;
-  }, [db]);
+  }, []);
 
   useEffect(() => {
-    const unsub = loadAllDrafts();
-    return () => { if (typeof unsub === 'function') unsub(); };
+    loadAllDrafts();
   }, [loadAllDrafts]);
 
   const handleDelete = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
     if (confirm('Delete this draft forever?')) {
-      // Delete Local
       try {
         const raw = localStorage.getItem('srishbish_drafts_v1');
         if (raw) {
           const parsed = JSON.parse(raw);
           delete parsed[id];
           localStorage.setItem('srishbish_drafts_v1', JSON.stringify(parsed));
+          setDrafts(prev => prev.filter(d => d.orderId !== id));
         }
       } catch (e) {}
-
-      // Delete Cloud
-      if (db) {
-        deleteDoc(doc(db, 'drafts', id)).catch(() => {});
-      }
-
-      // Optimistic UI
-      setDrafts(prev => prev.filter(d => d.orderId !== id));
     }
   };
-
-  const filteredDrafts = drafts.filter(draft => 
-    draft.orderId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (draft.eventDetails?.brideName || '').toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   const getClientName = (details: any) => {
     if (!details) return 'Unknown Client';
@@ -114,6 +63,11 @@ export default function DraftsPage() {
     return details.honoreeNameBirthday || details.honoreeNameOther || details.eventName || 'Unnamed Event';
   };
 
+  const filteredDrafts = drafts.filter(draft => 
+    draft.orderId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    getClientName(draft.eventDetails).toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <AppLayout>
       <div className="flex flex-col h-screen bg-background">
@@ -121,7 +75,7 @@ export default function DraftsPage() {
           <MobileNav />
           <div className="flex-1">
             <h1 className="font-semibold text-lg font-headline">Order Drafts</h1>
-            <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Local + Cloud Sync</p>
+            <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Saved to this device</p>
           </div>
         </header>
 
@@ -140,12 +94,12 @@ export default function DraftsPage() {
             {loading ? (
               <div className="flex flex-col items-center py-24 text-muted-foreground">
                 <Loader2 className="h-8 w-8 animate-spin mb-4" />
-                <p>Accessing storage...</p>
+                <p>Loading storage...</p>
               </div>
             ) : filteredDrafts.length === 0 ? (
               <div className="flex flex-col items-center py-24 border-2 border-dashed rounded-xl bg-card">
                 <FileText className="h-12 w-12 text-muted-foreground/30 mb-4" />
-                <p className="text-muted-foreground text-sm">No drafts found</p>
+                <p className="text-muted-foreground text-sm">No drafts found on this device</p>
               </div>
             ) : (
               <div className="rounded-xl border bg-card overflow-hidden shadow-sm">
@@ -154,20 +108,20 @@ export default function DraftsPage() {
                     <TableRow className="hover:bg-transparent">
                       <TableHead>Order ID</TableHead>
                       <TableHead>Client</TableHead>
-                      <TableHead>Status</TableHead>
+                      <TableHead>Storage</TableHead>
                       <TableHead className="text-right">Total (₹)</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                      <TableHead className="text-right"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredDrafts.map((draft) => (
-                      <TableRow key={draft.orderId} className="cursor-pointer group" onClick={() => loadDraft(draft)}>
+                      <TableRow key={draft.orderId} className="cursor-pointer group" onClick={() => { loadDraft(draft); router.push(draft.currentStep || '/'); }}>
                         <TableCell className="font-mono font-bold text-primary">{draft.orderId}</TableCell>
                         <TableCell className="font-medium">{getClientName(draft.eventDetails)}</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
-                             {draft.storage === 'cloud' ? <Database className="h-3 w-3 text-blue-500" /> : <HardDrive className="h-3 w-3 text-amber-500" />}
-                             <span className="text-[10px] uppercase font-bold text-muted-foreground">{draft.storage}</span>
+                             <HardDrive className="h-3 w-3 text-amber-500" />
+                             <span className="text-[10px] uppercase font-bold text-muted-foreground">Local Only</span>
                           </div>
                         </TableCell>
                         <TableCell className="text-right font-bold">
@@ -195,5 +149,3 @@ export default function DraftsPage() {
     </AppLayout>
   );
 }
-
-import { useCallback } from 'react';

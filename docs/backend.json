@@ -1,9 +1,8 @@
-
 {
   "entities": {
     "OrderDraft": {
       "title": "Order Draft",
-      "description": "Flexible store for drafts with catch-all metadata.",
+      "description": "Schema for orders saved locally. Used for client-side type reference.",
       "type": "object",
       "properties": {
         "orderId": { "type": "string" },
@@ -12,38 +11,12 @@
         "deliverables": { "type": "array" },
         "paymentReceived": { "type": "number" },
         "currentStep": { "type": "string" },
-        "lastSavedAt": { "type": ["object", "string", "null"] }
-      },
-      "required": ["orderId"]
-    },
-    "ActiveOrder": {
-      "title": "Active Order",
-      "description": "Finalized business order with catch-all metadata.",
-      "type": "object",
-      "properties": {
-        "orderId": { "type": "string" },
-        "id": { "type": "string" },
-        "eventDetails": { "type": "object" },
-        "deliverables": { "type": "array" },
-        "paymentReceived": { "type": "number" },
-        "currentStep": { "type": "string" },
-        "lastSavedAt": { "type": ["object", "string", "null"] },
-        "activatedAt": { "type": ["object", "string", "null"] }
+        "lastSavedAt": { "type": "string" }
       },
       "required": ["orderId"]
     }
   },
   "auth": {
     "providers": ["google.com"]
-  },
-  "firestore": {
-    "/drafts/{orderId}": {
-      "schema": "OrderDraft",
-      "description": "Permissive rules for drafts. (Rules Version: v10 - Sync Relaxed)"
-    },
-    "/active-orders/{orderId}": {
-      "schema": "ActiveOrder",
-      "description": "Permissive rules for active orders. (Rules Version: v10 - Sync Relaxed)"
-    }
   }
 }

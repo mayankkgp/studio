@@ -1,18 +1,15 @@
-
 'use client';
 
-import { useEffect, useState, useMemo, useCallback } from 'react';
-import { collection, query, orderBy, onSnapshot, doc, deleteDoc } from 'firebase/firestore';
+import { useEffect, useState, useCallback } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { MobileNav } from '@/components/layout/MobileNav';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useOrder } from '@/context/OrderContext';
 import { useRouter } from 'next/navigation';
-import { Zap, Trash2, Loader2, Search, HardDrive, Database } from 'lucide-react';
+import { Zap, Trash2, Loader2, Search, HardDrive } from 'lucide-react';
 import { calculateBillableItems } from '@/lib/pricing';
 import { Input } from '@/components/ui/input';
-import { useFirestore } from '@/firebase';
 
 export default function ActiveOrdersPage() {
   const [activeOrders, setActiveOrders] = useState<any[]>([]);
@@ -20,58 +17,27 @@ export default function ActiveOrdersPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const { loadDraft } = useOrder();
   const router = useRouter();
-  const db = useFirestore();
 
   const loadAllActive = useCallback(() => {
-    // 1. LocalStorage
-    let localData: any[] = [];
+    setLoading(true);
     try {
       const raw = localStorage.getItem('srishbish_active_v1');
       if (raw) {
         const parsed = JSON.parse(raw);
-        localData = Object.values(parsed).map((d: any) => ({ ...d, storage: 'local' }));
+        const data = Object.values(parsed).map((d: any) => ({ ...d }));
+        setActiveOrders(data.sort((a: any, b: any) => new Date(b.activatedAt).getTime() - new Date(a.activatedAt).getTime()));
+      } else {
+        setActiveOrders([]);
       }
-    } catch (e) {}
-
-    // 2. Cloud Sync
-    if (!db) {
-      setActiveOrders(localData);
+    } catch (e) {
+      console.error('Failed to load active orders', e);
+    } finally {
       setLoading(false);
-      return;
     }
-
-    const q = query(collection(db, 'active-orders'), orderBy('activatedAt', 'desc'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const cloudData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        storage: 'cloud'
-      }));
-
-      const merged = [...cloudData];
-      localData.forEach(localItem => {
-        if (!merged.find(cloudItem => cloudItem.orderId === localItem.orderId)) {
-          merged.push(localItem);
-        }
-      });
-
-      setActiveOrders(merged.sort((a: any, b: any) => {
-        const dateA = a.activatedAt?.toDate ? a.activatedAt.toDate() : new Date(a.activatedAt);
-        const dateB = b.activatedAt?.toDate ? b.activatedAt.toDate() : new Date(b.activatedAt);
-        return dateB.getTime() - dateA.getTime();
-      }));
-      setLoading(false);
-    }, () => {
-      setActiveOrders(localData);
-      setLoading(false);
-    });
-
-    return unsubscribe;
-  }, [db]);
+  }, []);
 
   useEffect(() => {
-    const unsub = loadAllActive();
-    return () => { if (typeof unsub === 'function') unsub(); };
+    loadAllActive();
   }, [loadAllActive]);
 
   const handleDelete = (e: React.MouseEvent, id: string) => {
@@ -83,10 +49,9 @@ export default function ActiveOrdersPage() {
           const parsed = JSON.parse(raw);
           delete parsed[id];
           localStorage.setItem('srishbish_active_v1', JSON.stringify(parsed));
+          setActiveOrders(prev => prev.filter(o => o.orderId !== id));
         }
       } catch (e) {}
-      if (db) deleteDoc(doc(db, 'active-orders', id)).catch(() => {});
-      setActiveOrders(prev => prev.filter(o => o.orderId !== id));
     }
   };
 
@@ -110,7 +75,7 @@ export default function ActiveOrdersPage() {
           <MobileNav />
           <div className="flex-1">
             <h1 className="font-semibold text-lg font-headline">Active Orders</h1>
-            <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Local + Cloud Sync</p>
+            <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Saved to this device</p>
           </div>
         </header>
 
@@ -129,12 +94,12 @@ export default function ActiveOrdersPage() {
             {loading ? (
               <div className="flex flex-col items-center py-24 text-muted-foreground">
                 <Loader2 className="h-8 w-8 animate-spin mb-4" />
-                <p>Accessing orders...</p>
+                <p>Loading storage...</p>
               </div>
             ) : filteredOrders.length === 0 ? (
               <div className="flex flex-col items-center py-24 border-2 border-dashed rounded-xl bg-card">
                 <Zap className="h-12 w-12 text-muted-foreground/30 mb-4" />
-                <p className="text-muted-foreground text-sm">No active orders found</p>
+                <p className="text-muted-foreground text-sm">No active orders found on this device</p>
               </div>
             ) : (
               <div className="rounded-xl border bg-card overflow-hidden shadow-sm">
@@ -155,8 +120,8 @@ export default function ActiveOrdersPage() {
                         <TableCell className="font-medium">{getClientName(order.eventDetails)}</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
-                             {order.storage === 'cloud' ? <Database className="h-3 w-3 text-blue-500" /> : <HardDrive className="h-3 w-3 text-amber-500" />}
-                             <span className="text-[10px] uppercase font-bold text-muted-foreground">{order.storage}</span>
+                             <HardDrive className="h-3 w-3 text-amber-500" />
+                             <span className="text-[10px] uppercase font-bold text-muted-foreground">Local Only</span>
                           </div>
                         </TableCell>
                         <TableCell className="text-right font-bold tabular-nums">

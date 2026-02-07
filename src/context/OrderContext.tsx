@@ -1,14 +1,9 @@
-
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { Order, EventDetails, ConfiguredProduct } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { doc, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { usePathname, useRouter } from 'next/navigation';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
-import { useFirestore } from '@/firebase';
 
 type OrderContextType = {
   order: Order;
@@ -51,7 +46,6 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const { toast } = useToast();
   const pathname = usePathname();
   const router = useRouter();
-  const db = useFirestore();
   
   useEffect(() => {
     setIsLoaded(true);
@@ -88,28 +82,19 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, []);
 
   const loadDraft = useCallback((draftOrder: Order) => {
-    const hydratedOrder = {
-      ...draftOrder,
-      eventDetails: {
-        ...draftOrder.eventDetails,
-        eventDate: (draftOrder.eventDetails?.eventDate as any)?.toDate?.() || draftOrder.eventDetails?.eventDate,
-        orderDueDate: (draftOrder.eventDetails?.orderDueDate as any)?.toDate?.() || draftOrder.eventDetails?.orderDueDate,
-        weddingDate: (draftOrder.eventDetails?.weddingDate as any)?.toDate?.() || draftOrder.eventDetails?.weddingDate,
-      }
-    };
-    setOrder(hydratedOrder);
+    setOrder(draftOrder);
     toast({
-      title: 'Draft Restored',
+      title: 'Order Loaded',
       description: `Order ${draftOrder.orderId} is now active.`,
     });
   }, [toast]);
 
-  const saveToLocalStorage = useCallback((collection: string, data: any) => {
+  const saveToLocalStorage = useCallback((key: string, data: any) => {
     try {
-      const existingRaw = localStorage.getItem(collection);
+      const existingRaw = localStorage.getItem(key);
       const existing = existingRaw ? JSON.parse(existingRaw) : {};
       existing[data.orderId] = { ...data, lastSavedAt: new Date().toISOString() };
-      localStorage.setItem(collection, JSON.stringify(existing));
+      localStorage.setItem(key, JSON.stringify(existing));
     } catch (e) {
       console.warn('LocalStorage Save Failed', e);
     }
@@ -123,31 +108,18 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
 
     const orderToSave = {
+      ...order,
       orderId: currentOrderId,
-      id: currentOrderId,
       eventDetails: manualDetails || order.eventDetails,
-      deliverables: order.deliverables || [],
-      paymentReceived: order.paymentReceived || 0,
       currentStep: pathname || '/',
       lastSavedAt: new Date().toISOString(),
     };
 
-    // 1. Save to LocalStorage IMMEDIATELY (Relaxed Permission)
     saveToLocalStorage(LS_DRAFTS_KEY, orderToSave);
     
-    // 2. Background Sync to Cloud (Non-blocking)
-    if (db) {
-      const draftRef = doc(db, 'drafts', currentOrderId);
-      setDoc(draftRef, { ...orderToSave, lastSavedAt: serverTimestamp() }, { merge: true })
-        .catch(() => {
-          // Silent catch for background sync errors to avoid blocking UI
-          console.debug('Cloud sync pending rules update');
-        });
-    }
-
-    toast({ title: 'Saved Locally', description: `Progress for ${currentOrderId} secured.` });
+    toast({ title: 'Saved Locally', description: `Order ${currentOrderId} saved to device.` });
     return true;
-  }, [order, toast, pathname, db, saveToLocalStorage]);
+  }, [order, toast, pathname, saveToLocalStorage]);
 
   const activateOrder = useCallback(async (): Promise<boolean> => {
     if (!order.orderId) {
@@ -156,11 +128,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
 
     const orderToActivate = {
-      orderId: order.orderId,
-      id: order.orderId,
-      eventDetails: order.eventDetails,
-      deliverables: order.deliverables,
-      paymentReceived: order.paymentReceived,
+      ...order,
       currentStep: '/active-orders',
       activatedAt: new Date().toISOString(),
     };
@@ -175,21 +143,11 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       localStorage.setItem(LS_DRAFTS_KEY, JSON.stringify(existingDrafts));
     } catch (e) {}
 
-    // 3. Background Cloud Sync
-    if (db) {
-      const activeRef = doc(db, 'active-orders', order.orderId);
-      const draftRef = doc(db, 'drafts', order.orderId);
-      
-      setDoc(activeRef, { ...orderToActivate, activatedAt: serverTimestamp() })
-        .then(() => deleteDoc(draftRef))
-        .catch(() => console.debug('Cloud activation pending rules'));
-    }
-
-    toast({ title: 'Order Activated!', description: `Moved ${order.orderId} to Active List.` });
+    toast({ title: 'Order Activated!', description: `Moved ${order.orderId} to Active Orders.` });
     resetOrder();
     router.push('/active-orders');
     return true;
-  }, [order, db, toast, router, resetOrder, saveToLocalStorage]);
+  }, [order, toast, router, resetOrder, saveToLocalStorage]);
 
   return (
     <OrderContext.Provider
