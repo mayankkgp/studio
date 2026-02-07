@@ -6,6 +6,8 @@ import { useToast } from '@/hooks/use-toast';
 import { db } from '@/lib/firebase';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { usePathname } from 'next/navigation';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 type OrderContextType = {
   order: Order;
@@ -44,7 +46,6 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const pathname = usePathname();
   
   useEffect(() => {
-    // Generate a unique order ID if not present
     const newOrderId = `ORD-${Math.floor(1000 + Math.random() * 9000)}`;
     setOrder((prev) => ({ ...prev, orderId: prev.orderId || newOrderId }));
     setIsLoaded(true);
@@ -52,42 +53,42 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const saveAsDraft = useCallback(async (manualDetails?: EventDetails): Promise<boolean> => {
     const currentOrderId = order.orderId;
+    if (!currentOrderId) return false;
+
+    const orderToSave = {
+      ...order,
+      eventDetails: manualDetails || order.eventDetails,
+      currentStep: pathname,
+      lastSavedAt: serverTimestamp(),
+    };
+
+    const draftRef = doc(db, 'drafts', currentOrderId);
+
+    // CRITICAL: We do NOT await the setDoc call. 
+    // This initiates the write and updates the local cache immediately (Optimistic UI).
+    setDoc(draftRef, orderToSave, { merge: true })
+      .catch(async (serverError) => {
+        // If the write fails (e.g. permission denied), we emit a specialized contextual error.
+        const permissionError = new FirestorePermissionError({
+          path: draftRef.path,
+          operation: 'write',
+          requestResourceData: orderToSave,
+        } satisfies SecurityRuleContext);
+
+        errorEmitter.emit('permission-error', permissionError);
+      });
+
+    // We return true immediately to allow the UI to proceed.
+    // If there is a permission error, it will surface in the dev overlay shortly after.
+    toast({
+      title: 'Syncing Draft...',
+      description: `Order ${currentOrderId} is being saved to cloud.`,
+    });
     
-    if (!currentOrderId) {
-      return false;
-    }
-
-    try {
-      const draftRef = doc(db, 'drafts', currentOrderId);
-      
-      const orderToSave = {
-        ...order,
-        eventDetails: manualDetails || order.eventDetails,
-        currentStep: pathname,
-        lastSavedAt: serverTimestamp(),
-      };
-
-      // We await here because the 'Next Step' flow depends on the result
-      await setDoc(draftRef, orderToSave, { merge: true });
-
-      toast({
-        title: 'Draft Saved',
-        description: `Order ${currentOrderId} is synced to cloud.`,
-      });
-      return true;
-    } catch (error: any) {
-      // Do not use console.error as it triggers the error overlay
-      toast({
-        variant: 'destructive',
-        title: 'Sync Delayed',
-        description: "Could not save draft. Please check your internet connection.",
-      });
-      return false;
-    }
+    return true;
   }, [order, toast, pathname]);
 
   const loadDraft = useCallback((draftOrder: Order) => {
-    // Hydrate Firestore Timestamps back into JavaScript Dates
     const hydratedOrder = {
       ...draftOrder,
       eventDetails: {
@@ -97,7 +98,6 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         weddingDate: (draftOrder.eventDetails?.weddingDate as any)?.toDate?.() || draftOrder.eventDetails?.weddingDate,
       }
     };
-
     setOrder(hydratedOrder);
     toast({
       title: 'Order Resumed',
@@ -134,11 +134,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const resetOrder = useCallback(() => {
     const newOrderId = `ORD-${Math.floor(1000 + Math.random() * 9000)}`;
     setOrder({ ...initialOrderState, orderId: newOrderId });
-    toast({
-        title: 'Order Reset',
-        description: 'New session started.',
-    });
-  }, [toast]);
+  }, []);
 
   return (
     <OrderContext.Provider

@@ -3,6 +3,7 @@ import './globals.css';
 import { AppProvider } from '@/components/AppProvider';
 import { Toaster } from '@/components/ui/toaster';
 import { cn } from '@/lib/utils';
+import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 
 export const metadata: Metadata = {
   title: 'Srishbish',
@@ -24,6 +25,7 @@ export default function RootLayout({
       </head>
       <body className={cn('font-body antialiased')}>
         <AppProvider>
+          <FirebaseErrorListener />
           {children}
           <Toaster />
         </AppProvider>
