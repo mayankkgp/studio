@@ -1,8 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { collection, query, orderBy, onSnapshot, doc, deleteDoc } from 'firebase/firestore';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { MobileNav } from '@/components/layout/MobileNav';
 import { Button } from '@/components/ui/button';
@@ -14,9 +13,9 @@ import { FileText, Trash2, Loader2, Search } from 'lucide-react';
 import { calculateBillableItems } from '@/lib/pricing';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { doc, deleteDoc } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
+import { useFirestore } from '@/firebase';
 
 export default function DraftsPage() {
   const [drafts, setDrafts] = useState<any[]>([]);
@@ -24,12 +23,14 @@ export default function DraftsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const { loadDraft } = useOrder();
   const router = useRouter();
+  const db = useFirestore();
 
   // Memoize query to prevent re-subscriptions on re-renders
+  // Now correctly depends on 'db' instance
   const draftsQuery = useMemo(() => {
     if (!db) return null;
     return query(collection(db, 'drafts'), orderBy('lastSavedAt', 'desc'));
-  }, []);
+  }, [db]);
 
   useEffect(() => {
     if (!draftsQuery) return;
