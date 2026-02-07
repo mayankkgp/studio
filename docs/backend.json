@@ -3,22 +3,7 @@
   "entities": {
     "OrderDraft": {
       "title": "Order Draft",
-      "description": "A partially completed order saved for later completion with metadata for routing and tracking.",
-      "type": "object",
-      "properties": {
-        "orderId": { "type": "string" },
-        "id": { "type": "string", "description": "Duplicate of orderId for reference" },
-        "eventDetails": { "type": "object" },
-        "deliverables": { "type": "array" },
-        "paymentReceived": { "type": "number" },
-        "currentStep": { "type": "string" },
-        "lastSavedAt": { "type": ["object", "null"], "description": "Firestore Server Timestamp" }
-      },
-      "required": ["orderId", "eventDetails"]
-    },
-    "ActiveOrder": {
-      "title": "Active Order",
-      "description": "A finalized and activated order ready for fulfillment.",
+      "description": "A partially completed order with flexible metadata.",
       "type": "object",
       "properties": {
         "orderId": { "type": "string" },
@@ -27,10 +12,25 @@
         "deliverables": { "type": "array" },
         "paymentReceived": { "type": "number" },
         "currentStep": { "type": "string" },
-        "lastSavedAt": { "type": ["object", "null"] },
-        "activatedAt": { "type": "object", "description": "Firestore Server Timestamp" }
+        "lastSavedAt": { "type": ["object", "string", "null"] }
       },
-      "required": ["orderId", "eventDetails", "activatedAt"]
+      "required": ["orderId"]
+    },
+    "ActiveOrder": {
+      "title": "Active Order",
+      "description": "A finalized order promoted from a draft.",
+      "type": "object",
+      "properties": {
+        "orderId": { "type": "string" },
+        "id": { "type": "string" },
+        "eventDetails": { "type": "object" },
+        "deliverables": { "type": "array" },
+        "paymentReceived": { "type": "number" },
+        "currentStep": { "type": "string" },
+        "lastSavedAt": { "type": ["object", "string", "null"] },
+        "activatedAt": { "type": ["object", "string", "null"] }
+      },
+      "required": ["orderId", "activatedAt"]
     }
   },
   "auth": {
@@ -39,11 +39,11 @@
   "firestore": {
     "/drafts/{orderId}": {
       "schema": "OrderDraft",
-      "description": "Store for partially completed order drafts. (Deployment Version: v8 - Permission Resilience)"
+      "description": "Flexible store for drafts. (Rules Version: v9 - Permissive Sync)"
     },
     "/active-orders/{orderId}": {
       "schema": "ActiveOrder",
-      "description": "Store for confirmed and activated orders. (Deployment Version: v8 - Permission Resilience)"
+      "description": "Store for active business. (Rules Version: v9 - Permissive Sync)"
     }
   }
 }
