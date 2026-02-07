@@ -19,13 +19,10 @@ export default function DeliverablesPage() {
     const { toast } = useToast();
     const headerSummary = useHeaderSummary(order.eventDetails);
     
-    // Row validation status
     const [rowStatus, setRowStatus] = useState<Record<string, { isValid: boolean }>>({});
     const [isNavigating, setIsNavigating] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     
-    // Track items that are "Done" (in the Order List)
-    // Initialize with all items so they start in the "Done" list when resuming a draft
     const [committedItemIds, setCommittedItemIds] = useState<string[]>(() => 
         (order.deliverables || []).map(item => item.id)
     );
@@ -52,7 +49,7 @@ export default function DeliverablesPage() {
             toast({
                 variant: "destructive",
                 title: "Setup Required",
-                description: "Please select a variant and complete mandatory fields (marked with *) before confirming."
+                description: "Please complete mandatory fields before confirming."
             });
         }
     }, [rowStatus, toast]);
@@ -71,70 +68,48 @@ export default function DeliverablesPage() {
         const list = committedItemIds
             .map(id => deliverables.find(item => item.id === id))
             .filter(item => !!item);
-
         const active = deliverables.filter(item => !committedItemIds.includes(item.id));
-
-        return { 
-            activeItems: active, 
-            orderListItems: list as any[]
-        };
+        return { activeItems: active, orderListItems: list as any[] };
     }, [order.deliverables, committedItemIds]);
 
-    const lastActiveCount = useRef(activeItems.length);
     const actionSectionRef = useRef<HTMLHeadingElement>(null);
 
-    useEffect(() => {
-        if (activeItems.length > lastActiveCount.current) {
-            actionSectionRef.current?.scrollIntoView({ 
-                behavior: 'smooth', 
-                block: 'start' 
-            });
-        }
-        lastActiveCount.current = activeItems.length;
-    }, [activeItems.length]);
-
-    // Trust committed items as valid
     const isNextStepActive = useMemo(() => {
         const deliverables = order.deliverables || [];
-        const hasItems = deliverables.length > 0;
-        const allConfirmed = activeItems.length === 0;
-        const allCollapsed = openOrderListItems.length === 0;
-        
-        // If an item is in "committedItemIds", we treat it as valid.
-        // If it's active, we check the live "rowStatus".
-        const allValid = deliverables.every(item => {
+        if (deliverables.length === 0) return false;
+        if (activeItems.length > 0) return false;
+        if (openOrderListItems.length > 0) return false;
+        return deliverables.every(item => {
             if (committedItemIds.includes(item.id)) return true;
             return rowStatus[item.id]?.isValid === true;
         });
-        
-        return hasItems && allConfirmed && allCollapsed && allValid;
     }, [order.deliverables, activeItems.length, openOrderListItems.length, rowStatus, committedItemIds]);
 
     const handleNextStep = useCallback(async () => {
-        if (isNextStepActive) {
-            setIsNavigating(true);
-            try {
-                // We rely on saveAsDraft returning a boolean now
-                const success = await saveAsDraft();
-                
-                if (success) {
-                    // Allow state to settle before navigation
-                    await new Promise(resolve => setTimeout(resolve, 100));
-                    router.push('/commercials');
-                } else {
-                    setIsNavigating(false);
-                }
-            } catch (err) {
-                console.error("Navigation error:", err);
-                setIsNavigating(false);
+        if (!isNextStepActive) return;
+        setIsNavigating(true);
+        try {
+            const success = await saveAsDraft();
+            if (success) {
+                // Short timeout to ensure state settles before push
+                await new Promise(r => setTimeout(r, 100));
+                router.push('/commercials');
             }
+        } catch (err) {
+            console.error("Navigation error:", err);
+        } finally {
+            // Only stop loader if we didn't navigate away
+            setTimeout(() => setIsNavigating(false), 2000);
         }
     }, [isNextStepActive, router, saveAsDraft]);
 
     const handleManualSave = async () => {
         setIsSaving(true);
-        await saveAsDraft();
-        setIsSaving(false);
+        try {
+            await saveAsDraft();
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     return (
@@ -160,19 +135,11 @@ export default function DeliverablesPage() {
                         <div className="space-y-12">
                             {activeItems.length > 0 && (
                                 <section className="space-y-4">
-                                    <h2 
-                                        ref={actionSectionRef}
-                                        className="text-xs font-bold uppercase tracking-widest text-primary flex items-center gap-2 scroll-mt-48"
-                                    >
+                                    <h2 ref={actionSectionRef} className="text-xs font-bold uppercase tracking-widest text-primary flex items-center gap-2 scroll-mt-48">
                                         <AlertCircle className="h-4 w-4" />
                                         Action Required ({activeItems.length})
                                     </h2>
-                                    
-                                    <Accordion 
-                                        type="multiple" 
-                                        value={activeItems.map(i => i.id)} 
-                                        className="space-y-2 pointer-events-auto"
-                                    >
+                                    <Accordion type="multiple" value={activeItems.map(i => i.id)} className="space-y-2 pointer-events-auto">
                                         {activeItems.map((item) => (
                                             <DeliverableRow 
                                                 key={item.id} 
@@ -196,12 +163,7 @@ export default function DeliverablesPage() {
                                         <CheckCircle2 className="h-4 w-4" />
                                         Order List ({orderListItems.length})
                                     </h2>
-                                    <Accordion 
-                                        type="multiple" 
-                                        value={openOrderListItems} 
-                                        onValueChange={setOpenOrderListItems} 
-                                        className="space-y-2"
-                                    >
+                                    <Accordion type="multiple" value={openOrderListItems} onValueChange={setOpenOrderListItems} className="space-y-2">
                                         {orderListItems.map((item) => (
                                             <DeliverableRow 
                                                 key={item.id} 
