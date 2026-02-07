@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
-import { format } from 'date-fns';
+import { format, isValid as isValidDate } from 'date-fns';
 import { CalendarIcon, Users, Star, PartyPopper, Cake, Milestone, Check, ChevronsUpDown, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -136,6 +136,13 @@ function ComboboxCity({
     </div>
   );
 }
+
+const formatDisplayDate = (dateValue: any) => {
+  if (!dateValue) return null;
+  const date = new Date(dateValue);
+  if (!isValidDate(date)) return null;
+  return format(date, 'dd MMM yyyy');
+};
 
 export function EventDetailsForm() {
   const router = useRouter();
@@ -287,13 +294,13 @@ export function EventDetailsForm() {
                               )}
                             >
                               <CalendarIcon className="mr-2 h-4 w-4" />
-                              {field.value ? format(new Date(field.value), 'dd MMM yyyy') : <span>Pick a date</span>}
+                              {formatDisplayDate(field.value) || <span>Pick a date</span>}
                             </Button>
                           </PopoverTrigger>
                           <PopoverContent className="w-auto p-0 flex flex-col" align="start">
                             <Calendar 
                               mode="single" 
-                              selected={field.value} 
+                              selected={field.value || undefined} 
                               onSelect={(date) => {
                                 field.onChange(date);
                                 setOpenEventDate(false);
@@ -308,7 +315,7 @@ export function EventDetailsForm() {
                                   className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
                                   type="button"
                                   onClick={() => {
-                                    field.onChange(undefined);
+                                    field.onChange(null);
                                     setOpenEventDate(false);
                                   }}
                                 >
@@ -337,13 +344,13 @@ export function EventDetailsForm() {
                               )}
                             >
                               <CalendarIcon className="mr-2 h-4 w-4" />
-                              {field.value ? format(new Date(field.value), 'dd MMM yyyy') : <span>Pick a date</span>}
+                              {formatDisplayDate(field.value) || <span>Pick a date</span>}
                             </Button>
                           </PopoverTrigger>
                           <PopoverContent className="w-auto p-0 flex flex-col" align="start">
                             <Calendar 
                               mode="single" 
-                              selected={field.value} 
+                              selected={field.value || undefined} 
                               onSelect={(date) => {
                                 field.onChange(date);
                                 setOpenDueDate(false);
@@ -358,7 +365,7 @@ export function EventDetailsForm() {
                                   className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
                                   type="button"
                                   onClick={() => {
-                                    field.onChange(undefined);
+                                    field.onChange(null);
                                     setOpenDueDate(false);
                                   }}
                                 >
@@ -425,13 +432,13 @@ export function EventDetailsForm() {
                                         )}
                                         >
                                         <CalendarIcon className="mr-2 h-4 w-4" />
-                                        {field.value ? format(new Date(field.value), 'dd MMM yyyy') : <span>Pick a date</span>}
+                                        {formatDisplayDate(field.value) || <span>Pick a date</span>}
                                         </Button>
                                     </PopoverTrigger>
                                     <PopoverContent className="w-auto p-0 flex flex-col" align="start">
                                         <Calendar 
                                           mode="single" 
-                                          selected={field.value} 
+                                          selected={field.value || undefined} 
                                           onSelect={(date) => {
                                             field.onChange(date);
                                             setOpenWeddingDate(false);
@@ -446,7 +453,7 @@ export function EventDetailsForm() {
                                               className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
                                               type="button"
                                               onClick={() => {
-                                                field.onChange(undefined);
+                                                field.onChange(null);
                                                 setOpenWeddingDate(false);
                                               }}
                                             >
