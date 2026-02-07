@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { collection, query, orderBy, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
+import { useEffect, useState, useMemo } from 'react';
+import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { MobileNav } from '@/components/layout/MobileNav';
@@ -13,7 +13,10 @@ import { format } from 'date-fns';
 import { FileText, Trash2, Loader2, Search } from 'lucide-react';
 import { calculateBillableItems } from '@/lib/pricing';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
+import { Badge } from '@/badge';
+import { doc, deleteDoc } from 'firebase/firestore';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 export default function DraftsPage() {
   const [drafts, setDrafts] = useState<any[]>([]);
@@ -22,25 +25,51 @@ export default function DraftsPage() {
   const { loadDraft } = useOrder();
   const router = useRouter();
 
+  // Memoize query to prevent re-subscriptions on re-renders
+  const draftsQuery = useMemo(() => {
+    if (!db) return null;
+    return query(collection(db, 'drafts'), orderBy('lastSavedAt', 'desc'));
+  }, []);
+
   useEffect(() => {
-    const q = query(collection(db, 'drafts'), orderBy('lastSavedAt', 'desc'));
-    
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const draftsData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setDrafts(draftsData);
-      setLoading(false);
-    });
+    if (!draftsQuery) return;
+
+    const unsubscribe = onSnapshot(
+      draftsQuery, 
+      (snapshot) => {
+        const draftsData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        setDrafts(draftsData);
+        setLoading(false);
+      },
+      async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+          path: 'drafts',
+          operation: 'list',
+        } satisfies SecurityRuleContext);
+
+        errorEmitter.emit('permission-error', permissionError);
+        setLoading(false);
+      }
+    );
 
     return () => unsubscribe();
-  }, []);
+  }, [draftsQuery]);
 
   const handleDelete = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
     if (confirm('Are you sure you want to delete this draft?')) {
-      await deleteDoc(doc(db, 'drafts', id));
+      const draftRef = doc(db, 'drafts', id);
+      deleteDoc(draftRef)
+        .catch(async () => {
+          const permissionError = new FirestorePermissionError({
+            path: draftRef.path,
+            operation: 'delete',
+          } satisfies SecurityRuleContext);
+          errorEmitter.emit('permission-error', permissionError);
+        });
     }
   };
 
@@ -131,7 +160,7 @@ export default function DraftsPage() {
             {loading ? (
               <div className="flex flex-col items-center justify-center py-24 text-muted-foreground">
                 <Loader2 className="h-8 w-8 animate-spin mb-4" />
-                <p>Loading your drafts...</p>
+                <p>Loading your drafts from the database...</p>
               </div>
             ) : filteredDrafts.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-24 border-2 border-dashed rounded-xl bg-card/50">

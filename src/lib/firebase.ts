@@ -21,10 +21,14 @@ const firestoreSettings = {
   experimentalForceLongPolling: true
 };
 
+// Ensure settings are applied by using initializeFirestore if no instance exists
 try {
-    db = initializeFirestore(app, firestoreSettings);
+    if (getApps().length === 1) {
+        db = initializeFirestore(app, firestoreSettings);
+    } else {
+        db = getFirestore(app);
+    }
 } catch (e) {
-    // If already initialized, we get the instance
     db = getFirestore(app);
 }
 
