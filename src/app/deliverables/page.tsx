@@ -24,7 +24,7 @@ export default function DeliverablesPage() {
     
     // Initialize committedItemIds with existing deliverables on mount
     const [committedItemIds, setCommittedItemIds] = useState<string[]>(() => 
-        order.deliverables.map(item => item.id)
+        (order.deliverables || []).map(item => item.id)
     );
     
     const [openOrderListItems, setOpenOrderListItems] = useState<string[]>([]);
@@ -64,11 +64,12 @@ export default function DeliverablesPage() {
     }, [removeDeliverable]);
 
     const { activeItems, orderListItems } = useMemo(() => {
+        const deliverables = order.deliverables || [];
         const list = committedItemIds
-            .map(id => order.deliverables.find(item => item.id === id))
+            .map(id => deliverables.find(item => item.id === id))
             .filter(item => !!item);
 
-        const active = order.deliverables.filter(item => !committedItemIds.includes(item.id));
+        const active = deliverables.filter(item => !committedItemIds.includes(item.id));
 
         return { 
             activeItems: active, 
@@ -92,27 +93,34 @@ export default function DeliverablesPage() {
     }, [activeItems.length]);
 
     const isNextStepActive = useMemo(() => {
-        const hasItems = order.deliverables.length > 0;
+        const deliverables = order.deliverables || [];
+        const hasItems = deliverables.length > 0;
         const allConfirmed = activeItems.length === 0;
         const allCollapsed = openOrderListItems.length === 0;
-        const allValid = order.deliverables.every(item => rowStatus[item.id]?.isValid);
+        // Safety: If rowStatus hasn't updated yet for a new item, we treat it as potentially invalid
+        const allValid = deliverables.every(item => rowStatus[item.id]?.isValid === true);
         
         return hasItems && allConfirmed && allCollapsed && allValid;
     }, [order.deliverables, activeItems.length, openOrderListItems.length, rowStatus]);
 
     const handleNextStep = useCallback(async () => {
-        if (isNextStepActive) {
+        if (isNextStepActive && !isNavigating) {
             setIsNavigating(true);
             try {
-                await saveAsDraft(); // Implicit save before navigation
+                // Ensure we save progress to cloud before leaving
+                await saveAsDraft();
                 router.push('/commercials');
             } catch (err) {
-                // Save failure toast is handled inside saveAsDraft, 
-                // but we should stop navigation if critical.
+                // If something goes wrong, allow the user to try again
                 setIsNavigating(false);
+            } finally {
+                // Note: setIsNavigating(false) shouldn't be here in a finally block 
+                // if the push is successful, but for safety against silent failures:
+                const timeout = setTimeout(() => setIsNavigating(false), 5000);
+                return () => clearTimeout(timeout);
             }
         }
-    }, [isNextStepActive, router, saveAsDraft]);
+    }, [isNextStepActive, isNavigating, router, saveAsDraft]);
 
     return (
         <AppLayout>
@@ -196,7 +204,7 @@ export default function DeliverablesPage() {
                                 </section>
                             )}
                             
-                            {order.deliverables.length === 0 && (
+                            {(!order.deliverables || order.deliverables.length === 0) && (
                                 <div className="flex flex-col items-center justify-center py-24 border-2 border-dashed rounded-xl bg-card/50">
                                     <Package className="h-12 w-12 text-muted-foreground/30 mb-4" />
                                     <p className="text-muted-foreground text-sm font-medium">Search for products above to start building the order</p>

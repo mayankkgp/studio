@@ -11,7 +11,9 @@ const getRate = (rateKey?: string) => (rateKey && rates[rateKey]) || 0;
  * Follows the "Price Row" model where every variant, add-on, and special request 
  * generates a specific row in the bill.
  */
-export function calculateBillableItems(deliverables: ConfiguredProduct[]): BillableItem[] {
+export function calculateBillableItems(deliverables: ConfiguredProduct[] = []): BillableItem[] {
+    if (!deliverables || !Array.isArray(deliverables)) return [];
+
     return deliverables.map(item => {
         const product = productCatalog.find(p => p.id === item.productId);
         if (!product) return null;

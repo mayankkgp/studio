@@ -24,11 +24,13 @@ export default function CommercialsPage() {
     const [billableItems, setBillableItems] = useState<BillableItem[]>([]);
 
     useEffect(() => {
-        setBillableItems(calculateBillableItems(order.deliverables));
+        if (order.deliverables) {
+            setBillableItems(calculateBillableItems(order.deliverables));
+        }
     }, [order.deliverables]);
 
     const handleRateChange = (configuredProductId: string, label: string, value: number) => {
-        const deliverable = order.deliverables.find(d => d.id === configuredProductId);
+        const deliverable = order.deliverables?.find(d => d.id === configuredProductId);
         if (!deliverable) return;
 
         const rateOverrides = { ...deliverable.rateOverrides, [label]: value };
