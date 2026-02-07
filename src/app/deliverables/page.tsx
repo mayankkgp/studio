@@ -117,12 +117,13 @@ export default function DeliverablesPage() {
                 const success = await saveAsDraft();
                 
                 if (success) {
+                    // Allow state to settle before navigation
+                    await new Promise(resolve => setTimeout(resolve, 100));
                     router.push('/commercials');
-                } else {
-                    setIsNavigating(false);
                 }
             } catch (err) {
                 console.error("Navigation error:", err);
+            } finally {
                 setIsNavigating(false);
             }
         }
