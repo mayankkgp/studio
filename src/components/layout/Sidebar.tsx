@@ -1,30 +1,39 @@
-
 'use client';
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, Package, DollarSign, FileText, PlusCircle, Zap } from 'lucide-react';
+import { Home, Package, DollarSign, FileText, PlusCircle, Zap, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Logo } from '@/components/icons/Logo';
 import { useOrder } from '@/context/OrderContext';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 
 const navItems = [
   { href: '/', label: 'Event Details', icon: Home },
   { href: '/deliverables', label: 'Deliverables', icon: Package },
   { href: '/commercials', label: 'Commercials', icon: DollarSign },
   { href: '/drafts', label: 'My Drafts', icon: FileText },
-  { href: '/active-orders', label: 'Active Orders', icon: Zap },
+  { href: '/active-orders', label: 'Active Order List', icon: Zap },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { order, resetOrder } = useOrder();
+  const { toast } = useToast();
 
   const handleCreateOrder = () => {
     resetOrder();
     router.push('/');
+  };
+
+  const clearStorage = () => {
+    if (confirm('Are you sure you want to clear ALL local storage? This cannot be undone.')) {
+      localStorage.clear();
+      toast({ title: "Storage Cleared", description: "All local data has been wiped." });
+      window.location.href = '/';
+    }
   };
 
   return (
@@ -63,11 +72,22 @@ export function Sidebar() {
             ))}
           </nav>
         </div>
-        <div className="mt-auto p-4 border-t">
-            <div className="text-center text-[10px] font-bold uppercase text-muted-foreground mb-1">Current Order</div>
-            <div className="text-center font-mono text-sm font-bold text-primary truncate">
-              {order.orderId || 'NOT ASSIGNED'}
+        <div className="mt-auto p-4 border-t space-y-4">
+            <div>
+                <div className="text-center text-[10px] font-bold uppercase text-muted-foreground mb-1">Current Order</div>
+                <div className="text-center font-mono text-sm font-bold text-primary truncate">
+                  {order.orderId || 'NOT ASSIGNED'}
+                </div>
             </div>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="w-full justify-start text-xs text-destructive hover:bg-destructive/10"
+              onClick={clearStorage}
+            >
+              <Trash2 className="h-3 w-3 mr-2" />
+              Clear Local Storage
+            </Button>
         </div>
       </div>
     </div>

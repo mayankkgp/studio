@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -22,7 +21,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 
 import { eventDetailsSchema } from '@/lib/schemas';
-import type { EventDetails, EventType } from '@/lib/types';
+import type { EventDetails, EventType, Order } from '@/lib/types';
 import { useOrder } from '@/context/OrderContext';
 import { cn } from '@/lib/utils';
 import { MobileNav } from '../layout/MobileNav';
@@ -146,7 +145,7 @@ const formatDisplayDate = (dateValue: any) => {
   return format(date, 'dd MMM yyyy');
 };
 
-export function EventDetailsForm() {
+export function EventDetailsForm({ activeOrder, onUpdate, hideFooters = false }: { activeOrder?: Order, onUpdate?: (details: EventDetails) => void, hideFooters?: boolean }) {
   const router = useRouter();
   const { order, setEventDetails, saveAsDraft, resetOrder, isLoaded } = useOrder();
   
@@ -156,22 +155,32 @@ export function EventDetailsForm() {
   const [isSaving, setIsSaving] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
 
+  const currentDetails = activeOrder ? activeOrder.eventDetails : order.eventDetails;
+
   const form = useForm<EventDetails>({
     resolver: zodResolver(eventDetailsSchema),
-    defaultValues: order.eventDetails,
+    defaultValues: currentDetails,
     mode: 'onChange'
   });
 
   const { register, control, watch, handleSubmit, formState: { errors, isValid }, reset, setValue, getValues } = form;
   
   useEffect(() => {
-    if (isLoaded) {
+    if (activeOrder) {
+      reset(activeOrder.eventDetails);
+    } else if (isLoaded) {
       reset(order.eventDetails);
     }
-  }, [isLoaded, order.eventDetails, reset]);
+  }, [isLoaded, order.eventDetails, activeOrder, reset]);
   
   const watchedFields = watch();
   const headerSummary = useHeaderSummary(watchedFields);
+
+  useEffect(() => {
+    if (activeOrder && onUpdate) {
+      onUpdate(watchedFields as EventDetails);
+    }
+  }, [watchedFields, activeOrder, onUpdate]);
 
   useEffect(() => {
     if (watchedFields.eventType && watchedFields.eventType !== 'Engagement') {
@@ -208,8 +217,382 @@ export function EventDetailsForm() {
     }
   };
 
-  if (!isLoaded) {
+  if (!isLoaded && !activeOrder) {
     return <div className="flex h-screen items-center justify-center">Loading...</div>;
+  }
+
+  const content = (
+    <div className="mx-auto max-w-3xl space-y-8 pb-12">
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-headline text-2xl">Event Type *</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Controller
+            name="eventType"
+            control={control}
+            render={({ field }) => (
+              <RadioGroup
+                onValueChange={field.onChange}
+                defaultValue={field.value}
+                className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4"
+              >
+                {eventTypeOptions.map((option) => (
+                  <div key={option.value}>
+                    <RadioGroupItem value={option.value} id={option.value} className="sr-only" />
+                    <Label
+                      htmlFor={option.value}
+                      className={cn(
+                        "flex flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent/20 hover:text-accent-foreground cursor-pointer transition-all",
+                        field.value === option.value && "border-primary ring-2 ring-primary bg-primary/5"
+                      )}
+                    >
+                      <option.icon className="mb-3 h-6 w-6" />
+                      {option.label}
+                    </Label>
+                  </div>
+                ))}
+              </RadioGroup>
+            )}
+          />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-headline text-2xl">Date & Venue</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="venueName">Venue</Label>
+              <Controller
+                name="venueName"
+                control={control}
+                render={({ field }) => (
+                  <ComboboxCity 
+                    value={field.value} 
+                    onSelect={field.onChange} 
+                    placeholder="Select or enter venue"
+                  />
+                )}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="shipToCity">Ship to City</Label>
+              <Controller
+                name="shipToCity"
+                control={control}
+                render={({ field }) => (
+                  <ComboboxCity 
+                    value={field.value} 
+                    onSelect={field.onChange} 
+                    placeholder="Select or enter city" 
+                  />
+                )}
+              />
+            </div>
+          </div>
+          <div className="grid md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="eventDate">Event Date *</Label>
+               <Controller
+                  name="eventDate"
+                  control={control}
+                  render={({ field, fieldState }) => {
+                    const showError = fieldState.invalid && fieldState.isTouched;
+                    return (
+                      <Popover open={openEventDate} onOpenChange={setOpenEventDate}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "w-full justify-start text-left font-normal hover:bg-transparent hover:border-foreground hover:text-foreground", 
+                              !field.value && "text-muted-foreground hover:text-muted-foreground",
+                              showError && "border-destructive hover:border-destructive"
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {formatDisplayDate(field.value) || <span>Pick a date</span>}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0 flex flex-col" align="start">
+                          <Calendar 
+                            mode="single" 
+                            selected={field.value || undefined} 
+                            onSelect={(date) => {
+                              field.onChange(date);
+                              setOpenEventDate(false);
+                            }} 
+                            initialFocus 
+                          />
+                          {field.value && (
+                            <div className="p-2 border-t">
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
+                                type="button"
+                                onClick={() => {
+                                  field.onChange(null);
+                                  setOpenEventDate(false);
+                                }}
+                              >
+                                Clear Date
+                              </Button>
+                            </div>
+                          )}
+                        </PopoverContent>
+                      </Popover>
+                    );
+                  }}
+                />
+            </div>
+             <div className="space-y-2">
+              <Label htmlFor="orderDueDate">Order Due Date *</Label>
+               <Controller
+                  name="orderDueDate"
+                  control={control}
+                  render={({ field, fieldState }) => {
+                    const showError = fieldState.invalid && fieldState.isTouched;
+                    return (
+                      <Popover open={openDueDate} onOpenChange={setOpenDueDate}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "w-full justify-start text-left font-normal hover:bg-transparent hover:border-foreground hover:text-foreground", 
+                              !field.value && "text-muted-foreground hover:text-muted-foreground",
+                              showError && "border-destructive hover:border-destructive"
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {formatDisplayDate(field.value) || <span>Pick a date</span>}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0 flex flex-col" align="start">
+                          <Calendar 
+                            mode="single" 
+                            selected={field.value || undefined} 
+                            onSelect={(date) => {
+                              field.onChange(date);
+                              setOpenDueDate(false);
+                            }} 
+                            initialFocus 
+                          />
+                          {field.value && (
+                            <div className="p-2 border-t">
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
+                                type="button"
+                                onClick={() => {
+                                  field.onChange(null);
+                                  setOpenDueDate(false);
+                                }}
+                              >
+                                Clear Date
+                              </Button>
+                            </div>
+                          )}
+                        </PopoverContent>
+                      </Popover>
+                    );
+                  }}
+                />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {watchedFields.eventType && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="font-headline text-2xl">Event Specifics</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {watchedFields.eventType === 'Wedding' && (
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="brideName">Bride's Name *</Label>
+                  <Input id="brideName" {...register('brideName')} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="groomName">Groom's Name *</Label>
+                  <Input id="groomName" {...register('groomName')} />
+                </div>
+              </div>
+            )}
+            
+            {watchedFields.eventType === 'Engagement' && (
+              <>
+                <div className="grid md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                        <Label htmlFor="engagementBrideName">Bride's Name *</Label>
+                        <Input id="engagementBrideName" {...register('engagementBrideName')} />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="engagementGroomName">Groom's Name *</Label>
+                        <Input id="engagementGroomName" {...register('engagementGroomName')} />
+                    </div>
+                </div>
+                 <div className="grid md:grid-cols-2 gap-6 items-start">
+                    <div className="space-y-2">
+                        <Label htmlFor="weddingDate">Wedding Date *</Label>
+                        <Controller
+                            name="weddingDate"
+                            control={control}
+                            render={({ field, fieldState }) => {
+                              const showError = fieldState.invalid && fieldState.isTouched;
+                              return (
+                                <Popover open={openWeddingDate} onOpenChange={setOpenWeddingDate}>
+                                  <PopoverTrigger asChild>
+                                      <Button
+                                      variant={"outline"}
+                                      className={cn(
+                                        "w-full justify-start text-left font-normal hover:bg-transparent hover:border-foreground hover:text-foreground", 
+                                        !field.value && "text-muted-foreground hover:text-muted-foreground",
+                                        showError && "border-destructive hover:border-destructive"
+                                      )}
+                                      >
+                                      <CalendarIcon className="mr-2 h-4 w-4" />
+                                      {formatDisplayDate(field.value) || <span>Pick a date</span>}
+                                      </Button>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-auto p-0 flex flex-col" align="start">
+                                      <Calendar 
+                                        mode="single" 
+                                        selected={field.value || undefined} 
+                                        onSelect={(date) => {
+                                          field.onChange(date);
+                                          setOpenWeddingDate(false);
+                                        }} 
+                                        initialFocus 
+                                      />
+                                      {field.value && (
+                                        <div className="p-2 border-t">
+                                          <Button 
+                                            variant="ghost" 
+                                            size="sm" 
+                                            className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
+                                            type="button"
+                                            onClick={() => {
+                                              field.onChange(null);
+                                              setOpenWeddingDate(false);
+                                            }}
+                                          >
+                                            Clear Date
+                                          </Button>
+                                        </div>
+                                      )}
+                                  </PopoverContent>
+                                </Popover>
+                              );
+                            }}
+                        />
+                    </div>
+                    <div className="space-y-2">
+                       <Label>Wedding Date Status *</Label>
+                       <Controller
+                          name="dateStatus"
+                          control={control}
+                          render={({ field }) => (
+                            <Tabs 
+                              value={field.value === true ? 'fixed' : field.value === false ? 'tentative' : ''} 
+                              onValueChange={(val) => field.onChange(val === 'fixed')}
+                              className="w-full"
+                            >
+                              <TabsList className="grid w-full grid-cols-2 h-10">
+                                <TabsTrigger value="tentative">Tentative</TabsTrigger>
+                                <TabsTrigger value="fixed">Fixed</TabsTrigger>
+                              </TabsList>
+                            </Tabs>
+                          )}
+                        />
+                    </div>
+                </div>
+              </>
+            )}
+
+            {watchedFields.eventType === 'Anniversary' && (
+              <div className="grid md:grid-cols-3 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="wifeName">Wife's Name *</Label>
+                  <Input id="wifeName" {...register('wifeName')} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="husbandName">Husband's Name *</Label>
+                  <Input id="husbandName" {...register('husbandName')} />
+                </div>
+                 <div className="space-y-2">
+                  <Label htmlFor="milestoneYears">Milestone Years *</Label>
+                  <Input id="milestoneYears" type="number" {...register('milestoneYears', { valueAsNumber: true })} />
+                </div>
+              </div>
+            )}
+            
+            {watchedFields.eventType === 'Birthday' && (
+              <div className="grid md:grid-cols-3 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="honoreeNameBirthday">Honoree Name *</Label>
+                  <Input id="honoreeNameBirthday" {...register('honoreeNameBirthday')} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="gender">Gender *</Label>
+                   <Controller
+                      name="gender"
+                      control={control}
+                      render={({ field }) => (
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <SelectTrigger className={cn(!field.value && "text-muted-foreground")}>
+                            <SelectValue placeholder="Select gender" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Male">Male</SelectItem>
+                            <SelectItem value="Female">Female</SelectItem>
+                            <SelectItem value="Other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
+                </div>
+                 <div className="space-y-2">
+                  <Label htmlFor="ageMilestone">Age / Milestone *</Label>
+                  <Input id="ageMilestone" type="number" {...register('ageMilestone', { valueAsNumber: true })} />
+                </div>
+              </div>
+            )}
+            
+            {watchedFields.eventType === 'Others' && (
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="eventName">Event Name *</Label>
+                  <Input id="eventName" {...register('eventName')} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="honoreeNameOther">Honoree Name *</Label>
+                  <Input id="honoreeNameOther" {...register('honoreeNameOther')} />
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-headline text-2xl">Additional Notes</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Textarea placeholder="Any other details..." {...register('additionalNotes')} />
+        </CardContent>
+      </Card>
+    </div>
+  );
+
+  if (hideFooters) {
+    return content;
   }
 
   return (
@@ -228,378 +611,7 @@ export function EventDetailsForm() {
       </header>
       
       <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
-        <div className="mx-auto max-w-3xl space-y-8">
-          <Card>
-            <CardHeader>
-              <CardTitle className="font-headline text-2xl">Event Type *</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Controller
-                name="eventType"
-                control={control}
-                render={({ field }) => (
-                  <RadioGroup
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                    className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4"
-                  >
-                    {eventTypeOptions.map((option) => (
-                      <div key={option.value}>
-                        <RadioGroupItem value={option.value} id={option.value} className="sr-only" />
-                        <Label
-                          htmlFor={option.value}
-                          className={cn(
-                            "flex flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent/20 hover:text-accent-foreground cursor-pointer transition-all",
-                            field.value === option.value && "border-primary ring-2 ring-primary bg-primary/5"
-                          )}
-                        >
-                          <option.icon className="mb-3 h-6 w-6" />
-                          {option.label}
-                        </Label>
-                      </div>
-                    ))}
-                  </RadioGroup>
-                )}
-              />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="font-headline text-2xl">Date & Venue</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="venueName">Venue</Label>
-                  <Controller
-                    name="venueName"
-                    control={control}
-                    render={({ field }) => (
-                      <ComboboxCity 
-                        value={field.value} 
-                        onSelect={field.onChange} 
-                        placeholder="Select or enter venue"
-                      />
-                    )}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="shipToCity">Ship to City</Label>
-                  <Controller
-                    name="shipToCity"
-                    control={control}
-                    render={({ field }) => (
-                      <ComboboxCity 
-                        value={field.value} 
-                        onSelect={field.onChange} 
-                        placeholder="Select or enter city" 
-                      />
-                    )}
-                  />
-                </div>
-              </div>
-              <div className="grid md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="eventDate">Event Date *</Label>
-                   <Controller
-                      name="eventDate"
-                      control={control}
-                      render={({ field, fieldState }) => {
-                        const showError = fieldState.invalid && fieldState.isTouched;
-                        return (
-                          <Popover open={openEventDate} onOpenChange={setOpenEventDate}>
-                            <PopoverTrigger asChild>
-                              <Button
-                                variant={"outline"}
-                                className={cn(
-                                  "w-full justify-start text-left font-normal hover:bg-transparent hover:border-foreground hover:text-foreground", 
-                                  !field.value && "text-muted-foreground hover:text-muted-foreground",
-                                  showError && "border-destructive hover:border-destructive"
-                                )}
-                              >
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {formatDisplayDate(field.value) || <span>Pick a date</span>}
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0 flex flex-col" align="start">
-                              <Calendar 
-                                mode="single" 
-                                selected={field.value || undefined} 
-                                onSelect={(date) => {
-                                  field.onChange(date);
-                                  setOpenEventDate(false);
-                                }} 
-                                initialFocus 
-                              />
-                              {field.value && (
-                                <div className="p-2 border-t">
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm" 
-                                    className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
-                                    type="button"
-                                    onClick={() => {
-                                      field.onChange(null);
-                                      setOpenEventDate(false);
-                                    }}
-                                  >
-                                    Clear Date
-                                  </Button>
-                                </div>
-                              )}
-                            </PopoverContent>
-                          </Popover>
-                        );
-                      }}
-                    />
-                </div>
-                 <div className="space-y-2">
-                  <Label htmlFor="orderDueDate">Order Due Date *</Label>
-                   <Controller
-                      name="orderDueDate"
-                      control={control}
-                      render={({ field, fieldState }) => {
-                        const showError = fieldState.invalid && fieldState.isTouched;
-                        return (
-                          <Popover open={openDueDate} onOpenChange={setOpenDueDate}>
-                            <PopoverTrigger asChild>
-                              <Button
-                                variant={"outline"}
-                                className={cn(
-                                  "w-full justify-start text-left font-normal hover:bg-transparent hover:border-foreground hover:text-foreground", 
-                                  !field.value && "text-muted-foreground hover:text-muted-foreground",
-                                  showError && "border-destructive hover:border-destructive"
-                                )}
-                              >
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {formatDisplayDate(field.value) || <span>Pick a date</span>}
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0 flex flex-col" align="start">
-                              <Calendar 
-                                mode="single" 
-                                selected={field.value || undefined} 
-                                onSelect={(date) => {
-                                  field.onChange(date);
-                                  setOpenDueDate(false);
-                                }} 
-                                initialFocus 
-                              />
-                              {field.value && (
-                                <div className="p-2 border-t">
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm" 
-                                    className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
-                                    type="button"
-                                    onClick={() => {
-                                      field.onChange(null);
-                                      setOpenDueDate(false);
-                                    }}
-                                  >
-                                    Clear Date
-                                  </Button>
-                                </div>
-                              )}
-                            </PopoverContent>
-                          </Popover>
-                        );
-                      }}
-                    />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {watchedFields.eventType && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="font-headline text-2xl">Event Specifics</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Wedding Fields */}
-                {watchedFields.eventType === 'Wedding' && (
-                  <div className="grid md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="brideName">Bride's Name *</Label>
-                      <Input id="brideName" {...register('brideName')} />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="groomName">Groom's Name *</Label>
-                      <Input id="groomName" {...register('groomName')} />
-                    </div>
-                  </div>
-                )}
-                
-                {/* Engagement Fields */}
-                {watchedFields.eventType === 'Engagement' && (
-                  <>
-                    <div className="grid md:grid-cols-2 gap-6">
-                        <div className="space-y-2">
-                            <Label htmlFor="engagementBrideName">Bride's Name *</Label>
-                            <Input id="engagementBrideName" {...register('engagementBrideName')} />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="engagementGroomName">Groom's Name *</Label>
-                            <Input id="engagementGroomName" {...register('engagementGroomName')} />
-                        </div>
-                    </div>
-                     <div className="grid md:grid-cols-2 gap-6 items-start">
-                        <div className="space-y-2">
-                            <Label htmlFor="weddingDate">Wedding Date *</Label>
-                            <Controller
-                                name="weddingDate"
-                                control={control}
-                                render={({ field, fieldState }) => {
-                                  const showError = fieldState.invalid && fieldState.isTouched;
-                                  return (
-                                    <Popover open={openWeddingDate} onOpenChange={setOpenWeddingDate}>
-                                      <PopoverTrigger asChild>
-                                          <Button
-                                          variant={"outline"}
-                                          className={cn(
-                                            "w-full justify-start text-left font-normal hover:bg-transparent hover:border-foreground hover:text-foreground", 
-                                            !field.value && "text-muted-foreground hover:text-muted-foreground",
-                                            showError && "border-destructive hover:border-destructive"
-                                          )}
-                                          >
-                                          <CalendarIcon className="mr-2 h-4 w-4" />
-                                          {formatDisplayDate(field.value) || <span>Pick a date</span>}
-                                          </Button>
-                                      </PopoverTrigger>
-                                      <PopoverContent className="w-auto p-0 flex flex-col" align="start">
-                                          <Calendar 
-                                            mode="single" 
-                                            selected={field.value || undefined} 
-                                            onSelect={(date) => {
-                                              field.onChange(date);
-                                              setOpenWeddingDate(false);
-                                            }} 
-                                            initialFocus 
-                                          />
-                                          {field.value && (
-                                            <div className="p-2 border-t">
-                                              <Button 
-                                                variant="ghost" 
-                                                size="sm" 
-                                                className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
-                                                type="button"
-                                                onClick={() => {
-                                                  field.onChange(null);
-                                                  setOpenWeddingDate(false);
-                                                }}
-                                              >
-                                                Clear Date
-                                              </Button>
-                                            </div>
-                                          )}
-                                      </PopoverContent>
-                                    </Popover>
-                                  );
-                                }}
-                            />
-                        </div>
-                        <div className="space-y-2">
-                           <Label>Wedding Date Status *</Label>
-                           <Controller
-                              name="dateStatus"
-                              control={control}
-                              render={({ field }) => (
-                                <Tabs 
-                                  value={field.value === true ? 'fixed' : field.value === false ? 'tentative' : ''} 
-                                  onValueChange={(val) => field.onChange(val === 'fixed')}
-                                  className="w-full"
-                                >
-                                  <TabsList className="grid w-full grid-cols-2 h-10">
-                                    <TabsTrigger value="tentative">Tentative</TabsTrigger>
-                                    <TabsTrigger value="fixed">Fixed</TabsTrigger>
-                                  </TabsList>
-                                </Tabs>
-                              )}
-                            />
-                        </div>
-                    </div>
-                  </>
-                )}
-
-                {/* Anniversary Fields */}
-                {watchedFields.eventType === 'Anniversary' && (
-                  <div className="grid md:grid-cols-3 gap-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="wifeName">Wife's Name *</Label>
-                      <Input id="wifeName" {...register('wifeName')} />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="husbandName">Husband's Name *</Label>
-                      <Input id="husbandName" {...register('husbandName')} />
-                    </div>
-                     <div className="space-y-2">
-                      <Label htmlFor="milestoneYears">Milestone Years *</Label>
-                      <Input id="milestoneYears" type="number" {...register('milestoneYears', { valueAsNumber: true })} />
-                    </div>
-                  </div>
-                )}
-                
-                {/* Birthday Fields */}
-                {watchedFields.eventType === 'Birthday' && (
-                  <div className="grid md:grid-cols-3 gap-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="honoreeNameBirthday">Honoree Name *</Label>
-                      <Input id="honoreeNameBirthday" {...register('honoreeNameBirthday')} />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="gender">Gender *</Label>
-                       <Controller
-                          name="gender"
-                          control={control}
-                          render={({ field }) => (
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                              <SelectTrigger className={cn(!field.value && "text-muted-foreground")}>
-                                <SelectValue placeholder="Select gender" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="Male">Male</SelectItem>
-                                <SelectItem value="Female">Female</SelectItem>
-                                <SelectItem value="Other">Other</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          )}
-                        />
-                    </div>
-                     <div className="space-y-2">
-                      <Label htmlFor="ageMilestone">Age / Milestone *</Label>
-                      <Input id="ageMilestone" type="number" {...register('ageMilestone', { valueAsNumber: true })} />
-                    </div>
-                  </div>
-                )}
-                
-                {/* Others Fields */}
-                {watchedFields.eventType === 'Others' && (
-                  <div className="grid md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="eventName">Event Name *</Label>
-                      <Input id="eventName" {...register('eventName')} />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="honoreeNameOther">Honoree Name *</Label>
-                      <Input id="honoreeNameOther" {...register('honoreeNameOther')} />
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="font-headline text-2xl">Additional Notes</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Textarea placeholder="Any other details..." {...register('additionalNotes')} />
-            </CardContent>
-          </Card>
-        </div>
+        {content}
       </main>
 
       <footer className="sticky bottom-0 z-10 flex items-center justify-between gap-4 border-t bg-background px-4 md:px-6 h-20">

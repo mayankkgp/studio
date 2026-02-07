@@ -24,7 +24,7 @@ import type { ConfiguredProduct, Product } from '@/lib/types';
 
 const QUICK_ADD_ITEMS = ['Logo', 'Invite', 'Save The Date', 'Welcome Note', 'Hashtag'];
 
-export function CommandBar() {
+export function CommandBar({ onAdd }: { onAdd?: (p: ConfiguredProduct) => void }) {
     const [open, setOpen] = React.useState(false);
     const { addDeliverable, order } = useOrder();
 
@@ -49,16 +49,20 @@ export function CommandBar() {
             id: `${product.id}-${Date.now()}`,
             productId: product.id,
             productName: productName,
-            variant: undefined, // Forced Intent: No default variant
-            quantity: product.configType === 'A' ? null : undefined, // Start as blank
-            pages: product.configType === 'B' ? null : undefined, // Start as blank
+            variant: undefined,
+            quantity: product.configType === 'A' ? null : undefined,
+            pages: product.configType === 'B' ? null : undefined,
             addons: [],
             customFieldValues: {},
             sizes: [],
             specialRequest: '',
         };
 
-        addDeliverable(newDeliverable);
+        if (onAdd) {
+            onAdd(newDeliverable);
+        } else {
+            addDeliverable(newDeliverable);
+        }
         setOpen(false);
     };
 

@@ -5,18 +5,16 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { MobileNav } from '@/components/layout/MobileNav';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { useOrder } from '@/context/OrderContext';
 import { useRouter } from 'next/navigation';
-import { Zap, Trash2, Loader2, Search, Calendar } from 'lucide-react';
+import { Zap, Trash2, Loader2, Search } from 'lucide-react';
 import { calculateBillableItems } from '@/lib/pricing';
 import { Input } from '@/components/ui/input';
 import { format } from 'date-fns';
 
-export default function ActiveOrdersPage() {
+export default function ActiveOrderListPage() {
   const [activeOrders, setActiveOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const { loadDraft } = useOrder();
   const router = useRouter();
 
   const loadAllActive = useCallback(() => {
@@ -84,8 +82,8 @@ export default function ActiveOrdersPage() {
         <header className="flex h-16 shrink-0 items-center gap-4 border-b px-4 md:px-6 bg-background">
           <MobileNav />
           <div className="flex-1">
-            <h1 className="font-semibold text-lg font-headline">Active Orders</h1>
-            <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Saved to this device</p>
+            <h1 className="font-semibold text-lg font-headline">Active Order List</h1>
+            <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Management View</p>
           </div>
         </header>
 
@@ -104,12 +102,12 @@ export default function ActiveOrdersPage() {
             {loading ? (
               <div className="flex flex-col items-center py-24 text-muted-foreground">
                 <Loader2 className="h-8 w-8 animate-spin mb-4" />
-                <p>Loading storage...</p>
+                <p>Loading records...</p>
               </div>
             ) : filteredOrders.length === 0 ? (
               <div className="flex flex-col items-center py-24 border-2 border-dashed rounded-xl bg-card">
                 <Zap className="h-12 w-12 text-muted-foreground/30 mb-4" />
-                <p className="text-muted-foreground text-sm">No active orders found on this device</p>
+                <p className="text-muted-foreground text-sm">No active orders found</p>
               </div>
             ) : (
               <div className="rounded-xl border bg-card overflow-hidden shadow-sm">
@@ -126,7 +124,11 @@ export default function ActiveOrdersPage() {
                   </TableHeader>
                   <TableBody>
                     {filteredOrders.map((order) => (
-                      <TableRow key={order.orderId} className="cursor-pointer group" onClick={() => { loadDraft(order); router.push('/commercials'); }}>
+                      <TableRow 
+                        key={order.orderId} 
+                        className="cursor-pointer group" 
+                        onClick={() => router.push(`/active-orders/${order.orderId}`)}
+                      >
                         <TableCell className="font-mono font-bold text-primary">{order.orderId}</TableCell>
                         <TableCell className="font-medium">{getClientName(order.eventDetails)}</TableCell>
                         <TableCell className="text-muted-foreground text-xs font-medium">

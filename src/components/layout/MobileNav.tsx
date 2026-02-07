@@ -1,31 +1,40 @@
-
 'use client';
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, Package, DollarSign, FileText, PanelLeft, PlusCircle, Zap } from 'lucide-react';
+import { Home, Package, DollarSign, FileText, PanelLeft, PlusCircle, Zap, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Logo } from '@/components/icons/Logo';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { useOrder } from '@/context/OrderContext';
+import { useToast } from '@/hooks/use-toast';
 
 const navItems = [
   { href: '/', label: 'Event Details', icon: Home },
   { href: '/deliverables', label: 'Deliverables', icon: Package },
   { href: '/commercials', label: 'Commercials', icon: DollarSign },
   { href: '/drafts', label: 'My Drafts', icon: FileText },
-  { href: '/active-orders', label: 'Active Orders', icon: Zap },
+  { href: '/active-orders', label: 'Active Order List', icon: Zap },
 ];
 
 export function MobileNav() {
   const pathname = usePathname();
   const router = useRouter();
   const { order, resetOrder } = useOrder();
+  const { toast } = useToast();
 
   const handleCreateOrder = () => {
     resetOrder();
     router.push('/');
+  };
+
+  const clearStorage = () => {
+    if (confirm('Are you sure you want to clear ALL local storage?')) {
+      localStorage.clear();
+      toast({ title: "Storage Cleared", description: "All local data has been wiped." });
+      window.location.href = '/';
+    }
   };
 
   return (
@@ -74,11 +83,22 @@ export function MobileNav() {
           ))}
         </nav>
         
-        <div className="mt-auto pb-6">
-            <div className="text-center text-[10px] font-bold uppercase text-muted-foreground mb-1">Current Order</div>
-            <div className="text-center font-mono font-bold text-primary">
-              {order.orderId || 'NOT ASSIGNED'}
+        <div className="mt-auto pb-6 space-y-6">
+            <div>
+              <div className="text-center text-[10px] font-bold uppercase text-muted-foreground mb-1">Current Order</div>
+              <div className="text-center font-mono font-bold text-primary">
+                {order.orderId || 'NOT ASSIGNED'}
+              </div>
             </div>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="w-full text-destructive"
+              onClick={clearStorage}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Clear All Data
+            </Button>
         </div>
       </SheetContent>
     </Sheet>
