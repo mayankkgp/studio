@@ -75,7 +75,9 @@ export default function DraftsPage() {
 
   const handleResume = (draft: any) => {
     loadDraft(draft);
-    router.push('/deliverables');
+    // Navigate to the saved step, or default to home if not available
+    const targetPath = draft.currentStep || '/';
+    router.push(targetPath);
   };
 
   const getClientName = (details: any) => {
