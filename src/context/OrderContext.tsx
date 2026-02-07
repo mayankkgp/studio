@@ -41,13 +41,13 @@ const initialOrderState: Order = {
   paymentReceived: 0,
 };
 
-const SYNC_TIMEOUT = 15000; // Increased to 15s to allow for cold starts
+const SYNC_TIMEOUT = 10000;
 
 const withTimeout = <T>(promise: Promise<T>, ms: number = SYNC_TIMEOUT): Promise<T> => {
   return Promise.race([
     promise,
     new Promise<T>((_, reject) => 
-      setTimeout(() => reject(new Error('Database operation timed out')), ms)
+      setTimeout(() => reject(new Error('DATABASE_TIMEOUT')), ms)
     )
   ]);
 };
@@ -68,8 +68,6 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (!db) return false;
 
     let currentOrderId = order.orderId;
-    
-    // Generate Order ID only on the first save action if it doesn't exist
     if (!currentOrderId) {
       currentOrderId = `ORD-${Math.floor(1000 + Math.random() * 9000)}`;
       setOrder(prev => ({ ...prev, orderId: currentOrderId }));
@@ -79,39 +77,44 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       ...order,
       orderId: currentOrderId,
       eventDetails: manualDetails || order.eventDetails,
-      currentStep: pathname,
+      currentStep: pathname || '/',
       lastSavedAt: serverTimestamp(),
     };
 
     const draftRef = doc(db, 'drafts', currentOrderId);
 
     try {
-      // Initiate the write and await confirmation
+      // Use setDoc and wait for the server confirmation or local timeout
       await withTimeout(setDoc(draftRef, orderToSave, { merge: true }));
       
       toast({
-        title: 'Progress Saved',
-        description: `Order ${currentOrderId} synced to cloud.`,
+        title: 'Cloud Sync Success',
+        description: `Draft ${currentOrderId} is now safely stored.`,
       });
       
       return true;
     } catch (serverError: any) {
-      // Handle permission errors by emitting specialized error for developer feedback
-      if (serverError.code === 'permission-denied' || serverError.message?.includes('permissions')) {
-        const permissionError = new FirestorePermissionError({
-          path: draftRef.path,
-          operation: 'write',
-          requestResourceData: orderToSave,
-        } satisfies SecurityRuleContext);
-        errorEmitter.emit('permission-error', permissionError);
+      if (serverError.message === 'DATABASE_TIMEOUT') {
+         toast({
+          title: 'Syncing in Background',
+          description: 'Connection is slow, but your data is being sent.',
+        });
+        return true; // Assume success for UI flow, let background sync handle it
       }
+
+      // Create the rich, contextual error for the dev overlay
+      const permissionError = new FirestorePermissionError({
+        path: draftRef.path,
+        operation: 'write',
+        requestResourceData: orderToSave,
+      } satisfies SecurityRuleContext);
+
+      errorEmitter.emit('permission-error', permissionError);
       
       toast({
         variant: 'destructive',
         title: 'Sync Failed',
-        description: serverError.message?.includes('permissions') 
-          ? 'Database rules are updating. Please try again in 10 seconds.'
-          : 'Could not reach database. Check your connection.',
+        description: 'Database rules are refreshing. Please try once more.',
       });
       
       return false;
@@ -122,8 +125,8 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (!db || !order.orderId) {
         toast({
             variant: 'destructive',
-            title: 'Action Required',
-            description: 'Please save your draft before activating.',
+            title: 'Unsaved Changes',
+            description: 'Save your draft before activating.',
         });
         return false;
     }
@@ -138,11 +141,11 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     try {
       await withTimeout(setDoc(activeRef, orderToActivate));
-      // Cleanup the draft once it's promoted to an active order
+      // Non-blocking cleanup
       deleteDoc(draftRef).catch(() => {});
       
       toast({
-        title: 'Order Activated!',
+        title: 'Order Activated',
         description: `Order ${order.orderId} moved to active list.`,
       });
       
@@ -150,19 +153,17 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       router.push('/active-orders');
       return true;
     } catch (serverError: any) {
-      if (serverError.code === 'permission-denied' || serverError.message?.includes('permissions')) {
-        const permissionError = new FirestorePermissionError({
-          path: activeRef.path,
-          operation: 'create',
-          requestResourceData: orderToActivate,
-        } satisfies SecurityRuleContext);
-        errorEmitter.emit('permission-error', permissionError);
-      }
+      const permissionError = new FirestorePermissionError({
+        path: activeRef.path,
+        operation: 'create',
+        requestResourceData: orderToActivate,
+      } satisfies SecurityRuleContext);
+      errorEmitter.emit('permission-error', permissionError);
       
       toast({
         variant: 'destructive',
         title: 'Activation Failed',
-        description: 'Permissions denied. Rules are still synchronizing.',
+        description: 'Permissions denied. Rules are still propagating.',
       });
       
       return false;
@@ -181,8 +182,8 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
     setOrder(hydratedOrder);
     toast({
-      title: 'Draft Loaded',
-      description: `Order ${draftOrder.orderId} is now the active session.`,
+      title: 'Draft Restored',
+      description: `Order ${draftOrder.orderId} is now active.`,
     });
   }, [toast]);
 

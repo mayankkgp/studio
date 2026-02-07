@@ -3,7 +3,7 @@
   "entities": {
     "OrderDraft": {
       "title": "Order Draft",
-      "description": "A partially completed order saved for later completion in the quote building process with metadata for tracking.",
+      "description": "A partially completed order saved for later completion with metadata for routing and tracking.",
       "type": "object",
       "properties": {
         "orderId": { "type": "string" },
@@ -13,11 +13,11 @@
         "currentStep": { "type": "string" },
         "lastSavedAt": { "type": "object", "description": "Firestore Server Timestamp" }
       },
-      "required": ["orderId", "eventDetails"]
+      "required": ["orderId", "eventDetails", "currentStep"]
     },
     "ActiveOrder": {
       "title": "Active Order",
-      "description": "A finalized and activated order ready for fulfillment with activation metadata.",
+      "description": "A finalized and activated order ready for fulfillment.",
       "type": "object",
       "properties": {
         "orderId": { "type": "string" },
@@ -26,7 +26,7 @@
         "paymentReceived": { "type": "number" },
         "activatedAt": { "type": "object", "description": "Firestore Server Timestamp" }
       },
-      "required": ["orderId", "eventDetails"]
+      "required": ["orderId", "eventDetails", "activatedAt"]
     }
   },
   "auth": {
@@ -35,11 +35,11 @@
   "firestore": {
     "/drafts/{orderId}": {
       "schema": "OrderDraft",
-      "description": "Store for partially completed order drafts. (Rule Refresh: v2)"
+      "description": "Store for partially completed order drafts. (Deployment Version: v5 - Full Permissions)"
     },
     "/active-orders/{orderId}": {
       "schema": "ActiveOrder",
-      "description": "Store for confirmed and activated orders. (Rule Refresh: v2)"
+      "description": "Store for confirmed and activated orders. (Deployment Version: v5 - Full Permissions)"
     }
   }
 }
