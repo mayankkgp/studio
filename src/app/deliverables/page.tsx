@@ -94,10 +94,16 @@ export default function DeliverablesPage() {
         const hasItems = deliverables.length > 0;
         const allConfirmed = activeItems.length === 0;
         const allCollapsed = openOrderListItems.length === 0;
-        const allValid = deliverables.every(item => rowStatus[item.id]?.isValid === true);
+        
+        // FIX: If an item is already committed (in the list), consider it valid.
+        // Otherwise, check the live rowStatus.
+        const allValid = deliverables.every(item => {
+            if (committedItemIds.includes(item.id)) return true;
+            return rowStatus[item.id]?.isValid === true;
+        });
         
         return hasItems && allConfirmed && allCollapsed && allValid;
-    }, [order.deliverables, activeItems.length, openOrderListItems.length, rowStatus]);
+    }, [order.deliverables, activeItems.length, openOrderListItems.length, rowStatus, committedItemIds]);
 
     const handleNextStep = useCallback(async () => {
         if (isNextStepActive) {
@@ -163,6 +169,7 @@ export default function DeliverablesPage() {
                                                 onDone={handleDone}
                                                 onValidityChange={handleValidityChange}
                                                 onUpdate={updateDeliverable}
+                                                onUpdateDeliverable={updateDeliverable}
                                                 onRemove={handleRemove}
                                             />
                                         ))}
@@ -191,6 +198,7 @@ export default function DeliverablesPage() {
                                                 onDone={() => setOpenOrderListItems(prev => prev.filter(id => id !== item.id))}
                                                 onValidityChange={handleValidityChange}
                                                 onUpdate={updateDeliverable}
+                                                onUpdateDeliverable={updateDeliverable}
                                                 onRemove={handleRemove}
                                                 isPersistent={true}
                                             />
