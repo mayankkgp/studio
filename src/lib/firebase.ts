@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getFirestore } from 'firebase/firestore';
+import { getFirestore, initializeFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "placeholder-key",
@@ -12,6 +12,14 @@ const firebaseConfig = {
 
 // Initialize Firebase
 const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
-const db = getFirestore(app);
+
+// Initialize Firestore with settings (ignore undefined values from forms)
+let db;
+try {
+    db = initializeFirestore(app, { ignoreUndefinedProperties: true });
+} catch (e) {
+    // Fallback for hot-reloading if instance already exists
+    db = getFirestore(app);
+}
 
 export { db };
