@@ -13,7 +13,7 @@ type OrderContextType = {
   updateDeliverable: (id: string, updates: Partial<ConfiguredProduct>) => void;
   removeDeliverable: (id: string) => void;
   setPaymentReceived: (amount: number) => void;
-  saveAsDraft: () => Promise<void>;
+  saveAsDraft: (manualDetails?: EventDetails) => Promise<void>;
   loadDraft: (draftOrder: Order) => void;
   resetOrder: () => void;
   isLoaded: boolean;
@@ -60,21 +60,25 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setIsLoaded(true);
   }, []);
 
-  const saveAsDraft = useCallback(async () => {
+  const saveAsDraft = useCallback(async (manualDetails?: EventDetails) => {
     try {
-      const draftRef = doc(db, 'drafts', order.orderId);
+      const currentOrderId = order.orderId;
+      if (!currentOrderId) return;
+
+      const draftRef = doc(db, 'drafts', currentOrderId);
       
-      // Clean dates for Firestore
-      const serializedOrder = {
+      // Use manualDetails if provided (useful for syncing forms before save state updates)
+      const orderToSave = {
         ...order,
+        eventDetails: manualDetails || order.eventDetails,
         lastSavedAt: serverTimestamp(),
       };
 
-      await setDoc(draftRef, serializedOrder, { merge: true });
+      await setDoc(draftRef, orderToSave, { merge: true });
 
       toast({
         title: 'Draft Saved',
-        description: `Order ${order.orderId} has been persisted to the cloud.`,
+        description: `Order ${currentOrderId} has been persisted to the cloud.`,
       });
     } catch (error: any) {
       toast({
@@ -86,7 +90,6 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [order, toast]);
 
   const loadDraft = useCallback((draftOrder: Order) => {
-    // Ensure dates are correctly hydrated if they come back as Firestore timestamps
     const hydratedOrder = {
       ...draftOrder,
       eventDetails: {

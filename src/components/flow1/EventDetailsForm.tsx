@@ -159,7 +159,7 @@ export function EventDetailsForm() {
     mode: 'onChange'
   });
 
-  const { register, control, watch, handleSubmit, formState: { errors, isValid }, reset, setValue } = form;
+  const { register, control, watch, handleSubmit, formState: { errors, isValid }, reset, setValue, getValues } = form;
   
   useEffect(() => {
     if (isLoaded) {
@@ -179,6 +179,12 @@ export function EventDetailsForm() {
   const onSubmit = (data: EventDetails) => {
     setEventDetails(data);
     router.push('/deliverables');
+  };
+
+  const handleSaveDraft = () => {
+    const currentDetails = getValues();
+    // Save draft with current form values to ensure persistence matches input
+    saveAsDraft(currentDetails);
   };
 
   const handleCancel = () => {
@@ -584,7 +590,7 @@ export function EventDetailsForm() {
       <footer className="sticky bottom-0 z-10 flex items-center justify-between gap-4 border-t bg-background px-4 md:px-6 h-20">
         <Button variant="outline" type="button" onClick={handleCancel}>Cancel</Button>
         <div className="flex items-center gap-4">
-          <Button variant="secondary" type="button" onClick={saveAsDraft}>Save as Draft</Button>
+          <Button variant="secondary" type="button" onClick={handleSaveDraft}>Save as Draft</Button>
           <Button type="submit" disabled={!isValid}>Next Step</Button>
         </div>
       </footer>
