@@ -35,11 +35,11 @@
   "firestore": {
     "/drafts/{orderId}": {
       "schema": "OrderDraft",
-      "description": "Secure store for partially completed order drafts."
+      "description": "Store for partially completed order drafts. (Rule Refresh: v2)"
     },
     "/active-orders/{orderId}": {
       "schema": "ActiveOrder",
-      "description": "Secure store for confirmed and activated orders."
+      "description": "Store for confirmed and activated orders. (Rule Refresh: v2)"
     }
   }
 }
