@@ -56,8 +56,8 @@ function ComboboxCity({
             role="combobox"
             aria-expanded={open}
             className={cn(
-              "w-full justify-start font-normal text-left h-10 px-3 pr-14 hover:bg-transparent hover:border-foreground",
-              !value && "text-muted-foreground"
+              "w-full justify-start font-normal text-left h-10 px-3 pr-14 hover:bg-transparent hover:border-foreground hover:text-foreground",
+              !value && "text-muted-foreground hover:text-muted-foreground"
             )}
           >
             <MapPin className="mr-2 h-4 w-4 shrink-0 opacity-50" />
@@ -290,9 +290,9 @@ export function EventDetailsForm() {
                             <Button
                               variant={"outline"}
                               className={cn(
-                                "w-full justify-start text-left font-normal hover:bg-transparent hover:border-foreground", 
-                                !field.value && "text-muted-foreground",
-                                fieldState.invalid && "border-destructive"
+                                "w-full justify-start text-left font-normal hover:bg-transparent hover:border-foreground hover:text-foreground", 
+                                !field.value && "text-muted-foreground hover:text-muted-foreground",
+                                fieldState.invalid && "border-destructive hover:border-destructive"
                               )}
                             >
                               <CalendarIcon className="mr-2 h-4 w-4" />
@@ -341,9 +341,9 @@ export function EventDetailsForm() {
                             <Button
                               variant={"outline"}
                               className={cn(
-                                "w-full justify-start text-left font-normal hover:bg-transparent hover:border-foreground", 
-                                !field.value && "text-muted-foreground",
-                                fieldState.invalid && "border-destructive"
+                                "w-full justify-start text-left font-normal hover:bg-transparent hover:border-foreground hover:text-foreground", 
+                                !field.value && "text-muted-foreground hover:text-muted-foreground",
+                                fieldState.invalid && "border-destructive hover:border-destructive"
                               )}
                             >
                               <CalendarIcon className="mr-2 h-4 w-4" />
@@ -430,9 +430,9 @@ export function EventDetailsForm() {
                                         <Button
                                         variant={"outline"}
                                         className={cn(
-                                          "w-full justify-start text-left font-normal hover:bg-transparent hover:border-foreground", 
-                                          !field.value && "text-muted-foreground",
-                                          fieldState.invalid && "border-destructive"
+                                          "w-full justify-start text-left font-normal hover:bg-transparent hover:border-foreground hover:text-foreground", 
+                                          !field.value && "text-muted-foreground hover:text-muted-foreground",
+                                          fieldState.invalid && "border-destructive hover:border-destructive"
                                         )}
                                         >
                                         <CalendarIcon className="mr-2 h-4 w-4" />
