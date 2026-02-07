@@ -63,6 +63,8 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, []);
 
   const saveAsDraft = useCallback(async (manualDetails?: EventDetails): Promise<boolean> => {
+    if (!db) return false;
+
     let currentOrderId = order.orderId;
     
     if (!currentOrderId) {
@@ -81,7 +83,6 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const draftRef = doc(db, 'drafts', currentOrderId);
 
     try {
-      // Use setDoc for writes. Rules should be triggered by backend.json update.
       await withTimeout(setDoc(draftRef, orderToSave, { merge: true }));
       
       toast({
@@ -110,7 +111,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [order, toast, pathname, db]);
 
   const activateOrder = useCallback(async (): Promise<boolean> => {
-    if (!order.orderId) {
+    if (!db || !order.orderId) {
         toast({
             variant: 'destructive',
             title: 'Error',
