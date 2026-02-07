@@ -22,35 +22,22 @@ type OrderContextType = {
 
 const OrderContext = createContext<OrderContextType | undefined>(undefined);
 
-const SAMPLE_DELIVERABLES: ConfiguredProduct[] = [
-  {
-    id: `1-${Date.now()}-sample-1`,
-    productId: 1,
-    productName: "Logo",
-    variant: "Custom",
-    quantity: 1,
-    addons: [],
-    customFieldValues: {},
-    specialRequest: "Make it look premium and modern",
-  }
-];
-
 const initialOrderState: Order = {
   orderId: '',
   eventDetails: {
     eventType: 'Wedding',
-    brideName: 'Riya',
-    groomName: 'Arjun',
-    eventDate: new Date(Date.now() + 45 * 24 * 60 * 60 * 1000),
-    orderDueDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
-    venueName: 'The Oberoi, Mumbai',
-    shipToCity: 'Mumbai'
+    brideName: '',
+    groomName: '',
+    eventDate: undefined,
+    orderDueDate: undefined,
+    venueName: '',
+    shipToCity: ''
   },
-  deliverables: SAMPLE_DELIVERABLES,
-  paymentReceived: 7500,
+  deliverables: [],
+  paymentReceived: 0,
 };
 
-// Helper to force a timeout
+// Helper to force a timeout for database operations
 const withTimeout = (promise: Promise<any>, ms: number) => {
     return Promise.race([
         promise,
@@ -86,7 +73,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         lastSavedAt: serverTimestamp(),
       };
 
-      // Force fail if it takes longer than 10 seconds (10000ms)
+      // Force fail if it takes longer than 10 seconds
       await withTimeout(
         setDoc(draftRef, orderToSave, { merge: true }), 
         10000 
@@ -94,14 +81,14 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       toast({
         title: 'Draft Saved',
-        description: `Order ${currentOrderId} has been persisted to the cloud.`,
+        description: `Order ${currentOrderId} has been successfully persisted to the cloud.`,
       });
       return true;
     } catch (error: any) {
       toast({
         variant: 'destructive',
         title: 'Save Failed',
-        description: error.message || 'Could not save draft to Firestore.',
+        description: error.message || 'Could not save draft. Please check your connection.',
       });
       return false;
     }
