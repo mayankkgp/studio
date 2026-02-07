@@ -46,17 +46,22 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const pathname = usePathname();
   
   useEffect(() => {
-    const newOrderId = `ORD-${Math.floor(1000 + Math.random() * 9000)}`;
-    setOrder((prev) => ({ ...prev, orderId: prev.orderId || newOrderId }));
+    // We only set isLoaded here, but don't generate the ID yet
     setIsLoaded(true);
   }, []);
 
   const saveAsDraft = useCallback(async (manualDetails?: EventDetails): Promise<boolean> => {
-    const currentOrderId = order.orderId;
-    if (!currentOrderId) return false;
+    let currentOrderId = order.orderId;
+    
+    // Generate Order ID if it doesn't exist (Only on Save/Next CTA)
+    if (!currentOrderId) {
+      currentOrderId = `ORD-${Math.floor(1000 + Math.random() * 9000)}`;
+      setOrder(prev => ({ ...prev, orderId: currentOrderId }));
+    }
 
     const orderToSave = {
       ...order,
+      orderId: currentOrderId,
       eventDetails: manualDetails || order.eventDetails,
       currentStep: pathname,
       lastSavedAt: serverTimestamp(),
@@ -65,12 +70,9 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const draftRef = doc(db, 'drafts', currentOrderId);
 
     try {
-      // Initiate the write. We await it but with a safety race to prevent indefinite spinning
-      // if firestore is struggling to reach the server in this environment.
+      // Initiate the write. We wait for it but with a safety race
       const savePromise = setDoc(draftRef, orderToSave, { merge: true });
       
-      // We wait for the save, but if it takes more than 4 seconds, we consider it "optimistically saved"
-      // to avoid blocking the UI forever.
       await Promise.race([
         savePromise,
         new Promise((resolve) => setTimeout(resolve, 4000))
@@ -145,8 +147,8 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, []);
 
   const resetOrder = useCallback(() => {
-    const newOrderId = `ORD-${Math.floor(1000 + Math.random() * 9000)}`;
-    setOrder({ ...initialOrderState, orderId: newOrderId });
+    // Reset to initial state with no ID
+    setOrder(initialOrderState);
   }, []);
 
   return (
