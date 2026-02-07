@@ -124,7 +124,7 @@ export default function DraftsPage() {
                              <span className="text-[10px] uppercase font-bold text-muted-foreground">Local Only</span>
                           </div>
                         </TableCell>
-                        <TableCell className="text-right font-bold">
+                        <TableCell className="text-right font-bold tabular-nums">
                           {calculateBillableItems(draft.deliverables).reduce((acc, item) => acc + item.components.reduce((cAcc, c) => cAcc + c.total, 0), 0).toLocaleString('en-IN')}
                         </TableCell>
                         <TableCell className="text-right">

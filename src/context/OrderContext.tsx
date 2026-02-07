@@ -36,7 +36,6 @@ const initialOrderState: Order = {
   paymentReceived: 0,
 };
 
-// Keys for LocalStorage
 const LS_DRAFTS_KEY = 'srishbish_drafts_v1';
 const LS_ACTIVE_KEY = 'srishbish_active_v1';
 
@@ -133,10 +132,8 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       activatedAt: new Date().toISOString(),
     };
 
-    // 1. Save to Local Active
     saveToLocalStorage(LS_ACTIVE_KEY, orderToActivate);
     
-    // 2. Remove from Local Drafts
     try {
       const existingDrafts = JSON.parse(localStorage.getItem(LS_DRAFTS_KEY) || '{}');
       delete existingDrafts[order.orderId];
