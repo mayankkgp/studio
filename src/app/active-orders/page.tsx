@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { collection, query, orderBy, onSnapshot, doc, deleteDoc } from 'firebase/firestore';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { MobileNav } from '@/components/layout/MobileNav';
@@ -9,13 +9,9 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useOrder } from '@/context/OrderContext';
 import { useRouter } from 'next/navigation';
-import { format } from 'date-fns';
-import { Zap, Trash2, Loader2, Search } from 'lucide-react';
+import { Zap, Trash2, Loader2, Search, HardDrive, Database } from 'lucide-react';
 import { calculateBillableItems } from '@/lib/pricing';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 import { useFirestore } from '@/firebase';
 
 export default function ActiveOrdersPage() {
@@ -26,56 +22,72 @@ export default function ActiveOrdersPage() {
   const router = useRouter();
   const db = useFirestore();
 
-  const activeOrdersQuery = useMemo(() => {
-    if (!db) return null;
-    return query(collection(db, 'active-orders'), orderBy('activatedAt', 'desc'));
+  const loadAllActive = useCallback(() => {
+    // 1. LocalStorage
+    let localData: any[] = [];
+    try {
+      const raw = localStorage.getItem('srishbish_active_v1');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        localData = Object.values(parsed).map((d: any) => ({ ...d, storage: 'local' }));
+      }
+    } catch (e) {}
+
+    // 2. Cloud Sync
+    if (!db) {
+      setActiveOrders(localData);
+      setLoading(false);
+      return;
+    }
+
+    const q = query(collection(db, 'active-orders'), orderBy('activatedAt', 'desc'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const cloudData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        storage: 'cloud'
+      }));
+
+      const merged = [...cloudData];
+      localData.forEach(localItem => {
+        if (!merged.find(cloudItem => cloudItem.orderId === localItem.orderId)) {
+          merged.push(localItem);
+        }
+      });
+
+      setActiveOrders(merged.sort((a: any, b: any) => {
+        const dateA = a.activatedAt?.toDate ? a.activatedAt.toDate() : new Date(a.activatedAt);
+        const dateB = b.activatedAt?.toDate ? b.activatedAt.toDate() : new Date(b.activatedAt);
+        return dateB.getTime() - dateA.getTime();
+      }));
+      setLoading(false);
+    }, () => {
+      setActiveOrders(localData);
+      setLoading(false);
+    });
+
+    return unsubscribe;
   }, [db]);
 
   useEffect(() => {
-    if (!activeOrdersQuery) return;
+    const unsub = loadAllActive();
+    return () => { if (typeof unsub === 'function') unsub(); };
+  }, [loadAllActive]);
 
-    const unsubscribe = onSnapshot(
-      activeOrdersQuery, 
-      (snapshot) => {
-        const data = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-        setActiveOrders(data);
-        setLoading(false);
-      },
-      async (serverError) => {
-        const permissionError = new FirestorePermissionError({
-          path: 'active-orders',
-          operation: 'list',
-        } satisfies SecurityRuleContext);
-        errorEmitter.emit('permission-error', permissionError);
-        setLoading(false);
-      }
-    );
-
-    return () => unsubscribe();
-  }, [activeOrdersQuery]);
-
-  const handleDelete = async (e: React.MouseEvent, id: string) => {
+  const handleDelete = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
-    if (confirm('Are you sure you want to delete this active order?')) {
-      const orderRef = doc(db, 'active-orders', id);
-      deleteDoc(orderRef)
-        .catch(async () => {
-          const permissionError = new FirestorePermissionError({
-            path: orderRef.path,
-            operation: 'delete',
-          } satisfies SecurityRuleContext);
-          errorEmitter.emit('permission-error', permissionError);
-        });
+    if (confirm('Delete active order?')) {
+      try {
+        const raw = localStorage.getItem('srishbish_active_v1');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          delete parsed[id];
+          localStorage.setItem('srishbish_active_v1', JSON.stringify(parsed));
+        }
+      } catch (e) {}
+      if (db) deleteDoc(doc(db, 'active-orders', id)).catch(() => {});
+      setActiveOrders(prev => prev.filter(o => o.orderId !== id));
     }
-  };
-
-  const handleView = (order: any) => {
-    // We treat active orders as read-only or re-editable drafts
-    loadDraft(order);
-    router.push('/commercials');
   };
 
   const getClientName = (details: any) => {
@@ -86,123 +98,76 @@ export default function ActiveOrdersPage() {
     return details.honoreeNameBirthday || details.honoreeNameOther || details.eventName || 'Unnamed Event';
   };
 
-  const getOrderTotal = (deliverables: any[]) => {
-    if (!deliverables) return 0;
-    const items = calculateBillableItems(deliverables);
-    return items.reduce((acc, item) => {
-      return acc + item.components.reduce((cAcc, c) => cAcc + c.total, 0);
-    }, 0);
-  };
-
   const filteredOrders = activeOrders.filter(order => 
     order.orderId.toLowerCase().includes(searchTerm.toLowerCase()) ||
     getClientName(order.eventDetails).toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const formatDate = (dateValue: any) => {
-    if (!dateValue) return '-';
-    try {
-      const date = dateValue.toDate ? dateValue.toDate() : new Date(dateValue);
-      return format(date, 'dd MMM');
-    } catch (e) { return '-'; }
-  };
-
-  const formatDateTime = (dateValue: any) => {
-    if (!dateValue) return 'Recently';
-    try {
-      const date = dateValue.toDate ? dateValue.toDate() : new Date(dateValue);
-      return format(date, 'dd MMM, HH:mm');
-    } catch (e) { return 'Recently'; }
-  };
-
   return (
     <AppLayout>
-      <div className="flex flex-col h-screen overflow-hidden bg-background">
-        <header className="flex h-16 shrink-0 items-center gap-4 border-b px-4 md:px-6 bg-background z-50">
+      <div className="flex flex-col h-screen bg-background">
+        <header className="flex h-16 shrink-0 items-center gap-4 border-b px-4 md:px-6 bg-background">
           <MobileNav />
-          <div className="flex-1 overflow-hidden">
-            <h1 className="font-semibold text-base md:text-lg font-headline">Active Orders</h1>
-            <p className="text-xs text-muted-foreground uppercase tracking-wider font-bold">Confirmed Business</p>
+          <div className="flex-1">
+            <h1 className="font-semibold text-lg font-headline">Active Orders</h1>
+            <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Local + Cloud Sync</p>
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
+        <main className="flex-1 overflow-y-auto p-4 md:p-8">
           <div className="mx-auto max-w-7xl space-y-6">
-            <div className="flex items-center gap-4 max-w-sm">
-              <div className="relative w-full">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input 
-                  placeholder="Search Active Orders..." 
-                  className="pl-9"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
+            <div className="relative max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input 
+                placeholder="Search Active Orders..." 
+                className="pl-9"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
             </div>
 
             {loading ? (
-              <div className="flex flex-col items-center justify-center py-24 text-muted-foreground">
+              <div className="flex flex-col items-center py-24 text-muted-foreground">
                 <Loader2 className="h-8 w-8 animate-spin mb-4" />
-                <p>Fetching active orders...</p>
+                <p>Accessing orders...</p>
               </div>
             ) : filteredOrders.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-24 border-2 border-dashed rounded-xl bg-card/50">
+              <div className="flex flex-col items-center py-24 border-2 border-dashed rounded-xl bg-card">
                 <Zap className="h-12 w-12 text-muted-foreground/30 mb-4" />
-                <p className="text-muted-foreground text-sm font-medium">
-                  {searchTerm ? 'No active orders match your search' : 'No active orders yet'}
-                </p>
+                <p className="text-muted-foreground text-sm">No active orders found</p>
               </div>
             ) : (
-              <div className="rounded-md border bg-card overflow-hidden">
+              <div className="rounded-xl border bg-card overflow-hidden shadow-sm">
                 <Table>
                   <TableHeader>
                     <TableRow className="hover:bg-transparent">
-                      <TableHead className="w-[140px]">Order ID</TableHead>
-                      <TableHead className="w-[120px]">Event Type</TableHead>
-                      <TableHead className="min-w-[200px]">Client Name</TableHead>
-                      <TableHead className="w-[100px] text-center">Items</TableHead>
-                      <TableHead className="w-[120px]">Event Date</TableHead>
-                      <TableHead className="w-[120px] text-right">Value (₹)</TableHead>
-                      <TableHead className="w-[140px]">Activated</TableHead>
-                      <TableHead className="w-[60px] text-right"></TableHead>
+                      <TableHead>Order ID</TableHead>
+                      <TableHead>Client</TableHead>
+                      <TableHead>Storage</TableHead>
+                      <TableHead className="text-right">Value (₹)</TableHead>
+                      <TableHead className="text-right"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredOrders.map((order) => (
-                      <TableRow 
-                        key={order.id} 
-                        className="cursor-pointer hover:bg-muted/50 transition-colors group" 
-                        onClick={() => handleView(order)}
-                      >
-                        <TableCell className="font-mono font-bold text-primary">
-                          {order.orderId}
-                        </TableCell>
+                      <TableRow key={order.orderId} className="cursor-pointer group" onClick={() => { loadDraft(order); router.push('/commercials'); }}>
+                        <TableCell className="font-mono font-bold text-primary">{order.orderId}</TableCell>
+                        <TableCell className="font-medium">{getClientName(order.eventDetails)}</TableCell>
                         <TableCell>
-                          <Badge variant="secondary" className="font-semibold text-[10px] uppercase">
-                            {order.eventDetails?.eventType || 'Other'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="font-medium">
-                          {getClientName(order.eventDetails)}
-                        </TableCell>
-                        <TableCell className="text-center text-muted-foreground text-xs font-bold">
-                          {order.deliverables?.length || 0}
-                        </TableCell>
-                        <TableCell className="text-sm">
-                          {formatDate(order.eventDetails?.eventDate)}
+                          <div className="flex items-center gap-2">
+                             {order.storage === 'cloud' ? <Database className="h-3 w-3 text-blue-500" /> : <HardDrive className="h-3 w-3 text-amber-500" />}
+                             <span className="text-[10px] uppercase font-bold text-muted-foreground">{order.storage}</span>
+                          </div>
                         </TableCell>
                         <TableCell className="text-right font-bold tabular-nums">
-                          {getOrderTotal(order.deliverables).toLocaleString('en-IN')}
-                        </TableCell>
-                        <TableCell className="text-[11px] text-muted-foreground">
-                          {formatDateTime(order.activatedAt)}
+                          {calculateBillableItems(order.deliverables).reduce((acc, item) => acc + item.components.reduce((cAcc, c) => cAcc + c.total, 0), 0).toLocaleString('en-IN')}
                         </TableCell>
                         <TableCell className="text-right">
                           <Button 
-                            size="icon" 
                             variant="ghost" 
-                            className="h-8 w-8 text-destructive opacity-0 group-hover:opacity-100 transition-opacity hover:text-destructive hover:bg-destructive/10" 
-                            onClick={(e) => handleDelete(e, order.id)}
+                            size="icon" 
+                            className="text-destructive opacity-0 group-hover:opacity-100"
+                            onClick={(e) => handleDelete(e, order.orderId)}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>

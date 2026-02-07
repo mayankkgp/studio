@@ -3,7 +3,7 @@
   "entities": {
     "OrderDraft": {
       "title": "Order Draft",
-      "description": "A partially completed order with flexible metadata.",
+      "description": "Flexible store for drafts with catch-all metadata.",
       "type": "object",
       "properties": {
         "orderId": { "type": "string" },
@@ -18,7 +18,7 @@
     },
     "ActiveOrder": {
       "title": "Active Order",
-      "description": "A finalized order promoted from a draft.",
+      "description": "Finalized business order with catch-all metadata.",
       "type": "object",
       "properties": {
         "orderId": { "type": "string" },
@@ -30,7 +30,7 @@
         "lastSavedAt": { "type": ["object", "string", "null"] },
         "activatedAt": { "type": ["object", "string", "null"] }
       },
-      "required": ["orderId", "activatedAt"]
+      "required": ["orderId"]
     }
   },
   "auth": {
@@ -39,11 +39,11 @@
   "firestore": {
     "/drafts/{orderId}": {
       "schema": "OrderDraft",
-      "description": "Flexible store for drafts. (Rules Version: v9 - Permissive Sync)"
+      "description": "Permissive rules for drafts. (Rules Version: v10 - Sync Relaxed)"
     },
     "/active-orders/{orderId}": {
       "schema": "ActiveOrder",
-      "description": "Store for active business. (Rules Version: v9 - Permissive Sync)"
+      "description": "Permissive rules for active orders. (Rules Version: v10 - Sync Relaxed)"
     }
   }
 }
