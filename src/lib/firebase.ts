@@ -14,11 +14,14 @@ const firebaseConfig = {
 const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 
 // Initialize Firestore with settings (ignore undefined values from forms)
-let db;
+let db: any;
 try {
-    db = initializeFirestore(app, { ignoreUndefinedProperties: true });
+    // Attempt to initialize with custom settings
+    db = initializeFirestore(app, { 
+      ignoreUndefinedProperties: true 
+    });
 } catch (e) {
-    // Fallback for hot-reloading if instance already exists
+    // Fallback if already initialized (common in hot-reloading)
     db = getFirestore(app);
 }
 

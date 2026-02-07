@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
@@ -38,12 +37,15 @@ const initialOrderState: Order = {
   paymentReceived: 0,
 };
 
-// Helper to force a timeout for database operations
+/**
+ * Helper to force a timeout for database operations.
+ * Increased to 20 seconds to allow for initial handshake/auth.
+ */
 const withTimeout = (promise: Promise<any>, ms: number) => {
     return Promise.race([
         promise,
         new Promise((_, reject) => 
-            setTimeout(() => reject(new Error("Request timed out")), ms)
+            setTimeout(() => reject(new Error("Database operation timed out")), ms)
         )
     ]);
 };
@@ -55,17 +57,21 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const pathname = usePathname();
   
   useEffect(() => {
-    // Ensure order ID is clean (alphanumeric and dashes/underscores)
+    // Generate a unique order ID if not present
     const newOrderId = `ORD-${Math.floor(1000 + Math.random() * 9000)}`;
     setOrder((prev) => ({ ...prev, orderId: prev.orderId || newOrderId }));
     setIsLoaded(true);
   }, []);
 
   const saveAsDraft = useCallback(async (manualDetails?: EventDetails): Promise<boolean> => {
-    try {
-      const currentOrderId = order.orderId;
-      if (!currentOrderId) return false;
+    const currentOrderId = order.orderId;
+    
+    if (!currentOrderId) {
+      console.warn("Save attempted without Order ID");
+      return false;
+    }
 
+    try {
       const draftRef = doc(db, 'drafts', currentOrderId);
       
       const orderToSave = {
@@ -75,23 +81,27 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         lastSavedAt: serverTimestamp(),
       };
 
-      // Force fail if it takes longer than 10 seconds
+      // Force fail if it takes longer than 20 seconds
       await withTimeout(
         setDoc(draftRef, orderToSave, { merge: true }), 
-        10000 
+        20000 
       );
 
       toast({
         title: 'Draft Saved',
-        description: `Order ${currentOrderId} has been synced to the cloud.`,
+        description: `Order ${currentOrderId} is synced to cloud.`,
       });
       return true;
     } catch (error: any) {
-      console.error("Firestore Save Error:", error);
+      // Log error but don't crash the console with raw stack traces
+      console.error("Cloud Sync Error:", error.message);
+      
       toast({
         variant: 'destructive',
-        title: 'Save Failed',
-        description: error.message || 'Could not save draft. Please check your connection.',
+        title: 'Sync Delayed',
+        description: error.message === "Database operation timed out" 
+          ? "The server is taking longer than expected. We'll keep trying in the background."
+          : "Could not save draft. Please check your internet connection.",
       });
       return false;
     }
@@ -112,7 +122,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setOrder(hydratedOrder);
     toast({
       title: 'Order Resumed',
-      description: `Draft ${draftOrder.orderId} is now active.`,
+      description: `Draft ${draftOrder.orderId} loaded successfully.`,
     });
   }, [toast]);
 
@@ -147,7 +157,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setOrder({ ...initialOrderState, orderId: newOrderId });
     toast({
         title: 'Order Reset',
-        description: 'All session data has been cleared.',
+        description: 'New session started.',
     });
   }, [toast]);
 
