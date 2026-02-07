@@ -1,0 +1,28 @@
+
+{
+  "entities": {
+    "OrderDraft": {
+      "title": "Order Draft",
+      "description": "A partially completed order saved for later completion.",
+      "type": "object",
+      "properties": {
+        "orderId": { "type": "string" },
+        "eventDetails": { "type": "object" },
+        "deliverables": { "type": "array" },
+        "paymentReceived": { "type": "number" },
+        "currentStep": { "type": "string" },
+        "lastSavedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["orderId", "eventDetails"]
+    }
+  },
+  "auth": {
+    "providers": ["google.com"]
+  },
+  "firestore": {
+    "/drafts/{orderId}": {
+      "schema": "OrderDraft",
+      "description": "Collection of order drafts indexed by their unique order ID."
+    }
+  }
+}

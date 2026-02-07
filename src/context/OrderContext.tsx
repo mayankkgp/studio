@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
@@ -47,14 +48,15 @@ const withTimeout = (promise: Promise<any>, ms: number) => {
     ]);
 };
 
-export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ children }: { children: React.ReactNode }) => {
+export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [order, setOrder] = useState<Order>(initialOrderState);
   const [isLoaded, setIsLoaded] = useState(false);
   const { toast } = useToast();
   const pathname = usePathname();
   
   useEffect(() => {
-    const newOrderId = `#ORD-${Math.floor(1000 + Math.random() * 9000)}`;
+    // Ensure order ID is clean (alphanumeric and dashes/underscores)
+    const newOrderId = `ORD-${Math.floor(1000 + Math.random() * 9000)}`;
     setOrder((prev) => ({ ...prev, orderId: prev.orderId || newOrderId }));
     setIsLoaded(true);
   }, []);
@@ -81,10 +83,11 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       toast({
         title: 'Draft Saved',
-        description: `Order ${currentOrderId} has been successfully persisted to the cloud.`,
+        description: `Order ${currentOrderId} has been synced to the cloud.`,
       });
       return true;
     } catch (error: any) {
+      console.error("Firestore Save Error:", error);
       toast({
         variant: 'destructive',
         title: 'Save Failed',
@@ -95,6 +98,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [order, toast, pathname]);
 
   const loadDraft = useCallback((draftOrder: Order) => {
+    // Hydrate Firestore Timestamps back into JavaScript Dates
     const hydratedOrder = {
       ...draftOrder,
       eventDetails: {
@@ -139,9 +143,8 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, []);
 
   const resetOrder = useCallback(() => {
-    const newOrderId = `#ORD-${Math.floor(1000 + Math.random() * 9000)}`;
-    const newOrder = { ...initialOrderState, orderId: newOrderId, deliverables: [] };
-    setOrder(newOrder);
+    const newOrderId = `ORD-${Math.floor(1000 + Math.random() * 9000)}`;
+    setOrder({ ...initialOrderState, orderId: newOrderId });
     toast({
         title: 'Order Reset',
         description: 'All session data has been cleared.',
