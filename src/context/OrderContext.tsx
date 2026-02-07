@@ -85,6 +85,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const draftRef = doc(db, 'drafts', currentOrderId);
 
     try {
+      // Initiate the write and await confirmation for the UI spinner
       await withTimeout(setDoc(draftRef, orderToSave, { merge: true }));
       
       toast({
@@ -94,19 +95,20 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       
       return true;
     } catch (serverError: any) {
-      // Create the rich, contextual error for the dev overlay
-      const permissionError = new FirestorePermissionError({
-        path: draftRef.path,
-        operation: 'write',
-        requestResourceData: orderToSave,
-      } satisfies SecurityRuleContext);
-
-      errorEmitter.emit('permission-error', permissionError);
+      // If it's a permission error, emit the specialized error for the dev overlay
+      if (serverError.code === 'permission-denied' || serverError.message?.includes('permissions')) {
+        const permissionError = new FirestorePermissionError({
+          path: draftRef.path,
+          operation: 'write',
+          requestResourceData: orderToSave,
+        } satisfies SecurityRuleContext);
+        errorEmitter.emit('permission-error', permissionError);
+      }
       
       toast({
         variant: 'destructive',
         title: 'Sync Failed',
-        description: 'Permissions error or timeout. Database rules are refreshing.',
+        description: 'Database rules are updating. Please try again in a moment.',
       });
       
       return false;
@@ -133,7 +135,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     try {
       await withTimeout(setDoc(activeRef, orderToActivate));
-      // Delete draft after successful activation (background)
+      // Delete draft after successful activation
       deleteDoc(draftRef).catch(() => {});
       
       toast({
@@ -145,18 +147,19 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       router.push('/active-orders');
       return true;
     } catch (serverError: any) {
-      const permissionError = new FirestorePermissionError({
-        path: activeRef.path,
-        operation: 'create',
-        requestResourceData: orderToActivate,
-      } satisfies SecurityRuleContext);
-
-      errorEmitter.emit('permission-error', permissionError);
+      if (serverError.code === 'permission-denied' || serverError.message?.includes('permissions')) {
+        const permissionError = new FirestorePermissionError({
+          path: activeRef.path,
+          operation: 'create',
+          requestResourceData: orderToActivate,
+        } satisfies SecurityRuleContext);
+        errorEmitter.emit('permission-error', permissionError);
+      }
       
       toast({
         variant: 'destructive',
         title: 'Activation Failed',
-        description: 'Check database permissions.',
+        description: 'Permissions denied. Check backend.json configuration.',
       });
       
       return false;

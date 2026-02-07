@@ -3,7 +3,7 @@
   "entities": {
     "OrderDraft": {
       "title": "Order Draft",
-      "description": "A partially completed order saved for later completion in the quote building process.",
+      "description": "A partially completed order saved for later completion in the quote building process with metadata for tracking.",
       "type": "object",
       "properties": {
         "orderId": { "type": "string" },
@@ -17,7 +17,7 @@
     },
     "ActiveOrder": {
       "title": "Active Order",
-      "description": "A finalized and activated order ready for fulfillment.",
+      "description": "A finalized and activated order ready for fulfillment with activation metadata.",
       "type": "object",
       "properties": {
         "orderId": { "type": "string" },
@@ -35,11 +35,11 @@
   "firestore": {
     "/drafts/{orderId}": {
       "schema": "OrderDraft",
-      "description": "Store for partially completed order drafts."
+      "description": "Secure store for partially completed order drafts."
     },
     "/active-orders/{orderId}": {
       "schema": "ActiveOrder",
-      "description": "Store for confirmed and activated orders."
+      "description": "Secure store for confirmed and activated orders."
     }
   }
 }
