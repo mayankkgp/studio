@@ -41,7 +41,6 @@ const initialOrderState: Order = {
   paymentReceived: 0,
 };
 
-// Utility to ensure Firestore operations don't hang indefinitely in the UI
 const withTimeout = <T>(promise: Promise<T>, ms: number = 10000): Promise<T> => {
   return Promise.race([
     promise,
@@ -82,6 +81,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const draftRef = doc(db, 'drafts', currentOrderId);
 
     try {
+      // Use setDoc for writes. Rules should be triggered by backend.json update.
       await withTimeout(setDoc(draftRef, orderToSave, { merge: true }));
       
       toast({
@@ -102,9 +102,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       toast({
         variant: 'destructive',
         title: 'Sync Failed',
-        description: serverError.message === 'Database operation timed out' 
-          ? 'Cloud sync is taking longer than expected. Retrying in background.' 
-          : 'Check your connection and try again.',
+        description: 'Permissions or network error. Check connection and retry.',
       });
       
       return false;
@@ -130,10 +128,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const draftRef = doc(db, 'drafts', order.orderId);
 
     try {
-      // 1. Set as active
       await withTimeout(setDoc(activeRef, orderToActivate));
-      
-      // 2. Remove from drafts
       await deleteDoc(draftRef).catch(() => {});
       
       toast({
@@ -156,7 +151,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       toast({
         variant: 'destructive',
         title: 'Activation Failed',
-        description: 'Operation timed out. Please try again.',
+        description: 'Could not move order to active state.',
       });
       
       return false;
