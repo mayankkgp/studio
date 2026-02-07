@@ -74,7 +74,7 @@ export default function DraftsPage() {
     if (!dateValue) return '-';
     try {
       const date = dateValue.toDate ? dateValue.toDate() : new Date(dateValue);
-      return format(date, 'dd MMM yyyy');
+      return format(date, 'dd MMM');
     } catch (e) {
       return '-';
     }
