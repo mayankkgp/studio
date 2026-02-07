@@ -14,7 +14,7 @@ type OrderContextType = {
   updateDeliverable: (id: string, updates: Partial<ConfiguredProduct>) => void;
   removeDeliverable: (id: string) => void;
   setPaymentReceived: (amount: number) => void;
-  saveAsDraft: (manualDetails?: EventDetails) => Promise<void>;
+  saveAsDraft: (manualDetails?: EventDetails) => Promise<boolean>;
   loadDraft: (draftOrder: Order) => void;
   resetOrder: () => void;
   isLoaded: boolean;
@@ -62,10 +62,10 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setIsLoaded(true);
   }, []);
 
-  const saveAsDraft = useCallback(async (manualDetails?: EventDetails) => {
+  const saveAsDraft = useCallback(async (manualDetails?: EventDetails): Promise<boolean> => {
     try {
       const currentOrderId = order.orderId;
-      if (!currentOrderId) return;
+      if (!currentOrderId) return false;
 
       const draftRef = doc(db, 'drafts', currentOrderId);
       
@@ -82,12 +82,14 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         title: 'Draft Saved',
         description: `Order ${currentOrderId} has been persisted to the cloud.`,
       });
+      return true;
     } catch (error: any) {
       toast({
         variant: 'destructive',
         title: 'Save Failed',
         description: error.message || 'Could not save draft to Firestore.',
       });
+      return false;
     }
   }, [order, toast, pathname]);
 

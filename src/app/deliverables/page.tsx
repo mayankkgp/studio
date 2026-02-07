@@ -108,16 +108,16 @@ export default function DeliverablesPage() {
             setIsNavigating(true);
             try {
                 // Ensure we save progress to cloud before leaving
-                await saveAsDraft();
-                router.push('/commercials');
+                const success = await saveAsDraft();
+                if (success) {
+                    router.push('/commercials');
+                } else {
+                    // Stay on page if save failed
+                    setIsNavigating(false);
+                }
             } catch (err) {
                 // If something goes wrong, allow the user to try again
                 setIsNavigating(false);
-            } finally {
-                // Note: setIsNavigating(false) shouldn't be here in a finally block 
-                // if the push is successful, but for safety against silent failures:
-                const timeout = setTimeout(() => setIsNavigating(false), 5000);
-                return () => clearTimeout(timeout);
             }
         }
     }, [isNextStepActive, isNavigating, router, saveAsDraft]);
@@ -168,6 +168,7 @@ export default function DeliverablesPage() {
                                                 onDone={handleDone}
                                                 onValidityChange={handleValidityChange}
                                                 onUpdate={updateDeliverable}
+                                                onUpdateDeliverable={updateDeliverable}
                                                 onRemove={handleRemove}
                                             />
                                         ))}
@@ -196,6 +197,7 @@ export default function DeliverablesPage() {
                                                 onDone={() => setOpenOrderListItems(prev => prev.filter(id => id !== item.id))}
                                                 onValidityChange={handleValidityChange}
                                                 onUpdate={updateDeliverable}
+                                                onUpdateDeliverable={updateDeliverable}
                                                 onRemove={handleRemove}
                                                 isPersistent={true}
                                             />
