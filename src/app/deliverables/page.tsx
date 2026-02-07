@@ -97,7 +97,6 @@ export default function DeliverablesPage() {
         const hasItems = deliverables.length > 0;
         const allConfirmed = activeItems.length === 0;
         const allCollapsed = openOrderListItems.length === 0;
-        // Safety: If rowStatus hasn't updated yet for a new item, we treat it as potentially invalid
         const allValid = deliverables.every(item => rowStatus[item.id]?.isValid === true);
         
         return hasItems && allConfirmed && allCollapsed && allValid;
@@ -107,14 +106,14 @@ export default function DeliverablesPage() {
         if (isNextStepActive) {
             setIsNavigating(true);
             try {
-                // Await the save result
+                // Await the boolean result from saveAsDraft
                 const success = await saveAsDraft();
                 
                 if (success) {
                     // Only navigate if save was successful
                     router.push('/commercials');
                 } else {
-                    // Stop loading if save failed
+                    // Stay on page if save failed
                     setIsNavigating(false);
                 }
             } catch (err) {
@@ -170,7 +169,6 @@ export default function DeliverablesPage() {
                                                 onDone={handleDone}
                                                 onValidityChange={handleValidityChange}
                                                 onUpdate={updateDeliverable}
-                                                onUpdateDeliverable={updateDeliverable}
                                                 onRemove={handleRemove}
                                             />
                                         ))}
@@ -199,7 +197,6 @@ export default function DeliverablesPage() {
                                                 onDone={() => setOpenOrderListItems(prev => prev.filter(id => id !== item.id))}
                                                 onValidityChange={handleValidityChange}
                                                 onUpdate={updateDeliverable}
-                                                onUpdateDeliverable={updateDeliverable}
                                                 onRemove={handleRemove}
                                                 isPersistent={true}
                                             />
