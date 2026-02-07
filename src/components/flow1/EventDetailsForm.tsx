@@ -1,7 +1,8 @@
+
 'use client';
 
 import * as React from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
@@ -165,22 +166,33 @@ export function EventDetailsForm({ activeOrder, onUpdate, hideFooters = false }:
 
   const { register, control, watch, handleSubmit, formState: { errors, isValid }, reset, setValue, getValues } = form;
   
+  const lastResetId = useRef<string | null>(null);
+
   useEffect(() => {
-    if (activeOrder) {
-      reset(activeOrder.eventDetails);
-    } else if (isLoaded) {
-      reset(order.eventDetails);
+    const currentId = activeOrder?.orderId || order?.orderId || 'new';
+    if (currentId !== lastResetId.current) {
+      if (activeOrder) {
+        reset(activeOrder.eventDetails);
+      } else if (isLoaded) {
+        reset(order.eventDetails);
+      }
+      lastResetId.current = currentId;
     }
-  }, [isLoaded, order.eventDetails, activeOrder, reset]);
+  }, [isLoaded, order, activeOrder, reset]);
   
   const watchedFields = watch();
   const headerSummary = useHeaderSummary(watchedFields);
 
   useEffect(() => {
     if (activeOrder && onUpdate) {
-      onUpdate(watchedFields as EventDetails);
+      const currentFormValues = getValues();
+      const parentValues = activeOrder.eventDetails;
+      // Only notify parent if values actually differ to prevent infinite loops
+      if (JSON.stringify(currentFormValues) !== JSON.stringify(parentValues)) {
+        onUpdate(currentFormValues as EventDetails);
+      }
     }
-  }, [watchedFields, activeOrder, onUpdate]);
+  }, [watchedFields, activeOrder, onUpdate, getValues]);
 
   useEffect(() => {
     if (watchedFields.eventType && watchedFields.eventType !== 'Engagement') {
@@ -234,7 +246,7 @@ export function EventDetailsForm({ activeOrder, onUpdate, hideFooters = false }:
             render={({ field }) => (
               <RadioGroup
                 onValueChange={field.onChange}
-                defaultValue={field.value}
+                value={field.value}
                 className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4"
               >
                 {eventTypeOptions.map((option) => (
@@ -544,7 +556,7 @@ export function EventDetailsForm({ activeOrder, onUpdate, hideFooters = false }:
                       name="gender"
                       control={control}
                       render={({ field }) => (
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value}>
                           <SelectTrigger className={cn(!field.value && "text-muted-foreground")}>
                             <SelectValue placeholder="Select gender" />
                           </SelectTrigger>
