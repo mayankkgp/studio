@@ -6,7 +6,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
 import { format, isValid as isValidDate } from 'date-fns';
-import { CalendarIcon, Users, Star, PartyPopper, Cake, Milestone, Check, ChevronsUpDown, X } from 'lucide-react';
+import { CalendarIcon, Users, Star, PartyPopper, Cake, Milestone, Check, ChevronsUpDown, X, MapPin } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -56,10 +56,11 @@ function ComboboxCity({
             role="combobox"
             aria-expanded={open}
             className={cn(
-              "w-full justify-between font-normal text-left h-10 px-3 pr-14",
+              "w-full justify-start font-normal text-left h-10 px-3 pr-14 hover:bg-transparent hover:border-foreground",
               !value && "text-muted-foreground"
             )}
           >
+            <MapPin className="mr-2 h-4 w-4 shrink-0 opacity-50" />
             <span className="truncate">{value || placeholder}</span>
             <ChevronsUpDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 shrink-0 opacity-50 pointer-events-none" />
           </Button>
@@ -283,14 +284,15 @@ export function EventDetailsForm() {
                    <Controller
                       name="eventDate"
                       control={control}
-                      render={({ field }) => (
+                      render={({ field, fieldState }) => (
                         <Popover open={openEventDate} onOpenChange={setOpenEventDate}>
                           <PopoverTrigger asChild>
                             <Button
                               variant={"outline"}
                               className={cn(
-                                "w-full justify-start text-left font-normal", 
-                                !field.value && "text-muted-foreground"
+                                "w-full justify-start text-left font-normal hover:bg-transparent hover:border-foreground", 
+                                !field.value && "text-muted-foreground",
+                                fieldState.invalid && "border-destructive"
                               )}
                             >
                               <CalendarIcon className="mr-2 h-4 w-4" />
@@ -333,14 +335,15 @@ export function EventDetailsForm() {
                    <Controller
                       name="orderDueDate"
                       control={control}
-                      render={({ field }) => (
+                      render={({ field, fieldState }) => (
                         <Popover open={openDueDate} onOpenChange={setOpenDueDate}>
                           <PopoverTrigger asChild>
                             <Button
                               variant={"outline"}
                               className={cn(
-                                "w-full justify-start text-left font-normal", 
-                                !field.value && "text-muted-foreground"
+                                "w-full justify-start text-left font-normal hover:bg-transparent hover:border-foreground", 
+                                !field.value && "text-muted-foreground",
+                                fieldState.invalid && "border-destructive"
                               )}
                             >
                               <CalendarIcon className="mr-2 h-4 w-4" />
@@ -421,14 +424,15 @@ export function EventDetailsForm() {
                             <Controller
                                 name="weddingDate"
                                 control={control}
-                                render={({ field }) => (
+                                render={({ field, fieldState }) => (
                                     <Popover open={openWeddingDate} onOpenChange={setOpenWeddingDate}>
                                     <PopoverTrigger asChild>
                                         <Button
                                         variant={"outline"}
                                         className={cn(
-                                          "w-full justify-start text-left font-normal", 
-                                          !field.value && "text-muted-foreground"
+                                          "w-full justify-start text-left font-normal hover:bg-transparent hover:border-foreground", 
+                                          !field.value && "text-muted-foreground",
+                                          fieldState.invalid && "border-destructive"
                                         )}
                                         >
                                         <CalendarIcon className="mr-2 h-4 w-4" />
@@ -521,7 +525,7 @@ export function EventDetailsForm() {
                           control={control}
                           render={({ field }) => (
                             <Select onValueChange={field.onChange} defaultValue={field.value}>
-                              <SelectTrigger>
+                              <SelectTrigger className={cn(!field.value && "text-muted-foreground")}>
                                 <SelectValue placeholder="Select gender" />
                               </SelectTrigger>
                               <SelectContent>
