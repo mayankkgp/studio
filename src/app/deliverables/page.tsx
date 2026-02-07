@@ -22,7 +22,6 @@ export default function DeliverablesPage() {
     const [rowStatus, setRowStatus] = useState<Record<string, { isValid: boolean }>>({});
     const [isNavigating, setIsNavigating] = useState(false);
     
-    // Initialize committedItemIds with existing deliverables on mount
     const [committedItemIds, setCommittedItemIds] = useState<string[]>(() => 
         (order.deliverables || []).map(item => item.id)
     );
@@ -77,13 +76,11 @@ export default function DeliverablesPage() {
         };
     }, [order.deliverables, committedItemIds]);
 
-    // Autoscroll logic for newly added items
     const lastActiveCount = useRef(activeItems.length);
     const actionSectionRef = useRef<HTMLHeadingElement>(null);
 
     useEffect(() => {
         if (activeItems.length > lastActiveCount.current) {
-            // New item was added via CommandBar
             actionSectionRef.current?.scrollIntoView({ 
                 behavior: 'smooth', 
                 block: 'start' 
@@ -106,14 +103,11 @@ export default function DeliverablesPage() {
         if (isNextStepActive) {
             setIsNavigating(true);
             try {
-                // Await the boolean result from saveAsDraft
                 const success = await saveAsDraft();
                 
                 if (success) {
-                    // Only navigate if save was successful
                     router.push('/commercials');
                 } else {
-                    // Stay on page if save failed
                     setIsNavigating(false);
                 }
             } catch (err) {
