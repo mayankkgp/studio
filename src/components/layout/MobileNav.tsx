@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Package, DollarSign, PanelLeft } from 'lucide-react';
+import { Home, Package, DollarSign, FileText, PanelLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Logo } from '@/components/icons/Logo';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger } from '@/components/ui/sheet';
@@ -13,6 +13,7 @@ const navItems = [
   { href: '/', label: 'Event Details', icon: Home },
   { href: '/deliverables', label: 'Deliverables', icon: Package },
   { href: '/commercials', label: 'Commercials', icon: DollarSign },
+  { href: '/drafts', label: 'My Drafts', icon: FileText },
 ];
 
 export function MobileNav() {
