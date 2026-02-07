@@ -19,9 +19,12 @@ export default function DeliverablesPage() {
     const { toast } = useToast();
     const headerSummary = useHeaderSummary(order.eventDetails);
     
+    // Row validation status
     const [rowStatus, setRowStatus] = useState<Record<string, { isValid: boolean }>>({});
     const [isNavigating, setIsNavigating] = useState(false);
     
+    // Track items that are "Done" (in the Order List)
+    // Initialize with all items so they start in the "Done" list when resuming a draft
     const [committedItemIds, setCommittedItemIds] = useState<string[]>(() => 
         (order.deliverables || []).map(item => item.id)
     );
@@ -89,14 +92,15 @@ export default function DeliverablesPage() {
         lastActiveCount.current = activeItems.length;
     }, [activeItems.length]);
 
+    // Trust committed items as valid
     const isNextStepActive = useMemo(() => {
         const deliverables = order.deliverables || [];
         const hasItems = deliverables.length > 0;
         const allConfirmed = activeItems.length === 0;
         const allCollapsed = openOrderListItems.length === 0;
         
-        // FIX: If an item is already committed (in the list), consider it valid.
-        // Otherwise, check the live rowStatus.
+        // If an item is in "committedItemIds", we treat it as valid.
+        // If it's active, we check the live "rowStatus".
         const allValid = deliverables.every(item => {
             if (committedItemIds.includes(item.id)) return true;
             return rowStatus[item.id]?.isValid === true;
@@ -109,6 +113,7 @@ export default function DeliverablesPage() {
         if (isNextStepActive) {
             setIsNavigating(true);
             try {
+                // We rely on saveAsDraft returning a boolean now
                 const success = await saveAsDraft();
                 
                 if (success) {
@@ -169,7 +174,6 @@ export default function DeliverablesPage() {
                                                 onDone={handleDone}
                                                 onValidityChange={handleValidityChange}
                                                 onUpdate={updateDeliverable}
-                                                onUpdateDeliverable={updateDeliverable}
                                                 onRemove={handleRemove}
                                             />
                                         ))}
@@ -198,7 +202,6 @@ export default function DeliverablesPage() {
                                                 onDone={() => setOpenOrderListItems(prev => prev.filter(id => id !== item.id))}
                                                 onValidityChange={handleValidityChange}
                                                 onUpdate={updateDeliverable}
-                                                onUpdateDeliverable={updateDeliverable}
                                                 onRemove={handleRemove}
                                                 isPersistent={true}
                                             />
