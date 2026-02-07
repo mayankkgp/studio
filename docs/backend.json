@@ -7,6 +7,7 @@
       "type": "object",
       "properties": {
         "orderId": { "type": "string" },
+        "id": { "type": "string", "description": "Duplicate of orderId for reference" },
         "eventDetails": { "type": "object" },
         "deliverables": { "type": "array" },
         "paymentReceived": { "type": "number" },
@@ -21,9 +22,12 @@
       "type": "object",
       "properties": {
         "orderId": { "type": "string" },
+        "id": { "type": "string" },
         "eventDetails": { "type": "object" },
         "deliverables": { "type": "array" },
         "paymentReceived": { "type": "number" },
+        "currentStep": { "type": "string" },
+        "lastSavedAt": { "type": ["object", "null"] },
         "activatedAt": { "type": "object", "description": "Firestore Server Timestamp" }
       },
       "required": ["orderId", "eventDetails", "activatedAt"]
@@ -35,11 +39,11 @@
   "firestore": {
     "/drafts/{orderId}": {
       "schema": "OrderDraft",
-      "description": "Store for partially completed order drafts. (Deployment Version: v5 - Full Permissions)"
+      "description": "Store for partially completed order drafts. (Deployment Version: v6 - Expanded Metadata)"
     },
     "/active-orders/{orderId}": {
       "schema": "ActiveOrder",
-      "description": "Store for confirmed and activated orders. (Deployment Version: v5 - Full Permissions)"
+      "description": "Store for confirmed and activated orders. (Deployment Version: v6 - Expanded Metadata)"
     }
   }
 }
