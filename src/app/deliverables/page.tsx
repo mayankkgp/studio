@@ -104,23 +104,25 @@ export default function DeliverablesPage() {
     }, [order.deliverables, activeItems.length, openOrderListItems.length, rowStatus]);
 
     const handleNextStep = useCallback(async () => {
-        if (isNextStepActive && !isNavigating) {
+        if (isNextStepActive) {
             setIsNavigating(true);
             try {
-                // Ensure we save progress to cloud before leaving
+                // Await the save result
                 const success = await saveAsDraft();
+                
                 if (success) {
+                    // Only navigate if save was successful
                     router.push('/commercials');
                 } else {
-                    // Stay on page if save failed
+                    // Stop loading if save failed
                     setIsNavigating(false);
                 }
             } catch (err) {
-                // If something goes wrong, allow the user to try again
+                console.error("Navigation error:", err);
                 setIsNavigating(false);
             }
         }
-    }, [isNextStepActive, isNavigating, router, saveAsDraft]);
+    }, [isNextStepActive, router, saveAsDraft]);
 
     return (
         <AppLayout>
