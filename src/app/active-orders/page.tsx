@@ -7,9 +7,10 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useOrder } from '@/context/OrderContext';
 import { useRouter } from 'next/navigation';
-import { Zap, Trash2, Loader2, Search, HardDrive } from 'lucide-react';
+import { Zap, Trash2, Loader2, Search, Calendar } from 'lucide-react';
 import { calculateBillableItems } from '@/lib/pricing';
 import { Input } from '@/components/ui/input';
+import { format } from 'date-fns';
 
 export default function ActiveOrdersPage() {
   const [activeOrders, setActiveOrders] = useState<any[]>([]);
@@ -63,6 +64,15 @@ export default function ActiveOrdersPage() {
     return details.honoreeNameBirthday || details.honoreeNameOther || details.eventName || 'Unnamed Event';
   };
 
+  const formatDate = (dateValue: any) => {
+    if (!dateValue) return '-';
+    try {
+      return format(new Date(dateValue), 'dd MMM yyyy');
+    } catch (e) {
+      return '-';
+    }
+  };
+
   const filteredOrders = activeOrders.filter(order => 
     order.orderId.toLowerCase().includes(searchTerm.toLowerCase()) ||
     getClientName(order.eventDetails).toLowerCase().includes(searchTerm.toLowerCase())
@@ -108,7 +118,8 @@ export default function ActiveOrdersPage() {
                     <TableRow className="hover:bg-transparent">
                       <TableHead>Order ID</TableHead>
                       <TableHead>Client</TableHead>
-                      <TableHead>Storage</TableHead>
+                      <TableHead>Event Date</TableHead>
+                      <TableHead>Due Date</TableHead>
                       <TableHead className="text-right">Value (₹)</TableHead>
                       <TableHead className="text-right"></TableHead>
                     </TableRow>
@@ -118,11 +129,11 @@ export default function ActiveOrdersPage() {
                       <TableRow key={order.orderId} className="cursor-pointer group" onClick={() => { loadDraft(order); router.push('/commercials'); }}>
                         <TableCell className="font-mono font-bold text-primary">{order.orderId}</TableCell>
                         <TableCell className="font-medium">{getClientName(order.eventDetails)}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                             <HardDrive className="h-3 w-3 text-amber-500" />
-                             <span className="text-[10px] uppercase font-bold text-muted-foreground">Local Only</span>
-                          </div>
+                        <TableCell className="text-muted-foreground text-xs font-medium">
+                          {formatDate(order.eventDetails?.eventDate)}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-xs font-medium">
+                          {formatDate(order.eventDetails?.orderDueDate)}
                         </TableCell>
                         <TableCell className="text-right font-bold tabular-nums">
                           {calculateBillableItems(order.deliverables).reduce((acc, item) => acc + item.components.reduce((cAcc, c) => cAcc + c.total, 0), 0).toLocaleString('en-IN')}
