@@ -13,7 +13,7 @@ import { format } from 'date-fns';
 import { FileText, Trash2, Loader2, Search } from 'lucide-react';
 import { calculateBillableItems } from '@/lib/pricing';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/badge';
+import { Badge } from '@/components/ui/badge';
 import { doc, deleteDoc } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
