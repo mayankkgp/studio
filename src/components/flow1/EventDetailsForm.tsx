@@ -284,50 +284,53 @@ export function EventDetailsForm() {
                    <Controller
                       name="eventDate"
                       control={control}
-                      render={({ field, fieldState }) => (
-                        <Popover open={openEventDate} onOpenChange={setOpenEventDate}>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant={"outline"}
-                              className={cn(
-                                "w-full justify-start text-left font-normal hover:bg-transparent hover:border-foreground hover:text-foreground", 
-                                !field.value && "text-muted-foreground hover:text-muted-foreground",
-                                fieldState.invalid && "border-destructive hover:border-destructive"
+                      render={({ field, fieldState }) => {
+                        const showError = fieldState.invalid && fieldState.isTouched;
+                        return (
+                          <Popover open={openEventDate} onOpenChange={setOpenEventDate}>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant={"outline"}
+                                className={cn(
+                                  "w-full justify-start text-left font-normal hover:bg-transparent hover:border-foreground hover:text-foreground", 
+                                  !field.value && "text-muted-foreground hover:text-muted-foreground",
+                                  showError && "border-destructive hover:border-destructive"
+                                )}
+                              >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {formatDisplayDate(field.value) || <span>Pick a date</span>}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0 flex flex-col" align="start">
+                              <Calendar 
+                                mode="single" 
+                                selected={field.value || undefined} 
+                                onSelect={(date) => {
+                                  field.onChange(date);
+                                  setOpenEventDate(false);
+                                }} 
+                                initialFocus 
+                              />
+                              {field.value && (
+                                <div className="p-2 border-t">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
+                                    type="button"
+                                    onClick={() => {
+                                      field.onChange(null);
+                                      setOpenEventDate(false);
+                                    }}
+                                  >
+                                    Clear Date
+                                  </Button>
+                                </div>
                               )}
-                            >
-                              <CalendarIcon className="mr-2 h-4 w-4" />
-                              {formatDisplayDate(field.value) || <span>Pick a date</span>}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0 flex flex-col" align="start">
-                            <Calendar 
-                              mode="single" 
-                              selected={field.value || undefined} 
-                              onSelect={(date) => {
-                                field.onChange(date);
-                                setOpenEventDate(false);
-                              }} 
-                              initialFocus 
-                            />
-                            {field.value && (
-                              <div className="p-2 border-t">
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
-                                  className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
-                                  type="button"
-                                  onClick={() => {
-                                    field.onChange(null);
-                                    setOpenEventDate(false);
-                                  }}
-                                >
-                                  Clear Date
-                                </Button>
-                              </div>
-                            )}
-                          </PopoverContent>
-                        </Popover>
-                      )}
+                            </PopoverContent>
+                          </Popover>
+                        );
+                      }}
                     />
                 </div>
                  <div className="space-y-2">
@@ -335,50 +338,53 @@ export function EventDetailsForm() {
                    <Controller
                       name="orderDueDate"
                       control={control}
-                      render={({ field, fieldState }) => (
-                        <Popover open={openDueDate} onOpenChange={setOpenDueDate}>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant={"outline"}
-                              className={cn(
-                                "w-full justify-start text-left font-normal hover:bg-transparent hover:border-foreground hover:text-foreground", 
-                                !field.value && "text-muted-foreground hover:text-muted-foreground",
-                                fieldState.invalid && "border-destructive hover:border-destructive"
+                      render={({ field, fieldState }) => {
+                        const showError = fieldState.invalid && fieldState.isTouched;
+                        return (
+                          <Popover open={openDueDate} onOpenChange={setOpenDueDate}>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant={"outline"}
+                                className={cn(
+                                  "w-full justify-start text-left font-normal hover:bg-transparent hover:border-foreground hover:text-foreground", 
+                                  !field.value && "text-muted-foreground hover:text-muted-foreground",
+                                  showError && "border-destructive hover:border-destructive"
+                                )}
+                              >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {formatDisplayDate(field.value) || <span>Pick a date</span>}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0 flex flex-col" align="start">
+                              <Calendar 
+                                mode="single" 
+                                selected={field.value || undefined} 
+                                onSelect={(date) => {
+                                  field.onChange(date);
+                                  setOpenDueDate(false);
+                                }} 
+                                initialFocus 
+                              />
+                              {field.value && (
+                                <div className="p-2 border-t">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
+                                    type="button"
+                                    onClick={() => {
+                                      field.onChange(null);
+                                      setOpenDueDate(false);
+                                    }}
+                                  >
+                                    Clear Date
+                                  </Button>
+                                </div>
                               )}
-                            >
-                              <CalendarIcon className="mr-2 h-4 w-4" />
-                              {formatDisplayDate(field.value) || <span>Pick a date</span>}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0 flex flex-col" align="start">
-                            <Calendar 
-                              mode="single" 
-                              selected={field.value || undefined} 
-                              onSelect={(date) => {
-                                field.onChange(date);
-                                setOpenDueDate(false);
-                              }} 
-                              initialFocus 
-                            />
-                            {field.value && (
-                              <div className="p-2 border-t">
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
-                                  className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
-                                  type="button"
-                                  onClick={() => {
-                                    field.onChange(null);
-                                    setOpenDueDate(false);
-                                  }}
-                                >
-                                  Clear Date
-                                </Button>
-                              </div>
-                            )}
-                          </PopoverContent>
-                        </Popover>
-                      )}
+                            </PopoverContent>
+                          </Popover>
+                        );
+                      }}
                     />
                 </div>
               </div>
@@ -424,50 +430,53 @@ export function EventDetailsForm() {
                             <Controller
                                 name="weddingDate"
                                 control={control}
-                                render={({ field, fieldState }) => (
+                                render={({ field, fieldState }) => {
+                                  const showError = fieldState.invalid && fieldState.isTouched;
+                                  return (
                                     <Popover open={openWeddingDate} onOpenChange={setOpenWeddingDate}>
-                                    <PopoverTrigger asChild>
-                                        <Button
-                                        variant={"outline"}
-                                        className={cn(
-                                          "w-full justify-start text-left font-normal hover:bg-transparent hover:border-foreground hover:text-foreground", 
-                                          !field.value && "text-muted-foreground hover:text-muted-foreground",
-                                          fieldState.invalid && "border-destructive hover:border-destructive"
-                                        )}
-                                        >
-                                        <CalendarIcon className="mr-2 h-4 w-4" />
-                                        {formatDisplayDate(field.value) || <span>Pick a date</span>}
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0 flex flex-col" align="start">
-                                        <Calendar 
-                                          mode="single" 
-                                          selected={field.value || undefined} 
-                                          onSelect={(date) => {
-                                            field.onChange(date);
-                                            setOpenWeddingDate(false);
-                                          }} 
-                                          initialFocus 
-                                        />
-                                        {field.value && (
-                                          <div className="p-2 border-t">
-                                            <Button 
-                                              variant="ghost" 
-                                              size="sm" 
-                                              className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
-                                              type="button"
-                                              onClick={() => {
-                                                field.onChange(null);
-                                                setOpenWeddingDate(false);
-                                              }}
-                                            >
-                                              Clear Date
-                                            </Button>
-                                          </div>
-                                        )}
-                                    </PopoverContent>
+                                      <PopoverTrigger asChild>
+                                          <Button
+                                          variant={"outline"}
+                                          className={cn(
+                                            "w-full justify-start text-left font-normal hover:bg-transparent hover:border-foreground hover:text-foreground", 
+                                            !field.value && "text-muted-foreground hover:text-muted-foreground",
+                                            showError && "border-destructive hover:border-destructive"
+                                          )}
+                                          >
+                                          <CalendarIcon className="mr-2 h-4 w-4" />
+                                          {formatDisplayDate(field.value) || <span>Pick a date</span>}
+                                          </Button>
+                                      </PopoverTrigger>
+                                      <PopoverContent className="w-auto p-0 flex flex-col" align="start">
+                                          <Calendar 
+                                            mode="single" 
+                                            selected={field.value || undefined} 
+                                            onSelect={(date) => {
+                                              field.onChange(date);
+                                              setOpenWeddingDate(false);
+                                            }} 
+                                            initialFocus 
+                                          />
+                                          {field.value && (
+                                            <div className="p-2 border-t">
+                                              <Button 
+                                                variant="ghost" 
+                                                size="sm" 
+                                                className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
+                                                type="button"
+                                                onClick={() => {
+                                                  field.onChange(null);
+                                                  setOpenWeddingDate(false);
+                                                }}
+                                              >
+                                                Clear Date
+                                              </Button>
+                                            </div>
+                                          )}
+                                      </PopoverContent>
                                     </Popover>
-                                )}
+                                  );
+                                }}
                             />
                         </div>
                         <div className="space-y-2">
