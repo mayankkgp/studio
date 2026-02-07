@@ -37,19 +37,6 @@ const initialOrderState: Order = {
   paymentReceived: 0,
 };
 
-/**
- * Helper to force a timeout for database operations.
- * Increased to 20 seconds to allow for initial handshake/auth.
- */
-const withTimeout = (promise: Promise<any>, ms: number) => {
-    return Promise.race([
-        promise,
-        new Promise((_, reject) => 
-            setTimeout(() => reject(new Error("Database operation timed out")), ms)
-        )
-    ]);
-};
-
 export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [order, setOrder] = useState<Order>(initialOrderState);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -67,7 +54,6 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const currentOrderId = order.orderId;
     
     if (!currentOrderId) {
-      console.warn("Save attempted without Order ID");
       return false;
     }
 
@@ -81,11 +67,8 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         lastSavedAt: serverTimestamp(),
       };
 
-      // Force fail if it takes longer than 20 seconds
-      await withTimeout(
-        setDoc(draftRef, orderToSave, { merge: true }), 
-        20000 
-      );
+      // We await here because the 'Next Step' flow depends on the result
+      await setDoc(draftRef, orderToSave, { merge: true });
 
       toast({
         title: 'Draft Saved',
@@ -93,15 +76,11 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       });
       return true;
     } catch (error: any) {
-      // Log error but don't crash the console with raw stack traces
-      console.error("Cloud Sync Error:", error.message);
-      
+      // Do not use console.error as it triggers the error overlay
       toast({
         variant: 'destructive',
         title: 'Sync Delayed',
-        description: error.message === "Database operation timed out" 
-          ? "The server is taking longer than expected. We'll keep trying in the background."
-          : "Could not save draft. Please check your internet connection.",
+        description: "Could not save draft. Please check your internet connection.",
       });
       return false;
     }
