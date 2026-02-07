@@ -1,11 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { Home, Package, DollarSign, FileText } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import { Home, Package, DollarSign, FileText, PlusCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Logo } from '@/components/icons/Logo';
 import { useOrder } from '@/context/OrderContext';
+import { Button } from '@/components/ui/button';
 
 const navItems = [
   { href: '/', label: 'Event Details', icon: Home },
@@ -16,7 +17,13 @@ const navItems = [
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { order } = useOrder();
+  const router = useRouter();
+  const { order, resetOrder } = useOrder();
+
+  const handleCreateOrder = () => {
+    resetOrder();
+    router.push('/');
+  };
 
   return (
     <div className="hidden border-r bg-card lg:block lg:w-64 fixed h-full">
@@ -26,6 +33,17 @@ export function Sidebar() {
             <Logo className="h-6 w-auto" />
           </Link>
         </div>
+        
+        <div className="px-4 py-4">
+          <Button 
+            onClick={handleCreateOrder}
+            className="w-full justify-start gap-2 font-bold shadow-sm"
+          >
+            <PlusCircle className="h-4 w-4" />
+            Create Order
+          </Button>
+        </div>
+
         <div className="flex-1 overflow-auto py-2">
           <nav className="grid items-start px-4 text-sm font-medium">
             {navItems.map((item) => (
@@ -43,9 +61,11 @@ export function Sidebar() {
             ))}
           </nav>
         </div>
-        <div className="mt-auto p-4">
-            <div className="text-center text-xs text-muted-foreground">Order ID</div>
-            <div className="text-center font-mono font-semibold text-primary">{order.orderId}</div>
+        <div className="mt-auto p-4 border-t">
+            <div className="text-center text-[10px] font-bold uppercase text-muted-foreground mb-1">Current Order</div>
+            <div className="text-center font-mono text-sm font-bold text-primary truncate">
+              {order.orderId || 'NOT ASSIGNED'}
+            </div>
         </div>
       </div>
     </div>

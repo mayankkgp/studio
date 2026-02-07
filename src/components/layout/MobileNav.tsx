@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { Home, Package, DollarSign, FileText, PanelLeft } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import { Home, Package, DollarSign, FileText, PanelLeft, PlusCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Logo } from '@/components/icons/Logo';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger } from '@/components/ui/sheet';
@@ -18,7 +18,13 @@ const navItems = [
 
 export function MobileNav() {
   const pathname = usePathname();
-  const { order } = useOrder();
+  const router = useRouter();
+  const { order, resetOrder } = useOrder();
+
+  const handleCreateOrder = () => {
+    resetOrder();
+    router.push('/');
+  };
 
   return (
     <Sheet>
@@ -28,25 +34,36 @@ export function MobileNav() {
           <span className="sr-only">Toggle Menu</span>
         </Button>
       </SheetTrigger>
-      <SheetContent side="left" className="sm:max-w-xs">
+      <SheetContent side="left" className="sm:max-w-xs flex flex-col">
         <SheetHeader className="sr-only">
           <SheetTitle>SrishFlow Navigation Menu</SheetTitle>
           <SheetDescription>
             Access and navigate through different sections of the order management system.
           </SheetDescription>
         </SheetHeader>
-        <nav className="grid gap-6 text-lg font-medium">
-          <Link href="/" className="group flex h-10 w-10 shrink-0 items-center justify-center gap-2 rounded-full bg-primary text-lg font-semibold text-primary-foreground md:text-base">
-            <Logo className="h-6 w-auto" />
-            <span className="sr-only">SrishFlow</span>
-          </Link>
+        
+        <div className="flex h-16 items-center px-2">
+          <Logo className="h-6 w-auto" />
+        </div>
+
+        <div className="py-4">
+          <Button 
+            onClick={handleCreateOrder}
+            className="w-full justify-start gap-2 font-bold"
+          >
+            <PlusCircle className="h-4 w-4" />
+            Create Order
+          </Button>
+        </div>
+
+        <nav className="grid gap-4 text-lg font-medium">
           {navItems.map((item) => (
             <Link
               key={item.label}
               href={item.href}
               className={cn(
                 'flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground',
-                pathname === item.href && 'text-foreground'
+                pathname === item.href && 'text-foreground font-bold'
               )}
             >
               <item.icon className="h-5 w-5" />
@@ -54,9 +71,12 @@ export function MobileNav() {
             </Link>
           ))}
         </nav>
-        <div className="mt-auto absolute bottom-4 left-4 right-4">
-            <div className="text-center text-xs text-muted-foreground">Order ID</div>
-            <div className="text-center font-mono font-semibold text-primary">{order.orderId}</div>
+        
+        <div className="mt-auto pb-6">
+            <div className="text-center text-[10px] font-bold uppercase text-muted-foreground mb-1">Current Order</div>
+            <div className="text-center font-mono font-bold text-primary">
+              {order.orderId || 'NOT ASSIGNED'}
+            </div>
         </div>
       </SheetContent>
     </Sheet>
