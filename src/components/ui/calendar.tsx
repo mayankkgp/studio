@@ -20,11 +20,16 @@ function Calendar({
       showOutsideDays={showOutsideDays}
       className={cn("p-3", className)}
       classNames={{
-        months: "flex flex-col sm:flex-row space-y-4 sm:x-4 sm:space-y-0",
-        month: "space-y-4 relative",
-        month_caption: "flex justify-center pt-1 relative items-center h-10 px-10",
+        months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
+        month: "space-y-4 relative", // Main anchor
+        month_caption: "flex justify-center pt-1 items-center h-10 px-10", // relative removed
         caption_label: "text-sm font-medium hidden",
+        dropdowns: "flex justify-center gap-1 items-center z-10",
+        
+        // Navigation Overlay: Full width, sits on top of header
         nav: "absolute top-0 w-full h-10 flex justify-between items-center px-1 pointer-events-none z-10",
+        
+        // Navigation Buttons: Static positioning within the flex overlay
         button_previous: cn(
           buttonVariants({ variant: "outline" }),
           "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 pointer-events-auto"
@@ -33,7 +38,7 @@ function Calendar({
           buttonVariants({ variant: "outline" }),
           "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 pointer-events-auto"
         ),
-        dropdowns: "flex justify-center gap-1 items-center z-10",
+        
         month_grid: "w-auto mx-auto border-collapse space-y-1",
         weekdays: "flex w-fit mx-auto",
         weekday: "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem] text-center",
