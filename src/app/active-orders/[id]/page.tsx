@@ -199,7 +199,11 @@ export default function ActiveOrderCommandCenter() {
     };
 
     const handleProjectedTotalChange = useCallback((id: string, total: number) => {
-        setProjectedTotals(prev => ({ ...prev, [id]: total }));
+        setProjectedTotals(prev => {
+            // Guard against identical updates to break re-render loops
+            if (prev[id] === total) return prev;
+            return { ...prev, [id]: total };
+        });
     }, []);
 
     const handleRowValidityChange = useCallback((id: string, isValid: boolean) => {

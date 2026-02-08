@@ -40,7 +40,10 @@ const getValidationSchema = (product: Product | null) => {
     let schemaObject: any = {
         variant: product.variants && product.variants.length > 0 ? z.string().min(1, "REQUIRED") : z.string().optional(),
         specialRequest: z.string().optional(),
-        rateOverrides: z.record(z.number().min(0, "MIN 0")).optional(),
+        rateOverrides: z.record(z.preprocess(
+            (val) => (val === "" || val === null ? undefined : Number(val)),
+            z.number().min(0, "MIN 0")
+        )).optional(),
     };
 
     if (product.configType === 'A') {
@@ -171,7 +174,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         }
     }, [isReadOnly, item, product, reset]);
 
-    // Use Ref to handle callback stability and avoid infinite update loops
     const onValidityChangeRef = React.useRef(onValidityChange);
     React.useEffect(() => {
         onValidityChangeRef.current = onValidityChange;
@@ -201,13 +203,17 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         return calculateItemBreakdown(currentItem);
     }, [watchedValues, item]);
 
-    // Broadcast projected total to parent
+    const currentNumericTotal = React.useMemo(() => {
+        return itemBreakdown.reduce((sum, c) => sum + c.total, 0);
+    }, [itemBreakdown]);
+
+    // Broadcast projected total to parent - uses currentNumericTotal (number) 
+    // to prevent identity-based re-render loops from the breakdown array.
     React.useEffect(() => {
         if (onProjectedTotalChange) {
-            const total = itemBreakdown.reduce((sum, c) => sum + c.total, 0);
-            onProjectedTotalChange(item.id, total);
+            onProjectedTotalChange(item.id, currentNumericTotal);
         }
-    }, [itemBreakdown, item.id, onProjectedTotalChange]);
+    }, [currentNumericTotal, item.id, onProjectedTotalChange]);
 
     const getLogicWarning = React.useCallback((fieldValue: any, constraints?: SoftConstraint[]) => {
         if (fieldValue === undefined || fieldValue === null || fieldValue === '') return null;
