@@ -14,7 +14,7 @@ interface CustomerDataFormProps {
 }
 
 /**
- * Auto-growing Textarea Component
+ * Auto-growing Textarea Component with Focus Stability
  */
 const AutoGrowingTextarea = React.forwardRef<
   HTMLTextAreaElement,
@@ -57,7 +57,7 @@ const AutoGrowingTextarea = React.forwardRef<
 AutoGrowingTextarea.displayName = "AutoGrowingTextarea";
 
 /**
- * Section Header Component (Moved Outside)
+ * Section Header Component
  */
 const SectionHeader = ({ title, icon: Icon }: { title: string, icon: any }) => (
   <div className="flex items-center gap-2 mb-6 group">
@@ -69,7 +69,7 @@ const SectionHeader = ({ title, icon: Icon }: { title: string, icon: any }) => (
 );
 
 /**
- * Editable Field Component (Moved Outside to prevent re-renders on keystroke)
+ * Editable Field Component
  */
 const EditableField = ({ 
   id, 
@@ -94,7 +94,7 @@ const EditableField = ({
 }) => {
   const hasValue = value && value.trim().length > 0;
 
-  // In review mode, if it's empty and not focused, we hide it completely to reduce noise
+  // In review mode, if it's empty and not focused, we show a subtle placeholder
   if (!hasValue && !isFocused) {
     return (
       <div 
@@ -125,6 +125,7 @@ const EditableField = ({
           placeholder={placeholder}
           onFocus={onFocus}
           onBlur={onBlur}
+          autoFocus={isFocused}
           className={cn(
             "font-medium leading-relaxed",
             !isFocused && "border-none shadow-none p-0 cursor-text",
@@ -164,7 +165,6 @@ const ProductBriefItem = ({
         isFocused ? "border-primary bg-white shadow-sm ring-1 ring-primary/20" : "border-primary/10 hover:border-primary/20"
       )}
     >
-      {/* Left: Metadata */}
       <div className="md:w-1/3 shrink-0 space-y-2">
         <div className="flex items-center justify-between">
           <h4 className="font-headline font-black text-sm text-foreground uppercase tracking-tight truncate">
@@ -204,7 +204,6 @@ const ProductBriefItem = ({
         </div>
       </div>
 
-      {/* Right: Input */}
       <div className="flex-1 min-w-0">
         {(!hasValue && !isFocused) ? (
           <div 
@@ -219,6 +218,7 @@ const ProductBriefItem = ({
             {...register(briefKey as any)}
             onFocus={onFocus}
             onBlur={onBlur}
+            autoFocus={isFocused}
             className={cn(
               "font-medium bg-transparent",
               !isFocused && "border-none shadow-none p-0 cursor-text",
@@ -255,7 +255,6 @@ export function CustomerDataForm({ order, onSave, isSaving }: CustomerDataFormPr
   return (
     <div className="space-y-12 pb-20">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-16">
-        {/* 1. Visual Identity */}
         <div className="space-y-8">
           <SectionHeader title="Visual Identity" icon={Palette} />
           <div className="space-y-6">
@@ -295,7 +294,6 @@ export function CustomerDataForm({ order, onSave, isSaving }: CustomerDataFormPr
           </div>
         </div>
 
-        {/* 2. The Narrative */}
         <div className="space-y-8">
           <SectionHeader title="The Narrative" icon={BookOpen} />
           <div className="space-y-6">
@@ -335,7 +333,6 @@ export function CustomerDataForm({ order, onSave, isSaving }: CustomerDataFormPr
           </div>
         </div>
 
-        {/* 3. Culture & Symbols */}
         <div className="space-y-8">
           <SectionHeader title="Culture & Symbols" icon={Globe} />
           <div className="space-y-6">
@@ -364,7 +361,6 @@ export function CustomerDataForm({ order, onSave, isSaving }: CustomerDataFormPr
           </div>
         </div>
 
-        {/* 4. Atmosphere & Extras */}
         <div className="space-y-8">
           <SectionHeader title="Atmosphere & Extras" icon={Sparkles} />
           <div className="space-y-6">
@@ -394,7 +390,6 @@ export function CustomerDataForm({ order, onSave, isSaving }: CustomerDataFormPr
         </div>
       </div>
 
-      {/* Product Specific Briefs */}
       <div className="pt-8 border-t border-primary/10">
         <SectionHeader title="Product Specific Briefs" icon={Box} />
         
@@ -413,7 +408,6 @@ export function CustomerDataForm({ order, onSave, isSaving }: CustomerDataFormPr
         </div>
       </div>
 
-      {/* Persistence Hook (Exposed via ID for Header Button) */}
       <form id="creative-brief-form" onSubmit={handleSubmit(onSave)} className="hidden" />
     </div>
   );
