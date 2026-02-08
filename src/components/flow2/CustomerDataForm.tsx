@@ -3,25 +3,26 @@
 import * as React from 'react';
 import { useForm, UseFormRegister } from 'react-hook-form';
 import { Label } from '@/components/ui/label';
-import { Palette, BookOpen, Globe, Sparkles, Box, MessageSquare } from 'lucide-react';
+import { Palette, BookOpen, Globe, Sparkles, Box, MessageSquare, Eye, EyeOff } from 'lucide-react';
 import type { Order, CustomerData, ConfiguredProduct } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 
 /**
- * Auto-growing Textarea Component with Dynamic Height Logic
- * Normalized box model for consistent alignment during focus.
+ * Auto-growing Textarea Component
+ * Optimized for keyboard stability and dynamic height.
  */
 const AutoGrowingTextarea = React.forwardRef<
   HTMLTextAreaElement,
-  React.TextareaHTMLAttributes<HTMLTextAreaElement>
->(({ className, onInput, ...props }, ref) => {
+  React.TextareaHTMLAttributes<HTMLTextAreaElement> & { minRows?: number }
+>(({ className, onInput, minRows = 2, ...props }, ref) => {
   const textAreaRef = React.useRef<HTMLTextAreaElement | null>(null);
 
   const adjustHeight = () => {
     const element = textAreaRef.current;
     if (element) {
       element.style.height = 'auto';
-      element.style.height = `${element.scrollHeight}px`;
+      element.style.height = `${Math.max(element.scrollHeight, 40)}px`;
     }
   };
 
@@ -38,14 +39,13 @@ const AutoGrowingTextarea = React.forwardRef<
         if (typeof ref === 'function') ref(e);
         else if (ref) ref(e);
       }}
-      rows={1}
+      rows={minRows}
       onInput={(e) => {
         adjustHeight();
         if (onInput) onInput(e);
       }}
       className={cn(
-        "flex w-full bg-transparent px-3 py-2 text-sm ring-offset-background focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 resize-none transition-all duration-200 overflow-hidden border-2",
-        "placeholder:italic placeholder:text-[11px] placeholder:opacity-75 placeholder:font-normal placeholder:text-muted-foreground",
+        "flex w-full bg-transparent px-3 py-2 text-sm transition-all duration-200 overflow-hidden resize-none focus:outline-none",
         className
       )}
     />
@@ -57,172 +57,147 @@ AutoGrowingTextarea.displayName = "AutoGrowingTextarea";
  * Section Header Component
  */
 const SectionHeader = ({ title, icon: Icon }: { title: string, icon: any }) => (
-  <div className="flex items-center gap-3 mb-8 group">
-    <div className="h-9 w-9 shrink-0 rounded-lg bg-primary/10 text-primary flex items-center justify-center border-2 border-primary/30 shadow-sm">
+  <div className="flex items-center gap-3 mb-6 group">
+    <div className="h-8 w-8 shrink-0 rounded-lg bg-primary/10 text-primary flex items-center justify-center border border-primary/20">
       <Icon className="h-4 w-4" />
     </div>
-    <h3 className="font-headline text-lg font-black text-foreground tracking-tight uppercase border-b-2 border-primary/40 pb-1">
+    <h3 className="font-headline text-sm font-black text-foreground tracking-tight uppercase border-b-2 border-primary/10 pb-0.5">
       {title}
     </h3>
   </div>
 );
 
 /**
- * Editable Field Component
+ * Expert Field Component (Always Rendered for Keyboard Nav)
  */
 const EditableField = ({ 
   id, 
   label, 
-  placeholder, 
   register,
   registerKey,
   value,
-  isFocused,
-  onFocus,
-  onBlur
+  showEmpty
 }: { 
   id: string, 
   label: string, 
-  placeholder: string, 
   register: UseFormRegister<CustomerData>,
   registerKey: any,
   value: string,
-  isFocused: boolean,
-  onFocus: () => void,
-  onBlur: () => void
+  showEmpty: boolean
 }) => {
   const hasValue = value && value.trim().length > 0;
+  
+  // Requirement 5: Hide empty states when not focused unless showEmpty is true
+  if (!hasValue && !showEmpty) {
+    return (
+      <div className="focus-within:block hidden">
+        <AutoGrowingTextarea {...register(registerKey)} />
+      </div>
+    );
+  }
 
   return (
-    <div className={cn(
-      "space-y-1 group transition-all duration-200 border-l-2 pl-4",
-      isFocused ? "border-primary" : "border-primary/25"
-    )}>
+    <div className="space-y-1 group transition-all duration-200 border-l-2 pl-4 border-primary/20 focus-within:border-primary">
       <Label 
         htmlFor={id} 
-        className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1 block"
+        className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/80 mb-1 block"
       >
         {label}
       </Label>
-      <div className="relative">
-        {(!hasValue && !isFocused) ? (
-          <div 
-            className="cursor-pointer py-2 pl-3 hover:bg-primary/5 transition-colors border-2 border-transparent"
-            onClick={onFocus}
-          >
-            <div className="text-xs italic text-muted-foreground/90 font-medium">Click to add {label.toLowerCase()}...</div>
-          </div>
-        ) : (
-          <AutoGrowingTextarea 
-            id={id} 
-            {...register(registerKey)}
-            placeholder={placeholder}
-            onFocus={onFocus}
-            onBlur={onBlur}
-            autoFocus={isFocused}
-            className={cn(
-              "font-semibold leading-relaxed text-foreground border-2 transition-all",
-              isFocused 
-                ? "bg-primary/5 border-primary/50 shadow-sm rounded-lg" 
-                : "border-transparent bg-transparent shadow-none cursor-text p-3 -ml-3" 
-            )}
-          />
+      <AutoGrowingTextarea 
+        id={id} 
+        {...register(registerKey)}
+        placeholder="Add details..."
+        className={cn(
+          "font-semibold leading-relaxed text-foreground border-2 rounded-md -ml-3",
+          "bg-transparent border-transparent hover:bg-primary/5",
+          "focus:bg-background focus:border-primary/40 focus:shadow-sm focus:placeholder:opacity-50",
+          "placeholder:italic placeholder:font-normal placeholder:text-muted-foreground/60"
         )}
-      </div>
+      />
     </div>
   );
 };
 
 /**
- * Product Brief Item Component
+ * Product Brief Row Component
  */
-const ProductBriefItem = ({
+const ProductBriefRow = ({
   item,
   register,
   value,
-  isFocused,
-  onFocus,
-  onBlur
+  showEmpty
 }: {
   item: ConfiguredProduct,
   register: UseFormRegister<CustomerData>,
   value: string,
-  isFocused: boolean,
-  onFocus: () => void,
-  onBlur: () => void
+  showEmpty: boolean
 }) => {
   const briefKey = `productBriefs.${item.id}`;
   const hasValue = value && value.trim().length > 0;
 
+  if (!hasValue && !showEmpty) {
+    return (
+      <div className="focus-within:grid hidden">
+        <AutoGrowingTextarea {...register(briefKey as any)} />
+      </div>
+    );
+  }
+
   return (
-    <div 
-      className={cn(
-        "group flex flex-col md:flex-row items-stretch gap-4 p-4 rounded-xl border-2 transition-all",
-        isFocused 
-          ? "border-primary/50 bg-primary/5 shadow-md" 
-          : "border-primary/20 bg-card/40 hover:bg-card/60"
-      )}
-    >
-      <div className="md:w-1/3 shrink-0 space-y-2.5">
-        <h4 className="font-headline font-black text-sm text-foreground uppercase tracking-tight">
+    <div className="grid grid-cols-1 md:grid-cols-[240px_1fr] gap-6 py-4 border-b border-primary/10 last:border-0 group transition-all">
+      <div className="space-y-2 pt-1">
+        <h4 className="font-headline font-black text-xs text-foreground uppercase tracking-tight">
           {item.productName}
         </h4>
-        
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-1">
           {item.quantity !== undefined && item.quantity !== null && (
-            <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-primary/15 text-primary font-black text-[9px] uppercase border-2 border-primary/30">
+            <span className="px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-bold text-[9px] uppercase border">
               QTY: {item.quantity}
             </span>
           )}
           {item.pages !== undefined && item.pages !== null && (
-            <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-primary/15 text-primary font-black text-[9px] uppercase border-2 border-primary/30">
+            <span className="px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-bold text-[9px] uppercase border">
               {item.pages} PGS
             </span>
           )}
           {item.variant && (
-            <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-muted/60 text-muted-foreground font-black text-[9px] uppercase border-2 border-border/60">
+            <span className="px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-bold text-[9px] uppercase border">
               {item.variant}
             </span>
           )}
-          {item.specialRequest && (
-            <div className="flex items-center gap-1.5 text-[9px] font-black text-orange-950 uppercase bg-orange-200 px-1.5 py-0.5 rounded border-2 border-orange-300 w-full">
-              <MessageSquare className="h-2.5 w-2.5 shrink-0" />
-              <span className="truncate">{item.specialRequest}</span>
-            </div>
-          )}
         </div>
+        {item.specialRequest && (
+          <div className="flex items-center gap-1.5 text-[9px] font-bold text-orange-800 uppercase bg-orange-50 px-1.5 py-1 rounded border border-orange-200">
+            <MessageSquare className="h-2.5 w-2.5 shrink-0" />
+            <span className="line-clamp-1">{item.specialRequest}</span>
+          </div>
+        )}
       </div>
 
-      <div className="flex-1 min-w-0">
-        {(!hasValue && !isFocused) ? (
-          <div 
-            className="h-full flex items-center px-3 cursor-pointer opacity-90 group-hover:opacity-100 transition-opacity min-h-[2.5rem]"
-            onClick={onFocus}
-          >
-            <span className="text-xs italic font-medium text-muted-foreground/90">Add brief details for {item.productName.toLowerCase()}...</span>
-          </div>
-        ) : (
-          <AutoGrowingTextarea 
-            placeholder={`Enter requirements for ${item.productName}`}
-            {...register(briefKey as any)}
-            onFocus={onFocus}
-            onBlur={onBlur}
-            autoFocus={isFocused}
-            className={cn(
-              "font-semibold bg-transparent text-foreground border-2 transition-all",
-              isFocused 
-                ? "border-primary/30 bg-background/50 rounded-lg shadow-sm p-3" 
-                : "border-transparent shadow-none cursor-text p-3 -ml-3"
-            )}
-          />
-        )}
+      <div className="relative focus-within:z-10">
+        <AutoGrowingTextarea 
+          placeholder="Add product requirements..."
+          {...register(briefKey as any)}
+          className={cn(
+            "font-semibold bg-transparent text-foreground border-2 rounded-md transition-all -ml-3",
+            "border-transparent hover:bg-primary/5",
+            "focus:bg-background focus:border-primary/40 focus:shadow-sm focus:placeholder:opacity-50",
+            "placeholder:italic placeholder:font-normal placeholder:text-muted-foreground/60"
+          )}
+        />
       </div>
     </div>
   );
 };
 
 export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; onSave: (data: CustomerData) => void; isSaving?: boolean }) {
-  const [focusedField, setFocusedField] = React.useState<string | null>(null);
+  // Logic to handle Requirement 5 (Hide empty states)
+  // Expert users can toggle this to add new data
+  const [showEmptyFields, setShowEmptyFields] = React.useState(() => {
+    // If entire creative brief is empty, default to show all
+    return !order.customerData;
+  });
 
   const defaultValues = React.useMemo(() => order.customerData || {
     visualIdentity: { moodStyle: '', colorTypography: '', designDislikes: '' },
@@ -243,160 +218,157 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
   }, [defaultValues, reset]);
 
   return (
-    <div className="space-y-12 pb-24">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-16">
-        <div className="space-y-8">
-          <SectionHeader title="Visual Identity" icon={Palette} />
-          <div className="space-y-6">
-            <EditableField 
-              id="mood"
-              label="Mood & Style Reference"
-              placeholder="Pinterest/Drive links or keywords like 'Minimalist', 'Regal', etc."
-              register={register}
-              registerKey="visualIdentity.moodStyle"
-              value={watchedValues.visualIdentity?.moodStyle || ''}
-              isFocused={focusedField === 'mood'}
-              onFocus={() => setFocusedField('mood')}
-              onBlur={() => setFocusedField(null)}
-            />
-            <EditableField 
-              id="colors"
-              label="Color Palette & Typography"
-              placeholder="Primary colors, accent shades, and preferred font styles"
-              register={register}
-              registerKey="visualIdentity.colorTypography"
-              value={watchedValues.visualIdentity?.colorTypography || ''}
-              isFocused={focusedField === 'colors'}
-              onFocus={() => setFocusedField('colors')}
-              onBlur={() => setFocusedField(null)}
-            />
-            <EditableField 
-              id="dislikes"
-              label="Design Dislikes"
-              placeholder="Elements, motifs, or styles to strictly avoid"
-              register={register}
-              registerKey="visualIdentity.designDislikes"
-              value={watchedValues.visualIdentity?.designDislikes || ''}
-              isFocused={focusedField === 'dislikes'}
-              onFocus={() => setFocusedField('dislikes')}
-              onBlur={() => setFocusedField(null)}
-            />
-          </div>
+    <div className="space-y-12 pb-24 max-w-6xl mx-auto">
+      <div className="flex items-center justify-between border-b border-primary/10 pb-4">
+        <div className="space-y-1">
+          <h2 className="text-xl font-headline font-black text-foreground">Creative Briefing</h2>
+          <p className="text-xs text-muted-foreground font-medium">Capture visual and narrative context for design production.</p>
+        </div>
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={() => setShowEmptyFields(!showEmptyFields)}
+          className={cn(
+            "h-8 gap-2 font-bold text-[10px] uppercase tracking-widest",
+            showEmptyFields ? "text-primary bg-primary/5" : "text-muted-foreground"
+          )}
+        >
+          {showEmptyFields ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+          {showEmptyFields ? "Hide Empty" : "Show All Fields"}
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-12">
+        <div className="space-y-10">
+          <section>
+            <SectionHeader title="Visual Identity" icon={Palette} />
+            <div className="space-y-6">
+              <EditableField 
+                id="mood"
+                label="Mood & Style Reference"
+                register={register}
+                registerKey="visualIdentity.moodStyle"
+                value={watchedValues.visualIdentity?.moodStyle || ''}
+                showEmpty={showEmptyFields}
+              />
+              <EditableField 
+                id="colors"
+                label="Color Palette & Typography"
+                register={register}
+                registerKey="visualIdentity.colorTypography"
+                value={watchedValues.visualIdentity?.colorTypography || ''}
+                showEmpty={showEmptyFields}
+              />
+              <EditableField 
+                id="dislikes"
+                label="Design Dislikes"
+                register={register}
+                registerKey="visualIdentity.designDislikes"
+                value={watchedValues.visualIdentity?.designDislikes || ''}
+                showEmpty={showEmptyFields}
+              />
+            </div>
+          </section>
+
+          <section>
+            <SectionHeader title="Culture & Symbols" icon={Globe} />
+            <div className="space-y-6">
+              <EditableField 
+                id="icons"
+                label="Mandatory Icons & Motifs"
+                register={register}
+                registerKey="cultureSymbols.mandatoryIcons"
+                value={watchedValues.cultureSymbols?.mandatoryIcons || ''}
+                showEmpty={showEmptyFields}
+              />
+              <EditableField 
+                id="nuances"
+                label="Regional Nuances"
+                register={register}
+                registerKey="cultureSymbols.regionalNuances"
+                value={watchedValues.cultureSymbols?.regionalNuances || ''}
+                showEmpty={showEmptyFields}
+              />
+            </div>
+          </section>
         </div>
 
-        <div className="space-y-8">
-          <SectionHeader title="The Narrative" icon={BookOpen} />
-          <div className="space-y-6">
-            <EditableField 
-              id="timeline"
-              label="Relationship Timeline"
-              placeholder="Meeting spot, key life moments, and proposal details"
-              register={register}
-              registerKey="narrative.timeline"
-              value={watchedValues.narrative?.timeline || ''}
-              isFocused={focusedField === 'timeline'}
-              onFocus={() => setFocusedField('timeline')}
-              onBlur={() => setFocusedField(null)}
-            />
-            <EditableField 
-              id="couple"
-              label="The Couple's World"
-              placeholder="Shared hobbies, pets, or travel destinations"
-              register={register}
-              registerKey="narrative.coupleWorld"
-              value={watchedValues.narrative?.coupleWorld || ''}
-              isFocused={focusedField === 'couple'}
-              onFocus={() => setFocusedField('couple')}
-              onBlur={() => setFocusedField(null)}
-            />
-            <EditableField 
-              id="eggs"
-              label="Easter Eggs"
-              placeholder="Inside jokes or subtle motifs to hide in designs"
-              register={register}
-              registerKey="narrative.easterEggs"
-              value={watchedValues.narrative?.easterEggs || ''}
-              isFocused={focusedField === 'eggs'}
-              onFocus={() => setFocusedField('eggs')}
-              onBlur={() => setFocusedField(null)}
-            />
-          </div>
-        </div>
+        <div className="space-y-10">
+          <section>
+            <SectionHeader title="The Narrative" icon={BookOpen} />
+            <div className="space-y-6">
+              <EditableField 
+                id="timeline"
+                label="Relationship Timeline"
+                register={register}
+                registerKey="narrative.timeline"
+                value={watchedValues.narrative?.timeline || ''}
+                showEmpty={showEmptyFields}
+              />
+              <EditableField 
+                id="couple"
+                label="The Couple's World"
+                register={register}
+                registerKey="narrative.coupleWorld"
+                value={watchedValues.narrative?.coupleWorld || ''}
+                showEmpty={showEmptyFields}
+              />
+              <EditableField 
+                id="eggs"
+                label="Easter Eggs"
+                register={register}
+                registerKey="narrative.easterEggs"
+                value={watchedValues.narrative?.easterEggs || ''}
+                showEmpty={showEmptyFields}
+              />
+            </div>
+          </section>
 
-        <div className="space-y-8">
-          <SectionHeader title="Culture & Symbols" icon={Globe} />
-          <div className="space-y-6">
-            <EditableField 
-              id="icons"
-              label="Mandatory Icons & Motifs"
-              placeholder="Religious symbols, family crests, or ancestral patterns"
-              register={register}
-              registerKey="cultureSymbols.mandatoryIcons"
-              value={watchedValues.cultureSymbols?.mandatoryIcons || ''}
-              isFocused={focusedField === 'icons'}
-              onFocus={() => setFocusedField('icons')}
-              onBlur={() => setFocusedField(null)}
-            />
-            <EditableField 
-              id="nuances"
-              label="Regional Nuances"
-              placeholder="Specific phrases, shlokas, or local cultural elements"
-              register={register}
-              registerKey="cultureSymbols.regionalNuances"
-              value={watchedValues.cultureSymbols?.regionalNuances || ''}
-              isFocused={focusedField === 'nuances'}
-              onFocus={() => setFocusedField('nuances')}
-              onBlur={() => setFocusedField(null)}
-            />
-          </div>
-        </div>
-
-        <div className="space-y-8">
-          <SectionHeader title="Atmosphere & Extras" icon={Sparkles} />
-          <div className="space-y-6">
-            <EditableField 
-              id="personality"
-              label="Venue Personality"
-              placeholder="Atmosphere and setting description for each event"
-              register={register}
-              registerKey="atmosphereExtras.venuePersonality"
-              value={watchedValues.atmosphereExtras?.venuePersonality || ''}
-              isFocused={focusedField === 'personality'}
-              onFocus={() => setFocusedField('personality')}
-              onBlur={() => setFocusedField(null)}
-            />
-            <EditableField 
-              id="other"
-              label="Other Details"
-              placeholder="Any miscellaneous constraints or requirements"
-              register={register}
-              registerKey="atmosphereExtras.otherDetails"
-              value={watchedValues.atmosphereExtras?.otherDetails || ''}
-              isFocused={focusedField === 'other'}
-              onFocus={() => setFocusedField('other')}
-              onBlur={() => setFocusedField(null)}
-            />
-          </div>
+          <section>
+            <SectionHeader title="Atmosphere & Extras" icon={Sparkles} />
+            <div className="space-y-6">
+              <EditableField 
+                id="personality"
+                label="Venue Personality"
+                register={register}
+                registerKey="atmosphereExtras.venuePersonality"
+                value={watchedValues.atmosphereExtras?.venuePersonality || ''}
+                showEmpty={showEmptyFields}
+              />
+              <EditableField 
+                id="other"
+                label="Other Details"
+                register={register}
+                registerKey="atmosphereExtras.otherDetails"
+                value={watchedValues.atmosphereExtras?.otherDetails || ''}
+                showEmpty={showEmptyFields}
+              />
+            </div>
+          </section>
         </div>
       </div>
 
-      <div className="pt-8 border-t-2 border-primary/20">
+      <section className="pt-8 border-t border-primary/10">
         <SectionHeader title="Product Specific Briefs" icon={Box} />
         
-        <div className="grid gap-3">
-          {order.deliverables.map((item) => (
-            <ProductBriefItem 
-              key={item.id}
-              item={item}
-              register={register}
-              value={(watchedValues.productBriefs as any)?.[item.id] || ''}
-              isFocused={focusedField === item.id}
-              onFocus={() => setFocusedField(item.id)}
-              onBlur={() => setFocusedField(null)}
-            />
-          ))}
+        <div className="bg-card/30 rounded-xl px-6 border border-primary/5">
+          {order.deliverables.length === 0 ? (
+            <div className="py-8 text-center italic text-muted-foreground text-sm">No products in scope. Add products in the Overview tab.</div>
+          ) : (
+            <div className="flex flex-col">
+              {order.deliverables.map((item) => (
+                <ProductBriefRow 
+                  key={item.id}
+                  item={item}
+                  register={register}
+                  value={(watchedValues.productBriefs as any)?.[item.id] || ''}
+                  showEmpty={showEmptyFields}
+                />
+              ))}
+            </div>
+          )}
         </div>
-      </div>
+      </section>
 
       <form id="creative-brief-form" onSubmit={handleSubmit(onSave)} className="hidden" />
     </div>
