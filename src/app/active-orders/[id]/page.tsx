@@ -21,13 +21,13 @@ import {
     Lock,
     Unlock,
     CheckCircle2,
-    ArrowRight,
     Receipt,
     WalletCards,
     ChevronUp,
     Info,
     AlertTriangle,
-    Eye,
+    Copy,
+    Search,
     X
 } from 'lucide-react';
 import { EventDetailsForm } from '@/components/flow1/EventDetailsForm';
@@ -39,6 +39,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Input } from '@/components/ui/input';
 import { 
     AlertDialog, 
     AlertDialogAction, 
@@ -67,6 +68,7 @@ export default function ActiveOrderCommandCenter() {
     const [viewMode, setViewMode] = useState<'scope' | 'bill'>('scope');
     const [isExitConfirmOpen, setIsExitConfirmOpen] = useState(false);
     const [isPaymentPopoverOpen, setIsPaymentPopoverOpen] = useState(false);
+    const [itemSearchQuery, setItemSearchQuery] = useState('');
     
     const [projectedTotals, setProjectedTotals] = useState<Record<string, number>>({});
     const [initialTotal, setInitialTotal] = useState(0);
@@ -178,6 +180,7 @@ export default function ActiveOrderCommandCenter() {
     const addDeliverable = (del: ConfiguredProduct) => {
         setActiveOrder(prev => {
             if (!prev) return null;
+            // Optimistically add to the current order state in memory
             return { ...prev, deliverables: [del, ...prev.deliverables] };
         });
         setExpandedItems(prev => [...prev, del.id]);
@@ -260,6 +263,33 @@ export default function ActiveOrderCommandCenter() {
         return d.honoreeNameBirthday || d.honoreeNameOther || d.eventName || 'Unnamed Event';
     };
 
+    const handleCopySummary = () => {
+        if (!activeOrder) return;
+        
+        const clientName = getClientDisplay();
+        const deliverables = activeOrder.deliverables.map(item => {
+            const components = calculateItemBreakdown(item);
+            const itemTotal = components.reduce((sum, c) => sum + c.total, 0);
+            const qty = item.quantity ? ` (x${item.quantity})` : '';
+            return `• ${item.productName}${qty}: ₹${itemTotal.toLocaleString('en-IN')}`;
+        }).join('\n');
+
+        const summary = `Order #${activeOrder.orderId} Summary for ${clientName}:
+${deliverables}
+
+Total Order Value: ₹${workingTotal.toLocaleString('en-IN')}
+Total Paid: ₹${(activeOrder.paymentReceived || 0).toLocaleString('en-IN')}
+Current Balance Due: ₹${balance.toLocaleString('en-IN')}
+        `.trim();
+
+        navigator.clipboard.writeText(summary).then(() => {
+            toast({
+                title: "Summary Copied",
+                description: "Order details have been copied to your clipboard.",
+            });
+        });
+    };
+
     const billViewData = useMemo(() => {
         if (!activeOrder) return [];
         return activeOrder.deliverables.flatMap(item => {
@@ -274,6 +304,15 @@ export default function ActiveOrderCommandCenter() {
             }));
         });
     }, [activeOrder?.deliverables, projectedTotals]);
+
+    const filteredDeliverables = useMemo(() => {
+        if (!activeOrder) return [];
+        if (!itemSearchQuery.trim()) return activeOrder.deliverables;
+        const query = itemSearchQuery.toLowerCase();
+        return activeOrder.deliverables.filter(d => 
+            d.productName.toLowerCase().includes(query)
+        );
+    }, [activeOrder?.deliverables, itemSearchQuery]);
 
     if (loading) {
         return (
@@ -359,7 +398,12 @@ export default function ActiveOrderCommandCenter() {
                 <CardHeader className="pb-2 bg-muted/20">
                     <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center justify-between">
                         Live Financials
-                        <TrendingUp className="h-3 w-3 text-primary" />
+                        <div className="flex items-center gap-2">
+                            <Button variant="ghost" size="icon" className="h-6 w-6 text-primary hover:bg-primary/10" onClick={handleCopySummary} title="Copy Summary">
+                                <Copy className="h-3 w-3" />
+                            </Button>
+                            <TrendingUp className="h-3 w-3 text-primary" />
+                        </div>
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6 pt-6">
@@ -445,8 +489,8 @@ export default function ActiveOrderCommandCenter() {
                             balance > 0 ? "text-destructive" : "text-green-600"
                         )}>
                             ₹{Math.abs(balance).toLocaleString('en-IN')}
-                            {balance < 0 && <span className="text-xs uppercase">(Excess)</span>}
-                            {balance === 0 && <span className="text-xs uppercase">(Paid)</span>}
+                            {balance < 0 && <span className="text-xs uppercase ml-1">(Excess)</span>}
+                            {balance === 0 && <span className="text-xs uppercase ml-1">(Paid)</span>}
                         </p>
                     </div>
                 </CardContent>
@@ -490,13 +534,34 @@ export default function ActiveOrderCommandCenter() {
                 <main className="flex-1 flex overflow-hidden">
                     <div className="flex-1 overflow-y-auto bg-background/50 custom-scrollbar relative">
                         <div className="max-w-4xl mx-auto p-4 md:p-8 space-y-8 pb-32">
-                            <div className="flex items-center justify-between">
-                                <h2 className="text-xl font-headline font-bold flex items-center gap-2">
+                            <div className="flex items-center justify-between gap-4">
+                                <h2 className="text-xl font-headline font-bold flex items-center gap-2 shrink-0">
                                     <Package className="h-5 w-5 text-primary" />
                                     Scope of Work
                                 </h2>
                                 
-                                <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-4 flex-1 justify-end">
+                                    {viewMode === 'scope' && (
+                                        <div className="relative max-w-[200px] hidden sm:block">
+                                            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                                            <Input 
+                                                placeholder="Filter list..." 
+                                                className="h-8 pl-8 text-xs bg-background"
+                                                value={itemSearchQuery}
+                                                onChange={(e) => setItemSearchQuery(e.target.value)}
+                                            />
+                                            {itemSearchQuery && (
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="icon" 
+                                                    className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6"
+                                                    onClick={() => setItemSearchQuery('')}
+                                                >
+                                                    <X className="h-3 w-3" />
+                                                </Button>
+                                            )}
+                                        </div>
+                                    )}
                                     <Tabs value={viewMode} onValueChange={(v: any) => setViewMode(v)} className="w-auto">
                                         <TabsList className="h-8 p-1 bg-muted/50 border">
                                             <TabsTrigger value="scope" className="text-[10px] font-bold uppercase h-6 px-3">
@@ -508,7 +573,7 @@ export default function ActiveOrderCommandCenter() {
                                         </TabsList>
                                     </Tabs>
                                     {!isEditMode && (
-                                        <Badge variant="secondary" className="gap-1.5 text-[10px] font-bold uppercase tracking-wider hidden sm:flex">
+                                        <Badge variant="secondary" className="gap-1.5 text-[10px] font-bold uppercase tracking-wider hidden md:flex">
                                             <Lock className="h-3 w-3" /> Locked
                                         </Badge>
                                     )}
@@ -518,6 +583,20 @@ export default function ActiveOrderCommandCenter() {
                             {isEditMode && (
                                 <div className="bg-card p-4 md:p-6 rounded-xl border-2 border-primary/10 shadow-sm sticky top-0 z-40 backdrop-blur-sm bg-card/95">
                                     <CommandBar onAdd={addDeliverable} />
+                                </div>
+                            )}
+
+                            {viewMode === 'scope' && (
+                                <div className="sm:hidden mb-4">
+                                    <div className="relative">
+                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                        <Input 
+                                            placeholder="Search products..." 
+                                            className="h-10 pl-10"
+                                            value={itemSearchQuery}
+                                            onChange={(e) => setItemSearchQuery(e.target.value)}
+                                        />
+                                    </div>
                                 </div>
                             )}
 
@@ -558,31 +637,40 @@ export default function ActiveOrderCommandCenter() {
                                         </table>
                                     </div>
                                 ) : (
-                                    <Accordion 
-                                        type="multiple" 
-                                        value={expandedItems} 
-                                        onValueChange={setExpandedItems}
-                                        className="space-y-3"
-                                    >
-                                        {activeOrder.deliverables.map((item) => (
-                                            <DeliverableRow 
-                                                key={item.id} 
-                                                item={item} 
-                                                isReadOnly={!isEditMode}
-                                                isExpanded={expandedItems.includes(item.id)} 
-                                                isNonCollapsible={false}
-                                                onEdit={() => handleEditRow(item.id)}
-                                                onDone={handleDoneRow}
-                                                onValidityChange={() => {}}
-                                                onUpdate={updateDeliverable}
-                                                onRemove={removeDeliverable}
-                                                onProjectedTotalChange={handleProjectedTotalChange}
-                                                isPersistent={false}
-                                                manualSyncOnly={true}
-                                                showCommercials={true}
-                                            />
-                                        ))}
-                                    </Accordion>
+                                    <>
+                                        {filteredDeliverables.length === 0 ? (
+                                            <div className="text-center py-20 bg-muted/20 rounded-xl border border-dashed">
+                                                <p className="text-muted-foreground text-sm">No items match "{itemSearchQuery}"</p>
+                                                <Button variant="link" size="sm" onClick={() => setItemSearchQuery('')}>Clear filter</Button>
+                                            </div>
+                                        ) : (
+                                            <Accordion 
+                                                type="multiple" 
+                                                value={expandedItems} 
+                                                onValueChange={setExpandedItems}
+                                                className="space-y-3"
+                                            >
+                                                {filteredDeliverables.map((item) => (
+                                                    <DeliverableRow 
+                                                        key={item.id} 
+                                                        item={item} 
+                                                        isReadOnly={!isEditMode}
+                                                        isExpanded={expandedItems.includes(item.id)} 
+                                                        isNonCollapsible={false}
+                                                        onEdit={() => handleEditRow(item.id)}
+                                                        onDone={handleDoneRow}
+                                                        onValidityChange={() => {}}
+                                                        onUpdate={updateDeliverable}
+                                                        onRemove={removeDeliverable}
+                                                        onProjectedTotalChange={handleProjectedTotalChange}
+                                                        isPersistent={false}
+                                                        manualSyncOnly={true}
+                                                        showCommercials={true}
+                                                    />
+                                                ))}
+                                            </Accordion>
+                                        )}
+                                    </>
                                 )}
                             </div>
                         </div>
