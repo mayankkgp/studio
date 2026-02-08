@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 
 /**
  * Auto-growing Textarea Component with Dynamic Height Logic
+ * Normalized box model for consistent alignment during focus.
  */
 const AutoGrowingTextarea = React.forwardRef<
   HTMLTextAreaElement,
@@ -44,7 +45,7 @@ const AutoGrowingTextarea = React.forwardRef<
       }}
       className={cn(
         "flex w-full bg-transparent px-3 py-2 text-sm ring-offset-background focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 resize-none transition-all duration-200 overflow-hidden border-2",
-        "placeholder:italic placeholder:text-[11px] placeholder:opacity-40 placeholder:font-normal",
+        "placeholder:italic placeholder:text-[11px] placeholder:opacity-75 placeholder:font-normal placeholder:text-muted-foreground",
         className
       )}
     />
@@ -92,44 +93,41 @@ const EditableField = ({
 }) => {
   const hasValue = value && value.trim().length > 0;
 
-  if (!hasValue && !isFocused) {
-    return (
-      <div 
-        className="group cursor-pointer py-2 border-l-2 border-primary/25 hover:border-primary/50 pl-4 transition-all duration-200"
-        onClick={onFocus}
-      >
-        <div className="text-[10px] font-black uppercase tracking-widest text-primary/70 mb-1">{label}</div>
-        <div className="text-xs italic text-muted-foreground/80 font-medium">Click to add {label.toLowerCase()}...</div>
-      </div>
-    );
-  }
-
   return (
     <div className={cn(
       "space-y-1 group transition-all duration-200 border-l-2 pl-4",
-      isFocused ? "border-primary" : "border-primary/40"
+      isFocused ? "border-primary" : "border-primary/25"
     )}>
       <Label 
         htmlFor={id} 
-        className="text-[10px] font-black uppercase tracking-widest text-primary/80 mb-1 block"
+        className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1 block"
       >
         {label}
       </Label>
       <div className="relative">
-        <AutoGrowingTextarea 
-          id={id} 
-          {...register(registerKey)}
-          placeholder={placeholder}
-          onFocus={onFocus}
-          onBlur={onBlur}
-          autoFocus={isFocused}
-          className={cn(
-            "font-semibold leading-relaxed text-foreground border-2 p-3 transition-all",
-            isFocused 
-              ? "bg-primary/5 border-primary/50 shadow-sm rounded-lg" 
-              : "border-transparent bg-transparent shadow-none cursor-text -ml-3" 
-          )}
-        />
+        {(!hasValue && !isFocused) ? (
+          <div 
+            className="cursor-pointer py-2 pl-3 hover:bg-primary/5 transition-colors border-2 border-transparent"
+            onClick={onFocus}
+          >
+            <div className="text-xs italic text-muted-foreground/90 font-medium">Click to add {label.toLowerCase()}...</div>
+          </div>
+        ) : (
+          <AutoGrowingTextarea 
+            id={id} 
+            {...register(registerKey)}
+            placeholder={placeholder}
+            onFocus={onFocus}
+            onBlur={onBlur}
+            autoFocus={isFocused}
+            className={cn(
+              "font-semibold leading-relaxed text-foreground border-2 transition-all",
+              isFocused 
+                ? "bg-primary/5 border-primary/50 shadow-sm rounded-lg" 
+                : "border-transparent bg-transparent shadow-none cursor-text p-3 -ml-3" 
+            )}
+          />
+        )}
       </div>
     </div>
   );
@@ -198,10 +196,10 @@ const ProductBriefItem = ({
       <div className="flex-1 min-w-0">
         {(!hasValue && !isFocused) ? (
           <div 
-            className="h-full flex items-center px-3 cursor-pointer opacity-80 group-hover:opacity-100 transition-opacity min-h-[2.5rem]"
+            className="h-full flex items-center px-3 cursor-pointer opacity-90 group-hover:opacity-100 transition-opacity min-h-[2.5rem]"
             onClick={onFocus}
           >
-            <span className="text-xs italic font-medium text-muted-foreground">Add brief details for {item.productName.toLowerCase()}...</span>
+            <span className="text-xs italic font-medium text-muted-foreground/90">Add brief details for {item.productName.toLowerCase()}...</span>
           </div>
         ) : (
           <AutoGrowingTextarea 
@@ -211,10 +209,10 @@ const ProductBriefItem = ({
             onBlur={onBlur}
             autoFocus={isFocused}
             className={cn(
-              "font-semibold bg-transparent text-foreground border-2 p-3",
+              "font-semibold bg-transparent text-foreground border-2 transition-all",
               isFocused 
-                ? "border-primary/30 bg-background/50 rounded-lg shadow-sm" 
-                : "border-transparent shadow-none -ml-3 cursor-text"
+                ? "border-primary/30 bg-background/50 rounded-lg shadow-sm p-3" 
+                : "border-transparent shadow-none cursor-text p-3 -ml-3"
             )}
           />
         )}
