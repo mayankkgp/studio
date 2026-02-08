@@ -6,7 +6,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
-import { format, isValid as isValidDate } from 'date-fns';
+import { format, isValid as isValidDate, parseISO } from 'date-fns';
 import { CalendarIcon, Users, Star, PartyPopper, Cake, Milestone, Check, ChevronsUpDown, X, MapPin, Loader2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -191,23 +191,36 @@ export function EventDetailsForm({ activeOrder, onUpdate, hideFooters = false }:
   
   const lastResetId = useRef<string | null>(null);
 
+  // Helper to safely convert potential ISO strings from localStorage back to Date objects
+  const ensureDates = (details: any): EventDetails => {
+    const d = { ...details };
+    const dateFields = ['eventDate', 'orderDueDate', 'weddingDate'];
+    dateFields.forEach(field => {
+      if (d[field] && typeof d[field] === 'string') {
+        try {
+          const parsed = parseISO(d[field]);
+          if (isValidDate(parsed)) d[field] = parsed;
+        } catch (e) {}
+      }
+    });
+    return d as EventDetails;
+  };
+
   useEffect(() => {
     const currentId = activeOrder?.orderId || order?.orderId || 'new';
     if (currentId !== lastResetId.current) {
       if (activeOrder) {
-        reset(activeOrder.eventDetails as any);
+        reset(ensureDates(activeOrder.eventDetails));
       } else if (isLoaded) {
-        reset(order.eventDetails as any);
+        reset(ensureDates(order.eventDetails));
       }
       
-      // Crucial: Use a small timeout to ensure reset is fully applied before triggering validation
-      // This ensures the 'isValid' state accurately reflects the loaded draft data
-      const timer = setTimeout(() => {
+      // Force validation trigger after state update
+      setTimeout(() => {
         trigger();
-      }, 50);
+      }, 100);
       
       lastResetId.current = currentId;
-      return () => clearTimeout(timer);
     }
   }, [isLoaded, order.orderId, activeOrder?.orderId, reset, order.eventDetails, trigger]);
   
@@ -249,8 +262,8 @@ export function EventDetailsForm({ activeOrder, onUpdate, hideFooters = false }:
 
   const handleCancel = () => {
     if (window.confirm("Are you sure you want to cancel? All unsaved changes will be lost.")) {
-      resetOrder(); // Clears global context
-      reset(DEFAULT_EVENT_VALUES); // Clears local form state
+      resetOrder(); 
+      reset(DEFAULT_EVENT_VALUES); 
       lastResetId.current = 'new';
     }
   };
