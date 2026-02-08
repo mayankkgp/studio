@@ -107,6 +107,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
     onValidityChange,
     onUpdate,
     onRemove,
+    onProjectedTotalChange,
     isPersistent = false,
     isReadOnly = false,
     manualSyncOnly = false,
@@ -193,6 +194,14 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         };
         return calculateItemBreakdown(currentItem);
     }, [watchedValues, item]);
+
+    // Broadcast projected total to parent
+    React.useEffect(() => {
+        if (onProjectedTotalChange) {
+            const total = itemBreakdown.reduce((sum, c) => sum + c.total, 0);
+            onProjectedTotalChange(item.id, total);
+        }
+    }, [itemBreakdown, item.id, onProjectedTotalChange]);
 
     const getLogicWarning = React.useCallback((fieldValue: any, constraints?: SoftConstraint[]) => {
         if (fieldValue === undefined || fieldValue === null || fieldValue === '') return null;
@@ -316,6 +325,11 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             const warning = getLogicWarning(watchedValues.pages, product.softConstraints);
             if (warning) return { type: 'soft', message: warning };
         }
+        
+        // Hard constraint for negative rates
+        const hasNegativeRate = Object.values(watchedValues.rateOverrides || {}).some(r => (r ?? 0) < 0);
+        if (hasNegativeRate) return { type: 'hard', message: 'INVALID RATE' };
+
         return { type: null, message: null };
     }, [isValid, watchedValues, product, getLogicWarning]);
 
@@ -349,7 +363,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                     <div className={cn(
                         "rounded-lg flex items-center justify-center shrink-0 transition-colors",
                         isExpanded ? "h-10 w-10" : "h-7 w-7",
-                        !isValid ? "text-destructive bg-destructive/10" : isExpanded ? "text-blue-600 bg-blue-50" : "text-green-600 bg-green-100"
+                        !isValid || warningData.type === 'hard' ? "text-destructive bg-destructive/10" : isExpanded ? "text-blue-600 bg-blue-50" : "text-green-600 bg-green-100"
                     )}>
                         <IconComponent className={isExpanded ? "h-5 w-5" : "h-4 w-4"} />
                     </div>
@@ -398,7 +412,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                 <Pencil className="h-3.5 w-3.5" /> Edit
                             </Button>
                         ) : (
-                            <Button size="sm" onClick={handleDoneClick} className="gap-2 h-8" disabled={!isValid}>
+                            <Button size="sm" onClick={handleDoneClick} className="gap-2 h-8" disabled={!isValid || warningData.type === 'hard'}>
                                 <Check className="h-4 w-4" /> Done
                             </Button>
                         )
@@ -618,6 +632,7 @@ interface DeliverableRowProps {
     onValidityChange: (id: string, isValid: boolean) => void;
     onUpdate: (id: string, updates: Partial<ConfiguredProduct>) => void;
     onRemove: (id: string) => void;
+    onProjectedTotalChange?: (id: string, total: number) => void;
     isPersistent?: boolean;
     isReadOnly?: boolean;
     manualSyncOnly?: boolean;

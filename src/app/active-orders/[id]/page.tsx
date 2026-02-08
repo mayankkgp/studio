@@ -20,7 +20,8 @@ import {
     TrendingUp,
     Lock,
     Unlock,
-    CheckCircle2
+    CheckCircle2,
+    ArrowRight
 } from 'lucide-react';
 import { EventDetailsForm } from '@/components/flow1/EventDetailsForm';
 import { DeliverableRow } from '@/components/flow2/DeliverableRow';
@@ -29,7 +30,7 @@ import { Accordion } from '@/components/ui/accordion';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { calculateBillableItems } from '@/lib/pricing';
+import { calculateBillableItems, calculateItemBreakdown } from '@/lib/pricing';
 import { cn } from '@/lib/utils';
 import type { Order, ConfiguredProduct, EventDetails } from '@/lib/types';
 
@@ -44,6 +45,10 @@ export default function ActiveOrderCommandCenter() {
     const [isDetailsSheetOpen, setIsDetailsSheetOpen] = useState(false);
     const [expandedItems, setExpandedItems] = useState<string[]>([]);
     const [isEditMode, setIsEditMode] = useState(false);
+    
+    // Projected values for current drafting/editing state
+    const [projectedTotals, setProjectedTotals] = useState<Record<string, number>>({});
+    const [initialTotal, setInitialTotal] = useState(0);
 
     const headerSummary = useHeaderSummary(activeOrder?.eventDetails || {});
 
@@ -53,7 +58,15 @@ export default function ActiveOrderCommandCenter() {
             if (raw) {
                 const parsed = JSON.parse(raw);
                 if (parsed[id]) {
-                    setActiveOrder(parsed[id]);
+                    const order = parsed[id];
+                    setActiveOrder(order);
+                    
+                    // Calculate initial total for diff view
+                    const items = calculateBillableItems(order.deliverables);
+                    const total = items.reduce((acc, item) => 
+                        acc + item.components.reduce((cAcc, c) => cAcc + c.total, 0), 0
+                    );
+                    setInitialTotal(total);
                 }
             }
         } catch (e) {
@@ -103,6 +116,13 @@ export default function ActiveOrderCommandCenter() {
                     };
                     parsed[id] = updatedOrder;
                     localStorage.setItem('srishbish_active_v1', JSON.stringify(parsed));
+                    
+                    // Update initial total after commit
+                    const items = calculateBillableItems(newDeliverables);
+                    const total = items.reduce((acc, item) => 
+                        acc + item.components.reduce((cAcc, c) => cAcc + c.total, 0), 0
+                    );
+                    setInitialTotal(total);
                     setActiveOrder(updatedOrder);
                 }
             }
@@ -112,6 +132,7 @@ export default function ActiveOrderCommandCenter() {
     }, [id, toast]);
 
     const updateDeliverable = (delId: string, updates: Partial<ConfiguredProduct>) => {
+        // Only updates local state
         setActiveOrder(prev => {
             if (!prev) return null;
             return {
@@ -125,8 +146,15 @@ export default function ActiveOrderCommandCenter() {
         setActiveOrder(prev => {
             if (!prev) return null;
             const updated = { ...prev, deliverables: prev.deliverables.filter(d => d.id !== delId) };
-            // Deletions are treated as immediate confirmed actions
             syncToStorage(updated);
+            
+            // Clean up projections
+            setProjectedTotals(prev => {
+                const next = { ...prev };
+                delete next[delId];
+                return next;
+            });
+            
             return updated;
         });
         setExpandedItems(prev => prev.filter(i => i !== delId));
@@ -154,6 +182,7 @@ export default function ActiveOrderCommandCenter() {
     const handleToggleEditMode = () => {
         if (isEditMode) {
             setExpandedItems([]);
+            setProjectedTotals({});
             loadOrder(); 
         }
         setIsEditMode(!isEditMode);
@@ -165,21 +194,29 @@ export default function ActiveOrderCommandCenter() {
     };
 
     const updatePayment = (amount: number) => {
-        if (!activeOrder) return;
+        if (!activeOrder || !isEditMode) return;
         syncToStorage({ ...activeOrder, paymentReceived: Math.max(0, amount) });
     };
 
-    const billableItems = useMemo(() => {
-        return activeOrder ? calculateBillableItems(activeOrder.deliverables) : [];
-    }, [activeOrder]);
+    const handleProjectedTotalChange = (id: string, total: number) => {
+        setProjectedTotals(prev => ({ ...prev, [id]: total }));
+    };
 
-    const totalValue = useMemo(() => {
-        return billableItems.reduce((acc, item) => 
-            acc + item.components.reduce((cAcc, c) => cAcc + c.total, 0), 0
-        );
-    }, [billableItems]);
+    const workingTotal = useMemo(() => {
+        if (!activeOrder) return 0;
+        return activeOrder.deliverables.reduce((acc, item) => {
+            const pTotal = projectedTotals[item.id];
+            if (pTotal !== undefined) return acc + pTotal;
+            
+            // Fallback for items that haven't reported a projected total yet
+            const components = calculateItemBreakdown(item);
+            return acc + components.reduce((sum, c) => sum + c.total, 0);
+        }, 0);
+    }, [activeOrder?.deliverables, projectedTotals]);
 
-    const balance = totalValue - (activeOrder?.paymentReceived || 0);
+    const balance = workingTotal - (activeOrder?.paymentReceived || 0);
+    const delta = workingTotal - initialTotal;
+    const hasDiff = Math.abs(delta) > 0.01;
 
     const getClientDisplay = () => {
         const d = activeOrder?.eventDetails;
@@ -298,6 +335,7 @@ export default function ActiveOrderCommandCenter() {
                                                 onValidityChange={() => {}}
                                                 onUpdate={updateDeliverable}
                                                 onRemove={removeDeliverable}
+                                                onProjectedTotalChange={handleProjectedTotalChange}
                                                 isPersistent={false}
                                                 manualSyncOnly={true}
                                                 showCommercials={true}
@@ -365,29 +403,61 @@ export default function ActiveOrderCommandCenter() {
                             </CardContent>
                         </Card>
 
-                        <Card className="shadow-sm border-2 border-primary/20 bg-background">
-                            <CardHeader className="pb-2">
+                        <Card className="shadow-sm border-2 border-primary/20 bg-background overflow-hidden">
+                            <CardHeader className="pb-2 bg-muted/20">
                                 <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center justify-between">
                                     Live Financials
                                     <TrendingUp className="h-3 w-3 text-primary" />
                                 </CardTitle>
                             </CardHeader>
-                            <CardContent className="space-y-6">
+                            <CardContent className="space-y-6 pt-6">
                                 <div className="space-y-1">
-                                    <p className="text-[10px] font-bold uppercase text-muted-foreground">Total Order Value</p>
-                                    <p className="text-4xl font-bold tracking-tight text-foreground">₹{totalValue.toLocaleString('en-IN')}</p>
+                                    <p className="text-[10px] font-bold uppercase text-muted-foreground">Order Value</p>
+                                    {hasDiff ? (
+                                        <div className="space-y-2">
+                                            <div className="flex items-center gap-2 text-muted-foreground/50 line-through text-sm">
+                                                ₹{initialTotal.toLocaleString('en-IN')}
+                                            </div>
+                                            <div className="flex items-center justify-between group">
+                                                <p className={cn(
+                                                    "text-4xl font-bold tracking-tight",
+                                                    delta > 0 ? "text-blue-600" : "text-amber-600"
+                                                )}>
+                                                    ₹{workingTotal.toLocaleString('en-IN')}
+                                                </p>
+                                                <Badge variant="secondary" className={cn(
+                                                    "h-6 px-2 gap-1 text-[10px] font-black animate-in fade-in slide-in-from-right-2 duration-300",
+                                                    delta > 0 ? "bg-blue-100 text-blue-700" : "bg-amber-100 text-amber-700"
+                                                )}>
+                                                    {delta > 0 ? '+' : '-'} ₹{Math.abs(delta).toLocaleString('en-IN')}
+                                                </Badge>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <p className="text-4xl font-bold tracking-tight text-foreground">₹{workingTotal.toLocaleString('en-IN')}</p>
+                                    )}
                                 </div>
                                 
                                 <div className="space-y-2">
-                                    <p className="text-[10px] font-bold uppercase text-muted-foreground">Payment Received</p>
-                                    <div className="relative">
+                                    <p className="text-[10px] font-bold uppercase text-muted-foreground flex items-center justify-between">
+                                        Payment Received
+                                        {!isEditMode && <Lock className="h-2.5 w-2.5 opacity-30" />}
+                                    </p>
+                                    <div className="relative group">
                                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">₹</span>
                                         <input 
                                             type="number"
                                             min="0"
+                                            disabled={!isEditMode}
                                             value={activeOrder.paymentReceived || ''}
                                             onChange={(e) => updatePayment(Number(e.target.value))}
-                                            className="w-full h-12 pl-7 pr-4 rounded-lg border-2 border-muted bg-muted/20 font-bold text-xl focus:border-primary focus:ring-0 transition-colors"
+                                            onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+                                            className={cn(
+                                                "w-full h-12 pl-7 pr-4 rounded-lg border-2 font-bold text-xl transition-all",
+                                                isEditMode 
+                                                    ? "bg-muted/10 border-primary focus:ring-4 focus:ring-primary/10" 
+                                                    : "bg-muted/30 border-transparent cursor-not-allowed opacity-70"
+                                            )}
                                             placeholder="0"
                                         />
                                     </div>
