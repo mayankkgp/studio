@@ -566,14 +566,14 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                         <TabsList className="h-12 bg-transparent p-0 gap-8">
                             <TabsTrigger 
                                 value="overview" 
-                                className="h-12 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none font-bold text-xs uppercase tracking-widest"
+                                className="h-12 rounded-none border-b-2 border-transparent transition-all hover:bg-primary/5 hover:text-primary data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none font-bold text-xs uppercase tracking-widest"
                             >
                                 <Package className="h-4 w-4 mr-2" />
                                 Overview
                             </TabsTrigger>
                             <TabsTrigger 
                                 value="customer" 
-                                className="h-12 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none font-bold text-xs uppercase tracking-widest"
+                                className="h-12 rounded-none border-b-2 border-transparent transition-all hover:bg-primary/5 hover:text-primary data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none font-bold text-xs uppercase tracking-widest"
                             >
                                 <ClipboardCheck className="h-4 w-4 mr-2" />
                                 Customer Data
@@ -616,10 +616,10 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                                                 )}
                                                 <Tabs value={viewMode} onValueChange={(v: any) => setViewMode(v)} className="w-auto">
                                                     <TabsList className="h-8 p-1 bg-muted/40 border border-primary/20">
-                                                        <TabsTrigger value="scope" className="text-[10px] font-bold uppercase h-6 px-3">
+                                                        <TabsTrigger value="scope" className="text-[10px] font-bold uppercase h-6 px-3 transition-all hover:text-primary">
                                                             <Info className="h-3 w-3 mr-1.5" /> Scope
                                                         </TabsTrigger>
-                                                        <TabsTrigger value="bill" className="text-[10px] font-bold uppercase h-6 px-3">
+                                                        <TabsTrigger value="bill" className="text-[10px] font-bold uppercase h-6 px-3 transition-all hover:text-primary">
                                                             <Receipt className="h-3 w-3 mr-1.5" /> Bill View
                                                         </TabsTrigger>
                                                     </TabsList>
@@ -657,7 +657,7 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                                                         </thead>
                                                         <tbody>
                                                             {billViewData.map((row, i) => (
-                                                                <tr key={i} className="border-b border-primary/5 last:border-0 hover:bg-primary/5">
+                                                                <tr key={i} className="border-b border-primary/5 last:border-0 hover:bg-primary/5 transition-colors">
                                                                     <td className="px-4 py-3">
                                                                         <div className="font-bold text-foreground">{row.productName}</div>
                                                                         <div className="text-[10px] text-muted-foreground font-bold uppercase">{row.label}</div>

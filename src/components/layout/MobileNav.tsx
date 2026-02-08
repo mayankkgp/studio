@@ -70,8 +70,8 @@ export function MobileNav() {
               key={item.label}
               href={item.href}
               className={cn(
-                'flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground',
-                pathname === item.href && 'text-foreground font-bold'
+                'flex items-center gap-4 px-2.5 text-muted-foreground transition-all hover:bg-primary/5 hover:text-primary rounded-lg py-2',
+                pathname === item.href && 'bg-primary/15 text-primary font-bold'
               )}
             >
               <item.icon className="h-5 w-5" />
