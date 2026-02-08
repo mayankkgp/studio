@@ -143,6 +143,12 @@ export const DeliverableRow = React.memo(function DeliverableRow({
     const { register, control, watch, formState: { errors, isValid }, trigger, getValues, setValue, reset } = form;
     const watchedValues = watch();
 
+    const handleEnterToBlur = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            (e.target as HTMLInputElement).blur();
+        }
+    };
+
     React.useEffect(() => {
         if (isReadOnly) {
             reset({
@@ -434,6 +440,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                         type="number" 
                                         min="0"
                                         disabled={isReadOnly}
+                                        onKeyDown={handleEnterToBlur}
                                         {...register(product?.configType === 'A' ? 'quantity' : 'pages', { valueAsNumber: true })}
                                         className={cn(
                                             "w-24 h-10 text-lg bg-background",
@@ -452,6 +459,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                         type="number" 
                                         min="0"
                                         disabled={isReadOnly}
+                                        onKeyDown={handleEnterToBlur}
                                         className={cn(
                                             "w-20 h-10 bg-background",
                                             getLogicWarning((watchedValues.customFieldValues as any)?.[field.id], field.softConstraints) && "border-[#FA7315] ring-[#FA7315] border-2"
@@ -497,6 +505,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                                     type="number" 
                                                                     min="0"
                                                                     disabled={isReadOnly}
+                                                                    onKeyDown={handleEnterToBlur}
                                                                     autoFocus={justActivatedAddonId === addon.id}
                                                                     className="h-6 px-2 py-0 text-xs bg-white border-none focus-visible:ring-0 rounded-md font-bold text-black w-12"
                                                                     value={val}
@@ -571,6 +580,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                             disabled={isReadOnly}
                                                             defaultValue={comp.rate}
                                                             onBlur={(e) => handleRateOverride(comp.label, Number(e.target.value))}
+                                                            onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
                                                             className={cn(
                                                                 "w-20 h-7 text-right bg-background border rounded px-1.5 font-bold focus:ring-1 focus:ring-primary",
                                                                 isReadOnly && "border-transparent bg-transparent"

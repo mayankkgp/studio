@@ -97,7 +97,6 @@ export default function CommercialsPage() {
     return (
         <AppLayout>
             <div className="flex flex-col h-screen overflow-hidden bg-background">
-                {/* Header: Simplified for high-density view */}
                 <header className="flex h-16 shrink-0 items-center gap-4 border-b px-4 md:px-6 bg-background z-50">
                     <MobileNav />
                     <div className="flex-1 overflow-hidden">
@@ -112,7 +111,6 @@ export default function CommercialsPage() {
                 </header>
 
                 <div className="flex flex-1 overflow-hidden">
-                    {/* Left Panel: Billable Items List */}
                     <main className="flex-1 flex flex-col overflow-hidden bg-background pt-6 pb-6">
                         <div className="flex-1 overflow-y-auto custom-scrollbar w-full">
                             <div className="max-w-4xl mx-auto w-full px-4 lg:px-6">
@@ -205,7 +203,6 @@ export default function CommercialsPage() {
                         </div>
                     </main>
 
-                    {/* Right Panel: Summary & Actions */}
                     <aside className="w-80 lg:w-96 shrink-0 border-l bg-card/50 flex flex-col p-6 z-40">
                         <div className="mb-6">
                             <Button 
@@ -240,6 +237,7 @@ export default function CommercialsPage() {
                                         placeholder="0"
                                         value={order.paymentReceived || ''}
                                         onChange={(e) => setPaymentReceived(Math.max(0, Number(e.target.value)))}
+                                        onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
                                         className="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 pl-7 text-lg font-semibold ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                                     />
                                 </div>
