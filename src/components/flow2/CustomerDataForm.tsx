@@ -15,14 +15,15 @@ import { Button } from '@/components/ui/button';
 const AutoGrowingTextarea = React.forwardRef<
   HTMLTextAreaElement,
   React.TextareaHTMLAttributes<HTMLTextAreaElement> & { minRows?: number }
->(({ className, onInput, minRows = 2, ...props }, ref) => {
+>(({ className, onInput, minRows = 1, ...props }, ref) => {
   const textAreaRef = React.useRef<HTMLTextAreaElement | null>(null);
 
   const adjustHeight = () => {
     const element = textAreaRef.current;
     if (element) {
       element.style.height = 'auto';
-      element.style.height = `${Math.max(element.scrollHeight, 40)}px`;
+      // Use scrollHeight to match content, fallback to a sensible minimum if needed
+      element.style.height = `${element.scrollHeight}px`;
     }
   };
 
@@ -87,11 +88,10 @@ const EditableField = ({
 }) => {
   const hasValue = value && value.trim().length > 0;
   
-  // Requirement 5: Hide empty states when not focused unless showEmpty is true
   if (!hasValue && !showEmpty) {
     return (
       <div className="focus-within:block hidden">
-        <AutoGrowingTextarea {...register(registerKey)} />
+        <AutoGrowingTextarea {...register(registerKey)} minRows={1} />
       </div>
     );
   }
@@ -108,6 +108,7 @@ const EditableField = ({
         id={id} 
         {...register(registerKey)}
         placeholder="Add details..."
+        minRows={1}
         className={cn(
           "font-semibold leading-relaxed text-foreground border-2 rounded-md -ml-3",
           "bg-transparent border-transparent hover:bg-primary/5",
@@ -139,7 +140,7 @@ const ProductBriefRow = ({
   if (!hasValue && !showEmpty) {
     return (
       <div className="focus-within:grid hidden">
-        <AutoGrowingTextarea {...register(briefKey as any)} />
+        <AutoGrowingTextarea {...register(briefKey as any)} minRows={2} />
       </div>
     );
   }
@@ -179,6 +180,7 @@ const ProductBriefRow = ({
         <AutoGrowingTextarea 
           placeholder="Add product requirements..."
           {...register(briefKey as any)}
+          minRows={2}
           className={cn(
             "font-semibold bg-transparent text-foreground border-2 rounded-md transition-all -ml-3",
             "border-transparent hover:bg-primary/5",
@@ -192,10 +194,7 @@ const ProductBriefRow = ({
 };
 
 export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; onSave: (data: CustomerData) => void; isSaving?: boolean }) {
-  // Logic to handle Requirement 5 (Hide empty states)
-  // Expert users can toggle this to add new data
   const [showEmptyFields, setShowEmptyFields] = React.useState(() => {
-    // If entire creative brief is empty, default to show all
     return !order.customerData;
   });
 
