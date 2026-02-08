@@ -351,13 +351,26 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                             <Trash2 className="h-4 w-4" />
                         </Button>
                     )}
-                    {!isExpanded ? (
-                        <Button size="sm" variant="outline" onClick={handleEditClick} className="gap-2 h-8">
-                            {isReadOnly ? <Info className="h-3.5 w-3.5" /> : <Pencil className="h-3.5 w-3.5" />}
-                            {isReadOnly ? 'View' : 'Edit'}
+                    
+                    {isReadOnly ? (
+                        <Button 
+                            size="sm" 
+                            variant="outline" 
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                isExpanded ? onDone(item.id, true) : onEdit(item.id);
+                            }} 
+                            className="gap-2 h-8"
+                        >
+                            {isExpanded ? <X className="h-3.5 w-3.5" /> : <Info className="h-3.5 w-3.5" />}
+                            {isExpanded ? 'Hide' : 'View'}
                         </Button>
                     ) : (
-                        !isReadOnly && (
+                        !isExpanded ? (
+                            <Button size="sm" variant="outline" onClick={handleEditClick} className="gap-2 h-8">
+                                <Pencil className="h-3.5 w-3.5" /> Edit
+                            </Button>
+                        ) : (
                             <Button size="sm" onClick={handleDoneClick} className="gap-2 h-8" disabled={!isValid}>
                                 <Check className="h-4 w-4" /> Done
                             </Button>
