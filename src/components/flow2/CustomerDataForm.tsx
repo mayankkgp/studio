@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useForm, UseFormRegister } from 'react-hook-form';
 import { Label } from '@/components/ui/label';
-import { Palette, BookOpen, Globe, Sparkles, Box, CheckCircle2, Eye, EyeOff } from 'lucide-react';
+import { Palette, BookOpen, Globe, Sparkles, Box, CheckCircle2, Eye, EyeOff, Save, Loader2 } from 'lucide-react';
 import type { Order, CustomerData, ConfiguredProduct } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -107,7 +107,7 @@ const EditableField = ({
           "font-semibold leading-relaxed text-foreground border-2 rounded-md -ml-3",
           "bg-transparent border-transparent hover:bg-primary/5",
           "focus:bg-background focus:border-primary/40 focus:shadow-sm focus:px-3",
-          "placeholder:italic placeholder:font-normal placeholder:text-muted-foreground/80 placeholder:text-[11px]"
+          "placeholder:italic placeholder:font-normal placeholder:text-muted-foreground/90 placeholder:text-[11px]"
         )}
       />
     </div>
@@ -234,18 +234,30 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
           <h2 className="text-xl font-headline font-black text-foreground uppercase tracking-tight">Creative Briefing</h2>
           <p className="text-xs text-muted-foreground font-medium">Capture visual and narrative context for design production.</p>
         </div>
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={toggleViewMode}
-          className="h-8 font-bold gap-2 text-[10px] uppercase tracking-widest border-primary/20"
-        >
-          {showEmptyFields ? (
-            <><EyeOff className="h-3 w-3" /> Hide Empty Fields</>
-          ) : (
-            <><Eye className="h-3 w-3" /> Show All Fields</>
-          )}
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={toggleViewMode}
+            className="h-8 font-bold gap-2 text-[10px] uppercase tracking-widest border-primary/20"
+          >
+            {showEmptyFields ? (
+              <><EyeOff className="h-3 w-3" /> Hide Empty Fields</>
+            ) : (
+              <><Eye className="h-3 w-3" /> Show All Fields</>
+            )}
+          </Button>
+          <Button 
+            size="sm" 
+            type="submit"
+            form="creative-brief-form"
+            disabled={isSaving}
+            className="h-8 font-bold gap-2 bg-primary shadow-lg shadow-primary/20 shrink-0"
+          >
+            {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            Save Creative Brief
+          </Button>
+        </div>
       </div>
 
       {/* Masonry Layout for General Sections */}
@@ -439,7 +451,7 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
                       className={cn(
                         "font-semibold bg-transparent text-foreground min-h-[350px] p-6 transition-all",
                         "focus:bg-background focus:ring-2 focus:ring-primary/20",
-                        "placeholder:italic placeholder:font-normal placeholder:text-muted-foreground/80 placeholder:text-[11px]"
+                        "placeholder:italic placeholder:font-normal placeholder:text-muted-foreground/90 placeholder:text-[11px]"
                       )}
                     />
                   </div>

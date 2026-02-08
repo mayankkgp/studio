@@ -451,7 +451,7 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                     <div className="space-y-2">
                         <div className="flex items-center justify-between">
                             <p className="text-[10px] font-bold uppercase text-muted-foreground">Payment Received</p>
-                            <Popover open={isPaymentPopoverOpen} onOpenChange={setIsPaymentPopoverOpen}>
+                            <Popover open={isPaymentPopoverOpen} onOpenChange={isPaymentPopoverOpen}>
                                 <PopoverTrigger asChild>
                                     <Button variant="outline" size="sm" className="h-6 text-[9px] font-bold uppercase gap-1 text-primary hover:text-primary hover:bg-primary/5 border-primary/50">
                                         <WalletCards className="h-2.5 w-2.5" /> Record
@@ -540,18 +540,6 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                                     ) : (
                                         <><Unlock className="h-4 w-4" /> Modify Order</>
                                     )}
-                                </Button>
-                            )}
-                            {activeTab === 'customer' && (
-                                <Button 
-                                    size="sm" 
-                                    type="submit"
-                                    form="creative-brief-form"
-                                    disabled={isSavingBrief}
-                                    className="h-8 font-bold gap-2 bg-primary shadow-lg shadow-primary/20 shrink-0"
-                                >
-                                    {isSavingBrief ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                                    Save Creative Brief
                                 </Button>
                             )}
                         </div>
