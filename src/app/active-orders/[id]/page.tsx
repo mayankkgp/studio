@@ -6,6 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { MobileNav } from '@/components/layout/MobileNav';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { useHeaderSummary } from '@/hooks/use-header-summary';
 import { useToast } from '@/hooks/use-toast';
 import { 
@@ -216,7 +217,7 @@ export default function ActiveOrderCommandCenter() {
                                 )}
                             </div>
 
-                            {/* Conditional Command Bar */}
+                            {/* Persistent Command Bar (Visible in Edit Mode) */}
                             {isEditMode && (
                                 <div className="bg-card p-4 md:p-6 rounded-xl border-2 border-primary/10 shadow-sm sticky top-0 z-40 backdrop-blur-sm bg-card/95">
                                     <CommandBar onAdd={addDeliverable} />
