@@ -723,12 +723,17 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                             </div>
                         </TabsContent>
                         
-                        <TabsContent value="customer" className="flex-1 m-0 overflow-y-auto bg-background/50 custom-scrollbar relative outline-none">
-                            <div className="max-w-4xl mx-auto p-4 md:p-8">
-                                <CustomerDataForm 
-                                    order={activeOrder} 
-                                    onSave={handleSaveCustomerData} 
-                                />
+                        <TabsContent value="customer" className="flex-1 flex overflow-hidden m-0 outline-none">
+                            <div className="flex-1 flex overflow-hidden">
+                                <main className="flex-1 overflow-y-auto bg-background/50 custom-scrollbar relative">
+                                    <div className="max-w-4xl mx-auto p-4 md:p-8">
+                                        <CustomerDataForm 
+                                            order={activeOrder} 
+                                            onSave={handleSaveCustomerData} 
+                                        />
+                                    </div>
+                                </main>
+                                <div className="w-[24rem] shrink-0 hidden xl:block" />
                             </div>
                         </TabsContent>
                     </div>

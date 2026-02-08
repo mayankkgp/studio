@@ -43,13 +43,13 @@ export function CustomerDataForm({ order, onSave }: CustomerDataFormProps) {
     );
 
     const Field = ({ id, label, placeholder, registerKey, className }: { id: string, label: string, placeholder: string, registerKey: any, className?: string }) => (
-        <div className={cn("space-y-3", className)}>
+        <div className={cn("space-y-2.5", className)}>
             <Label htmlFor={id} className="text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground/80 pl-1">{label}</Label>
             <Textarea 
                 id={id} 
                 {...register(registerKey)}
                 placeholder={placeholder}
-                className="min-h-[140px] bg-background/60 border-primary/15 focus-visible:ring-primary focus-visible:border-primary/40 placeholder:text-muted-foreground/50 transition-all duration-200 resize-none shadow-inner"
+                className="min-h-[140px] bg-background/60 border-primary/15 focus-visible:ring-primary focus-visible:border-primary/40 placeholder:text-muted-foreground/50 transition-all duration-200 resize-none shadow-inner p-4 text-sm leading-relaxed"
             />
         </div>
     );
@@ -156,7 +156,7 @@ export function CustomerDataForm({ order, onSave }: CustomerDataFormProps) {
 
             {/* Product Specific Briefs */}
             <div className="space-y-8">
-                <div className="flex items-center gap-4 border-b border-primary/10 pb-4">
+                <div className="flex items-center gap-4 border-b border-primary/10 pb-6">
                     <div className="h-10 w-10 rounded-xl bg-primary text-white flex items-center justify-center shadow-lg shadow-primary/20">
                         <Box className="h-5 w-5" />
                     </div>
@@ -170,10 +170,10 @@ export function CustomerDataForm({ order, onSave }: CustomerDataFormProps) {
                         const productDef = productCatalog.find(p => p.id === item.productId);
                         
                         return (
-                            <Card key={item.id} className="border-primary/15 bg-background/40 hover:bg-background/60 transition-colors shadow-none">
+                            <Card key={item.id} className="border-primary/15 bg-background/40 hover:bg-background/60 transition-colors shadow-none overflow-hidden">
                                 <CardContent className="pt-6">
                                     <div className="flex flex-col md:flex-row md:items-start justify-between mb-6 gap-6">
-                                        <div className="flex flex-col gap-2">
+                                        <div className="flex flex-col gap-2.5">
                                             <h4 className="font-black text-lg text-foreground font-headline tracking-tight leading-none">{item.productName}</h4>
                                             <div className="flex items-center gap-3">
                                                 <span className="text-[9px] font-black uppercase text-primary/70 tracking-tighter">Technical Specs:</span>
@@ -213,7 +213,7 @@ export function CustomerDataForm({ order, onSave }: CustomerDataFormProps) {
                                         <Textarea 
                                             placeholder={`Enter requirements & specific details for ${item.productName}`}
                                             {...register(`productBriefs.${item.id}`)}
-                                            className="bg-white/50 min-h-[140px] border-primary/10 focus-visible:ring-primary focus-visible:border-primary/40 resize-none shadow-sm"
+                                            className="bg-white/50 min-h-[140px] border-primary/10 focus-visible:ring-primary focus-visible:border-primary/40 resize-none shadow-sm p-4 text-sm leading-relaxed"
                                         />
                                     </div>
                                 </CardContent>
