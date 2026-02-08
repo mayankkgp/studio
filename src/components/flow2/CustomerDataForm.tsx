@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useForm, UseFormRegister } from 'react-hook-form';
 import { Label } from '@/components/ui/label';
-import { Palette, BookOpen, Globe, Sparkles, Box, CheckCircle2, Circle, Search, X, Save, Loader2, Eye, EyeOff } from 'lucide-react';
+import { Palette, BookOpen, Globe, Sparkles, Box, Circle, Search, X, Save, Loader2, Eye, EyeOff } from 'lucide-react';
 import type { Order, CustomerData, ConfiguredProduct } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -471,7 +471,10 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
                         </div>
                         <div className="shrink-0">
                           {hasData ? (
-                            <CheckCircle2 className={cn("h-4 w-4", isActive ? "text-white" : "text-green-500")} />
+                            <div className={cn(
+                              "h-4 w-4 rounded-full",
+                              isActive ? "bg-white" : "bg-green-600"
+                            )} />
                           ) : (
                             <Circle className={cn("h-4 w-4 opacity-40", isActive ? "text-white/40" : "text-muted-foreground/30")} />
                           )}
