@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useForm, UseFormRegister } from 'react-hook-form';
 import { Label } from '@/components/ui/label';
-import { Palette, BookOpen, Globe, Sparkles, Box, Circle, Search, X, Save, Loader2, Eye, EyeOff } from 'lucide-react';
+import { Palette, BookOpen, Globe, Sparkles, Box, Circle, Search, X } from 'lucide-react';
 import type { Order, CustomerData, ConfiguredProduct } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -115,17 +115,7 @@ const EditableField = ({
   );
 };
 
-export function CustomerDataForm({ 
-  order, 
-  onSave, 
-  isSaving,
-  showEmptyFields = true
-}: { 
-  order: Order; 
-  onSave: (data: CustomerData) => void; 
-  isSaving?: boolean;
-  showEmptyFields?: boolean;
-}) {
+export function CustomerDataForm({ order, onSave, isSaving, showEmptyFields = true }: { order: Order; onSave: (data: CustomerData) => void; isSaving?: boolean; showEmptyFields?: boolean }) {
   const [selectedProductId, setSelectedProductId] = React.useState<string | null>(
     order.deliverables.length > 0 ? order.deliverables[0].id : null
   );
@@ -348,7 +338,7 @@ export function CustomerDataForm({
 
       {/* Master-Detail View for Product Briefs */}
       <section className={cn(
-        showGenericData ? "mt-12 pt-12 border-t border-primary/10" : "mt-8"
+        showGenericData ? "mt-12 pt-12 border-t border-primary/10" : "mt-0"
       )}>
         <SectionHeader title="Product Specific Briefs" icon={Box} />
         
@@ -482,12 +472,7 @@ export function CustomerDataForm({
         )}
       </section>
 
-      {/* Hidden submit trigger for parent component to trigger save */}
-      <button 
-        id="creative-brief-submit-trigger" 
-        className="hidden" 
-        onClick={handleSubmit(onSave)} 
-      />
+      <form id="creative-brief-form" onSubmit={handleSubmit(onSave)} className="hidden" />
       
       <style jsx global>{`
         .custom-scrollbar::-webkit-scrollbar { width: 5px; }

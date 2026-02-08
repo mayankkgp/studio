@@ -83,7 +83,7 @@ export default function ActiveOrderCommandCenter() {
 
     const headerSummary = useHeaderSummary(activeOrder?.eventDetails || {});
 
-    // Load brief view preferences
+    // Persistence logic for view preference
     useEffect(() => {
         const saved = localStorage.getItem('srishbish_brief_view_pref');
         if (saved !== null) {
@@ -91,7 +91,7 @@ export default function ActiveOrderCommandCenter() {
         }
     }, []);
 
-    const toggleBriefView = () => {
+    const handleToggleViewMode = () => {
         const next = !showEmptyFields;
         setShowEmptyFields(next);
         localStorage.setItem('srishbish_brief_view_pref', String(next));
@@ -254,17 +254,7 @@ export default function ActiveOrderCommandCenter() {
         setIsPaymentPopoverOpen(false);
     };
 
-    const handleSaveCustomerData = () => {
-        if (!activeOrder) return;
-        // In this architecture, the form is passed a save trigger via its onSave prop
-        // We trigger it by finding the hidden submit button in the form
-        const formSubmitBtn = document.getElementById('creative-brief-submit-trigger');
-        if (formSubmitBtn) {
-            formSubmitBtn.click();
-        }
-    };
-
-    const onSaveBriefData = (data: CustomerData) => {
+    const handleSaveCustomerData = (data: CustomerData) => {
         if (!activeOrder) return;
         setIsSavingBrief(true);
         setTimeout(() => {
@@ -478,7 +468,7 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                     <div className="space-y-2">
                         <div className="flex items-center justify-between">
                             <p className="text-[10px] font-bold uppercase text-muted-foreground">Payment Received</p>
-                            <Popover open={isPaymentPopoverOpen} onOpenChange={isPaymentPopoverOpen}>
+                            <Popover open={isPaymentPopoverOpen} onOpenChange={setIsPaymentPopoverOpen}>
                                 <PopoverTrigger asChild>
                                     <Button variant="outline" size="sm" className="h-6 text-[9px] font-bold uppercase gap-1 text-primary hover:text-primary hover:bg-primary/5 border-primary/50">
                                         <WalletCards className="h-2.5 w-2.5" /> Record
@@ -570,28 +560,28 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                                 </Button>
                             )}
                             {activeTab === 'customer' && (
-                                <div className="flex items-center gap-3 shrink-0 ml-auto md:ml-0">
+                                <div className="flex items-center gap-2">
                                     <Button 
                                         variant="outline" 
                                         size="sm" 
-                                        onClick={toggleBriefView}
-                                        className="h-8 font-bold gap-2 text-[11px] uppercase tracking-widest border-primary/20 hover:bg-primary/5 hover:text-primary transition-all hidden sm:flex"
+                                        onClick={handleToggleViewMode}
+                                        className="h-8 font-bold gap-2 text-[11px] uppercase tracking-widest border-primary/20 hover:bg-primary/5 hover:text-primary transition-all shrink-0"
                                     >
                                         {showEmptyFields ? (
-                                            <><EyeOff className="h-3.5 w-3.5" /> Hide Empty Fields</>
+                                            <><EyeOff className="h-3.5 w-3.5" /> Hide Empty</>
                                         ) : (
-                                            <><Eye className="h-3.5 w-3.5" /> Show All Fields</>
+                                            <><Eye className="h-3.5 w-3.5" /> Show All</>
                                         )}
                                     </Button>
                                     <Button 
                                         size="sm" 
-                                        onClick={handleSaveCustomerData}
+                                        form="creative-brief-form"
+                                        type="submit"
                                         disabled={isSavingBrief}
-                                        className="h-8 font-bold gap-2 bg-primary shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all shrink-0"
+                                        className="h-8 font-bold gap-2 bg-primary shadow-lg shadow-primary/20 shrink-0 hover:bg-primary/90"
                                     >
                                         {isSavingBrief ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                                        <span className="hidden sm:inline">Save Creative Brief</span>
-                                        <span className="sm:hidden">Save Brief</span>
+                                        Save Brief
                                     </Button>
                                 </div>
                             )}
@@ -785,7 +775,7 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                             <div className="max-w-5xl mx-auto p-4 md:p-12">
                                 <CustomerDataForm 
                                     order={activeOrder} 
-                                    onSave={onSaveBriefData}
+                                    onSave={handleSaveCustomerData}
                                     isSaving={isSavingBrief}
                                     showEmptyFields={showEmptyFields}
                                 />
