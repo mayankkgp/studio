@@ -27,7 +27,8 @@ import {
     ChevronUp,
     Info,
     AlertTriangle,
-    Eye
+    Eye,
+    X
 } from 'lucide-react';
 import { EventDetailsForm } from '@/components/flow1/EventDetailsForm';
 import { DeliverableRow } from '@/components/flow2/DeliverableRow';
@@ -65,8 +66,8 @@ export default function ActiveOrderCommandCenter() {
     const [isEditMode, setIsEditMode] = useState(false);
     const [viewMode, setViewMode] = useState<'scope' | 'bill'>('scope');
     const [isExitConfirmOpen, setIsExitConfirmOpen] = useState(false);
+    const [isPaymentPopoverOpen, setIsPaymentPopoverOpen] = useState(false);
     
-    // Projected values for current drafting/editing state
     const [projectedTotals, setProjectedTotals] = useState<Record<string, number>>({});
     const [initialTotal, setInitialTotal] = useState(0);
 
@@ -81,7 +82,6 @@ export default function ActiveOrderCommandCenter() {
                     const order = parsed[id];
                     setActiveOrder(order);
                     
-                    // Calculate initial total for diff view
                     const items = calculateBillableItems(order.deliverables);
                     const total = items.reduce((acc, item) => 
                         acc + item.components.reduce((cAcc, c) => cAcc + c.total, 0), 0
@@ -137,7 +137,6 @@ export default function ActiveOrderCommandCenter() {
                     parsed[id] = updatedOrder;
                     localStorage.setItem('srishbish_active_v1', JSON.stringify(parsed));
                     
-                    // Update initial total after commit
                     const items = calculateBillableItems(newDeliverables);
                     const total = items.reduce((acc, item) => 
                         acc + item.components.reduce((cAcc, c) => cAcc + c.total, 0), 0
@@ -223,9 +222,12 @@ export default function ActiveOrderCommandCenter() {
         syncToStorage({ ...activeOrder, eventDetails: details });
     };
 
-    const updatePayment = (amount: number) => {
+    const handleRecordPayment = (amount: number) => {
         if (!activeOrder) return;
-        syncToStorage({ ...activeOrder, paymentReceived: Math.max(0, amount) });
+        const currentTotal = activeOrder.paymentReceived || 0;
+        const newTotal = Math.max(0, currentTotal + amount);
+        syncToStorage({ ...activeOrder, paymentReceived: newTotal });
+        setIsPaymentPopoverOpen(false);
     };
 
     const handleProjectedTotalChange = useCallback((id: string, total: number) => {
@@ -391,7 +393,7 @@ export default function ActiveOrderCommandCenter() {
                     <div className="space-y-2">
                         <div className="flex items-center justify-between">
                             <p className="text-[10px] font-bold uppercase text-muted-foreground">Payment Received</p>
-                            <Popover>
+                            <Popover open={isPaymentPopoverOpen} onOpenChange={setIsPaymentPopoverOpen}>
                                 <PopoverTrigger asChild>
                                     <Button variant="outline" size="sm" className="h-6 text-[9px] font-bold uppercase gap-1 text-primary hover:text-primary hover:bg-primary/5 border-primary/30">
                                         <WalletCards className="h-2.5 w-2.5" /> Record
@@ -399,18 +401,18 @@ export default function ActiveOrderCommandCenter() {
                                 </PopoverTrigger>
                                 <PopoverContent className="w-64 p-4 space-y-4" align="end">
                                     <div className="space-y-1.5">
-                                        <h4 className="font-bold text-xs uppercase tracking-wider">Update Payment</h4>
-                                        <p className="text-[10px] text-muted-foreground">Record new total payment received for this order.</p>
+                                        <h4 className="font-bold text-xs uppercase tracking-wider">Record Payment</h4>
+                                        <p className="text-[10px] text-muted-foreground">Add new payment received to the current balance.</p>
                                     </div>
                                     <div className="relative">
                                         <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-bold">₹</span>
                                         <input 
                                             type="number"
                                             min="0"
-                                            defaultValue={activeOrder.paymentReceived || 0}
+                                            placeholder="Enter amount"
                                             onKeyDown={(e) => {
                                                 if (e.key === 'Enter') {
-                                                    updatePayment(Number(e.currentTarget.value));
+                                                    handleRecordPayment(Number(e.currentTarget.value));
                                                     (e.target as any).blur();
                                                 }
                                             }}
@@ -421,10 +423,10 @@ export default function ActiveOrderCommandCenter() {
                                         className="w-full h-8 text-[10px] font-bold uppercase" 
                                         onClick={(e) => {
                                             const val = (e.currentTarget.parentElement?.querySelector('input') as HTMLInputElement).value;
-                                            updatePayment(Number(val));
+                                            handleRecordPayment(Number(val));
                                         }}
                                     >
-                                        Update Amount
+                                        Record Payment
                                     </Button>
                                 </PopoverContent>
                             </Popover>
@@ -495,18 +497,16 @@ export default function ActiveOrderCommandCenter() {
                                 </h2>
                                 
                                 <div className="flex items-center gap-4">
-                                    {!isEditMode && (
-                                        <Tabs value={viewMode} onValueChange={(v: any) => setViewMode(v)} className="w-auto">
-                                            <TabsList className="h-8 p-1 bg-muted/50 border">
-                                                <TabsTrigger value="scope" className="text-[10px] font-bold uppercase h-6 px-3">
-                                                    <Info className="h-3 w-3 mr-1.5" /> Scope
-                                                </TabsTrigger>
-                                                <TabsTrigger value="bill" className="text-[10px] font-bold uppercase h-6 px-3">
-                                                    <Receipt className="h-3 w-3 mr-1.5" /> Bill View
-                                                </TabsTrigger>
-                                            </TabsList>
-                                        </Tabs>
-                                    )}
+                                    <Tabs value={viewMode} onValueChange={(v: any) => setViewMode(v)} className="w-auto">
+                                        <TabsList className="h-8 p-1 bg-muted/50 border">
+                                            <TabsTrigger value="scope" className="text-[10px] font-bold uppercase h-6 px-3">
+                                                <Info className="h-3 w-3 mr-1.5" /> Scope
+                                            </TabsTrigger>
+                                            <TabsTrigger value="bill" className="text-[10px] font-bold uppercase h-6 px-3">
+                                                <Receipt className="h-3 w-3 mr-1.5" /> Bill View
+                                            </TabsTrigger>
+                                        </TabsList>
+                                    </Tabs>
                                     {!isEditMode && (
                                         <Badge variant="secondary" className="gap-1.5 text-[10px] font-bold uppercase tracking-wider hidden sm:flex">
                                             <Lock className="h-3 w-3" /> Locked
@@ -588,7 +588,6 @@ export default function ActiveOrderCommandCenter() {
                         </div>
                     </div>
 
-                    {/* Desktop Sidebar */}
                     <aside className="w-[24rem] shrink-0 border-l bg-card/30 hidden xl:flex flex-col p-6 gap-6 overflow-y-auto custom-scrollbar">
                         {FinancialSnapshot}
                         <div className="mt-auto pt-6 border-t flex items-center justify-between px-2">
@@ -603,7 +602,6 @@ export default function ActiveOrderCommandCenter() {
                     </aside>
                 </main>
 
-                {/* Mobile Financial Footer */}
                 <div className="xl:hidden fixed bottom-0 left-0 right-0 bg-background border-t z-40 shadow-2xl animate-in slide-in-from-bottom duration-300">
                     <div className="flex items-center justify-between px-4 h-20">
                         <div className="space-y-0.5">

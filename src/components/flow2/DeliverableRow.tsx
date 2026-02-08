@@ -207,8 +207,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         return itemBreakdown.reduce((sum, c) => sum + c.total, 0);
     }, [itemBreakdown]);
 
-    // Broadcast projected total to parent - uses currentNumericTotal (number) 
-    // to prevent identity-based re-render loops from the breakdown array.
     React.useEffect(() => {
         if (onProjectedTotalChange) {
             onProjectedTotalChange(item.id, currentNumericTotal);
@@ -271,6 +269,12 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             performSyncUpdate(currentValues);
             onDone(item.id, res, finalData);
         }
+    };
+
+    const handleCancelClick = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        reset();
+        onDone(item.id, true);
     };
 
     const handleEditClick = (e: React.MouseEvent) => {
@@ -338,7 +342,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             if (warning) return { type: 'soft', message: warning };
         }
         
-        // Hard constraint for negative rates
         const hasNegativeRate = Object.values(watchedValues.rateOverrides || {}).some(r => (r ?? 0) < 0);
         if (hasNegativeRate) return { type: 'hard', message: 'INVALID RATE' };
 
@@ -424,9 +427,14 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                 <Pencil className="h-3.5 w-3.5" /> Edit
                             </Button>
                         ) : (
-                            <Button size="sm" onClick={handleDoneClick} className="gap-2 h-8" disabled={!isValid || warningData.type === 'hard'}>
-                                <Check className="h-4 w-4" /> Done
-                            </Button>
+                            <div className="flex items-center gap-2">
+                                <Button size="sm" variant="ghost" onClick={handleCancelClick} className="gap-2 h-8 text-muted-foreground">
+                                    Cancel
+                                </Button>
+                                <Button size="sm" onClick={handleDoneClick} className="gap-2 h-8" disabled={!isValid || warningData.type === 'hard'}>
+                                    <Check className="h-4 w-4" /> Done
+                                </Button>
+                            </div>
                         )
                     )}
                 </div>
