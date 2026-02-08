@@ -78,18 +78,24 @@ const EditableField = ({
   register,
   registerKey,
   value,
-  showIfEmpty
+  showIfEmpty,
+  onFocusChange
 }: { 
   id: string, 
   label: string, 
   register: UseFormRegister<CustomerData>,
   registerKey: any,
   value: string,
-  showIfEmpty: boolean
+  showIfEmpty: boolean,
+  onFocusChange?: (key: string, isFocused: boolean) => void
 }) => {
+  const [localFocus, setLocalFocus] = React.useState(false);
   const isEmpty = !value || value.trim().length === 0;
   
-  if (!showIfEmpty && isEmpty) return null;
+  // Don't hide if it's focused, even if empty, to prevent jumping while typing
+  if (!showIfEmpty && isEmpty && !localFocus) return null;
+
+  const { onBlur: regOnBlur, onFocus: regOnFocus, ...regRest } = register(registerKey);
 
   return (
     <div className="mb-8 group transition-all duration-200 border-l-2 pl-4 border-primary/20 focus-within:border-primary break-inside-avoid">
@@ -101,7 +107,16 @@ const EditableField = ({
       </Label>
       <AutoGrowingTextarea 
         id={id} 
-        {...register(registerKey)}
+        {...regRest}
+        onFocus={(e) => {
+          setLocalFocus(true);
+          onFocusChange?.(String(registerKey), true);
+        }}
+        onBlur={(e) => {
+          setLocalFocus(false);
+          onFocusChange?.(String(registerKey), false);
+          regOnBlur(e);
+        }}
         placeholder="Enter creative brief details..."
         minRows={1}
         className={cn(
@@ -131,6 +146,7 @@ export function CustomerDataForm({
   );
 
   const [productSearchQuery, setProductSearchQuery] = React.useState('');
+  const [focusedFields, setFocusedFields] = React.useState<Record<string, boolean>>({});
 
   const defaultValues = React.useMemo(() => order.customerData || {
     visualIdentity: { moodStyle: '', colorTypography: '', designDislikes: '' },
@@ -150,18 +166,24 @@ export function CustomerDataForm({
     reset(defaultValues);
   }, [defaultValues, reset]);
 
-  // Section visibility checks for "Hide Empty" mode
-  const isSectionEmpty = (section: any) => {
-    if (!section) return true;
-    return Object.values(section).every(val => !val || (typeof val === 'string' && val.trim().length === 0));
+  const handleFocusChange = (key: string, isFocused: boolean) => {
+    setFocusedFields(prev => ({ ...prev, [key]: isFocused }));
   };
 
-  const isVisualEmpty = isSectionEmpty(watchedValues.visualIdentity);
-  const isNarrativeEmpty = isSectionEmpty(watchedValues.narrative);
-  const isCultureEmpty = isSectionEmpty(watchedValues.cultureSymbols);
-  const isAtmosphereEmpty = isSectionEmpty(watchedValues.atmosphereExtras);
+  // Section visibility checks for "Hide Empty" mode
+  const isSectionActive = (section: any, prefix: string) => {
+    if (!section) return false;
+    const hasData = Object.values(section).some(val => val && (typeof val === 'string' && val.trim().length > 0));
+    const hasFocus = Object.keys(section).some(key => focusedFields[`${prefix}.${key}`]);
+    return hasData || hasFocus;
+  };
 
-  const isGenericDataEmpty = isVisualEmpty && isNarrativeEmpty && isCultureEmpty && isAtmosphereEmpty;
+  const isVisualVisible = showEmptyFields || isSectionActive(watchedValues.visualIdentity, 'visualIdentity');
+  const isNarrativeVisible = showEmptyFields || isSectionActive(watchedValues.narrative, 'narrative');
+  const isCultureVisible = showEmptyFields || isSectionActive(watchedValues.cultureSymbols, 'cultureSymbols');
+  const isAtmosphereVisible = showEmptyFields || isSectionActive(watchedValues.atmosphereExtras, 'atmosphereExtras');
+
+  const isGenericDataVisible = isVisualVisible || isNarrativeVisible || isCultureVisible || isAtmosphereVisible;
 
   const getProductSpecsSummary = (item: ConfiguredProduct) => {
     const product = productCatalog.find(p => p.id === item.productId);
@@ -208,7 +230,10 @@ export function CustomerDataForm({
     if (!showEmptyFields) {
       list = list.filter(item => {
         const brief = (watchedValues.productBriefs as any)?.[item.id];
-        return brief && brief.trim().length > 0;
+        const hasData = brief && brief.trim().length > 0;
+        const isSelected = item.id === selectedProductId;
+        // Keep if it has data OR it's the currently selected one (to prevent disappearing while editing empty)
+        return hasData || isSelected;
       });
     }
 
@@ -218,29 +243,28 @@ export function CustomerDataForm({
     }
 
     return list;
-  }, [order.deliverables, showEmptyFields, productSearchQuery, watchedValues.productBriefs]);
+  }, [order.deliverables, showEmptyFields, productSearchQuery, watchedValues.productBriefs, selectedProductId]);
 
   // Ensure selection stays valid when switching visible list
   React.useEffect(() => {
     if (visibleDeliverables.length > 0) {
       const stillVisible = visibleDeliverables.some(d => d.id === selectedProductId);
-      if (!stillVisible) {
+      if (!stillVisible && !showEmptyFields) {
         setSelectedProductId(visibleDeliverables[0].id);
       }
-    } else {
+    } else if (!showEmptyFields) {
       setSelectedProductId(null);
     }
-  }, [visibleDeliverables, selectedProductId]);
+  }, [visibleDeliverables, selectedProductId, showEmptyFields]);
 
   const selectedItem = order.deliverables.find(d => d.id === selectedProductId);
-  const showGenericData = !isGenericDataEmpty || showEmptyFields;
 
   return (
     <div className="pb-24 max-w-6xl mx-auto relative">
       {/* Masonry Layout for General Sections */}
-      {showGenericData && (
+      {isGenericDataVisible && (
         <section className="columns-1 md:columns-2 gap-8 space-y-8">
-          {(!isVisualEmpty || showEmptyFields) && (
+          {isVisualVisible && (
             <div className="break-inside-avoid">
               <SectionHeader title="Visual Identity" icon={Palette} />
               <EditableField 
@@ -250,6 +274,7 @@ export function CustomerDataForm({
                 registerKey="visualIdentity.moodStyle"
                 value={watchedValues.visualIdentity?.moodStyle || ''}
                 showIfEmpty={showEmptyFields}
+                onFocusChange={handleFocusChange}
               />
               <EditableField 
                 id="colors"
@@ -258,6 +283,7 @@ export function CustomerDataForm({
                 registerKey="visualIdentity.colorTypography"
                 value={watchedValues.visualIdentity?.colorTypography || ''}
                 showIfEmpty={showEmptyFields}
+                onFocusChange={handleFocusChange}
               />
               <EditableField 
                 id="dislikes"
@@ -266,11 +292,12 @@ export function CustomerDataForm({
                 registerKey="visualIdentity.designDislikes"
                 value={watchedValues.visualIdentity?.designDislikes || ''}
                 showIfEmpty={showEmptyFields}
+                onFocusChange={handleFocusChange}
               />
             </div>
           )}
 
-          {(!isCultureEmpty || showEmptyFields) && (
+          {isCultureVisible && (
             <div className="break-inside-avoid">
               <SectionHeader title="Culture & Symbols" icon={Globe} />
               <EditableField 
@@ -280,6 +307,7 @@ export function CustomerDataForm({
                 registerKey="cultureSymbols.mandatoryIcons"
                 value={watchedValues.cultureSymbols?.mandatoryIcons || ''}
                 showIfEmpty={showEmptyFields}
+                onFocusChange={handleFocusChange}
               />
               <EditableField 
                 id="nuances"
@@ -288,11 +316,12 @@ export function CustomerDataForm({
                 registerKey="cultureSymbols.regionalNuances"
                 value={watchedValues.cultureSymbols?.regionalNuances || ''}
                 showIfEmpty={showEmptyFields}
+                onFocusChange={handleFocusChange}
               />
             </div>
           )}
 
-          {(!isNarrativeEmpty || showEmptyFields) && (
+          {isNarrativeVisible && (
             <div className="break-inside-avoid">
               <SectionHeader title="The Narrative" icon={BookOpen} />
               <EditableField 
@@ -302,6 +331,7 @@ export function CustomerDataForm({
                 registerKey="narrative.timeline"
                 value={watchedValues.narrative?.timeline || ''}
                 showIfEmpty={showEmptyFields}
+                onFocusChange={handleFocusChange}
               />
               <EditableField 
                 id="couple"
@@ -310,6 +340,7 @@ export function CustomerDataForm({
                 registerKey="narrative.coupleWorld"
                 value={watchedValues.narrative?.coupleWorld || ''}
                 showIfEmpty={showEmptyFields}
+                onFocusChange={handleFocusChange}
               />
               <EditableField 
                 id="eggs"
@@ -318,11 +349,12 @@ export function CustomerDataForm({
                 registerKey="narrative.easterEggs"
                 value={watchedValues.narrative?.easterEggs || ''}
                 showIfEmpty={showEmptyFields}
+                onFocusChange={handleFocusChange}
               />
             </div>
           )}
 
-          {(!isAtmosphereEmpty || showEmptyFields) && (
+          {isAtmosphereVisible && (
             <div className="break-inside-avoid">
               <SectionHeader title="Atmosphere & Extras" icon={Sparkles} />
               <EditableField 
@@ -332,6 +364,7 @@ export function CustomerDataForm({
                 registerKey="atmosphereExtras.venuePersonality"
                 value={watchedValues.atmosphereExtras?.venuePersonality || ''}
                 showIfEmpty={showEmptyFields}
+                onFocusChange={handleFocusChange}
               />
               <EditableField 
                 id="other"
@@ -340,6 +373,7 @@ export function CustomerDataForm({
                 registerKey="atmosphereExtras.otherDetails"
                 value={watchedValues.atmosphereExtras?.otherDetails || ''}
                 showIfEmpty={showEmptyFields}
+                onFocusChange={handleFocusChange}
               />
             </div>
           )}
@@ -348,7 +382,7 @@ export function CustomerDataForm({
 
       {/* Master-Detail View for Product Briefs */}
       <section className={cn(
-        showGenericData ? "mt-12 pt-12 border-t border-primary/10" : "mt-0"
+        isGenericDataVisible ? "mt-12 pt-12 border-t border-primary/10" : "mt-0"
       )}>
         <SectionHeader title="Product Specific Briefs" icon={Box} />
         
