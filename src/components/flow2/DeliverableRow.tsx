@@ -141,7 +141,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
     const { register, control, watch, formState: { errors, isValid }, trigger, getValues, setValue, reset } = form;
     const watchedValues = watch();
 
-    // Re-sync local form state when item data from parent changes (e.g. after a rejection/re-render)
     React.useEffect(() => {
         if (!isExpanded) {
             reset({
@@ -205,7 +204,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         });
     }, [getValues, item.id, onUpdate]);
 
-    // Auto-sync only if not in manualSyncOnly mode (usually draft flow vs active order flow)
     React.useEffect(() => {
         if (manualSyncOnly) return;
         
@@ -234,7 +232,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         e.stopPropagation();
         const res = await trigger();
         if (res) {
-            // Explicitly commit changes to parent/storage on "Done"
             performSyncUpdate();
             onDone(item.id, res);
         }
@@ -277,8 +274,17 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             });
         }
 
+        const activeAddons = (watchedValues.addons || []).filter((a: any) => a.value !== undefined && a.value !== false);
+        activeAddons.forEach((a: any) => {
+            parts.push(<span key={`addon-${a.id}`} className="text-primary/90 font-medium">{a.name}</span>);
+        });
+
+        if (watchedValues.specialRequest) {
+            parts.push(<span key="special" className="italic opacity-80">Note: {watchedValues.specialRequest}</span>);
+        }
+
         if (parts.length === 0) return null;
-        return parts.reduce((prev, curr, i) => [prev, <span key={`sep-${i}`} className="mx-1 text-muted-foreground/50">•</span>, curr]);
+        return parts.reduce((prev, curr, i) => [prev, <span key={`sep-${i}`} className="mx-1 text-muted-foreground/30">•</span>, curr]);
     };
 
     const getWarningData = React.useCallback((): { type: 'hard' | 'soft' | null, message: string | null } => {
@@ -320,7 +326,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                     )
             )}
         >
-            <div className={cn("flex items-center px-4 transition-all h-14")}>
+            <div className={cn("flex items-center px-4 transition-all min-h-[3.5rem] py-2")}>
                 <div className="flex-1 flex items-center gap-3 text-left w-full overflow-hidden">
                     <div className={cn(
                         "rounded-lg flex items-center justify-center shrink-0 transition-colors",
@@ -329,24 +335,26 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                     )}>
                         <IconComponent className={isExpanded ? "h-5 w-5" : "h-4 w-4"} />
                     </div>
-                    <div className={cn("flex items-baseline gap-3 flex-1 overflow-hidden")}>
-                        <h3 className={cn("font-semibold leading-none shrink-0", isExpanded ? "text-base" : "text-sm")}>
-                            {item.productName}
-                        </h3>
-                        {warningData.message && !isPersistent && (
-                            <Badge variant={warningData.type === 'hard' ? 'destructive' : 'warning'} className="text-[10px] h-4 py-0 font-bold uppercase shrink-0">
-                                {warningData.message}
-                            </Badge>
-                        )}
+                    <div className={cn("flex flex-col flex-1 overflow-hidden min-w-0")}>
+                        <div className="flex items-center gap-2 overflow-hidden">
+                            <h3 className={cn("font-semibold leading-none truncate", isExpanded ? "text-base" : "text-sm")}>
+                                {item.productName}
+                            </h3>
+                            {warningData.message && !isPersistent && (
+                                <Badge variant={warningData.type === 'hard' ? 'destructive' : 'warning'} className="text-[9px] h-3.5 py-0 px-1 font-bold uppercase shrink-0">
+                                    {warningData.message}
+                                </Badge>
+                            )}
+                        </div>
                         {!isExpanded && (
-                            <div className="text-xs text-muted-foreground truncate flex-1 min-w-0 flex items-center">
+                            <div className="text-[10px] sm:text-[11px] text-muted-foreground leading-snug mt-1 line-clamp-2 max-w-full">
                                 {getSummaryText()}
                             </div>
                         )}
                     </div>
                 </div>
 
-                <div className="flex items-center gap-2 ml-4">
+                <div className="flex items-center gap-2 ml-4 shrink-0">
                     {!isReadOnly && (
                         <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={handleDelete}>
                             <Trash2 className="h-4 w-4" />
