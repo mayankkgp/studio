@@ -234,7 +234,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
 
     const handleRateOverride = (label: string, value: number) => {
         const currentOverrides = getValues('rateOverrides') || {};
-        setValue('rateOverrides', { ...currentOverrides, [label]: Math.max(0, value) }, { shouldValidate: true });
+        setValue('rateOverrides', { ...currentOverrides, [label]: value }, { shouldValidate: true });
     };
 
     const handleDoneClick = async (e: React.MouseEvent) => {
@@ -578,12 +578,13 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                             type="number"
                                                             min="0"
                                                             disabled={isReadOnly}
-                                                            defaultValue={comp.rate}
-                                                            onBlur={(e) => handleRateOverride(comp.label, Number(e.target.value))}
+                                                            value={watchedValues.rateOverrides?.[comp.label] ?? comp.rate}
+                                                            onChange={(e) => handleRateOverride(comp.label, Number(e.target.value))}
                                                             onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
                                                             className={cn(
                                                                 "w-20 h-7 text-right bg-background border rounded px-1.5 font-bold focus:ring-1 focus:ring-primary",
-                                                                isReadOnly && "border-transparent bg-transparent"
+                                                                isReadOnly && "border-transparent bg-transparent",
+                                                                (watchedValues.rateOverrides?.[comp.label] ?? comp.rate) < 0 && "border-destructive text-destructive"
                                                             )}
                                                         />
                                                     </div>
