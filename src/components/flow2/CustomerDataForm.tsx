@@ -435,6 +435,13 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
                     const hasAddons = (item.addons || []).some((a: any) => a.value !== undefined && a.value !== false && a.value !== null);
                     const hasSpecial = item.specialRequest && item.specialRequest.trim().length > 0;
                     
+                    // Build technical tags string
+                    const tags = [];
+                    if (item.variant) tags.push(item.variant);
+                    if (hasAddons) tags.push("Add-on");
+                    if (hasSpecial) tags.push("Special Request");
+                    const tagsDisplay = tags.join(" • ");
+
                     return (
                       <button
                         key={item.id}
@@ -453,14 +460,14 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
                           )}>
                             {item.productName}
                           </div>
-                          <div className={cn(
-                            "text-[9px] font-bold uppercase truncate mt-0.5",
-                            isActive ? "text-white/80" : "text-muted-foreground"
-                          )}>
-                            {item.variant || 'Standard'}
-                            {hasAddons && " • Add-on"}
-                            {hasSpecial && " • Special Request"}
-                          </div>
+                          {tagsDisplay && (
+                            <div className={cn(
+                              "text-[9px] font-bold uppercase truncate mt-0.5",
+                              isActive ? "text-white/80" : "text-muted-foreground"
+                            )}>
+                              {tagsDisplay}
+                            </div>
+                          )}
                         </div>
                         <div className="shrink-0">
                           {hasData ? (
