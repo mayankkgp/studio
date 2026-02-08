@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Save, Palette, BookOpen, Globe, Sparkles, Box } from 'lucide-react';
+import { Save, Palette, BookOpen, Globe, Sparkles, Box, MessageSquare } from 'lucide-react';
 import type { Order, CustomerData } from '@/lib/types';
 import { productCatalog } from '@/lib/product-data';
 import { cn } from '@/lib/utils';
@@ -194,6 +194,12 @@ export function CustomerDataForm({ order, onSave }: CustomerDataFormProps) {
                                                         <CustomBadge variant="secondary">{item.pages} Pages</CustomBadge>
                                                     )}
                                                     {item.variant && <CustomBadge variant="secondary">{item.variant}</CustomBadge>}
+                                                    {item.specialRequest && (
+                                                        <CustomBadge variant="outline" className="border-orange-200 text-orange-800 bg-orange-50/50 gap-1.5">
+                                                            <MessageSquare className="h-2.5 w-2.5" />
+                                                            Request: {item.specialRequest}
+                                                        </CustomBadge>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
