@@ -80,9 +80,34 @@ export type BillableItem = {
   components: BillableComponent[];
 };
 
+export type CustomerData = {
+  visualIdentity: {
+    moodStyle: string;
+    colorTypography: string;
+    designDislikes: string;
+  };
+  narrative: {
+    timeline: string;
+    coupleWorld: string;
+    easterEggs: string;
+  };
+  cultureSymbols: {
+    mandatoryIcons: string;
+    regionalNuances: string;
+  };
+  atmosphereExtras: {
+    venuePersonality: string;
+    otherDetails: string;
+  };
+  productBriefs: Record<string, string>;
+};
+
 export type Order = {
   orderId: string;
   eventDetails: Partial<EventDetails>;
   deliverables: ConfiguredProduct[];
   paymentReceived: number;
+  customerData?: CustomerData;
+  activatedAt?: string;
+  lastModifiedAt?: string;
 };
