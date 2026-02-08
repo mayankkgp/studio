@@ -27,12 +27,12 @@ export const eventDetailsSchema = z
     // Anniversary
     husbandName: optionalString,
     wifeName: optionalString,
-    milestoneYears: z.number().optional(),
+    milestoneYears: z.number().min(0, 'Must be 0 or greater').optional(),
 
     // Birthday
     honoreeNameBirthday: optionalString,
     gender: z.enum(['Male', 'Female', 'Other']).optional(),
-    ageMilestone: z.number().optional(),
+    ageMilestone: z.number().min(0, 'Must be 0 or greater').optional(),
 
     // Others
     eventName: optionalString,

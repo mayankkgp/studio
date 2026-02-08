@@ -1,4 +1,3 @@
-
 'use client';
 
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -35,7 +34,7 @@ export default function CommercialsPage() {
         const deliverable = order.deliverables?.find(d => d.id === configuredProductId);
         if (!deliverable) return;
 
-        const rateOverrides = { ...deliverable.rateOverrides, [label]: value };
+        const rateOverrides = { ...deliverable.rateOverrides, [label]: Math.max(0, value) };
         updateDeliverable(deliverable.id, { rateOverrides });
     };
 
@@ -179,6 +178,7 @@ export default function CommercialsPage() {
                                                                         <TableCell className="py-0 text-right border-b border-stone-300">
                                                                             <input
                                                                                 type="number"
+                                                                                min="0"
                                                                                 defaultValue={comp.rate}
                                                                                 onBlur={(e) => handleRateChange(item.configuredProductId, comp.label, Number(e.target.value))}
                                                                                 onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
@@ -236,9 +236,10 @@ export default function CommercialsPage() {
                                     <input 
                                         id="payment" 
                                         type="number" 
+                                        min="0"
                                         placeholder="0"
                                         value={order.paymentReceived || ''}
-                                        onChange={(e) => setPaymentReceived(Number(e.target.value))}
+                                        onChange={(e) => setPaymentReceived(Math.max(0, Number(e.target.value)))}
                                         className="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 pl-7 text-lg font-semibold ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                                     />
                                 </div>

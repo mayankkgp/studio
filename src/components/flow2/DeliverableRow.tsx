@@ -40,15 +40,15 @@ const getValidationSchema = (product: Product | null) => {
     let schemaObject: any = {
         variant: product.variants && product.variants.length > 0 ? z.string().min(1, "REQUIRED") : z.string().optional(),
         specialRequest: z.string().optional(),
-        rateOverrides: z.record(z.number()).optional(),
+        rateOverrides: z.record(z.number().min(0, "MIN 0")).optional(),
     };
 
     if (product.configType === 'A') {
-        schemaObject.quantity = z.number({ required_error: "REQUIRED", invalid_type_error: "REQUIRED" });
+        schemaObject.quantity = z.number({ required_error: "REQUIRED", invalid_type_error: "REQUIRED" }).min(0, "MIN 0");
     }
     
     if (product.configType === 'B') {
-        schemaObject.pages = z.number({ required_error: "REQUIRED", invalid_type_error: "REQUIRED" });
+        schemaObject.pages = z.number({ required_error: "REQUIRED", invalid_type_error: "REQUIRED" }).min(0, "MIN 0");
     }
 
     if (product.customFields) {
@@ -58,7 +58,7 @@ const getValidationSchema = (product: Product | null) => {
                     ...acc,
                     [field.id]: z.preprocess(
                         (val) => (val === "" || val === null || (typeof val === 'number' && isNaN(val)) ? undefined : val),
-                        z.number().optional()
+                        z.number().min(0, "MIN 0").optional()
                     )
                 }), {})
             ).refine((vals: any) => {
@@ -68,7 +68,7 @@ const getValidationSchema = (product: Product | null) => {
             schemaObject.customFieldValues = z.object(
                 product.customFields.reduce((acc, field) => ({
                     ...acc,
-                    [field.id]: z.number({ required_error: "REQUIRED", invalid_type_error: "REQUIRED" })
+                    [field.id]: z.number({ required_error: "REQUIRED", invalid_type_error: "REQUIRED" }).min(0, "MIN 0")
                 }), {})
             );
         }
@@ -87,6 +87,8 @@ const getValidationSchema = (product: Product | null) => {
                 if (isSelected && addonDef && (addonDef.type === 'numeric' || addonDef.type === 'physical_quantity')) {
                     if (addon.value === null || addon.value === '' || isNaN(Number(addon.value))) {
                          ctx.addIssue({ code: z.ZodIssueCode.custom, message: "REQUIRED", path: [idx, 'value'] });
+                    } else if (Number(addon.value) < 0) {
+                         ctx.addIssue({ code: z.ZodIssueCode.custom, message: "MIN 0", path: [idx, 'value'] });
                     }
                 }
             });
@@ -226,7 +228,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
 
     const handleRateOverride = (label: string, value: number) => {
         const currentOverrides = getValues('rateOverrides') || {};
-        setValue('rateOverrides', { ...currentOverrides, [label]: value }, { shouldValidate: true });
+        setValue('rateOverrides', { ...currentOverrides, [label]: Math.max(0, value) }, { shouldValidate: true });
     };
 
     const handleDoneClick = async (e: React.MouseEvent) => {
@@ -430,6 +432,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                     </Label>
                                     <Input 
                                         type="number" 
+                                        min="0"
                                         disabled={isReadOnly}
                                         {...register(product?.configType === 'A' ? 'quantity' : 'pages', { valueAsNumber: true })}
                                         className={cn(
@@ -447,6 +450,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                     </Label>
                                     <Input 
                                         type="number" 
+                                        min="0"
                                         disabled={isReadOnly}
                                         className={cn(
                                             "w-20 h-10 bg-background",
@@ -490,11 +494,13 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                             <span className="text-xs font-bold uppercase tracking-tight">{addon.name}</span>
                                                             {addon.type !== 'checkbox' && (
                                                                 <Input
-                                                                    type="number" disabled={isReadOnly}
+                                                                    type="number" 
+                                                                    min="0"
+                                                                    disabled={isReadOnly}
                                                                     autoFocus={justActivatedAddonId === addon.id}
                                                                     className="h-6 px-2 py-0 text-xs bg-white border-none focus-visible:ring-0 rounded-md font-bold text-black w-12"
                                                                     value={val}
-                                                                    onChange={(e) => field.onChange(e.target.value === '' ? null : Number(e.target.value))}
+                                                                    onChange={(e) => field.onChange(e.target.value === '' ? null : Math.max(0, Number(e.target.value)))}
                                                                 />
                                                             )}
                                                             {!isReadOnly && (
@@ -561,6 +567,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                     <div className="flex justify-end">
                                                         <input 
                                                             type="number"
+                                                            min="0"
                                                             disabled={isReadOnly}
                                                             defaultValue={comp.rate}
                                                             onBlur={(e) => handleRateOverride(comp.label, Number(e.target.value))}

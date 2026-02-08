@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -578,7 +577,7 @@ export function EventDetailsForm({ activeOrder, onUpdate, hideFooters = false }:
                 </div>
                  <div className="space-y-2">
                   <Label htmlFor="milestoneYears">Milestone Years *</Label>
-                  <Input id="milestoneYears" type="number" {...register('milestoneYears', { valueAsNumber: true })} />
+                  <Input id="milestoneYears" type="number" min="0" {...register('milestoneYears', { valueAsNumber: true })} />
                 </div>
               </div>
             )}
@@ -610,7 +609,7 @@ export function EventDetailsForm({ activeOrder, onUpdate, hideFooters = false }:
                 </div>
                  <div className="space-y-2">
                   <Label htmlFor="ageMilestone">Age / Milestone *</Label>
-                  <Input id="ageMilestone" type="number" {...register('ageMilestone', { valueAsNumber: true })} />
+                  <Input id="ageMilestone" type="number" min="0" {...register('ageMilestone', { valueAsNumber: true })} />
                 </div>
               </div>
             )}

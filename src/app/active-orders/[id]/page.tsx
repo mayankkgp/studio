@@ -166,7 +166,7 @@ export default function ActiveOrderCommandCenter() {
 
     const updatePayment = (amount: number) => {
         if (!activeOrder) return;
-        syncToStorage({ ...activeOrder, paymentReceived: amount });
+        syncToStorage({ ...activeOrder, paymentReceived: Math.max(0, amount) });
     };
 
     const billableItems = useMemo(() => {
@@ -384,6 +384,7 @@ export default function ActiveOrderCommandCenter() {
                                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">₹</span>
                                         <input 
                                             type="number"
+                                            min="0"
                                             value={activeOrder.paymentReceived || ''}
                                             onChange={(e) => updatePayment(Number(e.target.value))}
                                             className="w-full h-12 pl-7 pr-4 rounded-lg border-2 border-muted bg-muted/20 font-bold text-xl focus:border-primary focus:ring-0 transition-colors"
