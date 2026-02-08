@@ -561,9 +561,9 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                         </TabsList>
                     </div>
 
-                    <div className="flex-1 flex overflow-hidden">
-                        <TabsContent value="overview" className="flex-1 flex overflow-hidden m-0 outline-none">
-                            <div className="flex-1 flex overflow-hidden w-full">
+                    <div className="flex-1 relative">
+                        <TabsContent value="overview" className="absolute inset-0 m-0 outline-none overflow-hidden">
+                            <div className="flex h-full w-full overflow-hidden">
                                 <main className="flex-1 overflow-y-auto bg-background/50 custom-scrollbar relative">
                                     <div className="max-w-4xl mx-auto p-4 md:p-8 space-y-8 pb-32">
                                         <div className="flex items-center justify-between gap-4">
@@ -618,20 +618,6 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                                             </div>
                                         )}
 
-                                        {viewMode === 'scope' && (
-                                            <div className="sm:hidden mb-4">
-                                                <div className="relative">
-                                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                                    <Input 
-                                                        placeholder="Search products..." 
-                                                        className="h-10 pl-10 border-primary/20"
-                                                        value={itemSearchQuery}
-                                                        onChange={(e) => setItemSearchQuery(e.target.value)}
-                                                    />
-                                                </div>
-                                            </div>
-                                        )}
-
                                         <div className="space-y-4">
                                             {activeOrder.deliverables.length === 0 ? (
                                                 <div className="text-center py-20 border-2 border-dashed rounded-xl bg-muted/20 border-primary/20">
@@ -670,6 +656,17 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                                                 </div>
                                             ) : (
                                                 <>
+                                                    <div className="sm:hidden mb-4">
+                                                        <div className="relative">
+                                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                                            <Input 
+                                                                placeholder="Search products..." 
+                                                                className="h-10 pl-10 border-primary/20"
+                                                                value={itemSearchQuery}
+                                                                onChange={(e) => setItemSearchQuery(e.target.value)}
+                                                            />
+                                                        </div>
+                                                    </div>
                                                     {filteredDeliverables.length === 0 ? (
                                                         <div className="text-center py-20 bg-muted/20 rounded-xl border-2 border-dashed border-primary/20">
                                                             <p className="text-muted-foreground text-sm font-bold">No items match "{itemSearchQuery}"</p>
@@ -723,15 +720,13 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                             </div>
                         </TabsContent>
                         
-                        <TabsContent value="customer" className="flex-1 flex overflow-hidden m-0 outline-none">
-                            <main className="flex-1 overflow-y-auto bg-background/50 custom-scrollbar relative">
-                                <div className="max-w-4xl mx-auto p-4 md:p-8">
-                                    <CustomerDataForm 
-                                        order={activeOrder} 
-                                        onSave={handleSaveCustomerData} 
-                                    />
-                                </div>
-                            </main>
+                        <TabsContent value="customer" className="absolute inset-0 m-0 outline-none overflow-y-auto custom-scrollbar bg-background/50">
+                            <div className="max-w-4xl mx-auto p-4 md:p-8">
+                                <CustomerDataForm 
+                                    order={activeOrder} 
+                                    onSave={handleSaveCustomerData} 
+                                />
+                            </div>
                         </TabsContent>
                     </div>
                 </Tabs>
