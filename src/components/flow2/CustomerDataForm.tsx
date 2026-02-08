@@ -26,6 +26,87 @@ const isFormEmpty = (data?: CustomerData) => {
     return !(hasVisual || hasNarrative || hasCulture || hasAtmosphere || hasProductBriefs);
 };
 
+/**
+ * UI Components moved outside to prevent re-creation on every render
+ * which was causing focus loss during typing.
+ */
+
+const SectionHeader = ({ title, icon: Icon, number, subtitle }: { title: string, icon: any, number?: string, subtitle?: string }) => (
+    <div className="flex items-center gap-4">
+        {number && (
+            <div className="h-10 w-10 shrink-0 rounded-xl bg-primary text-white flex items-center justify-center font-black text-base shadow-lg shadow-primary/20">
+                {number}
+            </div>
+        )}
+        {!number && (
+            <div className="h-10 w-10 shrink-0 rounded-xl bg-primary/10 text-primary flex items-center justify-center shadow-sm">
+                <Icon className="h-5 w-5" />
+            </div>
+        )}
+        <div className="flex flex-col">
+            <div className="flex items-center gap-2">
+                {number && <Icon className="h-4 w-4 text-primary opacity-90" />}
+                <h3 className="font-headline text-2xl font-black text-foreground tracking-tight">{title}</h3>
+            </div>
+            {subtitle ? (
+                <p className="text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground/80 mt-0.5">{subtitle}</p>
+            ) : (
+                <div className="h-0.5 w-12 bg-primary/30 mt-1 rounded-full" />
+            )}
+        </div>
+    </div>
+);
+
+const Field = ({ 
+    id, 
+    label, 
+    placeholder, 
+    registerKey, 
+    className, 
+    isEditing, 
+    register, 
+    value 
+}: { 
+    id: string, 
+    label: string, 
+    placeholder: string, 
+    registerKey: any, 
+    className?: string,
+    isEditing: boolean,
+    register: any,
+    value: string
+}) => (
+    <div className={cn("space-y-2.5", className)}>
+        <Label htmlFor={id} className="text-[10px] font-black uppercase tracking-[0.15em] text-foreground/70 pl-1">{label}</Label>
+        {isEditing ? (
+            <Textarea 
+                id={id} 
+                {...register(registerKey)}
+                placeholder={placeholder}
+                className="min-h-[140px] bg-white/90 border-primary/20 focus-visible:ring-primary/40 focus-visible:border-primary/40 placeholder:text-muted-foreground/50 transition-all duration-200 resize-none shadow-sm p-4 text-sm leading-relaxed font-medium"
+            />
+        ) : (
+            <div className="min-h-[140px] bg-muted/20 border-2 border-transparent rounded-md p-4 text-sm leading-relaxed font-bold text-foreground/90 whitespace-pre-wrap">
+                {value || <span className="text-muted-foreground/40 italic font-medium">No information provided.</span>}
+            </div>
+        )}
+    </div>
+);
+
+function CustomBadge({ children, variant = 'default', className }: { children: React.ReactNode, variant?: 'default' | 'secondary' | 'outline', className?: string }) {
+    return (
+        <span className={cn(
+            "inline-flex items-center rounded-lg px-3 py-1.5 text-[9px] font-black uppercase tracking-widest transition-all",
+            variant === 'default' && "bg-primary text-white shadow-md",
+            variant === 'secondary' && "bg-primary/10 text-primary border border-primary/20",
+            variant === 'outline' && "border-2 border-stone-200 text-foreground/80 bg-white/60",
+            className
+        )}>
+            {children}
+        </span>
+    );
+}
+
 export function CustomerDataForm({ order, onSave }: CustomerDataFormProps) {
     const [isEditing, setIsEditing] = React.useState(isFormEmpty(order.customerData));
 
@@ -56,53 +137,8 @@ export function CustomerDataForm({ order, onSave }: CustomerDataFormProps) {
         setIsEditing(false);
     };
 
-    const SectionHeader = ({ title, icon: Icon, number, subtitle }: { title: string, icon: any, number?: string, subtitle?: string }) => (
-        <div className="flex items-center gap-4">
-            {number && (
-                <div className="h-10 w-10 shrink-0 rounded-xl bg-primary text-white flex items-center justify-center font-black text-base shadow-lg shadow-primary/20">
-                    {number}
-                </div>
-            )}
-            {!number && (
-                <div className="h-10 w-10 shrink-0 rounded-xl bg-primary/10 text-primary flex items-center justify-center shadow-sm">
-                    <Icon className="h-5 w-5" />
-                </div>
-            )}
-            <div className="flex flex-col">
-                <div className="flex items-center gap-2">
-                    {number && <Icon className="h-4 w-4 text-primary opacity-90" />}
-                    <h3 className="font-headline text-2xl font-black text-foreground tracking-tight">{title}</h3>
-                </div>
-                {subtitle ? (
-                    <p className="text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground/80 mt-0.5">{subtitle}</p>
-                ) : (
-                    <div className="h-0.5 w-12 bg-primary/30 mt-1 rounded-full" />
-                )}
-            </div>
-        </div>
-    );
-
-    const Field = ({ id, label, placeholder, registerKey, className }: { id: string, label: string, placeholder: string, registerKey: any, className?: string }) => {
-        const value = watch(registerKey);
-        
-        return (
-            <div className={cn("space-y-2.5", className)}>
-                <Label htmlFor={id} className="text-[10px] font-black uppercase tracking-[0.15em] text-foreground/70 pl-1">{label}</Label>
-                {isEditing ? (
-                    <Textarea 
-                        id={id} 
-                        {...register(registerKey)}
-                        placeholder={placeholder}
-                        className="min-h-[140px] bg-white/90 border-primary/20 focus-visible:ring-primary/40 focus-visible:border-primary/40 placeholder:text-muted-foreground/50 transition-all duration-200 resize-none shadow-sm p-4 text-sm leading-relaxed font-medium"
-                    />
-                ) : (
-                    <div className="min-h-[140px] bg-muted/20 border-2 border-transparent rounded-md p-4 text-sm leading-relaxed font-bold text-foreground/90 whitespace-pre-wrap">
-                        {value || <span className="text-muted-foreground/40 italic font-medium">No information provided.</span>}
-                    </div>
-                )}
-            </div>
-        );
-    };
+    // Watch values at top level for Field components
+    const watchedValues = watch();
 
     return (
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-16 pb-32">
@@ -151,12 +187,18 @@ export function CustomerDataForm({ order, onSave }: CustomerDataFormProps) {
                         label="Mood & Style Reference"
                         placeholder="Pinterest/Drive link and style keywords e.g., 'Boho, Minimalist, Royal'"
                         registerKey="visualIdentity.moodStyle"
+                        isEditing={isEditing}
+                        register={register}
+                        value={watchedValues.visualIdentity?.moodStyle || ''}
                     />
                     <Field 
                         id="colors"
                         label="Color Palette & Typography"
                         placeholder="Hex codes/color names e.g., 'Dusty Rose, Gold' and font preferences"
                         registerKey="visualIdentity.colorTypography"
+                        isEditing={isEditing}
+                        register={register}
+                        value={watchedValues.visualIdentity?.colorTypography || ''}
                     />
                     <Field 
                         id="dislikes"
@@ -164,6 +206,9 @@ export function CustomerDataForm({ order, onSave }: CustomerDataFormProps) {
                         placeholder="Specific symbols, motifs, styles, or objects to strictly exclude"
                         registerKey="visualIdentity.designDislikes"
                         className="md:col-span-2"
+                        isEditing={isEditing}
+                        register={register}
+                        value={watchedValues.visualIdentity?.designDislikes || ''}
                     />
                 </CardContent>
             </Card>
@@ -179,12 +224,18 @@ export function CustomerDataForm({ order, onSave }: CustomerDataFormProps) {
                         label="The Relationship Timeline"
                         placeholder="Chronological highlights: Meeting spot, key trips, moving in, and proposal details"
                         registerKey="narrative.timeline"
+                        isEditing={isEditing}
+                        register={register}
+                        value={watchedValues.narrative?.timeline || ''}
                     />
                     <Field 
                         id="couple"
                         label="The Couple's World"
                         placeholder="Shared hobbies, favorite travel destinations, pets, or specific interests"
                         registerKey="narrative.coupleWorld"
+                        isEditing={isEditing}
+                        register={register}
+                        value={watchedValues.narrative?.coupleWorld || ''}
                     />
                     <Field 
                         id="eggs"
@@ -192,6 +243,9 @@ export function CustomerDataForm({ order, onSave }: CustomerDataFormProps) {
                         placeholder="Inside jokes, specific dates, or objects to subtly hide in the artwork"
                         registerKey="narrative.easterEggs"
                         className="md:col-span-2"
+                        isEditing={isEditing}
+                        register={register}
+                        value={watchedValues.narrative?.easterEggs || ''}
                     />
                 </CardContent>
             </Card>
@@ -207,12 +261,18 @@ export function CustomerDataForm({ order, onSave }: CustomerDataFormProps) {
                         label="Mandatory Icons & Motifs"
                         placeholder="Religious icons e.g., Om, Cross, specific animals e.g., Peacocks, or ancestral patterns"
                         registerKey="cultureSymbols.mandatoryIcons"
+                        isEditing={isEditing}
+                        register={register}
+                        value={watchedValues.cultureSymbols?.mandatoryIcons || ''}
                     />
                     <Field 
                         id="nuances"
                         label="Linguistic & Regional Nuances"
                         placeholder="Native phrases, Shlokas, or regional elements e.g., 'Varanasi skyline', 'Punjabi boli'"
                         registerKey="cultureSymbols.regionalNuances"
+                        isEditing={isEditing}
+                        register={register}
+                        value={watchedValues.cultureSymbols?.regionalNuances || ''}
                     />
                 </CardContent>
             </Card>
@@ -228,12 +288,18 @@ export function CustomerDataForm({ order, onSave }: CustomerDataFormProps) {
                         label="Venue & Function Personality"
                         placeholder="Setting and mood description for each function e.g., 'Haldi: Yellow garden party'"
                         registerKey="atmosphereExtras.venuePersonality"
+                        isEditing={isEditing}
+                        register={register}
+                        value={watchedValues.atmosphereExtras?.venuePersonality || ''}
                     />
                     <Field 
                         id="other"
                         label="Other Details"
                         placeholder="Any miscellaneous requirements, logistical constraints, or context"
                         registerKey="atmosphereExtras.otherDetails"
+                        isEditing={isEditing}
+                        register={register}
+                        value={watchedValues.atmosphereExtras?.otherDetails || ''}
                     />
                 </CardContent>
             </Card>
@@ -250,7 +316,7 @@ export function CustomerDataForm({ order, onSave }: CustomerDataFormProps) {
                 <div className="grid gap-8">
                     {order.deliverables.map((item) => {
                         const productDef = productCatalog.find(p => p.id === item.productId);
-                        const briefValue = watch(`productBriefs.${item.id}`);
+                        const briefValue = watchedValues.productBriefs?.[item.id] || '';
                         
                         return (
                             <Card key={item.id} className="border-primary/15 bg-card/60 backdrop-blur-md hover:bg-card/80 transition-all duration-300 shadow-sm overflow-hidden group">
@@ -318,19 +384,5 @@ export function CustomerDataForm({ order, onSave }: CustomerDataFormProps) {
                 </div>
             </div>
         </form>
-    );
-}
-
-function CustomBadge({ children, variant = 'default', className }: { children: React.ReactNode, variant?: 'default' | 'secondary' | 'outline', className?: string }) {
-    return (
-        <span className={cn(
-            "inline-flex items-center rounded-lg px-3 py-1.5 text-[9px] font-black uppercase tracking-widest transition-all",
-            variant === 'default' && "bg-primary text-white shadow-md",
-            variant === 'secondary' && "bg-primary/10 text-primary border border-primary/20",
-            variant === 'outline' && "border-2 border-stone-200 text-foreground/80 bg-white/60",
-            className
-        )}>
-            {children}
-        </span>
     );
 }
