@@ -35,7 +35,7 @@ const AutoGrowingTextarea = React.forwardRef<
       ref={(e) => {
         textAreaRef.current = e;
         if (typeof ref === 'function') ref(e);
-        else if (ref) ref.current = e;
+        else if (ref) ref(e);
       }}
       rows={1}
       onInput={(e) => {
@@ -43,7 +43,7 @@ const AutoGrowingTextarea = React.forwardRef<
         if (onInput) onInput(e);
       }}
       className={cn(
-        "flex w-full bg-transparent px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground/80 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 resize-none transition-all duration-200 overflow-hidden",
+        "flex w-full bg-transparent px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 resize-none transition-all duration-200 overflow-hidden border-2",
         className
       )}
     />
@@ -56,10 +56,10 @@ AutoGrowingTextarea.displayName = "AutoGrowingTextarea";
  */
 const SectionHeader = ({ title, icon: Icon }: { title: string, icon: any }) => (
   <div className="flex items-center gap-3 mb-8 group">
-    <div className="h-10 w-10 shrink-0 rounded-xl bg-primary/25 text-primary flex items-center justify-center shadow-sm border border-primary/40">
-      <Icon className="h-5 w-5" />
+    <div className="h-9 w-9 shrink-0 rounded-lg bg-primary/10 text-primary flex items-center justify-center border border-primary/20 shadow-sm">
+      <Icon className="h-4 w-4" />
     </div>
-    <h3 className="font-headline text-xl font-black text-foreground tracking-tight uppercase border-b-2 border-primary/40 pb-1">
+    <h3 className="font-headline text-lg font-black text-foreground tracking-tight uppercase border-b-2 border-primary/30 pb-1">
       {title}
     </h3>
   </div>
@@ -94,23 +94,23 @@ const EditableField = ({
   if (!hasValue && !isFocused) {
     return (
       <div 
-        className="group cursor-text py-3 border-l-2 border-primary/30 hover:border-primary/50 pl-4 transition-all duration-200"
+        className="group cursor-pointer py-2 border-l-2 border-primary/10 hover:border-primary/40 pl-4 transition-all duration-200"
         onClick={onFocus}
       >
-        <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/90 mb-1.5">{label}</div>
-        <div className="text-xs italic text-muted-foreground/80 font-medium">Click to add {label.toLowerCase()}...</div>
+        <div className="text-[10px] font-black uppercase tracking-widest text-primary/50 mb-1">{label}</div>
+        <div className="text-xs italic text-muted-foreground/40 font-medium">Click to add {label.toLowerCase()}...</div>
       </div>
     );
   }
 
   return (
     <div className={cn(
-      "space-y-1.5 group transition-all duration-200 border-l-2 pl-4",
-      isFocused ? "border-primary" : "border-primary/40"
+      "space-y-1 group transition-all duration-200 border-l-2 pl-4",
+      isFocused ? "border-primary" : "border-primary/30"
     )}>
       <Label 
         htmlFor={id} 
-        className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/90"
+        className="text-[10px] font-black uppercase tracking-widest text-primary/60 mb-1 block"
       >
         {label}
       </Label>
@@ -123,10 +123,10 @@ const EditableField = ({
           onBlur={onBlur}
           autoFocus={isFocused}
           className={cn(
-            "font-medium leading-relaxed text-foreground border-2",
+            "font-semibold leading-relaxed text-foreground border-2 p-3 transition-all",
             isFocused 
-              ? "bg-background border-primary shadow-sm rounded-lg" 
-              : "border-transparent shadow-none cursor-text px-3" // Maintain padding even when not focused
+              ? "bg-primary/5 border-primary/50 shadow-sm rounded-lg" 
+              : "border-transparent bg-transparent shadow-none cursor-text -ml-3" 
           )}
         />
       </div>
@@ -158,43 +158,36 @@ const ProductBriefItem = ({
   return (
     <div 
       className={cn(
-        "group flex flex-col md:flex-row items-stretch gap-6 p-5 rounded-2xl border transition-all",
+        "group flex flex-col md:flex-row items-stretch gap-4 p-4 rounded-xl border transition-all",
         isFocused 
-          ? "border-primary bg-background shadow-md ring-2 ring-primary/5" 
-          : "border-primary/25 bg-card/60 hover:bg-card/80 hover:border-primary/40"
+          ? "border-primary/40 bg-primary/5 shadow-md" 
+          : "border-primary/10 bg-card/40 hover:bg-card/60"
       )}
     >
-      <div className="md:w-1/3 shrink-0 space-y-3">
-        <h4 className="font-headline font-black text-base text-foreground uppercase tracking-tight">
+      <div className="md:w-1/3 shrink-0 space-y-2.5">
+        <h4 className="font-headline font-black text-sm text-foreground uppercase tracking-tight">
           {item.productName}
         </h4>
         
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-1.5">
           {item.quantity !== undefined && item.quantity !== null && (
-            <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-primary/15 text-primary font-black text-[9px] uppercase border border-primary/30">
-              Qty: {item.quantity}
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-primary/10 text-primary font-black text-[9px] uppercase border border-primary/20">
+              QTY: {item.quantity}
             </span>
           )}
           {item.pages !== undefined && item.pages !== null && (
-            <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-primary/15 text-primary font-black text-[9px] uppercase border border-primary/30">
-              {item.pages} Pages
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-primary/10 text-primary font-black text-[9px] uppercase border border-primary/20">
+              {item.pages} PGS
             </span>
           )}
           {item.variant && (
-            <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-muted/80 text-muted-foreground font-black text-[9px] uppercase border border-border">
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-muted/50 text-muted-foreground font-black text-[9px] uppercase border border-border">
               {item.variant}
             </span>
           )}
-          {Object.entries(item.customFieldValues || {}).map(([key, val]) => (
-            val !== null && (
-              <span key={key} className="inline-flex items-center px-2 py-0.5 rounded-md border-2 border-primary/15 text-muted-foreground font-black text-[9px] uppercase">
-                {key}: {val}
-              </span>
-            )
-          ))}
           {item.specialRequest && (
-            <div className="flex items-center gap-2 text-[9px] font-black text-orange-950 uppercase bg-orange-200/80 px-2 py-1 rounded-md border border-orange-400 w-full mt-1.5 shadow-sm">
-              <MessageSquare className="h-3 w-3 shrink-0" />
+            <div className="flex items-center gap-1.5 text-[9px] font-black text-orange-900 uppercase bg-orange-100 px-1.5 py-0.5 rounded border border-orange-200 w-full">
+              <MessageSquare className="h-2.5 w-2.5 shrink-0" />
               <span className="truncate">{item.specialRequest}</span>
             </div>
           )}
@@ -204,23 +197,23 @@ const ProductBriefItem = ({
       <div className="flex-1 min-w-0">
         {(!hasValue && !isFocused) ? (
           <div 
-            className="h-full flex items-center px-3 cursor-text opacity-80 group-hover:opacity-100 transition-opacity min-h-[2rem]"
+            className="h-full flex items-center px-3 cursor-pointer opacity-50 group-hover:opacity-100 transition-opacity min-h-[2.5rem]"
             onClick={onFocus}
           >
             <span className="text-xs italic font-medium text-muted-foreground">Add brief details for {item.productName.toLowerCase()}...</span>
           </div>
         ) : (
           <AutoGrowingTextarea 
-            placeholder={`Enter requirements & specific details for ${item.productName}`}
+            placeholder={`Enter requirements for ${item.productName}`}
             {...register(briefKey as any)}
             onFocus={onFocus}
             onBlur={onBlur}
             autoFocus={isFocused}
             className={cn(
-              "font-medium bg-transparent text-foreground border-2",
+              "font-semibold bg-transparent text-foreground border-2 p-3",
               isFocused 
-                ? "p-3 border-primary/50 bg-background/50 rounded-lg" 
-                : "border-transparent shadow-none p-0 px-3 cursor-text"
+                ? "border-primary/30 bg-background/50 rounded-lg shadow-sm" 
+                : "border-transparent shadow-none -ml-3 cursor-text"
             )}
           />
         )}
@@ -251,15 +244,15 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
   }, [defaultValues, reset]);
 
   return (
-    <div className="space-y-16 pb-24">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-20">
-        <div className="space-y-10">
+    <div className="space-y-12 pb-24">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-16">
+        <div className="space-y-8">
           <SectionHeader title="Visual Identity" icon={Palette} />
-          <div className="space-y-8">
+          <div className="space-y-6">
             <EditableField 
               id="mood"
               label="Mood & Style Reference"
-              placeholder="Pinterest/Drive link and style keywords e.g., 'Boho, Minimalist, Royal'"
+              placeholder="Pinterest/Drive links or keywords like 'Minimalist', 'Regal', etc."
               register={register}
               registerKey="visualIdentity.moodStyle"
               value={watchedValues.visualIdentity?.moodStyle || ''}
@@ -270,7 +263,7 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
             <EditableField 
               id="colors"
               label="Color Palette & Typography"
-              placeholder="Hex codes/color names e.g., 'Dusty Rose, Gold' and font preferences"
+              placeholder="Primary colors, accent shades, and preferred font styles"
               register={register}
               registerKey="visualIdentity.colorTypography"
               value={watchedValues.visualIdentity?.colorTypography || ''}
@@ -281,7 +274,7 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
             <EditableField 
               id="dislikes"
               label="Design Dislikes"
-              placeholder="Specific symbols, motifs, styles, or objects to strictly exclude"
+              placeholder="Elements, motifs, or styles to strictly avoid"
               register={register}
               registerKey="visualIdentity.designDislikes"
               value={watchedValues.visualIdentity?.designDislikes || ''}
@@ -292,13 +285,13 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
           </div>
         </div>
 
-        <div className="space-y-10">
+        <div className="space-y-8">
           <SectionHeader title="The Narrative" icon={BookOpen} />
-          <div className="space-y-8">
+          <div className="space-y-6">
             <EditableField 
               id="timeline"
               label="Relationship Timeline"
-              placeholder="Meeting spot, key trips, moving in, and proposal details"
+              placeholder="Meeting spot, key life moments, and proposal details"
               register={register}
               registerKey="narrative.timeline"
               value={watchedValues.narrative?.timeline || ''}
@@ -309,7 +302,7 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
             <EditableField 
               id="couple"
               label="The Couple's World"
-              placeholder="Shared hobbies, favorite travel destinations, pets, or specific interests"
+              placeholder="Shared hobbies, pets, or travel destinations"
               register={register}
               registerKey="narrative.coupleWorld"
               value={watchedValues.narrative?.coupleWorld || ''}
@@ -320,7 +313,7 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
             <EditableField 
               id="eggs"
               label="Easter Eggs"
-              placeholder="Inside jokes, specific dates, or objects to subtly hide"
+              placeholder="Inside jokes or subtle motifs to hide in designs"
               register={register}
               registerKey="narrative.easterEggs"
               value={watchedValues.narrative?.easterEggs || ''}
@@ -331,13 +324,13 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
           </div>
         </div>
 
-        <div className="space-y-10">
+        <div className="space-y-8">
           <SectionHeader title="Culture & Symbols" icon={Globe} />
-          <div className="space-y-8">
+          <div className="space-y-6">
             <EditableField 
               id="icons"
               label="Mandatory Icons & Motifs"
-              placeholder="Religious icons, specific animals, or ancestral patterns"
+              placeholder="Religious symbols, family crests, or ancestral patterns"
               register={register}
               registerKey="cultureSymbols.mandatoryIcons"
               value={watchedValues.cultureSymbols?.mandatoryIcons || ''}
@@ -348,7 +341,7 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
             <EditableField 
               id="nuances"
               label="Regional Nuances"
-              placeholder="Native phrases, Shlokas, or regional elements"
+              placeholder="Specific phrases, shlokas, or local cultural elements"
               register={register}
               registerKey="cultureSymbols.regionalNuances"
               value={watchedValues.cultureSymbols?.regionalNuances || ''}
@@ -359,13 +352,13 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
           </div>
         </div>
 
-        <div className="space-y-10">
+        <div className="space-y-8">
           <SectionHeader title="Atmosphere & Extras" icon={Sparkles} />
-          <div className="space-y-8">
+          <div className="space-y-6">
             <EditableField 
               id="personality"
               label="Venue Personality"
-              placeholder="Setting and mood description for each function"
+              placeholder="Atmosphere and setting description for each event"
               register={register}
               registerKey="atmosphereExtras.venuePersonality"
               value={watchedValues.atmosphereExtras?.venuePersonality || ''}
@@ -376,7 +369,7 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
             <EditableField 
               id="other"
               label="Other Details"
-              placeholder="Miscellaneous requirements or constraints"
+              placeholder="Any miscellaneous constraints or requirements"
               register={register}
               registerKey="atmosphereExtras.otherDetails"
               value={watchedValues.atmosphereExtras?.otherDetails || ''}
@@ -388,10 +381,10 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
         </div>
       </div>
 
-      <div className="pt-12 border-t-2 border-primary/40">
+      <div className="pt-8 border-t border-primary/20">
         <SectionHeader title="Product Specific Briefs" icon={Box} />
         
-        <div className="grid gap-4">
+        <div className="grid gap-3">
           {order.deliverables.map((item) => (
             <ProductBriefItem 
               key={item.id}
