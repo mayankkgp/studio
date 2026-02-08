@@ -16,7 +16,10 @@ import {
     CalendarDays, 
     MapPin, 
     Users,
-    TrendingUp
+    TrendingUp,
+    Lock,
+    Unlock,
+    CheckCircle2
 } from 'lucide-react';
 import { EventDetailsForm } from '@/components/flow1/EventDetailsForm';
 import { DeliverableRow } from '@/components/flow2/DeliverableRow';
@@ -39,6 +42,7 @@ export default function ActiveOrderCommandCenter() {
     const [loading, setLoading] = useState(true);
     const [isDetailsSheetOpen, setIsDetailsSheetOpen] = useState(false);
     const [expandedItems, setExpandedItems] = useState<string[]>([]);
+    const [isEditMode, setIsEditMode] = useState(false);
 
     const headerSummary = useHeaderSummary(activeOrder?.eventDetails || {});
 
@@ -72,7 +76,7 @@ export default function ActiveOrderCommandCenter() {
                 setActiveOrder(updatedOrder);
             }
         } catch (e) {
-            toast({ variant: "destructive", title: "Sync Failed", description: "Could not save changes to local storage." });
+            toast({ variant: "destructive", title: "Sync Failed", description: "Could not save changes." });
         }
     }, [id, toast]);
 
@@ -92,7 +96,6 @@ export default function ActiveOrderCommandCenter() {
     const addDeliverable = (del: ConfiguredProduct) => {
         if (!activeOrder) return;
         syncToStorage({ ...activeOrder, deliverables: [del, ...activeOrder.deliverables] });
-        // Auto-expand the newly added product
         setExpandedItems(prev => [...prev, del.id]);
     };
 
@@ -161,20 +164,39 @@ export default function ActiveOrderCommandCenter() {
     return (
         <AppLayout>
             <div className="flex flex-col h-screen overflow-hidden bg-background">
-                {/* Header Area */}
+                {/* Header Area with Safe Edit Toggle */}
                 <header className="flex h-16 shrink-0 items-center gap-4 border-b px-4 md:px-6 bg-background z-50">
                     <MobileNav />
                     <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => router.push('/active-orders')}>
                         <ChevronLeft className="h-5 w-5" />
                     </Button>
                     <div className="flex-1 overflow-hidden">
-                        <h1 className="font-semibold text-base md:text-lg font-headline truncate">
-                            {headerSummary}
-                        </h1>
-                        <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Command Center</p>
+                        <div className="flex items-center gap-3">
+                            <Button 
+                                variant={isEditMode ? "default" : "outline"} 
+                                size="sm" 
+                                onClick={() => setIsEditMode(!isEditMode)}
+                                className={cn(
+                                    "h-8 font-bold gap-2 transition-all",
+                                    isEditMode ? "bg-primary shadow-lg shadow-primary/20" : "border-primary/50 text-primary"
+                                )}
+                            >
+                                {isEditMode ? (
+                                    <><CheckCircle2 className="h-4 w-4" /> Done Editing</>
+                                ) : (
+                                    <><Unlock className="h-4 w-4" /> Modify Order</>
+                                )}
+                            </Button>
+                            <Separator orientation="vertical" className="h-6" />
+                            <h1 className="font-semibold text-base md:text-lg font-headline truncate">
+                                {headerSummary}
+                            </h1>
+                        </div>
                     </div>
-                    <div className="hidden lg:block font-mono text-xs opacity-50 bg-muted px-2 py-1 rounded">
-                        {activeOrder.orderId}
+                    <div className="hidden lg:block">
+                        <Badge variant="outline" className="font-mono text-[10px] uppercase opacity-50">
+                            ID: {activeOrder.orderId}
+                        </Badge>
                     </div>
                 </header>
 
@@ -187,23 +209,27 @@ export default function ActiveOrderCommandCenter() {
                                     <Package className="h-5 w-5 text-primary" />
                                     Scope of Work
                                 </h2>
-                                <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-                                    {activeOrder.deliverables.length} Items
-                                </span>
+                                {!isEditMode && (
+                                    <Badge variant="secondary" className="gap-1.5 text-[10px] font-bold uppercase tracking-wider">
+                                        <Lock className="h-3 w-3" /> Locked View
+                                    </Badge>
+                                )}
                             </div>
 
-                            {/* Always Active Command Bar */}
-                            <div className="bg-card p-4 md:p-6 rounded-xl border-2 border-primary/10 shadow-sm sticky top-0 z-40 backdrop-blur-sm bg-card/95">
-                                <CommandBar onAdd={addDeliverable} />
-                            </div>
+                            {/* Conditional Command Bar */}
+                            {isEditMode && (
+                                <div className="bg-card p-4 md:p-6 rounded-xl border-2 border-primary/10 shadow-sm sticky top-0 z-40 backdrop-blur-sm bg-card/95">
+                                    <CommandBar onAdd={addDeliverable} />
+                                </div>
+                            )}
 
                             {/* Interactive Deliverables List */}
                             <div className="space-y-4">
                                 {activeOrder.deliverables.length === 0 ? (
                                     <div className="text-center py-20 border-2 border-dashed rounded-xl bg-muted/30">
                                         <Package className="h-10 w-10 text-muted-foreground/30 mx-auto mb-4" />
-                                        <p className="text-sm text-muted-foreground font-medium">No deliverables added yet.</p>
-                                        <p className="text-xs text-muted-foreground mt-1">Search products above to build the scope.</p>
+                                        <p className="text-sm text-muted-foreground font-medium">No deliverables in scope.</p>
+                                        {isEditMode && <p className="text-xs text-muted-foreground mt-1">Search products above to add items.</p>}
                                     </div>
                                 ) : (
                                     <Accordion 
@@ -216,6 +242,7 @@ export default function ActiveOrderCommandCenter() {
                                             <DeliverableRow 
                                                 key={item.id} 
                                                 item={item} 
+                                                isReadOnly={!isEditMode}
                                                 isExpanded={expandedItems.includes(item.id)} 
                                                 isNonCollapsible={false}
                                                 onEdit={() => handleEditRow(item.id)}
@@ -335,11 +362,10 @@ export default function ActiveOrderCommandCenter() {
                             </CardContent>
                         </Card>
 
-                        {/* Quick Stats Placeholder */}
                         <div className="mt-auto pt-6 border-t flex items-center justify-between px-2">
                             <div className="flex items-center gap-2">
                                 <Users className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-[10px] font-bold text-muted-foreground uppercase">Team Access: Admin</span>
+                                <span className="text-[10px] font-bold text-muted-foreground uppercase">Role: Manager</span>
                             </div>
                             <Button variant="outline" size="sm" onClick={() => router.push('/active-orders')} className="h-8 text-[10px] font-bold uppercase">
                                 Exit to List

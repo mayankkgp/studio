@@ -16,11 +16,13 @@ import {
     Pencil,
     MessageSquarePlus,
     Plus,
-    X
+    X,
+    TrendingUp,
+    Info
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { productCatalog } from '@/lib/product-data';
-import type { Product, ConfiguredProduct, SoftConstraint } from '@/lib/types';
+import type { Product, ConfiguredProduct, SoftConstraint, BillableComponent } from '@/lib/types';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -36,6 +38,7 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { calculateItemBreakdown } from '@/lib/pricing';
 
 const getValidationSchema = (product: Product | null) => {
     if (!product) return z.object({});
@@ -43,6 +46,7 @@ const getValidationSchema = (product: Product | null) => {
     let schemaObject: any = {
         variant: product.variants && product.variants.length > 0 ? z.string().min(1, "REQUIRED") : z.string().optional(),
         specialRequest: z.string().optional(),
+        rateOverrides: z.record(z.number()).optional(),
     };
 
     if (product.configType === 'A') {
@@ -55,11 +59,9 @@ const getValidationSchema = (product: Product | null) => {
 
     if (product.customFields) {
         if (product.id === 5) {
-            // SPECIAL RULE: Invite Product (ID 5) - At least one custom field must be > 0
             schemaObject.customFieldValues = z.object(
                 product.customFields.reduce((acc, field) => ({
                     ...acc,
-                    // Preprocess to handle NaN (from empty input with valueAsNumber)
                     [field.id]: z.preprocess(
                         (val) => (val === "" || val === null || (typeof val === 'number' && isNaN(val)) ? undefined : val),
                         z.number().optional()
@@ -69,7 +71,6 @@ const getValidationSchema = (product: Product | null) => {
                 return Object.values(vals).some(v => typeof v === 'number' && v > 0);
             }, { message: "REQUIRED" });
         } else {
-            // Standard validation for other products with custom fields (all are mandatory)
             schemaObject.customFieldValues = z.object(
                 product.customFields.reduce((acc, field) => ({
                     ...acc,
@@ -110,7 +111,8 @@ export const DeliverableRow = React.memo(function DeliverableRow({
     onValidityChange,
     onUpdate,
     onRemove,
-    isPersistent = false
+    isPersistent = false,
+    isReadOnly = false
 }: DeliverableRowProps) {
     const product = React.useMemo(() => productCatalog.find(p => p.id === item.productId) || null, [item.productId]);
     const isBranchA = product?.configType === 'A' || product?.configType === 'B';
@@ -128,6 +130,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             pages: item.pages,
             specialRequest: item.specialRequest || '',
             customFieldValues: item.customFieldValues || {},
+            rateOverrides: item.rateOverrides || {},
             addons: product?.addons?.map(addon => {
                 const existingAddon = item.addons?.find(a => a.id === addon.id);
                 return { 
@@ -142,6 +145,16 @@ export const DeliverableRow = React.memo(function DeliverableRow({
 
     const { register, control, watch, formState: { errors, isValid }, trigger, getValues, setValue } = form;
     const watchedValues = watch();
+
+    const itemBreakdown = React.useMemo(() => {
+        // Create a temporary object to calculate breakdown using current form values
+        const currentItem: ConfiguredProduct = {
+            ...item,
+            ...watchedValues,
+            addons: (watchedValues.addons || []).filter((a: any) => a.value !== undefined && a.value !== false) as any
+        };
+        return calculateItemBreakdown(currentItem);
+    }, [watchedValues, item]);
 
     const adjustHeight = React.useCallback((el: HTMLTextAreaElement | null) => {
         if (!el) return;
@@ -195,8 +208,14 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         watchedValues.customFieldValues, 
         watchedValues.addons, 
         watchedValues.variant,
+        watchedValues.rateOverrides,
         performSyncUpdate
     ]);
+
+    const handleRateOverride = (label: string, value: number) => {
+        const currentOverrides = getValues('rateOverrides') || {};
+        setValue('rateOverrides', { ...currentOverrides, [label]: value }, { shouldValidate: true });
+    };
 
     const handleDoneClick = async (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -229,65 +248,18 @@ export const DeliverableRow = React.memo(function DeliverableRow({
 
         if (product.configType === 'A' && typeof watchedValues.quantity === 'number') {
             const warning = getLogicWarning(watchedValues.quantity, product.softConstraints);
-            parts.push(
-                <span key="qty" className={cn(warning && "text-[#FA7315] font-bold")}>
-                    Qty: {watchedValues.quantity}
-                </span>
-            );
+            parts.push(<span key="qty" className={cn(warning && "text-[#FA7315] font-bold")}>Qty: {watchedValues.quantity}</span>);
         } else if (product.configType === 'B' && typeof watchedValues.pages === 'number') {
             const warning = getLogicWarning(watchedValues.pages, product.softConstraints);
-            parts.push(
-                <span key="pages" className={cn(warning && "text-[#FA7315] font-bold")}>
-                    {watchedValues.pages} Pgs
-                </span>
-            );
-        }
-
-        if (product.customFields && watchedValues.customFieldValues) {
-            product.customFields.forEach(field => {
-                const val = (watchedValues.customFieldValues as any)[field.id];
-                if (val !== undefined && val !== null && val !== '' && !isNaN(val)) {
-                    const warning = getLogicWarning(val, field.softConstraints);
-                    parts.push(
-                        <span key={field.id} className={cn(warning && "text-[#FA7315] font-bold")}>
-                            {field.name}: {val}
-                        </span>
-                    );
-                }
-            });
-        }
-
-        if (watchedValues.addons) {
-            watchedValues.addons.forEach((addon: any) => {
-                const isSelected = addon.value !== undefined && addon.value !== false && addon.value !== null && addon.value !== '';
-                if (isSelected) {
-                    const addonDef = product.addons?.find(a => a.id === addon.id);
-                    const displayName = addonDef?.name || addon.name;
-                    const warning = getLogicWarning(addon.value, addonDef?.softConstraints);
-                    parts.push(
-                        <span key={addon.id} className={cn(warning && "text-[#FA7315] font-bold")}>
-                            {displayName}{typeof addon.value === 'number' ? ` (${addon.value})` : ''}
-                        </span>
-                    );
-                }
-            });
-        }
-
-        if (watchedValues.specialRequest) {
-            const snippet = watchedValues.specialRequest.slice(0, 20);
-            const suffix = watchedValues.specialRequest.length > 20 ? '...' : '';
-            parts.push(<span key="notes" className="text-muted-foreground italic">Notes: {snippet}{suffix}</span>);
+            parts.push(<span key="pages" className={cn(warning && "text-[#FA7315] font-bold")}>{watchedValues.pages} Pgs</span>);
         }
 
         if (parts.length === 0) return null;
-
         return parts.reduce((prev, curr, i) => [prev, <span key={`sep-${i}`} className="mx-1 text-muted-foreground/50">•</span>, curr]);
     };
 
     const getWarningData = React.useCallback((): { type: 'hard' | 'soft' | null, message: string | null } => {
-        if (!isValid) {
-            return { type: 'hard', message: 'SETUP REQUIRED' };
-        }
+        if (!isValid) return { type: 'hard', message: 'SETUP REQUIRED' };
 
         if (product?.configType === 'A') {
             const warning = getLogicWarning(watchedValues.quantity, product.softConstraints);
@@ -297,25 +269,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             const warning = getLogicWarning(watchedValues.pages, product.softConstraints);
             if (warning) return { type: 'soft', message: warning };
         }
-        if (product?.customFields) {
-            for (const field of product.customFields) {
-                const val = (watchedValues.customFieldValues as any)?.[field.id];
-                const warning = getLogicWarning(val, field.softConstraints);
-                if (warning) return { type: 'soft', message: warning };
-            }
-        }
-        if (watchedValues.addons) {
-            for (let i = 0; i < (watchedValues.addons?.length || 0); i++) {
-                const addon = watchedValues.addons[i];
-                const addonDef = product?.addons?.find(a => a.id === addon.id);
-                const isSelected = addon.value !== undefined && addon.value !== false && addon.value !== null;
-                if (isSelected) {
-                    const warning = getLogicWarning(addon.value, addonDef?.softConstraints);
-                    if (warning) return { type: 'soft', message: warning };
-                }
-            }
-        }
-
         return { type: null, message: null };
     }, [isValid, watchedValues, product, getLogicWarning]);
 
@@ -329,7 +282,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         }
     };
     const IconComponent = getIcon();
-
     const warningData = getWarningData();
 
     return (
@@ -358,11 +310,8 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                         <h3 className={cn("font-semibold leading-none shrink-0", isExpanded ? "text-base" : "text-sm")}>
                             {item.productName}
                         </h3>
-                        {warningData.message && !isPersistent && (
-                            <Badge 
-                                variant={warningData.type === 'hard' ? 'destructive' : 'warning'} 
-                                className="text-[10px] h-4 py-0 font-bold uppercase shrink-0"
-                            >
+                        {warningData.message && !isPersistent && !isReadOnly && (
+                            <Badge variant={warningData.type === 'hard' ? 'destructive' : 'warning'} className="text-[10px] h-4 py-0 font-bold uppercase shrink-0">
                                 {warningData.message}
                             </Badge>
                         )}
@@ -375,92 +324,89 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                 </div>
 
                 <div className="flex items-center gap-2 ml-4">
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={handleDelete}>
-                        <Trash2 className="h-4 w-4" />
-                    </Button>
+                    {!isReadOnly && (
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={handleDelete}>
+                            <Trash2 className="h-4 w-4" />
+                        </Button>
+                    )}
                     {!isExpanded ? (
                         <Button size="sm" variant="outline" onClick={handleEditClick} className="gap-2 h-8">
-                            <Pencil className="h-3.5 w-3.5" /> Edit
+                            {isReadOnly ? <Info className="h-3.5 w-3.5" /> : <Pencil className="h-3.5 w-3.5" />}
+                            {isReadOnly ? 'View' : 'Edit'}
                         </Button>
                     ) : (
-                        <Button size="sm" onClick={handleDoneClick} className="gap-2 h-8" disabled={!isValid}>
-                            <Check className="h-4 w-4" /> Done
-                        </Button>
+                        !isReadOnly && (
+                            <Button size="sm" onClick={handleDoneClick} className="gap-2 h-8" disabled={!isValid}>
+                                <Check className="h-4 w-4" /> Done
+                            </Button>
+                        )
                     )}
                 </div>
             </div>
 
             <AccordionContent className="px-4 pb-4 border-t bg-muted/5 relative" forceMount={isExpanded}>
-                <div className="flex flex-col gap-6 pt-4">
-                    <div className="flex flex-wrap items-center gap-x-8 gap-y-4">
-                        {product?.variants && product.variants.length > 0 && (
-                            <div className="flex items-center gap-4">
-                                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap">
-                                    Variant *
-                                </Label>
-                                <div className="flex flex-wrap gap-2">
-                                    {product.variants.map(v => (
-                                        <Button
-                                            key={v}
-                                            type="button"
-                                            variant={watchedValues.variant === v ? "default" : "outline"}
-                                            size="sm"
-                                            className={cn(
-                                                "h-9 rounded-full px-4",
-                                                watchedValues.variant === v ? "shadow-sm" : "hover:bg-accent"
-                                            )}
-                                            onClick={() => setValue('variant', v, { shouldValidate: true })}
-                                        >
-                                            {v}
-                                        </Button>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {isBranchA && (
-                            <div className="flex items-center gap-4">
-                                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap">
-                                    {product?.configType === 'A' ? 'QTY *' : 'PAGES *'}
-                                </Label>
-                                <Input 
-                                    type="number" 
-                                    {...register(product?.configType === 'A' ? 'quantity' : 'pages', { valueAsNumber: true })}
-                                    className={cn(
-                                        "w-24 h-10 text-lg bg-background [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
-                                        getLogicWarning(product?.configType === 'A' ? watchedValues.quantity : watchedValues.pages, product?.softConstraints) && "border-[#FA7315] ring-[#FA7315] border-2"
-                                    )}
-                                />
-                            </div>
-                        )}
-
-                        {product?.customFields && product.customFields.length > 0 && (
-                            <div className={cn(
-                                "flex flex-wrap items-center gap-x-6 gap-y-3",
-                                product.id === 5 && "grid grid-cols-1 sm:grid-cols-2 gap-x-12 w-full max-w-2xl"
-                            )}>
-                                {product.customFields.map((field) => (
-                                    <div key={field.id} className="flex items-center gap-3">
-                                        <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap">
-                                            {field.name} {product.id !== 5 && "*"}
-                                        </Label>
-                                        <Input 
-                                            type="number" 
-                                            className={cn(
-                                                "w-16 h-10 px-2 text-sm bg-background [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
-                                                getLogicWarning((watchedValues.customFieldValues as any)?.[field.id], field.softConstraints) && "border-[#FA7315] ring-[#FA7315] border-2"
-                                            )}
-                                            {...register(`customFieldValues.${field.id}`, { valueAsNumber: true })} 
-                                        />
+                <div className="flex flex-col gap-8 pt-6">
+                    {/* Configuration Section */}
+                    <div className="space-y-6">
+                        <div className="flex flex-wrap items-center gap-x-8 gap-y-6">
+                            {product?.variants && product.variants.length > 0 && (
+                                <div className="flex flex-col gap-2">
+                                    <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Variant *</Label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {product.variants.map(v => (
+                                            <Button
+                                                key={v}
+                                                type="button"
+                                                variant={watchedValues.variant === v ? "default" : "outline"}
+                                                size="sm"
+                                                disabled={isReadOnly}
+                                                className={cn("h-9 rounded-full px-4", watchedValues.variant === v && "shadow-sm")}
+                                                onClick={() => setValue('variant', v, { shouldValidate: true })}
+                                            >
+                                                {v}
+                                            </Button>
+                                        ))}
                                     </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
+                                </div>
+                            )}
 
-                    <div className="flex flex-col gap-4">
-                        {product?.addons && product.addons.length > 0 && (
-                            <div className="flex flex-wrap gap-2">
+                            {isBranchA && (
+                                <div className="flex flex-col gap-2">
+                                    <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                                        {product?.configType === 'A' ? 'Quantity *' : 'Pages *'}
+                                    </Label>
+                                    <Input 
+                                        type="number" 
+                                        disabled={isReadOnly}
+                                        {...register(product?.configType === 'A' ? 'quantity' : 'pages', { valueAsNumber: true })}
+                                        className={cn(
+                                            "w-24 h-10 text-lg bg-background",
+                                            getLogicWarning(product?.configType === 'A' ? watchedValues.quantity : watchedValues.pages, product?.softConstraints) && "border-[#FA7315] ring-[#FA7315] border-2"
+                                        )}
+                                    />
+                                </div>
+                            )}
+
+                            {product?.customFields && product.customFields.map((field) => (
+                                <div key={field.id} className="flex flex-col gap-2">
+                                    <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                                        {field.name} {product.id !== 5 && "*"}
+                                    </Label>
+                                    <Input 
+                                        type="number" 
+                                        disabled={isReadOnly}
+                                        className={cn(
+                                            "w-20 h-10 bg-background",
+                                            getLogicWarning((watchedValues.customFieldValues as any)?.[field.id], field.softConstraints) && "border-[#FA7315] ring-[#FA7315] border-2"
+                                        )}
+                                        {...register(`customFieldValues.${field.id}`, { valueAsNumber: true })} 
+                                    />
+                                </div>
+                            ))}
+                        </div>
+
+                        {product?.addons && (
+                            <div className="flex flex-wrap gap-2 pt-2">
                                 {product.addons.map((addon, index) => {
                                     const parentIndex = addon.dependsOn ? product.addons!.findIndex(a => a.id === addon.dependsOn) : -1;
                                     const parentValue = parentIndex !== -1 ? watchedValues.addons?.[parentIndex]?.value : undefined;
@@ -476,92 +422,39 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                 const isChecked = field.value !== undefined && field.value !== false;
                                                 const softWarning = getLogicWarning(field.value, addon.softConstraints);
                                                 
-                                                if (addon.type === 'checkbox') {
-                                                    return (
+                                                if (!isChecked) {
+                                                    return !isReadOnly ? (
                                                         <Button
-                                                            type="button"
-                                                            variant={field.value ? "default" : "outline"}
-                                                            size="sm"
-                                                            className="h-8 rounded-full px-3 gap-1.5 text-xs"
-                                                            onClick={() => field.onChange(field.value ? false : true)}
+                                                            type="button" variant="outline" size="sm" className="h-8 rounded-full px-3 gap-1.5 text-xs"
+                                                            onClick={() => { setJustActivatedAddonId(addon.id); field.onChange(addon.type === 'checkbox' ? true : null); }}
                                                         >
-                                                            {field.value ? <Check className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
-                                                            {addon.name}
+                                                            <Plus className="h-3 w-3" /> {addon.name}
                                                         </Button>
-                                                    );
+                                                    ) : null;
                                                 } else {
-                                                    if (!isChecked) {
-                                                        return (
-                                                            <Button
-                                                                type="button"
-                                                                variant="outline"
-                                                                size="sm"
-                                                                className="h-8 rounded-full px-3 gap-1.5 text-xs"
-                                                                onClick={() => {
-                                                                    setJustActivatedAddonId(addon.id);
-                                                                    field.onChange(null);
-                                                                }}
-                                                            >
-                                                                <Plus className="h-3 w-3" />
-                                                                {addon.name}
-                                                            </Button>
-                                                        );
-                                                    } else {
-                                                        const val = field.value ?? '';
-                                                        const valString = val.toString();
-                                                        return (
-                                                            <div 
-                                                                className={cn(
-                                                                    "inline-flex items-center rounded-full h-8 pl-4 pr-1.5 gap-2 bg-[#FA7315] text-white shadow-sm transition-colors cursor-pointer",
-                                                                    softWarning && "ring-2 ring-white"
-                                                                )}
-                                                                onClick={(e) => {
-                                                                    const input = e.currentTarget.querySelector('input');
-                                                                    input?.focus();
-                                                                }}
-                                                            >
-                                                                <span className="text-xs font-medium">
-                                                                    {addon.name}
-                                                                </span>
+                                                    const val = field.value ?? '';
+                                                    return (
+                                                        <div className={cn("inline-flex items-center rounded-full h-8 pl-4 pr-1.5 gap-2 bg-[#FA7315] text-white shadow-sm transition-colors", isReadOnly && "bg-muted text-muted-foreground")}>
+                                                            <span className="text-xs font-bold uppercase tracking-tight">{addon.name}</span>
+                                                            {addon.type !== 'checkbox' && (
                                                                 <Input
-                                                                    type="number"
+                                                                    type="number" disabled={isReadOnly}
                                                                     autoFocus={justActivatedAddonId === addon.id}
-                                                                    className="h-6 px-2 py-0 text-xs bg-white border-none focus-visible:ring-0 rounded-md font-bold text-black [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                                                    style={{ width: `${Math.max(2, valString.length) + 3}ch` }}
+                                                                    className="h-6 px-2 py-0 text-xs bg-white border-none focus-visible:ring-0 rounded-md font-bold text-black w-12"
                                                                     value={val}
-                                                                    onBlur={() => {
-                                                                        if (justActivatedAddonId === addon.id) setJustActivatedAddonId(null);
-                                                                    }}
                                                                     onChange={(e) => field.onChange(e.target.value === '' ? null : Number(e.target.value))}
-                                                                    onKeyDown={(e) => {
-                                                                        if (e.key === 'Enter') {
-                                                                            e.currentTarget.blur();
-                                                                        }
-                                                                    }}
                                                                 />
-                                                                {softWarning && (
-                                                                    <TooltipProvider>
-                                                                        <Tooltip>
-                                                                            <TooltipTrigger asChild><AlertCircle className="h-3.5 w-3.5 text-white" /></TooltipTrigger>
-                                                                            <TooltipContent><p>{softWarning}</p></TooltipContent>
-                                                                        </Tooltip>
-                                                                    </TooltipProvider>
-                                                                )}
+                                                            )}
+                                                            {!isReadOnly && (
                                                                 <Button
-                                                                    type="button"
-                                                                    variant="ghost"
-                                                                    size="icon"
-                                                                    className="h-5 w-5 rounded-full hover:bg-white/20 text-white p-0"
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        field.onChange(false);
-                                                                    }}
+                                                                    type="button" variant="ghost" size="icon" className="h-5 w-5 rounded-full hover:bg-white/20 text-white p-0"
+                                                                    onClick={() => field.onChange(false)}
                                                                 >
                                                                     <X className="h-3 w-3" />
                                                                 </Button>
-                                                            </div>
-                                                        );
-                                                    }
+                                                            )}
+                                                        </div>
+                                                    );
                                                 }
                                             }}
                                         />
@@ -570,29 +463,73 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                             </div>
                         )}
 
-                        <div className="flex-1">
+                        <div className="pt-2">
                             {showNotes ? (
-                                <div className="relative group">
+                                <div className="space-y-2">
+                                    <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Special Instructions</Label>
                                     <Textarea 
                                         {...register('specialRequest')} 
-                                        className="min-h-[40px] bg-background/50 overflow-hidden resize-none leading-6 px-3" 
+                                        disabled={isReadOnly}
+                                        className="min-h-[60px] bg-background/50 leading-6" 
                                         placeholder="Add special instructions..."
-                                        ref={(e) => {
-                                            register('specialRequest').ref(e);
-                                            notesRef.current = e;
-                                        }}
-                                        onChange={(e) => {
-                                            register('specialRequest').onChange(e);
-                                            adjustHeight(e.target);
-                                        }}
                                     />
                                 </div>
-                            ) : (
+                            ) : !isReadOnly && (
                                 <Button variant="ghost" size="sm" className="h-8 gap-2 text-muted-foreground px-3" onClick={() => setShowNotes(true)}>
                                     <MessageSquarePlus className="h-4 w-4" />
                                     <span className="text-xs font-medium uppercase">Add Note</span>
                                 </Button>
                             )}
+                        </div>
+                    </div>
+
+                    {/* Commercials & Rates Section */}
+                    <div className="border-t pt-8 space-y-4">
+                        <div className="flex items-center gap-2">
+                            <TrendingUp className="h-4 w-4 text-primary" />
+                            <h4 className="text-sm font-bold uppercase tracking-widest">Commercials & Rates</h4>
+                        </div>
+                        
+                        <div className="rounded-xl border bg-card/30 overflow-hidden">
+                            <table className="w-full text-left text-xs">
+                                <thead>
+                                    <tr className="bg-muted/50 border-b">
+                                        <th className="px-4 py-3 font-bold uppercase tracking-wider text-muted-foreground">Label</th>
+                                        <th className="px-4 py-3 font-bold uppercase tracking-wider text-muted-foreground text-center">Multiplier</th>
+                                        <th className="px-4 py-3 font-bold uppercase tracking-wider text-muted-foreground text-right">Unit Rate (₹)</th>
+                                        <th className="px-4 py-3 font-bold uppercase tracking-wider text-muted-foreground text-right">Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {itemBreakdown.map((comp, i) => (
+                                        <tr key={i} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
+                                            <td className="px-4 py-3 font-medium">{comp.label}</td>
+                                            <td className="px-4 py-3 text-center text-muted-foreground font-mono">{comp.isFixed ? '-' : comp.multiplier}</td>
+                                            <td className="px-4 py-2 text-right">
+                                                <div className="flex justify-end">
+                                                    <input 
+                                                        type="number"
+                                                        disabled={isReadOnly}
+                                                        defaultValue={comp.rate}
+                                                        onBlur={(e) => handleRateOverride(comp.label, Number(e.target.value))}
+                                                        className={cn(
+                                                            "w-20 h-7 text-right bg-background border rounded px-1.5 font-bold focus:ring-1 focus:ring-primary",
+                                                            isReadOnly && "border-transparent bg-transparent"
+                                                        )}
+                                                    />
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-3 text-right font-bold tabular-nums">₹{comp.total.toLocaleString('en-IN')}</td>
+                                        </tr>
+                                    ))}
+                                    <tr className="bg-muted/10">
+                                        <td colSpan={3} className="px-4 py-4 text-right font-bold uppercase tracking-widest text-muted-foreground">Item Total</td>
+                                        <td className="px-4 py-4 text-right font-black text-sm text-primary">
+                                            ₹{itemBreakdown.reduce((sum, c) => sum + c.total, 0).toLocaleString('en-IN')}
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
@@ -611,4 +548,5 @@ interface DeliverableRowProps {
     onUpdate: (id: string, updates: Partial<ConfiguredProduct>) => void;
     onRemove: (id: string) => void;
     isPersistent?: boolean;
+    isReadOnly?: boolean;
 }
