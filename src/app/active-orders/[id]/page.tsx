@@ -81,22 +81,62 @@ export default function ActiveOrderCommandCenter() {
         }
     }, [id, toast]);
 
+    const patchRowToStorage = useCallback((rowId: string, itemData: ConfiguredProduct) => {
+        try {
+            const raw = localStorage.getItem('srishbish_active_v1');
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                const persistentOrder = parsed[id];
+                if (persistentOrder) {
+                    const existingIdx = persistentOrder.deliverables.findIndex((d: any) => d.id === rowId);
+                    let newDeliverables = [...persistentOrder.deliverables];
+                    if (existingIdx > -1) {
+                        newDeliverables[existingIdx] = itemData;
+                    } else {
+                        newDeliverables = [itemData, ...newDeliverables];
+                    }
+                    
+                    const updatedOrder = { 
+                        ...persistentOrder, 
+                        deliverables: newDeliverables,
+                        lastModifiedAt: new Date().toISOString() 
+                    };
+                    parsed[id] = updatedOrder;
+                    localStorage.setItem('srishbish_active_v1', JSON.stringify(parsed));
+                    setActiveOrder(updatedOrder);
+                }
+            }
+        } catch (e) {
+            toast({ variant: "destructive", title: "Save Failed", description: "Could not persist row changes." });
+        }
+    }, [id, toast]);
+
     const updateDeliverable = (delId: string, updates: Partial<ConfiguredProduct>) => {
-        if (!activeOrder) return;
-        const newDeliverables = activeOrder.deliverables.map(d => d.id === delId ? { ...d, ...updates } : d);
-        syncToStorage({ ...activeOrder, deliverables: newDeliverables });
+        setActiveOrder(prev => {
+            if (!prev) return null;
+            return {
+                ...prev,
+                deliverables: prev.deliverables.map(d => d.id === delId ? { ...d, ...updates } : d)
+            };
+        });
     };
 
     const removeDeliverable = (delId: string) => {
-        if (!activeOrder) return;
-        const newDeliverables = activeOrder.deliverables.filter(d => d.id !== delId);
-        syncToStorage({ ...activeOrder, deliverables: newDeliverables });
+        setActiveOrder(prev => {
+            if (!prev) return null;
+            const updated = { ...prev, deliverables: prev.deliverables.filter(d => d.id !== delId) };
+            // Deletions are treated as immediate confirmed actions
+            syncToStorage(updated);
+            return updated;
+        });
         setExpandedItems(prev => prev.filter(i => i !== delId));
     };
 
     const addDeliverable = (del: ConfiguredProduct) => {
-        if (!activeOrder) return;
-        syncToStorage({ ...activeOrder, deliverables: [del, ...activeOrder.deliverables] });
+        setActiveOrder(prev => {
+            if (!prev) return null;
+            return { ...prev, deliverables: [del, ...prev.deliverables] };
+        });
         setExpandedItems(prev => [...prev, del.id]);
     };
 
@@ -104,14 +144,17 @@ export default function ActiveOrderCommandCenter() {
         setExpandedItems(prev => Array.from(new Set([...prev, rowId])));
     };
 
-    const handleDoneRow = (rowId: string) => {
+    const handleDoneRow = (rowId: string, isValid: boolean, confirmedData?: ConfiguredProduct) => {
+        if (isValid && confirmedData) {
+            patchRowToStorage(rowId, confirmedData);
+        }
         setExpandedItems(prev => prev.filter(id => id !== rowId));
     };
 
     const handleToggleEditMode = () => {
         if (isEditMode) {
             setExpandedItems([]);
-            loadOrder(); // Re-sync with storage to discard any uncommitted edits in row-level staged state
+            loadOrder(); 
         }
         setIsEditMode(!isEditMode);
     };
@@ -251,7 +294,7 @@ export default function ActiveOrderCommandCenter() {
                                                 isExpanded={expandedItems.includes(item.id)} 
                                                 isNonCollapsible={false}
                                                 onEdit={() => handleEditRow(item.id)}
-                                                onDone={() => handleDoneRow(item.id)}
+                                                onDone={handleDoneRow}
                                                 onValidityChange={() => {}}
                                                 onUpdate={updateDeliverable}
                                                 onRemove={removeDeliverable}

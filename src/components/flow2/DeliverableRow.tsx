@@ -141,7 +141,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
     const { register, control, watch, formState: { errors, isValid }, trigger, getValues, setValue, reset } = form;
     const watchedValues = watch();
 
-    // Discard uncommitted changes when exiting edit mode
     React.useEffect(() => {
         if (isReadOnly) {
             reset({
@@ -163,7 +162,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         }
     }, [isReadOnly, item, product, reset]);
 
-    // Handle initial validation and external sync
     React.useEffect(() => {
         const initValidation = async () => {
             const res = await trigger();
@@ -179,7 +177,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         }
     }, [item.id, isValid, hasValidated, onValidityChange]);
 
-    // Internal breakdown for "Live" feedback during editing
     const itemBreakdown = React.useMemo(() => {
         const currentItem: ConfiguredProduct = {
             ...item,
@@ -206,7 +203,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         });
     }, [item.id, onUpdate]);
 
-    // Auto-sync for Deliverables page (where manualSyncOnly is false)
     React.useEffect(() => {
         if (manualSyncOnly) return;
         
@@ -238,8 +234,13 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         const res = await trigger();
         if (res) {
             const currentValues = getValues();
+            const finalData = {
+                ...item,
+                ...currentValues,
+                addons: (currentValues.addons || []).filter((a: any) => a.value !== undefined && a.value !== false) as any
+            };
             performSyncUpdate(currentValues);
-            onDone(item.id, res);
+            onDone(item.id, res, finalData);
         }
     };
 
@@ -259,8 +260,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         if (!product) return null;
         const parts: React.ReactNode[] = [];
         
-        // Always show the confirmed state in compact mode
-        const displayValues = item;
+        const displayValues = isReadOnly ? item : { ...item, ...watchedValues };
 
         if (displayValues.variant) {
             parts.push(<span key="variant">{displayValues.variant}</span>);
@@ -350,7 +350,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                             <h3 className={cn("font-semibold leading-none truncate", isExpanded ? "text-base" : "text-sm")}>
                                 {item.productName}
                             </h3>
-                            {warningData.message && !isPersistent && (
+                            {warningData.message && (
                                 <Badge variant={warningData.type === 'hard' ? 'destructive' : 'warning'} className="text-[9px] h-3.5 py-0 px-1 font-bold uppercase shrink-0">
                                     {warningData.message}
                                 </Badge>
@@ -596,7 +596,7 @@ interface DeliverableRowProps {
     isExpanded: boolean;
     isNonCollapsible?: boolean;
     onEdit: (id: string) => void;
-    onDone: (id: string, isValid: boolean) => void;
+    onDone: (id: string, isValid: boolean, data?: ConfiguredProduct) => void;
     onValidityChange: (id: string, isValid: boolean) => void;
     onUpdate: (id: string, updates: Partial<ConfiguredProduct>) => void;
     onRemove: (id: string) => void;
