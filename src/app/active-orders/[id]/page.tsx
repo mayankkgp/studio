@@ -661,7 +661,7 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                                             </div>
                                         </div>
 
-                                        {isEditMode && (
+                                        {isEditMode && viewMode !== 'bill' && (
                                             <div className="bg-card p-4 md:p-6 rounded-xl border-2 border-primary/20 shadow-sm sticky top-0 z-40 backdrop-blur-sm bg-card/95">
                                                 <CommandBar onAdd={addDeliverable} />
                                             </div>
