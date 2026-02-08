@@ -117,9 +117,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
     const [hasValidated, setHasValidated] = React.useState(false);
     const [justActivatedAddonId, setJustActivatedAddonId] = React.useState<string | null>(null);
 
-    // Staged internal state for Active Orders to allow rejection of uncommitted changes
-    const [stagedValues, setStagedValues] = React.useState<Partial<ConfiguredProduct>>(item);
-
     const form = useForm({
         resolver: zodResolver(getValidationSchema(product)),
         defaultValues: {
@@ -144,10 +141,27 @@ export const DeliverableRow = React.memo(function DeliverableRow({
     const { register, control, watch, formState: { errors, isValid }, trigger, getValues, setValue, reset } = form;
     const watchedValues = watch();
 
-    // Reset internal staged values when item changes from outside (e.g. initial load)
+    // Discard uncommitted changes when exiting edit mode
     React.useEffect(() => {
-        setStagedValues(item);
-    }, [item]);
+        if (isReadOnly) {
+            reset({
+                variant: item.variant,
+                quantity: item.quantity,
+                pages: item.pages,
+                specialRequest: item.specialRequest || '',
+                customFieldValues: item.customFieldValues || {},
+                rateOverrides: item.rateOverrides || {},
+                addons: product?.addons?.map(addon => {
+                    const existingAddon = item.addons?.find(a => a.id === addon.id);
+                    return { 
+                        id: addon.id, 
+                        name: addon.name, 
+                        value: existingAddon?.value ?? undefined
+                    };
+                }) || []
+            });
+        }
+    }, [isReadOnly, item, product, reset]);
 
     // Handle initial validation and external sync
     React.useEffect(() => {

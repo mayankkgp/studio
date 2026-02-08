@@ -111,6 +111,7 @@ export default function ActiveOrderCommandCenter() {
     const handleToggleEditMode = () => {
         if (isEditMode) {
             setExpandedItems([]);
+            loadOrder(); // Re-sync with storage to discard any uncommitted edits in row-level staged state
         }
         setIsEditMode(!isEditMode);
     };
