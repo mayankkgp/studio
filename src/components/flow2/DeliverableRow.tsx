@@ -32,12 +32,6 @@ import {
     AccordionItem,
     AccordionContent,
 } from "@/components/ui/accordion";
-import {
-    Tooltip,
-    TooltipContent,
-    TooltipProvider,
-    TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { calculateItemBreakdown } from '@/lib/pricing';
 
 const getValidationSchema = (product: Product | null) => {
@@ -117,7 +111,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
     const product = React.useMemo(() => productCatalog.find(p => p.id === item.productId) || null, [item.productId]);
     const isBranchA = product?.configType === 'A' || product?.configType === 'B';
     
-    const notesRef = React.useRef<HTMLTextAreaElement | null>(null);
     const [showNotes, setShowNotes] = React.useState(!!item.specialRequest);
     const [hasValidated, setHasValidated] = React.useState(false);
     const [justActivatedAddonId, setJustActivatedAddonId] = React.useState<string | null>(null);
@@ -147,7 +140,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
     const watchedValues = watch();
 
     const itemBreakdown = React.useMemo(() => {
-        // Create a temporary object to calculate breakdown using current form values
         const currentItem: ConfiguredProduct = {
             ...item,
             ...watchedValues,
@@ -155,13 +147,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         };
         return calculateItemBreakdown(currentItem);
     }, [watchedValues, item]);
-
-    const adjustHeight = React.useCallback((el: HTMLTextAreaElement | null) => {
-        if (!el) return;
-        el.style.height = '0px'; 
-        const scrollHeight = el.scrollHeight;
-        el.style.height = `${Math.max(40, scrollHeight)}px`;
-    }, []);
 
     const getLogicWarning = React.useCallback((fieldValue: any, constraints?: SoftConstraint[]) => {
         if (fieldValue === undefined || fieldValue === null || fieldValue === '') return null;
@@ -254,6 +239,15 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             parts.push(<span key="pages" className={cn(warning && "text-[#FA7315] font-bold")}>{watchedValues.pages} Pgs</span>);
         }
 
+        if (product.customFields && watchedValues.customFieldValues) {
+            product.customFields.forEach(field => {
+                const val = (watchedValues.customFieldValues as any)?.[field.id];
+                if (val && typeof val === 'number') {
+                    parts.push(<span key={field.id}>{field.name}: {val}</span>);
+                }
+            });
+        }
+
         if (parts.length === 0) return null;
         return parts.reduce((prev, curr, i) => [prev, <span key={`sep-${i}`} className="mx-1 text-muted-foreground/50">•</span>, curr]);
     };
@@ -310,7 +304,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                         <h3 className={cn("font-semibold leading-none shrink-0", isExpanded ? "text-base" : "text-sm")}>
                             {item.productName}
                         </h3>
-                        {warningData.message && !isPersistent && !isReadOnly && (
+                        {warningData.message && !isPersistent && (
                             <Badge variant={warningData.type === 'hard' ? 'destructive' : 'warning'} className="text-[10px] h-4 py-0 font-bold uppercase shrink-0">
                                 {warningData.message}
                             </Badge>
@@ -346,7 +340,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
 
             <AccordionContent className="px-4 pb-4 border-t bg-muted/5 relative" forceMount={isExpanded}>
                 <div className="flex flex-col gap-8 pt-6">
-                    {/* Configuration Section */}
                     <div className="space-y-6">
                         <div className="flex flex-wrap items-center gap-x-8 gap-y-6">
                             {product?.variants && product.variants.length > 0 && (
@@ -420,7 +413,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                             control={control}
                                             render={({ field }) => {
                                                 const isChecked = field.value !== undefined && field.value !== false;
-                                                const softWarning = getLogicWarning(field.value, addon.softConstraints);
                                                 
                                                 if (!isChecked) {
                                                     return !isReadOnly ? (
@@ -483,7 +475,6 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                         </div>
                     </div>
 
-                    {/* Commercials & Rates Section */}
                     <div className="border-t pt-8 space-y-4">
                         <div className="flex items-center gap-2">
                             <TrendingUp className="h-4 w-4 text-primary" />
