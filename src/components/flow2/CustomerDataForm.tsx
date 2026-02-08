@@ -7,14 +7,8 @@ import { Palette, BookOpen, Globe, Sparkles, Box, MessageSquare } from 'lucide-r
 import type { Order, CustomerData, ConfiguredProduct } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
-interface CustomerDataFormProps {
-  order: Order;
-  onSave: (data: CustomerData) => void;
-  isSaving?: boolean;
-}
-
 /**
- * Auto-growing Textarea Component with Focus Stability
+ * Auto-growing Textarea Component with Dynamic Height Logic
  */
 const AutoGrowingTextarea = React.forwardRef<
   HTMLTextAreaElement,
@@ -26,13 +20,17 @@ const AutoGrowingTextarea = React.forwardRef<
     const element = textAreaRef.current;
     if (element) {
       element.style.height = 'auto';
+      // Set to scrollHeight to fit content perfectly
       element.style.height = `${element.scrollHeight}px`;
     }
   };
 
+  // Recalculate height whenever value or styling classes change
   React.useEffect(() => {
-    adjustHeight();
-  }, [props.value]);
+    // Small delay to allow browser to calculate layout after class changes
+    const timer = setTimeout(adjustHeight, 0);
+    return () => clearTimeout(timer);
+  }, [props.value, className]);
 
   return (
     <textarea
@@ -42,13 +40,13 @@ const AutoGrowingTextarea = React.forwardRef<
         if (typeof ref === 'function') ref(e);
         else if (ref) ref.current = e;
       }}
-      rows={3}
+      rows={1}
       onInput={(e) => {
         adjustHeight();
         if (onInput) onInput(e);
       }}
       className={cn(
-        "flex w-full bg-transparent px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground/30 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 resize-none transition-all duration-200",
+        "flex w-full bg-transparent px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground/30 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 resize-none transition-all duration-200 overflow-hidden",
         className
       )}
     />
@@ -94,7 +92,6 @@ const EditableField = ({
 }) => {
   const hasValue = value && value.trim().length > 0;
 
-  // In review mode, if it's empty and not focused, we show a subtle placeholder
   if (!hasValue && !isFocused) {
     return (
       <div 
@@ -207,7 +204,7 @@ const ProductBriefItem = ({
       <div className="flex-1 min-w-0">
         {(!hasValue && !isFocused) ? (
           <div 
-            className="h-full flex items-center px-4 cursor-text opacity-30 group-hover:opacity-100 transition-opacity"
+            className="h-full flex items-center px-4 cursor-text opacity-30 group-hover:opacity-100 transition-opacity min-h-[1.5rem]"
             onClick={onFocus}
           >
             <span className="text-[10px] italic">Add requirements for {item.productName.toLowerCase()}...</span>
@@ -231,7 +228,7 @@ const ProductBriefItem = ({
   );
 };
 
-export function CustomerDataForm({ order, onSave, isSaving }: CustomerDataFormProps) {
+export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; onSave: (data: CustomerData) => void; isSaving?: boolean }) {
   const [focusedField, setFocusedField] = React.useState<string | null>(null);
 
   const defaultValues = React.useMemo(() => order.customerData || {
