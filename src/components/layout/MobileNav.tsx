@@ -11,7 +11,7 @@ import { useOrder } from '@/context/OrderContext';
 import { useToast } from '@/hooks/use-toast';
 
 const navItems = [
-  { href: '/drafts', label: 'My Drafts', icon: FileText },
+  { href: '/', label: 'My Drafts', icon: FileText },
   { href: '/active-orders', label: 'Active Order List', icon: Zap },
 ];
 
@@ -23,7 +23,7 @@ export function MobileNav() {
 
   const handleCreateOrder = () => {
     resetOrder();
-    router.push('/');
+    router.push('/new-order');
   };
 
   const clearStorage = () => {

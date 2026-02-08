@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 
 const navItems = [
-  { href: '/drafts', label: 'My Drafts', icon: FileText },
+  { href: '/', label: 'My Drafts', icon: FileText },
   { href: '/active-orders', label: 'Active Order List', icon: Zap },
 ];
 
@@ -22,7 +22,7 @@ export function Sidebar() {
 
   const handleCreateOrder = () => {
     resetOrder();
-    router.push('/');
+    router.push('/new-order');
   };
 
   const clearStorage = () => {
