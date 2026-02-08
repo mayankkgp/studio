@@ -71,6 +71,7 @@ export default function ActiveOrderCommandCenter() {
     const [isExitConfirmOpen, setIsExitConfirmOpen] = useState(false);
     const [isPaymentPopoverOpen, setIsPaymentPopoverOpen] = useState(false);
     const [itemSearchQuery, setItemSearchQuery] = useState('');
+    const [activeTab, setActiveTab] = useState('overview');
     
     const [projectedTotals, setProjectedTotals] = useState<Record<string, number>>({});
     const [initialTotal, setInitialTotal] = useState(0);
@@ -515,25 +516,29 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                     </Button>
                     <div className="flex-1 overflow-hidden">
                         <div className="flex items-center gap-3">
-                            <Button 
-                                variant={isEditMode ? "default" : "outline"} 
-                                size="sm" 
-                                onClick={handleToggleEditMode}
-                                className={cn(
-                                    "h-8 font-bold gap-2 transition-all",
-                                    isEditMode ? "bg-primary shadow-lg shadow-primary/20" : "border-primary text-primary hover:bg-primary/5"
-                                )}
-                            >
-                                {isEditMode ? (
-                                    <><CheckCircle2 className="h-4 w-4" /> Done Editing</>
-                                ) : (
-                                    <><Unlock className="h-4 w-4" /> Modify Order</>
-                                )}
-                            </Button>
-                            <Separator orientation="vertical" className="h-6" />
-                            <h1 className="font-bold text-base md:text-lg font-headline truncate text-foreground">
+                            <h1 className="font-bold text-base md:text-lg font-headline truncate text-foreground flex-1">
                                 {headerSummary}
                             </h1>
+                            {activeTab === 'overview' && (
+                                <>
+                                    <Separator orientation="vertical" className="h-6" />
+                                    <Button 
+                                        variant={isEditMode ? "default" : "outline"} 
+                                        size="sm" 
+                                        onClick={handleToggleEditMode}
+                                        className={cn(
+                                            "h-8 font-bold gap-2 transition-all shrink-0",
+                                            isEditMode ? "bg-primary shadow-lg shadow-primary/20" : "border-primary text-primary hover:bg-primary/5"
+                                        )}
+                                    >
+                                        {isEditMode ? (
+                                            <><CheckCircle2 className="h-4 w-4" /> Done Editing</>
+                                        ) : (
+                                            <><Unlock className="h-4 w-4" /> Modify Order</>
+                                        )}
+                                    </Button>
+                                </>
+                            )}
                         </div>
                     </div>
                     <div className="hidden sm:block font-mono text-xs font-bold text-muted-foreground uppercase tracking-widest opacity-60">
@@ -541,7 +546,7 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                     </div>
                 </header>
 
-                <Tabs defaultValue="overview" className="flex-1 flex flex-col overflow-hidden">
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
                     <div className="px-4 md:px-8 border-b bg-muted/20">
                         <TabsList className="h-12 bg-transparent p-0 gap-8">
                             <TabsTrigger 
