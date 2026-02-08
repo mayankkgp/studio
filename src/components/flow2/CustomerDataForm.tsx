@@ -7,6 +7,7 @@ import { Palette, BookOpen, Globe, Sparkles, Box, MessageSquare, Eye, EyeOff } f
 import type { Order, CustomerData, ConfiguredProduct } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { productCatalog } from '@/lib/product-data';
 
 /**
  * Auto-growing Textarea Component
@@ -121,7 +122,7 @@ const EditableField = ({
 
 /**
  * Product Brief Row Component
- * Refactored to remove "boxes" and badges from specs.
+ * Unified text summary of all configured specs.
  */
 const ProductBriefRow = ({
   item,
@@ -134,6 +135,7 @@ const ProductBriefRow = ({
   value: string,
   showEmpty: boolean
 }) => {
+  const product = productCatalog.find(p => p.id === item.productId);
   const briefKey = `productBriefs.${item.id}`;
   const hasValue = value && value.trim().length > 0;
 
@@ -145,33 +147,52 @@ const ProductBriefRow = ({
     );
   }
 
+  // Build the summary parts following the sequence logic in DeliverableRow
+  const parts: React.ReactNode[] = [];
+  
+  if (item.variant) {
+    parts.push(<span key="variant">{item.variant}</span>);
+  }
+
+  if (product?.configType === 'A' && typeof item.quantity === 'number' && item.quantity > 0) {
+    parts.push(<span key="qty">Qty: {item.quantity}</span>);
+  } else if (product?.configType === 'B' && typeof item.pages === 'number' && item.pages > 0) {
+    parts.push(<span key="pages">{item.pages} Pgs</span>);
+  }
+
+  if (product?.customFields && item.customFieldValues) {
+    product.customFields.forEach(field => {
+      const val = (item.customFieldValues as any)?.[field.id];
+      if (val && typeof val === 'number' && val > 0) {
+        parts.push(<span key={field.id}>{field.name}: {val}</span>);
+      }
+    });
+  }
+
+  const activeAddons = (item.addons || []).filter((a: any) => a.value !== undefined && a.value !== false && a.value !== null);
+  activeAddons.forEach((a: any) => {
+    const displayVal = typeof a.value === 'number' ? `: ${a.value}` : '';
+    parts.push(<span key={`addon-${a.id}`}>{a.name}{displayVal}</span>);
+  });
+
+  if (item.specialRequest) {
+    parts.push(<span key="special" className="italic font-medium">Note: {item.specialRequest}</span>);
+  }
+
+  const summary = parts.length > 0 
+    ? parts.reduce((prev, curr, i) => [prev, <span key={`sep-${i}`} className="mx-1 text-muted-foreground/40 font-black">•</span>, curr])
+    : null;
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-[240px_1fr] gap-6 py-6 border-b border-primary/10 last:border-0 group transition-all">
-      <div className="space-y-2 pt-1">
+      <div className="space-y-1.5 pt-1">
         <h4 className="font-headline font-black text-xs text-foreground uppercase tracking-tight">
           {item.productName}
         </h4>
         
-        <div className="flex flex-col gap-0.5">
-          {item.variant && (
-             <span className="text-[10px] font-bold text-primary uppercase tracking-wide">
-               {item.variant}
-             </span>
-          )}
-          <div className="flex flex-wrap gap-x-3 text-[10px] font-bold text-muted-foreground/80 uppercase tracking-tight">
-            {item.quantity !== undefined && item.quantity !== null && (
-              <span>QTY: {item.quantity}</span>
-            )}
-            {item.pages !== undefined && item.pages !== null && (
-              <span>{item.pages} PGS</span>
-            )}
-          </div>
-        </div>
-
-        {item.specialRequest && (
-          <div className="flex items-start gap-1.5 text-[10px] font-medium text-orange-800/80 italic leading-tight pt-1">
-            <MessageSquare className="h-3 w-3 shrink-0 mt-0.5" />
-            <span>{item.specialRequest}</span>
+        {summary && (
+          <div className="flex flex-wrap items-center text-[10px] font-bold text-muted-foreground/80 uppercase tracking-tight leading-normal">
+            {summary}
           </div>
         )}
       </div>
@@ -223,18 +244,20 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
           <h2 className="text-xl font-headline font-black text-foreground">Creative Briefing</h2>
           <p className="text-xs text-muted-foreground font-medium">Capture visual and narrative context for design production.</p>
         </div>
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          onClick={() => setShowEmptyFields(!showEmptyFields)}
-          className={cn(
-            "h-8 gap-2 font-bold text-[10px] uppercase tracking-widest",
-            showEmptyFields ? "text-primary bg-primary/5" : "text-muted-foreground"
-          )}
-        >
-          {showEmptyFields ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-          {showEmptyFields ? "Hide Empty" : "Show All Fields"}
-        </Button>
+        <div className="flex items-center gap-4">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => setShowEmptyFields(!showEmptyFields)}
+            className={cn(
+              "h-8 gap-2 font-bold text-[10px] uppercase tracking-widest",
+              showEmptyFields ? "text-primary bg-primary/5" : "text-muted-foreground"
+            )}
+          >
+            {showEmptyFields ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+            {showEmptyFields ? "Hide Empty" : "Show All Fields"}
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-12 items-start">
