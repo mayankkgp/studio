@@ -20,14 +20,11 @@ const AutoGrowingTextarea = React.forwardRef<
     const element = textAreaRef.current;
     if (element) {
       element.style.height = 'auto';
-      // Set to scrollHeight to fit content perfectly
       element.style.height = `${element.scrollHeight}px`;
     }
   };
 
-  // Recalculate height whenever value or styling classes change
   React.useEffect(() => {
-    // Small delay to allow browser to calculate layout after class changes
     const timer = setTimeout(adjustHeight, 0);
     return () => clearTimeout(timer);
   }, [props.value, className]);
@@ -46,7 +43,7 @@ const AutoGrowingTextarea = React.forwardRef<
         if (onInput) onInput(e);
       }}
       className={cn(
-        "flex w-full bg-transparent px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground/30 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 resize-none transition-all duration-200 overflow-hidden",
+        "flex w-full bg-transparent px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground/65 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 resize-none transition-all duration-200 overflow-hidden",
         className
       )}
     />
@@ -58,11 +55,13 @@ AutoGrowingTextarea.displayName = "AutoGrowingTextarea";
  * Section Header Component
  */
 const SectionHeader = ({ title, icon: Icon }: { title: string, icon: any }) => (
-  <div className="flex items-center gap-2 mb-6 group">
-    <div className="h-8 w-8 shrink-0 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-      <Icon className="h-4 w-4" />
+  <div className="flex items-center gap-3 mb-8 group">
+    <div className="h-10 w-10 shrink-0 rounded-xl bg-primary/15 text-primary flex items-center justify-center shadow-sm border border-primary/10">
+      <Icon className="h-5 w-5" />
     </div>
-    <h3 className="font-headline text-lg font-black text-foreground tracking-tight uppercase">{title}</h3>
+    <h3 className="font-headline text-xl font-black text-foreground tracking-tight uppercase border-b-2 border-primary/20 pb-1">
+      {title}
+    </h3>
   </div>
 );
 
@@ -95,23 +94,23 @@ const EditableField = ({
   if (!hasValue && !isFocused) {
     return (
       <div 
-        className="group cursor-text py-2 opacity-40 hover:opacity-100 transition-opacity border-l-2 border-transparent pl-4"
+        className="group cursor-text py-3 border-l-2 border-primary/5 hover:border-primary/20 pl-4 transition-all duration-200"
         onClick={onFocus}
       >
-        <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-1">{label}</div>
-        <div className="text-[10px] italic">Click to add {label.toLowerCase()}...</div>
+        <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1.5">{label}</div>
+        <div className="text-xs italic text-muted-foreground/80 font-medium">Click to add {label.toLowerCase()}...</div>
       </div>
     );
   }
 
   return (
     <div className={cn(
-      "space-y-1 group transition-all duration-200 border-l-2 pl-4",
-      isFocused ? "border-primary" : "border-transparent"
+      "space-y-1.5 group transition-all duration-200 border-l-2 pl-4",
+      isFocused ? "border-primary" : "border-primary/10"
     )}>
       <Label 
         htmlFor={id} 
-        className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/80"
+        className="text-[10px] font-black uppercase tracking-widest text-muted-foreground"
       >
         {label}
       </Label>
@@ -124,9 +123,9 @@ const EditableField = ({
           onBlur={onBlur}
           autoFocus={isFocused}
           className={cn(
-            "font-medium leading-relaxed",
+            "font-medium leading-relaxed text-foreground",
             !isFocused && "border-none shadow-none p-0 cursor-text",
-            isFocused && "bg-white border-primary/20 shadow-sm rounded-md"
+            isFocused && "bg-background border-2 border-primary/20 shadow-sm rounded-lg"
           )}
         />
       </div>
@@ -158,44 +157,44 @@ const ProductBriefItem = ({
   return (
     <div 
       className={cn(
-        "group flex flex-col md:flex-row items-stretch gap-4 p-4 rounded-xl border bg-card/40 transition-all",
-        isFocused ? "border-primary bg-white shadow-sm ring-1 ring-primary/20" : "border-primary/10 hover:border-primary/20"
+        "group flex flex-col md:flex-row items-stretch gap-6 p-5 rounded-2xl border transition-all",
+        isFocused 
+          ? "border-primary bg-background shadow-md ring-2 ring-primary/5" 
+          : "border-primary/10 bg-card/40 hover:bg-card/60 hover:border-primary/20"
       )}
     >
-      <div className="md:w-1/3 shrink-0 space-y-2">
-        <div className="flex items-center justify-between">
-          <h4 className="font-headline font-black text-sm text-foreground uppercase tracking-tight truncate">
-            {item.productName}
-          </h4>
-        </div>
+      <div className="md:w-1/3 shrink-0 space-y-3">
+        <h4 className="font-headline font-black text-base text-foreground uppercase tracking-tight">
+          {item.productName}
+        </h4>
         
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-2">
           {item.quantity !== undefined && item.quantity !== null && (
-            <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[8px] font-black uppercase">
+            <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-primary/20 text-primary-foreground font-black text-[9px] uppercase border border-primary/20 bg-primary/10 text-primary">
               Qty: {item.quantity}
             </span>
           )}
           {item.pages !== undefined && item.pages !== null && (
-            <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[8px] font-black uppercase">
+            <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-primary/20 text-primary-foreground font-black text-[9px] uppercase border border-primary/20 bg-primary/10 text-primary">
               {item.pages} Pages
             </span>
           )}
           {item.variant && (
-            <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-muted text-muted-foreground text-[8px] font-black uppercase">
+            <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-muted text-muted-foreground font-black text-[9px] uppercase border border-border">
               {item.variant}
             </span>
           )}
           {Object.entries(item.customFieldValues || {}).map(([key, val]) => (
             val !== null && (
-              <span key={key} className="inline-flex items-center px-1.5 py-0.5 rounded border border-primary/10 text-muted-foreground text-[8px] font-black uppercase">
+              <span key={key} className="inline-flex items-center px-2 py-0.5 rounded-md border-2 border-primary/10 text-muted-foreground font-black text-[9px] uppercase">
                 {key}: {val}
               </span>
             )
           ))}
           {item.specialRequest && (
-            <div className="flex items-center gap-1 text-[8px] font-bold text-orange-600 uppercase bg-orange-50 px-1.5 py-0.5 rounded border border-orange-100 w-full mt-1">
-              <MessageSquare className="h-2 w-2" />
-              {item.specialRequest}
+            <div className="flex items-center gap-2 text-[9px] font-black text-orange-800 uppercase bg-orange-100 px-2 py-1 rounded-md border border-orange-200 w-full mt-1.5 shadow-sm">
+              <MessageSquare className="h-3 w-3 shrink-0" />
+              <span className="truncate">{item.specialRequest}</span>
             </div>
           )}
         </div>
@@ -204,10 +203,10 @@ const ProductBriefItem = ({
       <div className="flex-1 min-w-0">
         {(!hasValue && !isFocused) ? (
           <div 
-            className="h-full flex items-center px-4 cursor-text opacity-30 group-hover:opacity-100 transition-opacity min-h-[1.5rem]"
+            className="h-full flex items-center px-4 cursor-text opacity-50 group-hover:opacity-100 transition-opacity min-h-[2rem]"
             onClick={onFocus}
           >
-            <span className="text-[10px] italic">Add requirements for {item.productName.toLowerCase()}...</span>
+            <span className="text-xs italic font-medium text-muted-foreground">Add brief details for {item.productName.toLowerCase()}...</span>
           </div>
         ) : (
           <AutoGrowingTextarea 
@@ -217,9 +216,9 @@ const ProductBriefItem = ({
             onBlur={onBlur}
             autoFocus={isFocused}
             className={cn(
-              "font-medium bg-transparent",
+              "font-medium bg-transparent text-foreground",
               !isFocused && "border-none shadow-none p-0 cursor-text",
-              isFocused && "p-3 border-primary/10 bg-white/50 rounded-md"
+              isFocused && "p-3 border-2 border-primary/10 bg-background/50 rounded-lg"
             )}
           />
         )}
@@ -250,11 +249,11 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
   }, [defaultValues, reset]);
 
   return (
-    <div className="space-y-12 pb-20">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-16">
-        <div className="space-y-8">
+    <div className="space-y-16 pb-24">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-20">
+        <div className="space-y-10">
           <SectionHeader title="Visual Identity" icon={Palette} />
-          <div className="space-y-6">
+          <div className="space-y-8">
             <EditableField 
               id="mood"
               label="Mood & Style Reference"
@@ -291,9 +290,9 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
           </div>
         </div>
 
-        <div className="space-y-8">
+        <div className="space-y-10">
           <SectionHeader title="The Narrative" icon={BookOpen} />
-          <div className="space-y-6">
+          <div className="space-y-8">
             <EditableField 
               id="timeline"
               label="Relationship Timeline"
@@ -330,9 +329,9 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
           </div>
         </div>
 
-        <div className="space-y-8">
+        <div className="space-y-10">
           <SectionHeader title="Culture & Symbols" icon={Globe} />
-          <div className="space-y-6">
+          <div className="space-y-8">
             <EditableField 
               id="icons"
               label="Mandatory Icons & Motifs"
@@ -358,9 +357,9 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
           </div>
         </div>
 
-        <div className="space-y-8">
+        <div className="space-y-10">
           <SectionHeader title="Atmosphere & Extras" icon={Sparkles} />
-          <div className="space-y-6">
+          <div className="space-y-8">
             <EditableField 
               id="personality"
               label="Venue Personality"
@@ -387,10 +386,10 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
         </div>
       </div>
 
-      <div className="pt-8 border-t border-primary/10">
+      <div className="pt-12 border-t-2 border-primary/10">
         <SectionHeader title="Product Specific Briefs" icon={Box} />
         
-        <div className="grid gap-2">
+        <div className="grid gap-4">
           {order.deliverables.map((item) => (
             <ProductBriefItem 
               key={item.id}
