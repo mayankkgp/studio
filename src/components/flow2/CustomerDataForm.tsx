@@ -115,27 +115,22 @@ const EditableField = ({
   );
 };
 
-export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; onSave: (data: CustomerData) => void; isSaving?: boolean }) {
+export function CustomerDataForm({ 
+  order, 
+  onSave, 
+  isSaving,
+  showEmptyFields = true
+}: { 
+  order: Order; 
+  onSave: (data: CustomerData) => void; 
+  isSaving?: boolean;
+  showEmptyFields?: boolean;
+}) {
   const [selectedProductId, setSelectedProductId] = React.useState<string | null>(
     order.deliverables.length > 0 ? order.deliverables[0].id : null
   );
 
-  const [showEmptyFields, setShowEmptyFields] = React.useState(true);
   const [productSearchQuery, setProductSearchQuery] = React.useState('');
-
-  // Persistence logic for view preference
-  React.useEffect(() => {
-    const saved = localStorage.getItem('srishbish_brief_view_pref');
-    if (saved !== null) {
-      setShowEmptyFields(saved === 'true');
-    }
-  }, []);
-
-  const toggleViewMode = () => {
-    const next = !showEmptyFields;
-    setShowEmptyFields(next);
-    localStorage.setItem('srishbish_brief_view_pref', String(next));
-  };
 
   const defaultValues = React.useMemo(() => order.customerData || {
     visualIdentity: { moodStyle: '', colorTypography: '', designDislikes: '' },
@@ -242,40 +237,9 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
 
   return (
     <div className="pb-24 max-w-6xl mx-auto relative">
-      <div className="sticky top-0 z-30 bg-background/95 backdrop-blur-sm pt-4 -mt-4 mb-8 border-b border-primary/10 pb-4 flex items-center justify-between">
-        <div className="space-y-1">
-          <h2 className="text-xl font-headline font-black text-foreground uppercase tracking-tight">Creative Briefing</h2>
-          <p className="text-xs text-muted-foreground font-bold uppercase tracking-wide opacity-80">Capture visual and narrative context for design production</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={toggleViewMode}
-            className="h-8 font-bold gap-2 text-[11px] uppercase tracking-widest border-primary/20 hover:bg-primary/5 hover:text-primary transition-all"
-          >
-            {showEmptyFields ? (
-              <><EyeOff className="h-3.5 w-3.5" /> Hide Empty Fields</>
-            ) : (
-              <><Eye className="h-3.5 w-3.5" /> Show All Fields</>
-            )}
-          </Button>
-          <Button 
-            size="sm" 
-            type="submit"
-            form="creative-brief-form"
-            disabled={isSaving}
-            className="h-8 font-bold gap-2 bg-primary shadow-lg shadow-primary/20 shrink-0 hover:bg-primary/90"
-          >
-            {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            Save Creative Brief
-          </Button>
-        </div>
-      </div>
-
       {/* Masonry Layout for General Sections */}
       {showGenericData && (
-        <section className="mt-12 columns-1 md:columns-2 gap-8 space-y-8">
+        <section className="mt-4 columns-1 md:columns-2 gap-8 space-y-8">
           {(!isVisualEmpty || showEmptyFields) && (
             <div className="break-inside-avoid">
               <SectionHeader title="Visual Identity" icon={Palette} />
@@ -394,11 +358,6 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
             <p className="font-bold uppercase tracking-widest text-[11px]">
               {showEmptyFields ? "No products in scope" : "No brief data recorded"}
             </p>
-            {!showEmptyFields && order.deliverables.length > 0 && (
-              <Button variant="link" size="sm" onClick={toggleViewMode} className="mt-2 font-black uppercase text-[10px] tracking-widest">
-                Show empty products
-              </Button>
-            )}
           </div>
         ) : (
           <div className="flex flex-col md:flex-row h-[600px] border border-primary/10 rounded-xl overflow-hidden bg-card/5 shadow-sm">
@@ -523,7 +482,12 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
         )}
       </section>
 
-      <form id="creative-brief-form" onSubmit={handleSubmit(onSave)} className="hidden" />
+      {/* Hidden submit trigger for parent component to trigger save */}
+      <button 
+        id="creative-brief-submit-trigger" 
+        className="hidden" 
+        onClick={handleSubmit(onSave)} 
+      />
       
       <style jsx global>{`
         .custom-scrollbar::-webkit-scrollbar { width: 5px; }
