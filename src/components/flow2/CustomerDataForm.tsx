@@ -106,17 +106,38 @@ export function CustomerDataForm({ order, onSave }: CustomerDataFormProps) {
 
     return (
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-16 pb-32">
-            <div className="flex items-center justify-between px-4 sticky top-0 z-50 py-4 bg-background/80 backdrop-blur-sm -mx-4">
+            <div className="flex items-center justify-between px-4 sticky top-0 z-50 py-4 bg-background/95 backdrop-blur-md -mx-4 border-b border-primary/10 mb-8">
                 <div>
                     <h2 className="text-xl font-black font-headline text-primary uppercase tracking-wider">
                         {isEditing ? 'Editing Creative Brief' : 'Creative Brief Summary'}
                     </h2>
                 </div>
-                {!isEditing && (
-                    <Button type="button" onClick={() => setIsEditing(true)} className="gap-2 shadow-lg">
-                        <Pencil className="h-4 w-4" /> Edit Brief
-                    </Button>
-                )}
+                <div className="flex gap-3">
+                    {isEditing ? (
+                        <>
+                            <Button 
+                                type="button" 
+                                variant="outline"
+                                onClick={handleCancel}
+                                className="h-10 px-4 font-bold border-primary/20 hover:bg-muted"
+                            >
+                                <X className="h-4 w-4 mr-2" />
+                                Cancel
+                            </Button>
+                            <Button 
+                                type="submit" 
+                                className="h-10 px-6 font-bold shadow-lg shadow-primary/20"
+                            >
+                                <Save className="h-4 w-4 mr-2" />
+                                Save Data
+                            </Button>
+                        </>
+                    ) : (
+                        <Button type="button" onClick={() => setIsEditing(true)} className="gap-2 shadow-lg h-10 px-6 font-bold">
+                            <Pencil className="h-4 w-4" /> Edit Brief
+                        </Button>
+                    )}
+                </div>
             </div>
 
             {/* 1. Visual Identity */}
@@ -296,27 +317,6 @@ export function CustomerDataForm({ order, onSave }: CustomerDataFormProps) {
                     })}
                 </div>
             </div>
-
-            {isEditing && (
-                <div className="fixed bottom-10 left-1/2 -translate-x-1/2 w-full max-w-lg px-6 z-50 flex gap-4">
-                    <Button 
-                        type="button" 
-                        variant="secondary"
-                        onClick={handleCancel}
-                        className="flex-1 h-16 text-base font-black uppercase tracking-[0.25em] shadow-2xl rounded-2xl border-2"
-                    >
-                        <X className="h-5 w-5 mr-3" />
-                        Cancel
-                    </Button>
-                    <Button 
-                        type="submit" 
-                        className="flex-[2] h-16 text-base font-black uppercase tracking-[0.25em] shadow-2xl shadow-primary/30 rounded-2xl transition-all hover:scale-[1.02] active:scale-[0.98]"
-                    >
-                        <Save className="h-5 w-5 mr-3" />
-                        Save Data
-                    </Button>
-                </div>
-            )}
         </form>
     );
 }
