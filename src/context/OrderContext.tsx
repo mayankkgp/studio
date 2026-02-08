@@ -100,11 +100,8 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const loadDraft = useCallback((draftOrder: Order) => {
     setOrder(draftOrder);
-    toast({
-      title: 'Order Loaded',
-      description: `Order ${draftOrder.orderId} is now active.`,
-    });
-  }, [toast]);
+    // Success toast removed as requested
+  }, []);
 
   const saveToLocalStorage = useCallback((key: string, data: any) => {
     try {
@@ -134,9 +131,9 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     saveToLocalStorage(LS_DRAFTS_KEY, orderToSave);
     
-    toast({ title: 'Saved Locally', description: `Order ${currentOrderId} saved to device.` });
+    // Success toast removed as requested
     return true;
-  }, [order, toast, pathname, saveToLocalStorage]);
+  }, [order, pathname, saveToLocalStorage]);
 
   const activateOrder = useCallback(async (): Promise<boolean> => {
     if (!order.orderId) {
@@ -158,7 +155,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       localStorage.setItem(LS_DRAFTS_KEY, JSON.stringify(existingDrafts));
     } catch (e) {}
 
-    toast({ title: 'Order Activated!', description: `Moved ${order.orderId} to Active Orders.` });
+    // Success toast removed as requested
     resetOrder();
     return true;
   }, [order, toast, resetOrder, saveToLocalStorage]);
