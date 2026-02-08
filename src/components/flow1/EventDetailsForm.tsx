@@ -199,9 +199,15 @@ export function EventDetailsForm({ activeOrder, onUpdate, hideFooters = false }:
       } else if (isLoaded) {
         reset(order.eventDetails as any);
       }
-      // Trigger validation on mount/load to ensure CTA state is correct
-      trigger();
+      
+      // Crucial: Use a small timeout to ensure reset is fully applied before triggering validation
+      // This ensures the 'isValid' state accurately reflects the loaded draft data
+      const timer = setTimeout(() => {
+        trigger();
+      }, 50);
+      
       lastResetId.current = currentId;
+      return () => clearTimeout(timer);
     }
   }, [isLoaded, order.orderId, activeOrder?.orderId, reset, order.eventDetails, trigger]);
   
