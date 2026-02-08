@@ -117,6 +117,9 @@ export const DeliverableRow = React.memo(function DeliverableRow({
     const [hasValidated, setHasValidated] = React.useState(false);
     const [justActivatedAddonId, setJustActivatedAddonId] = React.useState<string | null>(null);
 
+    // Staged internal state for Active Orders to allow rejection of uncommitted changes
+    const [stagedValues, setStagedValues] = React.useState<Partial<ConfiguredProduct>>(item);
+
     const form = useForm({
         resolver: zodResolver(getValidationSchema(product)),
         defaultValues: {
@@ -141,27 +144,28 @@ export const DeliverableRow = React.memo(function DeliverableRow({
     const { register, control, watch, formState: { errors, isValid }, trigger, getValues, setValue, reset } = form;
     const watchedValues = watch();
 
+    // Reset internal staged values when item changes from outside (e.g. initial load)
     React.useEffect(() => {
-        if (!isExpanded) {
-            reset({
-                variant: item.variant,
-                quantity: item.quantity,
-                pages: item.pages,
-                specialRequest: item.specialRequest || '',
-                customFieldValues: item.customFieldValues || {},
-                rateOverrides: item.rateOverrides || {},
-                addons: product?.addons?.map(addon => {
-                    const existingAddon = item.addons?.find(a => a.id === addon.id);
-                    return { 
-                        id: addon.id, 
-                        name: addon.name, 
-                        value: existingAddon?.value ?? undefined
-                    };
-                }) || []
-            });
-        }
-    }, [item, isExpanded, reset, product?.addons]);
+        setStagedValues(item);
+    }, [item]);
 
+    // Handle initial validation and external sync
+    React.useEffect(() => {
+        const initValidation = async () => {
+            const res = await trigger();
+            onValidityChange(item.id, res);
+            setHasValidated(true);
+        };
+        initValidation();
+    }, [trigger, item.id, onValidityChange]);
+
+    React.useEffect(() => {
+        if (hasValidated) {
+            onValidityChange(item.id, isValid);
+        }
+    }, [item.id, isValid, hasValidated, onValidityChange]);
+
+    // Internal breakdown for "Live" feedback during editing
     const itemBreakdown = React.useMemo(() => {
         const currentItem: ConfiguredProduct = {
             ...item,
@@ -181,34 +185,20 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         return null;
     }, []);
 
-    React.useEffect(() => {
-        const initValidation = async () => {
-            const res = await trigger();
-            onValidityChange(item.id, res);
-            setHasValidated(true);
-        };
-        initValidation();
-    }, [trigger, item.id, onValidityChange]);
-
-    React.useEffect(() => {
-        if (hasValidated) {
-            onValidityChange(item.id, isValid);
-        }
-    }, [item.id, isValid, hasValidated, onValidityChange]);
-
-    const performSyncUpdate = React.useCallback(() => {
-        const currentValues = getValues();
+    const performSyncUpdate = React.useCallback((confirmedValues: any) => {
         onUpdate(item.id, {
-            ...currentValues,
-            addons: (currentValues.addons || []).filter((a: any) => a.value !== undefined && a.value !== false) as any
+            ...confirmedValues,
+            addons: (confirmedValues.addons || []).filter((a: any) => a.value !== undefined && a.value !== false) as any
         });
-    }, [getValues, item.id, onUpdate]);
+    }, [item.id, onUpdate]);
 
+    // Auto-sync for Deliverables page (where manualSyncOnly is false)
     React.useEffect(() => {
         if (manualSyncOnly) return;
         
         const timer = setTimeout(() => {
-            performSyncUpdate();
+            const currentValues = getValues();
+            performSyncUpdate(currentValues);
         }, 300);
         return () => clearTimeout(timer);
     }, [
@@ -220,7 +210,8 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         watchedValues.variant,
         watchedValues.rateOverrides,
         performSyncUpdate,
-        manualSyncOnly
+        manualSyncOnly,
+        getValues
     ]);
 
     const handleRateOverride = (label: string, value: number) => {
@@ -232,7 +223,8 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         e.stopPropagation();
         const res = await trigger();
         if (res) {
-            performSyncUpdate();
+            const currentValues = getValues();
+            performSyncUpdate(currentValues);
             onDone(item.id, res);
         }
     };
@@ -253,34 +245,38 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         if (!product) return null;
         const parts: React.ReactNode[] = [];
         
-        if (watchedValues.variant) {
-            parts.push(<span key="variant">{watchedValues.variant}</span>);
+        // Always show the confirmed state in compact mode
+        const displayValues = item;
+
+        if (displayValues.variant) {
+            parts.push(<span key="variant">{displayValues.variant}</span>);
         }
 
-        if (product.configType === 'A' && typeof watchedValues.quantity === 'number') {
-            const warning = getLogicWarning(watchedValues.quantity, product.softConstraints);
-            parts.push(<span key="qty" className={cn(warning && "text-[#FA7315] font-bold")}>Qty: {watchedValues.quantity}</span>);
-        } else if (product.configType === 'B' && typeof watchedValues.pages === 'number') {
-            const warning = getLogicWarning(watchedValues.pages, product.softConstraints);
-            parts.push(<span key="pages" className={cn(warning && "text-[#FA7315] font-bold")}>{watchedValues.pages} Pgs</span>);
+        if (product.configType === 'A' && typeof displayValues.quantity === 'number') {
+            const warning = getLogicWarning(displayValues.quantity, product.softConstraints);
+            parts.push(<span key="qty" className={cn(warning && "text-[#FA7315] font-bold")}>Qty: {displayValues.quantity}</span>);
+        } else if (product.configType === 'B' && typeof displayValues.pages === 'number') {
+            const warning = getLogicWarning(displayValues.pages, product.softConstraints);
+            parts.push(<span key="pages" className={cn(warning && "text-[#FA7315] font-bold")}>{displayValues.pages} Pgs</span>);
         }
 
-        if (product.customFields && watchedValues.customFieldValues) {
+        if (product.customFields && displayValues.customFieldValues) {
             product.customFields.forEach(field => {
-                const val = (watchedValues.customFieldValues as any)?.[field.id];
+                const val = (displayValues.customFieldValues as any)?.[field.id];
                 if (val && typeof val === 'number') {
                     parts.push(<span key={field.id}>{field.name}: {val}</span>);
                 }
             });
         }
 
-        const activeAddons = (watchedValues.addons || []).filter((a: any) => a.value !== undefined && a.value !== false);
+        const activeAddons = (displayValues.addons || []).filter((a: any) => a.value !== undefined && a.value !== false);
         activeAddons.forEach((a: any) => {
-            parts.push(<span key={`addon-${a.id}`} className="text-primary/90 font-medium">{a.name}</span>);
+            const displayVal = typeof a.value === 'number' ? `: ${a.value}` : '';
+            parts.push(<span key={`addon-${a.id}`}>{a.name}{displayVal}</span>);
         });
 
-        if (watchedValues.specialRequest) {
-            parts.push(<span key="special" className="italic opacity-80">Note: {watchedValues.specialRequest}</span>);
+        if (displayValues.specialRequest) {
+            parts.push(<span key="special" className="italic opacity-80">Note: {displayValues.specialRequest}</span>);
         }
 
         if (parts.length === 0) return null;
