@@ -43,7 +43,8 @@ const AutoGrowingTextarea = React.forwardRef<
         if (onInput) onInput(e);
       }}
       className={cn(
-        "flex w-full bg-transparent px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 resize-none transition-all duration-200 overflow-hidden border-2",
+        "flex w-full bg-transparent px-3 py-2 text-sm ring-offset-background focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 resize-none transition-all duration-200 overflow-hidden border-2",
+        "placeholder:italic placeholder:text-[11px] placeholder:opacity-40 placeholder:font-normal",
         className
       )}
     />
@@ -56,10 +57,10 @@ AutoGrowingTextarea.displayName = "AutoGrowingTextarea";
  */
 const SectionHeader = ({ title, icon: Icon }: { title: string, icon: any }) => (
   <div className="flex items-center gap-3 mb-8 group">
-    <div className="h-9 w-9 shrink-0 rounded-lg bg-primary/10 text-primary flex items-center justify-center border border-primary/20 shadow-sm">
+    <div className="h-9 w-9 shrink-0 rounded-lg bg-primary/10 text-primary flex items-center justify-center border-2 border-primary/30 shadow-sm">
       <Icon className="h-4 w-4" />
     </div>
-    <h3 className="font-headline text-lg font-black text-foreground tracking-tight uppercase border-b-2 border-primary/30 pb-1">
+    <h3 className="font-headline text-lg font-black text-foreground tracking-tight uppercase border-b-2 border-primary/40 pb-1">
       {title}
     </h3>
   </div>
@@ -94,11 +95,11 @@ const EditableField = ({
   if (!hasValue && !isFocused) {
     return (
       <div 
-        className="group cursor-pointer py-2 border-l-2 border-primary/10 hover:border-primary/40 pl-4 transition-all duration-200"
+        className="group cursor-pointer py-2 border-l-2 border-primary/25 hover:border-primary/50 pl-4 transition-all duration-200"
         onClick={onFocus}
       >
-        <div className="text-[10px] font-black uppercase tracking-widest text-primary/50 mb-1">{label}</div>
-        <div className="text-xs italic text-muted-foreground/40 font-medium">Click to add {label.toLowerCase()}...</div>
+        <div className="text-[10px] font-black uppercase tracking-widest text-primary/70 mb-1">{label}</div>
+        <div className="text-xs italic text-muted-foreground/80 font-medium">Click to add {label.toLowerCase()}...</div>
       </div>
     );
   }
@@ -106,11 +107,11 @@ const EditableField = ({
   return (
     <div className={cn(
       "space-y-1 group transition-all duration-200 border-l-2 pl-4",
-      isFocused ? "border-primary" : "border-primary/30"
+      isFocused ? "border-primary" : "border-primary/40"
     )}>
       <Label 
         htmlFor={id} 
-        className="text-[10px] font-black uppercase tracking-widest text-primary/60 mb-1 block"
+        className="text-[10px] font-black uppercase tracking-widest text-primary/80 mb-1 block"
       >
         {label}
       </Label>
@@ -158,10 +159,10 @@ const ProductBriefItem = ({
   return (
     <div 
       className={cn(
-        "group flex flex-col md:flex-row items-stretch gap-4 p-4 rounded-xl border transition-all",
+        "group flex flex-col md:flex-row items-stretch gap-4 p-4 rounded-xl border-2 transition-all",
         isFocused 
-          ? "border-primary/40 bg-primary/5 shadow-md" 
-          : "border-primary/10 bg-card/40 hover:bg-card/60"
+          ? "border-primary/50 bg-primary/5 shadow-md" 
+          : "border-primary/20 bg-card/40 hover:bg-card/60"
       )}
     >
       <div className="md:w-1/3 shrink-0 space-y-2.5">
@@ -171,22 +172,22 @@ const ProductBriefItem = ({
         
         <div className="flex flex-wrap gap-1.5">
           {item.quantity !== undefined && item.quantity !== null && (
-            <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-primary/10 text-primary font-black text-[9px] uppercase border border-primary/20">
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-primary/15 text-primary font-black text-[9px] uppercase border-2 border-primary/30">
               QTY: {item.quantity}
             </span>
           )}
           {item.pages !== undefined && item.pages !== null && (
-            <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-primary/10 text-primary font-black text-[9px] uppercase border border-primary/20">
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-primary/15 text-primary font-black text-[9px] uppercase border-2 border-primary/30">
               {item.pages} PGS
             </span>
           )}
           {item.variant && (
-            <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-muted/50 text-muted-foreground font-black text-[9px] uppercase border border-border">
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-muted/60 text-muted-foreground font-black text-[9px] uppercase border-2 border-border/60">
               {item.variant}
             </span>
           )}
           {item.specialRequest && (
-            <div className="flex items-center gap-1.5 text-[9px] font-black text-orange-900 uppercase bg-orange-100 px-1.5 py-0.5 rounded border border-orange-200 w-full">
+            <div className="flex items-center gap-1.5 text-[9px] font-black text-orange-950 uppercase bg-orange-200 px-1.5 py-0.5 rounded border-2 border-orange-300 w-full">
               <MessageSquare className="h-2.5 w-2.5 shrink-0" />
               <span className="truncate">{item.specialRequest}</span>
             </div>
@@ -197,7 +198,7 @@ const ProductBriefItem = ({
       <div className="flex-1 min-w-0">
         {(!hasValue && !isFocused) ? (
           <div 
-            className="h-full flex items-center px-3 cursor-pointer opacity-50 group-hover:opacity-100 transition-opacity min-h-[2.5rem]"
+            className="h-full flex items-center px-3 cursor-pointer opacity-80 group-hover:opacity-100 transition-opacity min-h-[2.5rem]"
             onClick={onFocus}
           >
             <span className="text-xs italic font-medium text-muted-foreground">Add brief details for {item.productName.toLowerCase()}...</span>
@@ -381,7 +382,7 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
         </div>
       </div>
 
-      <div className="pt-8 border-t border-primary/20">
+      <div className="pt-8 border-t-2 border-primary/20">
         <SectionHeader title="Product Specific Briefs" icon={Box} />
         
         <div className="grid gap-3">
