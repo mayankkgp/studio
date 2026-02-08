@@ -146,7 +146,7 @@ const formatDisplayDate = (dateValue: any) => {
 };
 
 const DEFAULT_EVENT_VALUES: EventDetails = {
-  eventType: 'Wedding',
+  eventType: undefined as any,
   brideName: '',
   groomName: '',
   eventDate: undefined as any,
@@ -154,6 +154,18 @@ const DEFAULT_EVENT_VALUES: EventDetails = {
   venueName: '',
   shipToCity: '',
   additionalNotes: '',
+  engagementBrideName: '',
+  engagementGroomName: '',
+  weddingDate: undefined as any,
+  dateStatus: undefined as any,
+  wifeName: '',
+  husbandName: '',
+  milestoneYears: undefined as any,
+  honoreeNameBirthday: '',
+  gender: undefined as any,
+  ageMilestone: undefined as any,
+  eventName: '',
+  honoreeNameOther: '',
 };
 
 export function EventDetailsForm({ activeOrder, onUpdate, hideFooters = false }: { activeOrder?: Order, onUpdate?: (details: EventDetails) => void, hideFooters?: boolean }) {
@@ -202,12 +214,6 @@ export function EventDetailsForm({ activeOrder, onUpdate, hideFooters = false }:
       }
     }
   }, [watchedFields, activeOrder, onUpdate, getValues]);
-
-  useEffect(() => {
-    if (watchedFields.eventType && watchedFields.eventType !== 'Engagement') {
-      setValue('dateStatus', true);
-    }
-  }, [watchedFields.eventType, setValue]);
 
   const onSubmit = async (data: EventDetails) => {
     setIsNavigating(true);
