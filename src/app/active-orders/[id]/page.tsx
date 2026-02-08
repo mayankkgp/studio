@@ -563,7 +563,7 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
 
                     <div className="flex-1 flex overflow-hidden">
                         <TabsContent value="overview" className="flex-1 flex overflow-hidden m-0 outline-none">
-                            <div className="flex-1 flex overflow-hidden">
+                            <div className="flex-1 flex overflow-hidden w-full">
                                 <main className="flex-1 overflow-y-auto bg-background/50 custom-scrollbar relative">
                                     <div className="max-w-4xl mx-auto p-4 md:p-8 space-y-8 pb-32">
                                         <div className="flex items-center justify-between gap-4">
@@ -724,17 +724,14 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                         </TabsContent>
                         
                         <TabsContent value="customer" className="flex-1 flex overflow-hidden m-0 outline-none">
-                            <div className="flex-1 flex overflow-hidden">
-                                <main className="flex-1 overflow-y-auto bg-background/50 custom-scrollbar relative">
-                                    <div className="max-w-4xl mx-auto p-4 md:p-8">
-                                        <CustomerDataForm 
-                                            order={activeOrder} 
-                                            onSave={handleSaveCustomerData} 
-                                        />
-                                    </div>
-                                </main>
-                                <div className="w-[24rem] shrink-0 hidden xl:block" />
-                            </div>
+                            <main className="flex-1 overflow-y-auto bg-background/50 custom-scrollbar relative">
+                                <div className="max-w-4xl mx-auto p-4 md:p-8">
+                                    <CustomerDataForm 
+                                        order={activeOrder} 
+                                        onSave={handleSaveCustomerData} 
+                                    />
+                                </div>
+                            </main>
                         </TabsContent>
                     </div>
                 </Tabs>
