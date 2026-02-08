@@ -12,7 +12,6 @@ import {
     Pencil, 
     ChevronLeft, 
     Loader2, 
-    DollarSign, 
     Package, 
     CalendarDays, 
     MapPin, 
@@ -39,6 +38,7 @@ export default function ActiveOrderCommandCenter() {
     const [activeOrder, setActiveOrder] = useState<Order | null>(null);
     const [loading, setLoading] = useState(true);
     const [isDetailsSheetOpen, setIsDetailsSheetOpen] = useState(false);
+    const [expandedItems, setExpandedItems] = useState<string[]>([]);
 
     const headerSummary = useHeaderSummary(activeOrder?.eventDetails || {});
 
@@ -86,11 +86,22 @@ export default function ActiveOrderCommandCenter() {
         if (!activeOrder) return;
         const newDeliverables = activeOrder.deliverables.filter(d => d.id !== delId);
         syncToStorage({ ...activeOrder, deliverables: newDeliverables });
+        setExpandedItems(prev => prev.filter(i => i !== delId));
     };
 
     const addDeliverable = (del: ConfiguredProduct) => {
         if (!activeOrder) return;
         syncToStorage({ ...activeOrder, deliverables: [del, ...activeOrder.deliverables] });
+        // Auto-expand the newly added product
+        setExpandedItems(prev => [...prev, del.id]);
+    };
+
+    const handleEditRow = (rowId: string) => {
+        setExpandedItems(prev => Array.from(new Set([...prev, rowId])));
+    };
+
+    const handleDoneRow = (rowId: string) => {
+        setExpandedItems(prev => prev.filter(id => id !== rowId));
     };
 
     const updateDetails = (details: EventDetails) => {
@@ -195,15 +206,20 @@ export default function ActiveOrderCommandCenter() {
                                         <p className="text-xs text-muted-foreground mt-1">Search products above to build the scope.</p>
                                     </div>
                                 ) : (
-                                    <Accordion type="multiple" defaultValue={activeOrder.deliverables.map(d => d.id)} className="space-y-3">
+                                    <Accordion 
+                                        type="multiple" 
+                                        value={expandedItems} 
+                                        onValueChange={setExpandedItems}
+                                        className="space-y-3"
+                                    >
                                         {activeOrder.deliverables.map((item) => (
                                             <DeliverableRow 
                                                 key={item.id} 
                                                 item={item} 
-                                                isExpanded={true} 
+                                                isExpanded={expandedItems.includes(item.id)} 
                                                 isNonCollapsible={false}
-                                                onEdit={() => {}}
-                                                onDone={() => {}}
+                                                onEdit={() => handleEditRow(item.id)}
+                                                onDone={() => handleDoneRow(item.id)}
                                                 onValidityChange={() => {}}
                                                 onUpdate={updateDeliverable}
                                                 onRemove={removeDeliverable}
