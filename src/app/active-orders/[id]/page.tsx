@@ -76,26 +76,12 @@ export default function ActiveOrderCommandCenter() {
     const [itemSearchQuery, setItemSearchQuery] = useState('');
     const [activeTab, setActiveTab] = useState('overview');
     const [isSavingBrief, setIsSavingBrief] = useState(false);
-    const [showEmptyFields, setShowEmptyFields] = useState(true);
+    const [showEmptyBriefFields, setShowEmptyBriefFields] = useState(true);
     
     const [projectedTotals, setProjectedTotals] = useState<Record<string, number>>({});
     const [initialTotal, setInitialTotal] = useState(0);
 
     const headerSummary = useHeaderSummary(activeOrder?.eventDetails || {});
-
-    // Persistence logic for view preference
-    useEffect(() => {
-        const saved = localStorage.getItem('srishbish_brief_view_pref');
-        if (saved !== null) {
-            setShowEmptyFields(saved === 'true');
-        }
-    }, []);
-
-    const handleToggleViewMode = () => {
-        const next = !showEmptyFields;
-        setShowEmptyFields(next);
-        localStorage.setItem('srishbish_brief_view_pref', String(next));
-    };
 
     const loadOrder = useCallback(() => {
         try {
@@ -122,7 +108,19 @@ export default function ActiveOrderCommandCenter() {
 
     useEffect(() => {
         loadOrder();
+        
+        // Load brief view preference
+        const savedPref = localStorage.getItem('srishbish_brief_view_pref');
+        if (savedPref !== null) {
+            setShowEmptyBriefFields(savedPref === 'true');
+        }
     }, [loadOrder]);
+
+    const handleToggleBriefView = () => {
+        const next = !showEmptyBriefFields;
+        setShowEmptyBriefFields(next);
+        localStorage.setItem('srishbish_brief_view_pref', String(next));
+    };
 
     const syncToStorage = useCallback((updatedOrder: Order) => {
         try {
@@ -564,24 +562,24 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                                     <Button 
                                         variant="outline" 
                                         size="sm" 
-                                        onClick={handleToggleViewMode}
+                                        onClick={handleToggleBriefView}
                                         className="h-8 font-bold gap-2 text-[11px] uppercase tracking-widest border-primary/20 hover:bg-primary/5 hover:text-primary transition-all shrink-0"
                                     >
-                                        {showEmptyFields ? (
-                                            <><EyeOff className="h-3.5 w-3.5" /> Hide Empty</>
+                                        {showEmptyBriefFields ? (
+                                            <><EyeOff className="h-3.5 w-3.5" /> Hide Empty Fields</>
                                         ) : (
-                                            <><Eye className="h-3.5 w-3.5" /> Show All</>
+                                            <><Eye className="h-3.5 w-3.5" /> Show All Fields</>
                                         )}
                                     </Button>
                                     <Button 
                                         size="sm" 
-                                        form="creative-brief-form"
                                         type="submit"
+                                        form="creative-brief-form"
                                         disabled={isSavingBrief}
                                         className="h-8 font-bold gap-2 bg-primary shadow-lg shadow-primary/20 shrink-0 hover:bg-primary/90"
                                     >
                                         {isSavingBrief ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                                        Save Brief
+                                        Save Creative Brief
                                     </Button>
                                 </div>
                             )}
@@ -777,7 +775,7 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                                     order={activeOrder} 
                                     onSave={handleSaveCustomerData}
                                     isSaving={isSavingBrief}
-                                    showEmptyFields={showEmptyFields}
+                                    showEmptyFields={showEmptyBriefFields}
                                 />
                             </div>
                         </TabsContent>
@@ -821,26 +819,6 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                     </div>
                 </div>
             </div>
-
-            <AlertDialog open={isExitConfirmOpen} onOpenChange={setIsExitConfirmOpen}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle className="flex items-center gap-2">
-                            <AlertTriangle className="h-5 w-5 text-orange-500" />
-                            Unsaved Changes Detected
-                        </AlertDialogTitle>
-                        <AlertDialogDescription>
-                            You have open product items with unsaved configurations. Exiting "Modify Order" will discard these changes. Would you like to go back and save them, or discard and exit?
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel onClick={() => setIsExitConfirmOpen(false)}>Go Back to Save</AlertDialogCancel>
-                        <AlertDialogAction onClick={confirmExitEditMode} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                            Discard & Exit
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
 
             <style jsx global>{`
                 .custom-scrollbar::-webkit-scrollbar { width: 5px; }

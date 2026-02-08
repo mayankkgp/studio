@@ -108,14 +108,24 @@ const EditableField = ({
           "font-semibold leading-relaxed text-foreground border-2 rounded-md -ml-3",
           "bg-transparent border-transparent hover:bg-primary/5",
           "focus:bg-background focus:border-primary/40 focus:ring-2 focus:ring-primary/10 focus:shadow-sm focus:px-3",
-          "placeholder:italic placeholder:font-normal placeholder:text-muted-foreground/60 placeholder:text-[12px]"
+          "placeholder:italic placeholder:font-normal placeholder:text-muted-foreground/60 placeholder:text-[13px]"
         )}
       />
     </div>
   );
 };
 
-export function CustomerDataForm({ order, onSave, isSaving, showEmptyFields = true }: { order: Order; onSave: (data: CustomerData) => void; isSaving?: boolean; showEmptyFields?: boolean }) {
+export function CustomerDataForm({ 
+    order, 
+    onSave, 
+    isSaving,
+    showEmptyFields = true
+}: { 
+    order: Order; 
+    onSave: (data: CustomerData) => void; 
+    isSaving?: boolean;
+    showEmptyFields?: boolean;
+}) {
   const [selectedProductId, setSelectedProductId] = React.useState<string | null>(
     order.deliverables.length > 0 ? order.deliverables[0].id : null
   );
@@ -229,7 +239,7 @@ export function CustomerDataForm({ order, onSave, isSaving, showEmptyFields = tr
     <div className="pb-24 max-w-6xl mx-auto relative">
       {/* Masonry Layout for General Sections */}
       {showGenericData && (
-        <section className="mt-4 columns-1 md:columns-2 gap-8 space-y-8">
+        <section className="columns-1 md:columns-2 gap-8 space-y-8">
           {(!isVisualEmpty || showEmptyFields) && (
             <div className="break-inside-avoid">
               <SectionHeader title="Visual Identity" icon={Palette} />
