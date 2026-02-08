@@ -153,6 +153,19 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
     reset(defaultValues);
   }, [defaultValues, reset]);
 
+  // Section visibility checks for "Hide Empty" mode
+  const isSectionEmpty = (section: any) => {
+    if (!section) return true;
+    return Object.values(section).every(val => !val || (typeof val === 'string' && val.trim().length === 0));
+  };
+
+  const isVisualEmpty = isSectionEmpty(watchedValues.visualIdentity);
+  const isNarrativeEmpty = isSectionEmpty(watchedValues.narrative);
+  const isCultureEmpty = isSectionEmpty(watchedValues.cultureSymbols);
+  const isAtmosphereEmpty = isSectionEmpty(watchedValues.atmosphereExtras);
+
+  const isGenericDataEmpty = isVisualEmpty && isNarrativeEmpty && isCultureEmpty && isAtmosphereEmpty;
+
   const getProductSpecsSummary = (item: ConfiguredProduct) => {
     const product = productCatalog.find(p => p.id === item.productId);
     const parts: React.ReactNode[] = [];
@@ -191,6 +204,27 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
       : null;
   };
 
+  // Filter deliverables based on data presence if "Hide Empty" is on
+  const visibleDeliverables = React.useMemo(() => {
+    if (showEmptyFields) return order.deliverables;
+    return order.deliverables.filter(item => {
+      const brief = (watchedValues.productBriefs as any)?.[item.id];
+      return brief && brief.trim().length > 0;
+    });
+  }, [order.deliverables, showEmptyFields, watchedValues.productBriefs]);
+
+  // Ensure selection stays valid when switching visible list
+  React.useEffect(() => {
+    if (visibleDeliverables.length > 0) {
+      const stillVisible = visibleDeliverables.some(d => d.id === selectedProductId);
+      if (!stillVisible) {
+        setSelectedProductId(visibleDeliverables[0].id);
+      }
+    } else {
+      setSelectedProductId(null);
+    }
+  }, [visibleDeliverables, selectedProductId]);
+
   const selectedItem = order.deliverables.find(d => d.id === selectedProductId);
 
   return (
@@ -215,118 +249,134 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
       </div>
 
       {/* Masonry Layout for General Sections */}
-      <section className="columns-1 md:columns-2 gap-8 space-y-8">
-        <div className="break-inside-avoid">
-          <SectionHeader title="Visual Identity" icon={Palette} />
-          <EditableField 
-            id="mood"
-            label="Mood & Style Reference"
-            register={register}
-            registerKey="visualIdentity.moodStyle"
-            value={watchedValues.visualIdentity?.moodStyle || ''}
-            showIfEmpty={showEmptyFields}
-          />
-          <EditableField 
-            id="colors"
-            label="Color Palette & Typography"
-            register={register}
-            registerKey="visualIdentity.colorTypography"
-            value={watchedValues.visualIdentity?.colorTypography || ''}
-            showIfEmpty={showEmptyFields}
-          />
-          <EditableField 
-            id="dislikes"
-            label="Design Dislikes"
-            register={register}
-            registerKey="visualIdentity.designDislikes"
-            value={watchedValues.visualIdentity?.designDislikes || ''}
-            showIfEmpty={showEmptyFields}
-          />
-        </div>
+      {(!isGenericDataEmpty || showEmptyFields) && (
+        <section className="columns-1 md:columns-2 gap-8 space-y-8">
+          {(!isVisualEmpty || showEmptyFields) && (
+            <div className="break-inside-avoid">
+              <SectionHeader title="Visual Identity" icon={Palette} />
+              <EditableField 
+                id="mood"
+                label="Mood & Style Reference"
+                register={register}
+                registerKey="visualIdentity.moodStyle"
+                value={watchedValues.visualIdentity?.moodStyle || ''}
+                showIfEmpty={showEmptyFields}
+              />
+              <EditableField 
+                id="colors"
+                label="Color Palette & Typography"
+                register={register}
+                registerKey="visualIdentity.colorTypography"
+                value={watchedValues.visualIdentity?.colorTypography || ''}
+                showIfEmpty={showEmptyFields}
+              />
+              <EditableField 
+                id="dislikes"
+                label="Design Dislikes"
+                register={register}
+                registerKey="visualIdentity.designDislikes"
+                value={watchedValues.visualIdentity?.designDislikes || ''}
+                showIfEmpty={showEmptyFields}
+              />
+            </div>
+          )}
 
-        <div className="break-inside-avoid">
-          <SectionHeader title="The Narrative" icon={BookOpen} />
-          <EditableField 
-            id="timeline"
-            label="Relationship Timeline"
-            register={register}
-            registerKey="narrative.timeline"
-            value={watchedValues.narrative?.timeline || ''}
-            showIfEmpty={showEmptyFields}
-          />
-          <EditableField 
-            id="couple"
-            label="The Couple's World"
-            register={register}
-            registerKey="narrative.coupleWorld"
-            value={watchedValues.narrative?.coupleWorld || ''}
-            showIfEmpty={showEmptyFields}
-          />
-          <EditableField 
-            id="eggs"
-            label="Easter Eggs"
-            register={register}
-            registerKey="narrative.easterEggs"
-            value={watchedValues.narrative?.easterEggs || ''}
-            showIfEmpty={showEmptyFields}
-          />
-        </div>
+          {(!isNarrativeEmpty || showEmptyFields) && (
+            <div className="break-inside-avoid">
+              <SectionHeader title="The Narrative" icon={BookOpen} />
+              <EditableField 
+                id="timeline"
+                label="Relationship Timeline"
+                register={register}
+                registerKey="narrative.timeline"
+                value={watchedValues.narrative?.timeline || ''}
+                showIfEmpty={showEmptyFields}
+              />
+              <EditableField 
+                id="couple"
+                label="The Couple's World"
+                register={register}
+                registerKey="narrative.coupleWorld"
+                value={watchedValues.narrative?.coupleWorld || ''}
+                showIfEmpty={showEmptyFields}
+              />
+              <EditableField 
+                id="eggs"
+                label="Easter Eggs"
+                register={register}
+                registerKey="narrative.easterEggs"
+                value={watchedValues.narrative?.easterEggs || ''}
+                showIfEmpty={showEmptyFields}
+              />
+            </div>
+          )}
 
-        <div className="break-inside-avoid">
-          <SectionHeader title="Culture & Symbols" icon={Globe} />
-          <EditableField 
-            id="icons"
-            label="Mandatory Icons & Motifs"
-            register={register}
-            registerKey="cultureSymbols.mandatoryIcons"
-            value={watchedValues.cultureSymbols?.mandatoryIcons || ''}
-            showIfEmpty={showEmptyFields}
-          />
-          <EditableField 
-            id="nuances"
-            label="Regional Nuances"
-            register={register}
-            registerKey="cultureSymbols.regionalNuances"
-            value={watchedValues.cultureSymbols?.regionalNuances || ''}
-            showIfEmpty={showEmptyFields}
-          />
-        </div>
+          {(!isCultureEmpty || showEmptyFields) && (
+            <div className="break-inside-avoid">
+              <SectionHeader title="Culture & Symbols" icon={Globe} />
+              <EditableField 
+                id="icons"
+                label="Mandatory Icons & Motifs"
+                register={register}
+                registerKey="cultureSymbols.mandatoryIcons"
+                value={watchedValues.cultureSymbols?.mandatoryIcons || ''}
+                showIfEmpty={showEmptyFields}
+              />
+              <EditableField 
+                id="nuances"
+                label="Regional Nuances"
+                register={register}
+                registerKey="cultureSymbols.regionalNuances"
+                value={watchedValues.cultureSymbols?.regionalNuances || ''}
+                showIfEmpty={showEmptyFields}
+              />
+            </div>
+          )}
 
-        <div className="break-inside-avoid">
-          <SectionHeader title="Atmosphere & Extras" icon={Sparkles} />
-          <EditableField 
-            id="personality"
-            label="Venue Personality"
-            register={register}
-            registerKey="atmosphereExtras.venuePersonality"
-            value={watchedValues.atmosphereExtras?.venuePersonality || ''}
-            showIfEmpty={showEmptyFields}
-          />
-          <EditableField 
-            id="other"
-            label="Other Details"
-            register={register}
-            registerKey="atmosphereExtras.otherDetails"
-            value={watchedValues.atmosphereExtras?.otherDetails || ''}
-            showIfEmpty={showEmptyFields}
-          />
-        </div>
-      </section>
+          {(!isAtmosphereEmpty || showEmptyFields) && (
+            <div className="break-inside-avoid">
+              <SectionHeader title="Atmosphere & Extras" icon={Sparkles} />
+              <EditableField 
+                id="personality"
+                label="Venue Personality"
+                register={register}
+                registerKey="atmosphereExtras.venuePersonality"
+                value={watchedValues.atmosphereExtras?.venuePersonality || ''}
+                showIfEmpty={showEmptyFields}
+              />
+              <EditableField 
+                id="other"
+                label="Other Details"
+                register={register}
+                registerKey="atmosphereExtras.otherDetails"
+                value={watchedValues.atmosphereExtras?.otherDetails || ''}
+                showIfEmpty={showEmptyFields}
+              />
+            </div>
+          )}
+        </section>
+      )}
 
       {/* Master-Detail View for Product Briefs */}
       <section className="pt-12 border-t border-primary/10">
         <SectionHeader title="Product Specific Briefs" icon={Box} />
         
-        {order.deliverables.length === 0 ? (
-          <div className="py-12 text-center italic text-muted-foreground text-sm bg-card/10 rounded-xl border border-dashed">
-            No products in scope. Add products in the Overview tab.
+        {visibleDeliverables.length === 0 ? (
+          <div className="py-20 text-center italic text-muted-foreground text-sm bg-card/10 rounded-xl border border-dashed flex flex-col items-center justify-center">
+            <Box className="h-8 w-8 opacity-20 mb-4" />
+            {showEmptyFields ? "No products in scope." : "No data recorded."}
+            {!showEmptyFields && order.deliverables.length > 0 && (
+              <Button variant="link" size="sm" onClick={toggleViewMode} className="mt-2 font-bold">
+                Show empty products
+              </Button>
+            )}
           </div>
         ) : (
           <div className="flex flex-col md:flex-row h-[600px] border border-primary/10 rounded-xl overflow-hidden bg-card/5 shadow-sm">
             {/* Master List (Left) */}
             <aside className="w-full md:w-72 border-b md:border-b-0 md:border-r border-primary/10 overflow-y-auto custom-scrollbar bg-card/20 shrink-0">
               <div className="p-2 space-y-1">
-                {order.deliverables.map((item) => {
+                {visibleDeliverables.map((item) => {
                   const hasData = (watchedValues.productBriefs as any)?.[item.id]?.trim().length > 0;
                   const isActive = selectedProductId === item.id;
                   
