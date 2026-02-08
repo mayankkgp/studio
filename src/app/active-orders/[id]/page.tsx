@@ -105,16 +105,11 @@ export default function ActiveOrderCommandCenter() {
     };
 
     const handleDoneRow = (rowId: string) => {
-        // When Done is clicked on a row, the DeliverableRow component commits its state via onUpdate
-        // Then we collapse the row
         setExpandedItems(prev => prev.filter(id => id !== rowId));
     };
 
     const handleToggleEditMode = () => {
         if (isEditMode) {
-            // When exiting edit mode, collapse all rows. 
-            // Any rows that were opened but didn't have "Done" clicked will have their unsaved changes rejected
-            // because DeliverableRow in active order view uses manualSyncOnly={true}
             setExpandedItems([]);
         }
         setIsEditMode(!isEditMode);
@@ -177,7 +172,6 @@ export default function ActiveOrderCommandCenter() {
     return (
         <AppLayout>
             <div className="flex flex-col h-screen overflow-hidden bg-background">
-                {/* Header Area with Safe Edit Toggle */}
                 <header className="flex h-16 shrink-0 items-center gap-4 border-b px-4 md:px-6 bg-background z-50">
                     <MobileNav />
                     <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => router.push('/active-orders')}>
@@ -214,7 +208,6 @@ export default function ActiveOrderCommandCenter() {
                 </header>
 
                 <main className="flex-1 flex overflow-hidden">
-                    {/* Left Panel: Scope of Work */}
                     <div className="flex-1 overflow-y-auto bg-background/50 custom-scrollbar">
                         <div className="max-w-4xl mx-auto p-4 md:p-8 space-y-8 pb-24">
                             <div className="flex items-center justify-between">
@@ -229,14 +222,12 @@ export default function ActiveOrderCommandCenter() {
                                 )}
                             </div>
 
-                            {/* Persistent Command Bar (Visible in Edit Mode) */}
                             {isEditMode && (
                                 <div className="bg-card p-4 md:p-6 rounded-xl border-2 border-primary/10 shadow-sm sticky top-0 z-40 backdrop-blur-sm bg-card/95">
                                     <CommandBar onAdd={addDeliverable} />
                                 </div>
                             )}
 
-                            {/* Interactive Deliverables List */}
                             <div className="space-y-4">
                                 {activeOrder.deliverables.length === 0 ? (
                                     <div className="text-center py-20 border-2 border-dashed rounded-xl bg-muted/30">
@@ -264,7 +255,8 @@ export default function ActiveOrderCommandCenter() {
                                                 onUpdate={updateDeliverable}
                                                 onRemove={removeDeliverable}
                                                 isPersistent={false}
-                                                manualSyncOnly={true} // Enable staged editing
+                                                manualSyncOnly={true}
+                                                showCommercials={true}
                                             />
                                         ))}
                                     </Accordion>
@@ -273,10 +265,7 @@ export default function ActiveOrderCommandCenter() {
                         </div>
                     </div>
 
-                    {/* Right Sidebar: Snapshot & Financials */}
                     <aside className="w-[24rem] shrink-0 border-l bg-card/30 hidden xl:flex flex-col p-6 gap-6 overflow-y-auto custom-scrollbar">
-                        
-                        {/* Event Snapshot */}
                         <Card className="shadow-none border-primary/10">
                             <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
                                 <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Event Snapshot</CardTitle>
@@ -299,7 +288,7 @@ export default function ActiveOrderCommandCenter() {
                                         />
                                         <div className="mt-8 pt-6 border-t">
                                             <Button className="w-full" onClick={() => setIsDetailsSheetOpen(false)}>
-                                                Close & Return
+                                                Close &amp; Return
                                             </Button>
                                         </div>
                                     </SheetContent>
@@ -332,7 +321,6 @@ export default function ActiveOrderCommandCenter() {
                             </CardContent>
                         </Card>
 
-                        {/* Live Financials */}
                         <Card className="shadow-sm border-2 border-primary/20 bg-background">
                             <CardHeader className="pb-2">
                                 <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center justify-between">

@@ -107,7 +107,8 @@ export const DeliverableRow = React.memo(function DeliverableRow({
     onRemove,
     isPersistent = false,
     isReadOnly = false,
-    manualSyncOnly = false
+    manualSyncOnly = false,
+    showCommercials = false
 }: DeliverableRowProps) {
     const product = React.useMemo(() => productCatalog.find(p => p.id === item.productId) || null, [item.productId]);
     const isBranchA = product?.configType === 'A' || product?.configType === 'B';
@@ -516,54 +517,56 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                         </div>
                     </div>
 
-                    <div className="border-t pt-8 space-y-4">
-                        <div className="flex items-center gap-2">
-                            <TrendingUp className="h-4 w-4 text-primary" />
-                            <h4 className="text-sm font-bold uppercase tracking-widest">Commercials & Rates</h4>
-                        </div>
-                        
-                        <div className="rounded-xl border bg-card/30 overflow-hidden">
-                            <table className="w-full text-left text-xs">
-                                <thead>
-                                    <tr className="bg-muted/50 border-b">
-                                        <th className="px-4 py-3 font-bold uppercase tracking-wider text-muted-foreground">Label</th>
-                                        <th className="px-4 py-3 font-bold uppercase tracking-wider text-muted-foreground text-center">Multiplier</th>
-                                        <th className="px-4 py-3 font-bold uppercase tracking-wider text-muted-foreground text-right">Unit Rate (₹)</th>
-                                        <th className="px-4 py-3 font-bold uppercase tracking-wider text-muted-foreground text-right">Total</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {itemBreakdown.map((comp, i) => (
-                                        <tr key={i} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
-                                            <td className="px-4 py-3 font-medium">{comp.label}</td>
-                                            <td className="px-4 py-3 text-center text-muted-foreground font-mono">{comp.isFixed ? '-' : comp.multiplier}</td>
-                                            <td className="px-4 py-2 text-right">
-                                                <div className="flex justify-end">
-                                                    <input 
-                                                        type="number"
-                                                        disabled={isReadOnly}
-                                                        defaultValue={comp.rate}
-                                                        onBlur={(e) => handleRateOverride(comp.label, Number(e.target.value))}
-                                                        className={cn(
-                                                            "w-20 h-7 text-right bg-background border rounded px-1.5 font-bold focus:ring-1 focus:ring-primary",
-                                                            isReadOnly && "border-transparent bg-transparent"
-                                                        )}
-                                                    />
-                                                </div>
-                                            </td>
-                                            <td className="px-4 py-3 text-right font-bold tabular-nums">₹{comp.total.toLocaleString('en-IN')}</td>
+                    {showCommercials && (
+                        <div className="border-t pt-8 space-y-4">
+                            <div className="flex items-center gap-2">
+                                <TrendingUp className="h-4 w-4 text-primary" />
+                                <h4 className="text-sm font-bold uppercase tracking-widest">Commercials &amp; Rates</h4>
+                            </div>
+                            
+                            <div className="rounded-xl border bg-card/30 overflow-hidden">
+                                <table className="w-full text-left text-xs">
+                                    <thead>
+                                        <tr className="bg-muted/50 border-b">
+                                            <th className="px-4 py-3 font-bold uppercase tracking-wider text-muted-foreground">Label</th>
+                                            <th className="px-4 py-3 font-bold uppercase tracking-wider text-muted-foreground text-center">Multiplier</th>
+                                            <th className="px-4 py-3 font-bold uppercase tracking-wider text-muted-foreground text-right">Unit Rate (₹)</th>
+                                            <th className="px-4 py-3 font-bold uppercase tracking-wider text-muted-foreground text-right">Total</th>
                                         </tr>
-                                    ))}
-                                    <tr className="bg-muted/10">
-                                        <td colSpan={3} className="px-4 py-4 text-right font-bold uppercase tracking-widest text-muted-foreground">Item Total</td>
-                                        <td className="px-4 py-4 text-right font-black text-sm text-primary">
-                                            ₹{itemBreakdown.reduce((sum, c) => sum + c.total, 0).toLocaleString('en-IN')}
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody>
+                                        {itemBreakdown.map((comp, i) => (
+                                            <tr key={i} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
+                                                <td className="px-4 py-3 font-medium">{comp.label}</td>
+                                                <td className="px-4 py-3 text-center text-muted-foreground font-mono">{comp.isFixed ? '-' : comp.multiplier}</td>
+                                                <td className="px-4 py-2 text-right">
+                                                    <div className="flex justify-end">
+                                                        <input 
+                                                            type="number"
+                                                            disabled={isReadOnly}
+                                                            defaultValue={comp.rate}
+                                                            onBlur={(e) => handleRateOverride(comp.label, Number(e.target.value))}
+                                                            className={cn(
+                                                                "w-20 h-7 text-right bg-background border rounded px-1.5 font-bold focus:ring-1 focus:ring-primary",
+                                                                isReadOnly && "border-transparent bg-transparent"
+                                                            )}
+                                                        />
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-3 text-right font-bold tabular-nums">₹{comp.total.toLocaleString('en-IN')}</td>
+                                            </tr>
+                                        ))}
+                                        <tr className="bg-muted/10">
+                                            <td colSpan={3} className="px-4 py-4 text-right font-bold uppercase tracking-widest text-muted-foreground">Item Total</td>
+                                            <td className="px-4 py-4 text-right font-black text-sm text-primary">
+                                                ₹{itemBreakdown.reduce((sum, c) => sum + c.total, 0).toLocaleString('en-IN')}
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </div>
             </AccordionContent>
         </AccordionItem>
@@ -582,4 +585,5 @@ interface DeliverableRowProps {
     isPersistent?: boolean;
     isReadOnly?: boolean;
     manualSyncOnly?: boolean;
+    showCommercials?: boolean;
 }
