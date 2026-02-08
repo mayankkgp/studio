@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, Package, DollarSign, FileText, PanelLeft, PlusCircle, Zap, Trash2 } from 'lucide-react';
+import { FileText, PanelLeft, PlusCircle, Zap, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Logo } from '@/components/icons/Logo';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger } from '@/components/ui/sheet';
@@ -11,9 +11,6 @@ import { useOrder } from '@/context/OrderContext';
 import { useToast } from '@/hooks/use-toast';
 
 const navItems = [
-  { href: '/', label: 'Event Details', icon: Home },
-  { href: '/deliverables', label: 'Deliverables', icon: Package },
-  { href: '/commercials', label: 'Commercials', icon: DollarSign },
   { href: '/drafts', label: 'My Drafts', icon: FileText },
   { href: '/active-orders', label: 'Active Order List', icon: Zap },
 ];

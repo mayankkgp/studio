@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, Package, DollarSign, FileText, PlusCircle, Zap, Trash2 } from 'lucide-react';
+import { FileText, PlusCircle, Zap, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Logo } from '@/components/icons/Logo';
 import { useOrder } from '@/context/OrderContext';
@@ -10,9 +10,6 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 
 const navItems = [
-  { href: '/', label: 'Event Details', icon: Home },
-  { href: '/deliverables', label: 'Deliverables', icon: Package },
-  { href: '/commercials', label: 'Commercials', icon: DollarSign },
   { href: '/drafts', label: 'My Drafts', icon: FileText },
   { href: '/active-orders', label: 'Active Order List', icon: Zap },
 ];
