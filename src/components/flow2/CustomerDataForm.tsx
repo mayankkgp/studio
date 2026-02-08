@@ -432,6 +432,8 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
                   visibleDeliverables.map((item) => {
                     const hasData = (watchedValues.productBriefs as any)?.[item.id]?.trim().length > 0;
                     const isActive = selectedProductId === item.id;
+                    const hasAddons = (item.addons || []).some((a: any) => a.value !== undefined && a.value !== false && a.value !== null);
+                    const hasSpecial = item.specialRequest && item.specialRequest.trim().length > 0;
                     
                     return (
                       <button
@@ -456,6 +458,8 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
                             isActive ? "text-white/80" : "text-muted-foreground"
                           )}>
                             {item.variant || 'Standard'}
+                            {hasAddons && " • Add-on"}
+                            {hasSpecial && " • Special Request"}
                           </div>
                         </div>
                         <div className="shrink-0">
@@ -477,9 +481,6 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
               {selectedItem ? (
                 <div className="space-y-6">
                   <div className="space-y-2">
-                    <h4 className="font-headline font-black text-lg text-foreground uppercase tracking-tight">
-                      {selectedItem.productName}
-                    </h4>
                     <div className="flex flex-wrap items-center text-[10px] font-bold text-muted-foreground/80 uppercase tracking-tight leading-normal">
                       {getProductSpecsSummary(selectedItem)}
                     </div>
