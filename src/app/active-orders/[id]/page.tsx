@@ -21,7 +21,13 @@ import {
     Lock,
     Unlock,
     CheckCircle2,
-    ArrowRight
+    ArrowRight,
+    Receipt,
+    WalletCards,
+    ChevronUp,
+    Info,
+    AlertTriangle,
+    Eye
 } from 'lucide-react';
 import { EventDetailsForm } from '@/components/flow1/EventDetailsForm';
 import { DeliverableRow } from '@/components/flow2/DeliverableRow';
@@ -30,6 +36,18 @@ import { Accordion } from '@/components/ui/accordion';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { 
+    AlertDialog, 
+    AlertDialogAction, 
+    AlertDialogCancel, 
+    AlertDialogContent, 
+    AlertDialogDescription, 
+    AlertDialogFooter, 
+    AlertDialogHeader, 
+    AlertDialogTitle 
+} from '@/components/ui/alert-dialog';
 import { calculateBillableItems, calculateItemBreakdown } from '@/lib/pricing';
 import { cn } from '@/lib/utils';
 import type { Order, ConfiguredProduct, EventDetails } from '@/lib/types';
@@ -45,6 +63,8 @@ export default function ActiveOrderCommandCenter() {
     const [isDetailsSheetOpen, setIsDetailsSheetOpen] = useState(false);
     const [expandedItems, setExpandedItems] = useState<string[]>([]);
     const [isEditMode, setIsEditMode] = useState(false);
+    const [viewMode, setViewMode] = useState<'scope' | 'bill'>('scope');
+    const [isExitConfirmOpen, setIsExitConfirmOpen] = useState(false);
     
     // Projected values for current drafting/editing state
     const [projectedTotals, setProjectedTotals] = useState<Record<string, number>>({});
@@ -132,7 +152,6 @@ export default function ActiveOrderCommandCenter() {
     }, [id, toast]);
 
     const updateDeliverable = (delId: string, updates: Partial<ConfiguredProduct>) => {
-        // Only updates local state
         setActiveOrder(prev => {
             if (!prev) return null;
             return {
@@ -147,14 +166,11 @@ export default function ActiveOrderCommandCenter() {
             if (!prev) return null;
             const updated = { ...prev, deliverables: prev.deliverables.filter(d => d.id !== delId) };
             syncToStorage(updated);
-            
-            // Clean up projections
             setProjectedTotals(prev => {
                 const next = { ...prev };
                 delete next[delId];
                 return next;
             });
-            
             return updated;
         });
         setExpandedItems(prev => prev.filter(i => i !== delId));
@@ -181,11 +197,25 @@ export default function ActiveOrderCommandCenter() {
 
     const handleToggleEditMode = () => {
         if (isEditMode) {
-            setExpandedItems([]);
+            if (expandedItems.length > 0) {
+                setIsExitConfirmOpen(true);
+                return;
+            }
+            setIsEditMode(false);
             setProjectedTotals({});
             loadOrder(); 
+        } else {
+            setIsEditMode(true);
+            setViewMode('scope');
         }
-        setIsEditMode(!isEditMode);
+    };
+
+    const confirmExitEditMode = () => {
+        setIsEditMode(false);
+        setExpandedItems([]);
+        setProjectedTotals({});
+        setIsExitConfirmOpen(false);
+        loadOrder();
     };
 
     const updateDetails = (details: EventDetails) => {
@@ -194,21 +224,15 @@ export default function ActiveOrderCommandCenter() {
     };
 
     const updatePayment = (amount: number) => {
-        if (!activeOrder || !isEditMode) return;
+        if (!activeOrder) return;
         syncToStorage({ ...activeOrder, paymentReceived: Math.max(0, amount) });
     };
 
     const handleProjectedTotalChange = useCallback((id: string, total: number) => {
         setProjectedTotals(prev => {
-            // Guard against identical updates to break re-render loops
             if (prev[id] === total) return prev;
             return { ...prev, [id]: total };
         });
-    }, []);
-
-    const handleRowValidityChange = useCallback((id: string, isValid: boolean) => {
-        // No parent state update needed for validity in this view, 
-        // but providing a stable callback avoids infinite loops in child.
     }, []);
 
     const workingTotal = useMemo(() => {
@@ -216,8 +240,6 @@ export default function ActiveOrderCommandCenter() {
         return activeOrder.deliverables.reduce((acc, item) => {
             const pTotal = projectedTotals[item.id];
             if (pTotal !== undefined) return acc + pTotal;
-            
-            // Fallback for items that haven't reported a projected total yet
             const components = calculateItemBreakdown(item);
             return acc + components.reduce((sum, c) => sum + c.total, 0);
         }, 0);
@@ -235,6 +257,21 @@ export default function ActiveOrderCommandCenter() {
         if (d.eventType === 'Anniversary') return `${d.wifeName} & ${d.husbandName}`;
         return d.honoreeNameBirthday || d.honoreeNameOther || d.eventName || 'Unnamed Event';
     };
+
+    const billViewData = useMemo(() => {
+        if (!activeOrder) return [];
+        return activeOrder.deliverables.flatMap(item => {
+            const components = calculateItemBreakdown(item);
+            return components.map(c => ({
+                productName: item.productName,
+                label: c.label,
+                multiplier: c.multiplier,
+                rate: c.rate,
+                total: c.total,
+                isFixed: c.isFixed
+            }));
+        });
+    }, [activeOrder?.deliverables, projectedTotals]);
 
     if (loading) {
         return (
@@ -258,6 +295,162 @@ export default function ActiveOrderCommandCenter() {
             </AppLayout>
         );
     }
+
+    const FinancialSnapshot = (
+        <div className="space-y-6">
+            <Card className="shadow-none border-primary/10">
+                <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
+                    <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Event Snapshot</CardTitle>
+                    <Sheet open={isDetailsSheetOpen} onOpenChange={setIsDetailsSheetOpen}>
+                        <SheetTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-7 px-2 text-primary hover:text-primary hover:bg-primary/10">
+                                <Pencil className="h-3 w-3 mr-1.5" /> Edit
+                            </Button>
+                        </SheetTrigger>
+                        <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto">
+                            <SheetHeader className="mb-6">
+                                <SheetTitle className="font-headline text-2xl">Modify Event Details</SheetTitle>
+                            </SheetHeader>
+                            <EventDetailsForm 
+                                activeOrder={activeOrder} 
+                                onUpdate={(details) => {
+                                    updateDetails(details);
+                                }} 
+                                hideFooters 
+                            />
+                            <div className="mt-8 pt-6 border-t">
+                                <Button className="w-full" onClick={() => setIsDetailsSheetOpen(false)}>
+                                    Close &amp; Return
+                                </Button>
+                            </div>
+                        </SheetContent>
+                    </Sheet>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div className="space-y-1">
+                        <p className="text-lg font-bold font-headline leading-tight">{getClientDisplay()}</p>
+                        <p className="text-xs text-primary font-bold uppercase">{activeOrder.eventDetails.eventType}</p>
+                    </div>
+                    <Separator />
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                            <div className="flex items-center gap-1.5 text-muted-foreground uppercase text-[9px] font-bold">
+                                <CalendarDays className="h-3 w-3" /> Event Date
+                            </div>
+                            <p className="text-xs font-semibold">
+                                {activeOrder.eventDetails.eventDate ? new Date(activeOrder.eventDetails.eventDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
+                            </p>
+                        </div>
+                        <div className="space-y-1">
+                            <div className="flex items-center gap-1.5 text-muted-foreground uppercase text-[9px] font-bold">
+                                <MapPin className="h-3 w-3" /> Venue
+                            </div>
+                            <p className="text-xs font-semibold truncate" title={activeOrder.eventDetails.venueName || '-'}>
+                                {activeOrder.eventDetails.venueName || '-'}
+                            </p>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+
+            <Card className="shadow-sm border-2 border-primary/20 bg-background overflow-hidden">
+                <CardHeader className="pb-2 bg-muted/20">
+                    <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center justify-between">
+                        Live Financials
+                        <TrendingUp className="h-3 w-3 text-primary" />
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6 pt-6">
+                    <div className="space-y-1">
+                        <p className="text-[10px] font-bold uppercase text-muted-foreground">Order Value</p>
+                        {hasDiff ? (
+                            <div className="space-y-2">
+                                <div className="flex items-center gap-2 text-muted-foreground/50 line-through text-sm">
+                                    ₹{initialTotal.toLocaleString('en-IN')}
+                                </div>
+                                <div className="flex items-center justify-between group">
+                                    <p className={cn(
+                                        "text-4xl font-bold tracking-tight",
+                                        delta > 0 ? "text-blue-600" : "text-amber-600"
+                                    )}>
+                                        ₹{workingTotal.toLocaleString('en-IN')}
+                                    </p>
+                                    <Badge variant="secondary" className={cn(
+                                        "h-6 px-2 gap-1 text-[10px] font-black",
+                                        delta > 0 ? "bg-blue-100 text-blue-700" : "bg-amber-100 text-amber-700"
+                                    )}>
+                                        {delta > 0 ? '+' : '-'} ₹{Math.abs(delta).toLocaleString('en-IN')}
+                                    </Badge>
+                                </div>
+                            </div>
+                        ) : (
+                            <p className="text-4xl font-bold tracking-tight text-foreground">₹{workingTotal.toLocaleString('en-IN')}</p>
+                        )}
+                    </div>
+                    
+                    <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                            <p className="text-[10px] font-bold uppercase text-muted-foreground">Payment Received</p>
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <Button variant="outline" size="sm" className="h-6 text-[9px] font-bold uppercase gap-1 text-primary hover:text-primary hover:bg-primary/5 border-primary/30">
+                                        <WalletCards className="h-2.5 w-2.5" /> Record
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-64 p-4 space-y-4" align="end">
+                                    <div className="space-y-1.5">
+                                        <h4 className="font-bold text-xs uppercase tracking-wider">Update Payment</h4>
+                                        <p className="text-[10px] text-muted-foreground">Record new total payment received for this order.</p>
+                                    </div>
+                                    <div className="relative">
+                                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-bold">₹</span>
+                                        <input 
+                                            type="number"
+                                            min="0"
+                                            defaultValue={activeOrder.paymentReceived || 0}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                    updatePayment(Number(e.currentTarget.value));
+                                                    (e.target as any).blur();
+                                                }
+                                            }}
+                                            className="w-full h-10 pl-6 pr-3 text-sm font-bold border rounded-md"
+                                        />
+                                    </div>
+                                    <Button 
+                                        className="w-full h-8 text-[10px] font-bold uppercase" 
+                                        onClick={(e) => {
+                                            const val = (e.currentTarget.parentElement?.querySelector('input') as HTMLInputElement).value;
+                                            updatePayment(Number(val));
+                                        }}
+                                    >
+                                        Update Amount
+                                    </Button>
+                                </PopoverContent>
+                            </Popover>
+                        </div>
+                        <div className="h-12 flex items-center px-4 bg-muted/30 rounded-lg border-2 border-transparent font-bold text-xl opacity-70 cursor-default">
+                            ₹{(activeOrder.paymentReceived || 0).toLocaleString('en-IN')}
+                        </div>
+                    </div>
+
+                    <Separator />
+
+                    <div className="space-y-1">
+                        <p className="text-[10px] font-bold uppercase text-muted-foreground">Current Balance Due</p>
+                        <p className={cn(
+                            "text-2xl font-bold flex items-baseline gap-1.5", 
+                            balance > 0 ? "text-destructive" : "text-green-600"
+                        )}>
+                            ₹{Math.abs(balance).toLocaleString('en-IN')}
+                            {balance < 0 && <span className="text-xs uppercase">(Excess)</span>}
+                            {balance === 0 && <span className="text-xs uppercase">(Paid)</span>}
+                        </p>
+                    </div>
+                </CardContent>
+            </Card>
+        </div>
+    );
 
     return (
         <AppLayout>
@@ -290,26 +483,36 @@ export default function ActiveOrderCommandCenter() {
                             </h1>
                         </div>
                     </div>
-                    <div className="hidden lg:block">
-                        <Badge variant="outline" className="font-mono text-[10px] uppercase opacity-50">
-                            ID: {activeOrder.orderId}
-                        </Badge>
-                    </div>
                 </header>
 
                 <main className="flex-1 flex overflow-hidden">
-                    <div className="flex-1 overflow-y-auto bg-background/50 custom-scrollbar">
-                        <div className="max-w-4xl mx-auto p-4 md:p-8 space-y-8 pb-24">
+                    <div className="flex-1 overflow-y-auto bg-background/50 custom-scrollbar relative">
+                        <div className="max-w-4xl mx-auto p-4 md:p-8 space-y-8 pb-32">
                             <div className="flex items-center justify-between">
                                 <h2 className="text-xl font-headline font-bold flex items-center gap-2">
                                     <Package className="h-5 w-5 text-primary" />
                                     Scope of Work
                                 </h2>
-                                {!isEditMode && (
-                                    <Badge variant="secondary" className="gap-1.5 text-[10px] font-bold uppercase tracking-wider">
-                                        <Lock className="h-3 w-3" /> Locked View
-                                    </Badge>
-                                )}
+                                
+                                <div className="flex items-center gap-4">
+                                    {!isEditMode && (
+                                        <Tabs value={viewMode} onValueChange={(v: any) => setViewMode(v)} className="w-auto">
+                                            <TabsList className="h-8 p-1 bg-muted/50 border">
+                                                <TabsTrigger value="scope" className="text-[10px] font-bold uppercase h-6 px-3">
+                                                    <Info className="h-3 w-3 mr-1.5" /> Scope
+                                                </TabsTrigger>
+                                                <TabsTrigger value="bill" className="text-[10px] font-bold uppercase h-6 px-3">
+                                                    <Receipt className="h-3 w-3 mr-1.5" /> Bill View
+                                                </TabsTrigger>
+                                            </TabsList>
+                                        </Tabs>
+                                    )}
+                                    {!isEditMode && (
+                                        <Badge variant="secondary" className="gap-1.5 text-[10px] font-bold uppercase tracking-wider hidden sm:flex">
+                                            <Lock className="h-3 w-3" /> Locked
+                                        </Badge>
+                                    )}
+                                </div>
                             </div>
 
                             {isEditMode && (
@@ -323,7 +526,36 @@ export default function ActiveOrderCommandCenter() {
                                     <div className="text-center py-20 border-2 border-dashed rounded-xl bg-muted/30">
                                         <Package className="h-10 w-10 text-muted-foreground/30 mx-auto mb-4" />
                                         <p className="text-sm text-muted-foreground font-medium">No deliverables in scope.</p>
-                                        {isEditMode && <p className="text-xs text-muted-foreground mt-1">Search products above to add items.</p>}
+                                    </div>
+                                ) : viewMode === 'bill' ? (
+                                    <div className="rounded-xl border bg-card overflow-hidden shadow-sm animate-in fade-in slide-in-from-bottom-2">
+                                        <table className="w-full text-left text-xs border-collapse">
+                                            <thead>
+                                                <tr className="bg-muted/40 border-b">
+                                                    <th className="px-4 py-3 font-bold uppercase tracking-wider text-muted-foreground">Product / Item</th>
+                                                    <th className="px-4 py-3 font-bold uppercase tracking-wider text-muted-foreground text-center">Multiplier</th>
+                                                    <th className="px-4 py-3 font-bold uppercase tracking-wider text-muted-foreground text-right">Rate (₹)</th>
+                                                    <th className="px-4 py-3 font-bold uppercase tracking-wider text-muted-foreground text-right">Total (₹)</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {billViewData.map((row, i) => (
+                                                    <tr key={i} className="border-b last:border-0 hover:bg-muted/10">
+                                                        <td className="px-4 py-3">
+                                                            <div className="font-bold text-foreground">{row.productName}</div>
+                                                            <div className="text-[10px] text-muted-foreground font-medium uppercase">{row.label}</div>
+                                                        </td>
+                                                        <td className="px-4 py-3 text-center font-mono">{row.isFixed ? '-' : row.multiplier}</td>
+                                                        <td className="px-4 py-3 text-right tabular-nums">{row.rate.toLocaleString('en-IN')}</td>
+                                                        <td className="px-4 py-3 text-right font-bold tabular-nums">{row.total.toLocaleString('en-IN')}</td>
+                                                    </tr>
+                                                ))}
+                                                <tr className="bg-primary/5 font-bold">
+                                                    <td colSpan={3} className="px-4 py-4 text-right uppercase tracking-widest text-[10px]">Total Order Value</td>
+                                                    <td className="px-4 py-4 text-right text-base text-primary tabular-nums">₹{workingTotal.toLocaleString('en-IN')}</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
                                     </div>
                                 ) : (
                                     <Accordion 
@@ -341,7 +573,7 @@ export default function ActiveOrderCommandCenter() {
                                                 isNonCollapsible={false}
                                                 onEdit={() => handleEditRow(item.id)}
                                                 onDone={handleDoneRow}
-                                                onValidityChange={handleRowValidityChange}
+                                                onValidityChange={() => {}}
                                                 onUpdate={updateDeliverable}
                                                 onRemove={removeDeliverable}
                                                 onProjectedTotalChange={handleProjectedTotalChange}
@@ -356,138 +588,9 @@ export default function ActiveOrderCommandCenter() {
                         </div>
                     </div>
 
+                    {/* Desktop Sidebar */}
                     <aside className="w-[24rem] shrink-0 border-l bg-card/30 hidden xl:flex flex-col p-6 gap-6 overflow-y-auto custom-scrollbar">
-                        <Card className="shadow-none border-primary/10">
-                            <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
-                                <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Event Snapshot</CardTitle>
-                                <Sheet open={isDetailsSheetOpen} onOpenChange={setIsDetailsSheetOpen}>
-                                    <SheetTrigger asChild>
-                                        <Button variant="ghost" size="sm" className="h-7 px-2 text-primary hover:text-primary hover:bg-primary/10">
-                                            <Pencil className="h-3 w-3 mr-1.5" /> Edit
-                                        </Button>
-                                    </SheetTrigger>
-                                    <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto">
-                                        <SheetHeader className="mb-6">
-                                            <SheetTitle className="font-headline text-2xl">Modify Event Details</SheetTitle>
-                                        </SheetHeader>
-                                        <EventDetailsForm 
-                                            activeOrder={activeOrder} 
-                                            onUpdate={(details) => {
-                                                updateDetails(details);
-                                            }} 
-                                            hideFooters 
-                                        />
-                                        <div className="mt-8 pt-6 border-t">
-                                            <Button className="w-full" onClick={() => setIsDetailsSheetOpen(false)}>
-                                                Close &amp; Return
-                                            </Button>
-                                        </div>
-                                    </SheetContent>
-                                </Sheet>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                <div className="space-y-1">
-                                    <p className="text-lg font-bold font-headline leading-tight">{getClientDisplay()}</p>
-                                    <p className="text-xs text-primary font-bold uppercase">{activeOrder.eventDetails.eventType}</p>
-                                </div>
-                                <Separator />
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-1">
-                                        <div className="flex items-center gap-1.5 text-muted-foreground uppercase text-[9px] font-bold">
-                                            <CalendarDays className="h-3 w-3" /> Event Date
-                                        </div>
-                                        <p className="text-xs font-semibold">
-                                            {activeOrder.eventDetails.eventDate ? new Date(activeOrder.eventDetails.eventDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
-                                        </p>
-                                    </div>
-                                    <div className="space-y-1">
-                                        <div className="flex items-center gap-1.5 text-muted-foreground uppercase text-[9px] font-bold">
-                                            <MapPin className="h-3 w-3" /> Venue
-                                        </div>
-                                        <p className="text-xs font-semibold truncate" title={activeOrder.eventDetails.venueName || '-'}>
-                                            {activeOrder.eventDetails.venueName || '-'}
-                                        </p>
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-
-                        <Card className="shadow-sm border-2 border-primary/20 bg-background overflow-hidden">
-                            <CardHeader className="pb-2 bg-muted/20">
-                                <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center justify-between">
-                                    Live Financials
-                                    <TrendingUp className="h-3 w-3 text-primary" />
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-6 pt-6">
-                                <div className="space-y-1">
-                                    <p className="text-[10px] font-bold uppercase text-muted-foreground">Order Value</p>
-                                    {hasDiff ? (
-                                        <div className="space-y-2">
-                                            <div className="flex items-center gap-2 text-muted-foreground/50 line-through text-sm">
-                                                ₹{initialTotal.toLocaleString('en-IN')}
-                                            </div>
-                                            <div className="flex items-center justify-between group">
-                                                <p className={cn(
-                                                    "text-4xl font-bold tracking-tight",
-                                                    delta > 0 ? "text-blue-600" : "text-amber-600"
-                                                )}>
-                                                    ₹{workingTotal.toLocaleString('en-IN')}
-                                                </p>
-                                                <Badge variant="secondary" className={cn(
-                                                    "h-6 px-2 gap-1 text-[10px] font-black animate-in fade-in slide-in-from-right-2 duration-300",
-                                                    delta > 0 ? "bg-blue-100 text-blue-700" : "bg-amber-100 text-amber-700"
-                                                )}>
-                                                    {delta > 0 ? '+' : '-'} ₹{Math.abs(delta).toLocaleString('en-IN')}
-                                                </Badge>
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <p className="text-4xl font-bold tracking-tight text-foreground">₹{workingTotal.toLocaleString('en-IN')}</p>
-                                    )}
-                                </div>
-                                
-                                <div className="space-y-2">
-                                    <p className="text-[10px] font-bold uppercase text-muted-foreground flex items-center justify-between">
-                                        Payment Received
-                                        {!isEditMode && <Lock className="h-2.5 w-2.5 opacity-30" />}
-                                    </p>
-                                    <div className="relative group">
-                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">₹</span>
-                                        <input 
-                                            type="number"
-                                            min="0"
-                                            disabled={!isEditMode}
-                                            value={activeOrder.paymentReceived || ''}
-                                            onChange={(e) => updatePayment(Number(e.target.value))}
-                                            onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-                                            className={cn(
-                                                "w-full h-12 pl-7 pr-4 rounded-lg border-2 font-bold text-xl transition-all",
-                                                isEditMode 
-                                                    ? "bg-muted/10 border-primary focus:ring-4 focus:ring-primary/10" 
-                                                    : "bg-muted/30 border-transparent cursor-not-allowed opacity-70"
-                                            )}
-                                            placeholder="0"
-                                        />
-                                    </div>
-                                </div>
-
-                                <Separator />
-
-                                <div className="space-y-1">
-                                    <p className="text-[10px] font-bold uppercase text-muted-foreground">Current Balance Due</p>
-                                    <p className={cn(
-                                        "text-2xl font-bold flex items-baseline gap-1.5", 
-                                        balance > 0 ? "text-destructive" : "text-green-600"
-                                    )}>
-                                        ₹{Math.abs(balance).toLocaleString('en-IN')}
-                                        {balance < 0 && <span className="text-xs uppercase">(Excess)</span>}
-                                        {balance === 0 && <span className="text-xs uppercase">(Paid)</span>}
-                                    </p>
-                                </div>
-                            </CardContent>
-                        </Card>
-
+                        {FinancialSnapshot}
                         <div className="mt-auto pt-6 border-t flex items-center justify-between px-2">
                             <div className="flex items-center gap-2">
                                 <Users className="h-4 w-4 text-muted-foreground" />
@@ -499,7 +602,65 @@ export default function ActiveOrderCommandCenter() {
                         </div>
                     </aside>
                 </main>
+
+                {/* Mobile Financial Footer */}
+                <div className="xl:hidden fixed bottom-0 left-0 right-0 bg-background border-t z-40 shadow-2xl animate-in slide-in-from-bottom duration-300">
+                    <div className="flex items-center justify-between px-4 h-20">
+                        <div className="space-y-0.5">
+                            <p className="text-[9px] font-bold uppercase text-muted-foreground">Order Value</p>
+                            <p className={cn("text-xl font-black tabular-nums", hasDiff ? "text-primary" : "text-foreground")}>
+                                ₹{workingTotal.toLocaleString('en-IN')}
+                            </p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <div className="text-right">
+                                <p className="text-[9px] font-bold uppercase text-muted-foreground">Balance</p>
+                                <p className={cn("text-sm font-bold tabular-nums", balance > 0 ? "text-destructive" : "text-green-600")}>
+                                    ₹{Math.abs(balance).toLocaleString('en-IN')}
+                                </p>
+                            </div>
+                            <Sheet>
+                                <SheetTrigger asChild>
+                                    <Button variant="secondary" size="icon" className="h-10 w-10 rounded-full shadow-lg">
+                                        <ChevronUp className="h-5 w-5" />
+                                    </Button>
+                                </SheetTrigger>
+                                <SheetContent side="bottom" className="h-[80vh] px-4 pt-10 rounded-t-3xl overflow-y-auto custom-scrollbar">
+                                    <SheetHeader className="sr-only">
+                                        <SheetTitle>Financial Details</SheetTitle>
+                                    </SheetHeader>
+                                    {FinancialSnapshot}
+                                    <div className="pt-8 pb-10">
+                                        <Button variant="outline" className="w-full h-12 font-bold uppercase" onClick={() => router.push('/active-orders')}>
+                                            Exit to List
+                                        </Button>
+                                    </div>
+                                </SheetContent>
+                            </Sheet>
+                        </div>
+                    </div>
+                </div>
             </div>
+
+            <AlertDialog open={isExitConfirmOpen} onOpenChange={setIsExitConfirmOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="flex items-center gap-2">
+                            <AlertTriangle className="h-5 w-5 text-amber-500" />
+                            Unsaved Data Detected
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                            You have one or more product configurations open. Exiting Edit Mode now will discard any unconfirmed changes in those rows.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Go Back &amp; Save</AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmExitEditMode} className="bg-destructive hover:bg-destructive/90">
+                            Discard Changes
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
 
             <style jsx global>{`
                 .custom-scrollbar::-webkit-scrollbar { width: 5px; }
