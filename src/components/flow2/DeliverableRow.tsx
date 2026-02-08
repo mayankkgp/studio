@@ -171,20 +171,26 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         }
     }, [isReadOnly, item, product, reset]);
 
+    // Use Ref to handle callback stability and avoid infinite update loops
+    const onValidityChangeRef = React.useRef(onValidityChange);
+    React.useEffect(() => {
+        onValidityChangeRef.current = onValidityChange;
+    }, [onValidityChange]);
+
     React.useEffect(() => {
         const initValidation = async () => {
             const res = await trigger();
-            onValidityChange(item.id, res);
+            onValidityChangeRef.current?.(item.id, res);
             setHasValidated(true);
         };
         initValidation();
-    }, [trigger, item.id, onValidityChange]);
+    }, [trigger, item.id]);
 
     React.useEffect(() => {
         if (hasValidated) {
-            onValidityChange(item.id, isValid);
+            onValidityChangeRef.current?.(item.id, isValid);
         }
-    }, [item.id, isValid, hasValidated, onValidityChange]);
+    }, [item.id, isValid, hasValidated]);
 
     const itemBreakdown = React.useMemo(() => {
         const currentItem: ConfiguredProduct = {

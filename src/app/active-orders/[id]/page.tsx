@@ -198,9 +198,14 @@ export default function ActiveOrderCommandCenter() {
         syncToStorage({ ...activeOrder, paymentReceived: Math.max(0, amount) });
     };
 
-    const handleProjectedTotalChange = (id: string, total: number) => {
+    const handleProjectedTotalChange = useCallback((id: string, total: number) => {
         setProjectedTotals(prev => ({ ...prev, [id]: total }));
-    };
+    }, []);
+
+    const handleRowValidityChange = useCallback((id: string, isValid: boolean) => {
+        // No parent state update needed for validity in this view, 
+        // but providing a stable callback avoids infinite loops in child.
+    }, []);
 
     const workingTotal = useMemo(() => {
         if (!activeOrder) return 0;
@@ -332,7 +337,7 @@ export default function ActiveOrderCommandCenter() {
                                                 isNonCollapsible={false}
                                                 onEdit={() => handleEditRow(item.id)}
                                                 onDone={handleDoneRow}
-                                                onValidityChange={() => {}}
+                                                onValidityChange={handleRowValidityChange}
                                                 onUpdate={updateDeliverable}
                                                 onRemove={removeDeliverable}
                                                 onProjectedTotalChange={handleProjectedTotalChange}
