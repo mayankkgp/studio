@@ -29,36 +29,36 @@ export function CustomerDataForm({ order, onSave }: CustomerDataFormProps) {
 
     const SectionHeader = ({ title, icon: Icon, number }: { title: string, icon: any, number: string }) => (
         <div className="flex items-center gap-4">
-            <div className="h-10 w-10 shrink-0 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-bold text-base shadow-sm border border-primary/5">
+            <div className="h-10 w-10 shrink-0 rounded-xl bg-primary text-white flex items-center justify-center font-black text-base shadow-lg shadow-primary/20">
                 {number}
             </div>
             <div className="flex flex-col">
                 <div className="flex items-center gap-2">
-                    <Icon className="h-4 w-4 text-primary opacity-80" />
-                    <h3 className="font-headline text-xl font-black text-foreground tracking-tight">{title}</h3>
+                    <Icon className="h-4 w-4 text-primary opacity-90" />
+                    <h3 className="font-headline text-2xl font-black text-foreground tracking-tight">{title}</h3>
                 </div>
-                <div className="h-0.5 w-12 bg-primary/20 mt-1 rounded-full" />
+                <div className="h-0.5 w-12 bg-primary/30 mt-1 rounded-full" />
             </div>
         </div>
     );
 
     const Field = ({ id, label, placeholder, registerKey, className }: { id: string, label: string, placeholder: string, registerKey: any, className?: string }) => (
         <div className={cn("space-y-2.5", className)}>
-            <Label htmlFor={id} className="text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground/80 pl-1">{label}</Label>
+            <Label htmlFor={id} className="text-[10px] font-black uppercase tracking-[0.15em] text-foreground/70 pl-1">{label}</Label>
             <Textarea 
                 id={id} 
                 {...register(registerKey)}
                 placeholder={placeholder}
-                className="min-h-[140px] bg-background/60 border-primary/15 focus-visible:ring-primary focus-visible:border-primary/40 placeholder:text-muted-foreground/50 transition-all duration-200 resize-none shadow-inner p-4 text-sm leading-relaxed"
+                className="min-h-[140px] bg-background/80 border-primary/20 focus-visible:ring-primary/40 focus-visible:border-primary/40 placeholder:text-muted-foreground/60 transition-all duration-200 resize-none shadow-sm p-4 text-sm leading-relaxed font-medium"
             />
         </div>
     );
 
     return (
-        <form onSubmit={handleSubmit(onSave)} className="space-y-12 pb-32">
+        <form onSubmit={handleSubmit(onSave)} className="space-y-16 pb-32">
             {/* 1. Visual Identity */}
-            <Card className="border-primary/10 shadow-sm bg-card/40 backdrop-blur-sm overflow-hidden">
-                <CardHeader className="bg-muted/20 border-b border-primary/5 pb-4">
+            <Card className="border-primary/10 shadow-sm bg-card/60 backdrop-blur-md overflow-hidden">
+                <CardHeader className="bg-muted/30 border-b border-primary/5 pb-5">
                     <SectionHeader title="Visual Identity" icon={Palette} number="1" />
                 </CardHeader>
                 <CardContent className="pt-8 grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -85,8 +85,8 @@ export function CustomerDataForm({ order, onSave }: CustomerDataFormProps) {
             </Card>
 
             {/* 2. The Narrative */}
-            <Card className="border-primary/10 shadow-sm bg-card/40 backdrop-blur-sm overflow-hidden">
-                <CardHeader className="bg-muted/20 border-b border-primary/5 pb-4">
+            <Card className="border-primary/10 shadow-sm bg-card/60 backdrop-blur-md overflow-hidden">
+                <CardHeader className="bg-muted/30 border-b border-primary/5 pb-5">
                     <SectionHeader title="The Narrative" icon={BookOpen} number="2" />
                 </CardHeader>
                 <CardContent className="pt-8 grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -113,8 +113,8 @@ export function CustomerDataForm({ order, onSave }: CustomerDataFormProps) {
             </Card>
 
             {/* 3. Culture & Symbols */}
-            <Card className="border-primary/10 shadow-sm bg-card/40 backdrop-blur-sm overflow-hidden">
-                <CardHeader className="bg-muted/20 border-b border-primary/5 pb-4">
+            <Card className="border-primary/10 shadow-sm bg-card/60 backdrop-blur-md overflow-hidden">
+                <CardHeader className="bg-muted/30 border-b border-primary/5 pb-5">
                     <SectionHeader title="Culture & Symbols" icon={Globe} number="3" />
                 </CardHeader>
                 <CardContent className="pt-8 grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -134,8 +134,8 @@ export function CustomerDataForm({ order, onSave }: CustomerDataFormProps) {
             </Card>
 
             {/* 4. Atmosphere & Extras */}
-            <Card className="border-primary/10 shadow-sm bg-card/40 backdrop-blur-sm overflow-hidden">
-                <CardHeader className="bg-muted/20 border-b border-primary/5 pb-4">
+            <Card className="border-primary/10 shadow-sm bg-card/60 backdrop-blur-md overflow-hidden">
+                <CardHeader className="bg-muted/30 border-b border-primary/5 pb-5">
                     <SectionHeader title="Atmosphere & Extras" icon={Sparkles} number="4" />
                 </CardHeader>
                 <CardContent className="pt-8 grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -155,65 +155,65 @@ export function CustomerDataForm({ order, onSave }: CustomerDataFormProps) {
             </Card>
 
             {/* Product Specific Briefs */}
-            <div className="space-y-8">
-                <div className="flex items-center gap-4 border-b border-primary/10 pb-6">
-                    <div className="h-10 w-10 rounded-xl bg-primary text-white flex items-center justify-center shadow-lg shadow-primary/20">
-                        <Box className="h-5 w-5" />
+            <div className="space-y-10">
+                <div className="flex items-center gap-4 border-b border-primary/20 pb-6">
+                    <div className="h-12 w-12 rounded-2xl bg-primary text-white flex items-center justify-center shadow-xl shadow-primary/20">
+                        <Box className="h-6 w-6" />
                     </div>
                     <div>
-                        <h3 className="font-headline text-2xl font-black text-foreground tracking-tight">Product Specific Briefs</h3>
-                        <p className="text-[10px] font-black uppercase tracking-[0.1em] text-muted-foreground/60">Content & Instructions per Deliverable</p>
+                        <h3 className="font-headline text-3xl font-black text-foreground tracking-tight">Product Specific Briefs</h3>
+                        <p className="text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground/80 mt-1">Content & Instructions per Deliverable</p>
                     </div>
                 </div>
-                <div className="grid gap-6">
+                <div className="grid gap-8">
                     {order.deliverables.map((item) => {
                         const productDef = productCatalog.find(p => p.id === item.productId);
                         
                         return (
-                            <Card key={item.id} className="border-primary/15 bg-background/40 hover:bg-background/60 transition-colors shadow-none overflow-hidden">
-                                <CardContent className="pt-6">
-                                    <div className="flex flex-col md:flex-row md:items-start justify-between mb-6 gap-6">
-                                        <div className="flex flex-col gap-2.5">
-                                            <h4 className="font-black text-lg text-foreground font-headline tracking-tight leading-none">{item.productName}</h4>
-                                            <div className="flex items-center gap-3">
-                                                <span className="text-[9px] font-black uppercase text-primary/70 tracking-tighter">Technical Specs:</span>
-                                                <div className="flex flex-wrap gap-1.5">
+                            <Card key={item.id} className="border-primary/15 bg-background/50 hover:bg-background/80 transition-all duration-300 shadow-sm overflow-hidden group">
+                                <CardContent className="pt-8">
+                                    <div className="flex flex-col md:flex-row md:items-start justify-between mb-8 gap-6">
+                                        <div className="flex flex-col gap-3">
+                                            <h4 className="font-black text-xl text-foreground font-headline tracking-tight group-hover:text-primary transition-colors">{item.productName}</h4>
+                                            <div className="flex items-center gap-4">
+                                                <span className="text-[9px] font-black uppercase text-muted-foreground tracking-widest">Specifications</span>
+                                                <div className="flex flex-wrap gap-2">
                                                     {item.quantity !== undefined && item.quantity !== null && (
-                                                        <Badge variant="secondary">Qty: {item.quantity}</Badge>
+                                                        <CustomBadge variant="secondary">Qty: {item.quantity}</CustomBadge>
                                                     )}
                                                     {item.pages !== undefined && item.pages !== null && (
-                                                        <Badge variant="secondary">{item.pages} Pages</Badge>
+                                                        <CustomBadge variant="secondary">{item.pages} Pages</CustomBadge>
                                                     )}
-                                                    {item.variant && <Badge variant="secondary">{item.variant}</Badge>}
+                                                    {item.variant && <CustomBadge variant="secondary">{item.variant}</CustomBadge>}
                                                 </div>
                                             </div>
                                         </div>
                                         
-                                        <div className="flex flex-wrap gap-1.5 justify-start md:justify-end max-w-sm">
+                                        <div className="flex flex-wrap gap-2 justify-start md:justify-end max-w-sm">
                                             {/* Custom Fields */}
                                             {item.customFieldValues && Object.entries(item.customFieldValues).map(([key, val]) => {
                                                 if (val === null || val === undefined) return null;
                                                 const fieldDef = productDef?.customFields?.find(f => f.id === key);
                                                 return (
-                                                    <Badge key={key} variant="outline">
+                                                    <CustomBadge key={key} variant="outline">
                                                         {fieldDef?.name || key}: {val}
-                                                    </Badge>
+                                                    </CustomBadge>
                                                 );
                                             })}
 
                                             {/* Addons */}
                                             {item.addons.map(a => (
-                                                <Badge key={a.id} variant="outline" className="border-primary/10 text-muted-foreground/70 bg-stone-50/50">
+                                                <CustomBadge key={a.id} variant="outline" className="border-primary/20 text-foreground/70 bg-white/40">
                                                     {a.name}{typeof a.value === 'number' ? `: ${a.value}` : ''}
-                                                </Badge>
+                                                </CustomBadge>
                                             ))}
                                         </div>
                                     </div>
-                                    <div className="space-y-2">
+                                    <div className="space-y-3">
                                         <Textarea 
                                             placeholder={`Enter requirements & specific details for ${item.productName}`}
                                             {...register(`productBriefs.${item.id}`)}
-                                            className="bg-white/50 min-h-[140px] border-primary/10 focus-visible:ring-primary focus-visible:border-primary/40 resize-none shadow-sm p-4 text-sm leading-relaxed"
+                                            className="bg-white/90 min-h-[160px] border-primary/20 focus-visible:ring-primary/40 focus-visible:border-primary/40 resize-none shadow-inner p-5 text-sm leading-relaxed font-medium"
                                         />
                                     </div>
                                 </CardContent>
@@ -223,8 +223,8 @@ export function CustomerDataForm({ order, onSave }: CustomerDataFormProps) {
                 </div>
             </div>
 
-            <div className="fixed bottom-8 left-1/2 -translate-x-1/2 w-full max-w-lg px-4 z-50 xl:relative xl:bottom-0 xl:left-0 xl:translate-x-0 xl:max-w-none xl:px-0">
-                <Button type="submit" className="w-full h-14 text-base font-black uppercase tracking-[0.2em] shadow-xl shadow-primary/30 rounded-2xl">
+            <div className="fixed bottom-10 left-1/2 -translate-x-1/2 w-full max-w-lg px-6 z-50 xl:relative xl:bottom-0 xl:left-0 xl:translate-x-0 xl:max-w-none xl:px-0">
+                <Button type="submit" className="w-full h-16 text-base font-black uppercase tracking-[0.25em] shadow-2xl shadow-primary/30 rounded-2xl transition-all hover:scale-[1.02] active:scale-[0.98]">
                     <Save className="h-5 w-5 mr-3" />
                     Save Creative Data
                 </Button>
@@ -233,13 +233,13 @@ export function CustomerDataForm({ order, onSave }: CustomerDataFormProps) {
     );
 }
 
-function Badge({ children, variant = 'default', className }: { children: React.ReactNode, variant?: 'default' | 'secondary' | 'outline', className?: string }) {
+function CustomBadge({ children, variant = 'default', className }: { children: React.ReactNode, variant?: 'default' | 'secondary' | 'outline', className?: string }) {
     return (
         <span className={cn(
-            "inline-flex items-center rounded-lg px-2.5 py-1 text-[9px] font-black uppercase tracking-wider transition-all",
-            variant === 'default' && "bg-primary text-white shadow-sm",
-            variant === 'secondary' && "bg-primary/10 text-primary border border-primary/10",
-            variant === 'outline' && "border border-stone-300 text-muted-foreground/80 bg-stone-50/50",
+            "inline-flex items-center rounded-lg px-3 py-1.5 text-[9px] font-black uppercase tracking-widest transition-all",
+            variant === 'default' && "bg-primary text-white shadow-md",
+            variant === 'secondary' && "bg-primary/10 text-primary border border-primary/20",
+            variant === 'outline' && "border-2 border-stone-200 text-foreground/80 bg-white/60",
             className
         )}>
             {children}
