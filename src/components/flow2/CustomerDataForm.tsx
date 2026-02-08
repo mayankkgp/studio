@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Save, Palette, BookOpen, Globe, Sparkles, Box, MessageSquare } from 'lucide-react';
+import { Save, Palette, BookOpen, Globe, Sparkles, Box, MessageSquare, Pencil, X } from 'lucide-react';
 import type { Order, CustomerData } from '@/lib/types';
 import { productCatalog } from '@/lib/product-data';
 import { cn } from '@/lib/utils';
@@ -16,16 +16,45 @@ interface CustomerDataFormProps {
     onSave: (data: CustomerData) => void;
 }
 
+const isFormEmpty = (data?: CustomerData) => {
+    if (!data) return true;
+    const hasVisual = Object.values(data.visualIdentity || {}).some(v => !!v);
+    const hasNarrative = Object.values(data.narrative || {}).some(v => !!v);
+    const hasCulture = Object.values(data.cultureSymbols || {}).some(v => !!v);
+    const hasAtmosphere = Object.values(data.atmosphereExtras || {}).some(v => !!v);
+    const hasProductBriefs = Object.values(data.productBriefs || {}).some(v => !!v);
+    return !(hasVisual || hasNarrative || hasCulture || hasAtmosphere || hasProductBriefs);
+};
+
 export function CustomerDataForm({ order, onSave }: CustomerDataFormProps) {
-    const { register, handleSubmit } = useForm<CustomerData>({
-        defaultValues: order.customerData || {
-            visualIdentity: { moodStyle: '', colorTypography: '', designDislikes: '' },
-            narrative: { timeline: '', coupleWorld: '', easterEggs: '' },
-            cultureSymbols: { mandatoryIcons: '', regionalNuances: '' },
-            atmosphereExtras: { venuePersonality: '', otherDetails: '' },
-            productBriefs: {}
-        }
+    const [isEditing, setIsEditing] = React.useState(isFormEmpty(order.customerData));
+
+    const defaultValues = React.useMemo(() => order.customerData || {
+        visualIdentity: { moodStyle: '', colorTypography: '', designDislikes: '' },
+        narrative: { timeline: '', coupleWorld: '', easterEggs: '' },
+        cultureSymbols: { mandatoryIcons: '', regionalNuances: '' },
+        atmosphereExtras: { venuePersonality: '', otherDetails: '' },
+        productBriefs: {}
+    }, [order.customerData]);
+
+    const { register, handleSubmit, reset, watch } = useForm<CustomerData>({
+        defaultValues
     });
+
+    // Handle incoming order updates
+    React.useEffect(() => {
+        reset(defaultValues);
+    }, [defaultValues, reset]);
+
+    const onSubmit = (data: CustomerData) => {
+        onSave(data);
+        setIsEditing(false);
+    };
+
+    const handleCancel = () => {
+        reset(defaultValues);
+        setIsEditing(false);
+    };
 
     const SectionHeader = ({ title, icon: Icon, number, subtitle }: { title: string, icon: any, number?: string, subtitle?: string }) => (
         <div className="flex items-center gap-4">
@@ -53,20 +82,43 @@ export function CustomerDataForm({ order, onSave }: CustomerDataFormProps) {
         </div>
     );
 
-    const Field = ({ id, label, placeholder, registerKey, className }: { id: string, label: string, placeholder: string, registerKey: any, className?: string }) => (
-        <div className={cn("space-y-2.5", className)}>
-            <Label htmlFor={id} className="text-[10px] font-black uppercase tracking-[0.15em] text-foreground/70 pl-1">{label}</Label>
-            <Textarea 
-                id={id} 
-                {...register(registerKey)}
-                placeholder={placeholder}
-                className="min-h-[140px] bg-white/90 border-primary/20 focus-visible:ring-primary/40 focus-visible:border-primary/40 placeholder:text-muted-foreground/50 transition-all duration-200 resize-none shadow-sm p-4 text-sm leading-relaxed font-medium"
-            />
-        </div>
-    );
+    const Field = ({ id, label, placeholder, registerKey, className }: { id: string, label: string, placeholder: string, registerKey: any, className?: string }) => {
+        const value = watch(registerKey);
+        
+        return (
+            <div className={cn("space-y-2.5", className)}>
+                <Label htmlFor={id} className="text-[10px] font-black uppercase tracking-[0.15em] text-foreground/70 pl-1">{label}</Label>
+                {isEditing ? (
+                    <Textarea 
+                        id={id} 
+                        {...register(registerKey)}
+                        placeholder={placeholder}
+                        className="min-h-[140px] bg-white/90 border-primary/20 focus-visible:ring-primary/40 focus-visible:border-primary/40 placeholder:text-muted-foreground/50 transition-all duration-200 resize-none shadow-sm p-4 text-sm leading-relaxed font-medium"
+                    />
+                ) : (
+                    <div className="min-h-[140px] bg-muted/20 border-2 border-transparent rounded-md p-4 text-sm leading-relaxed font-bold text-foreground/90 whitespace-pre-wrap">
+                        {value || <span className="text-muted-foreground/40 italic font-medium">No information provided.</span>}
+                    </div>
+                )}
+            </div>
+        );
+    };
 
     return (
-        <form onSubmit={handleSubmit(onSave)} className="space-y-16 pb-32">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-16 pb-32">
+            <div className="flex items-center justify-between px-4 sticky top-0 z-50 py-4 bg-background/80 backdrop-blur-sm -mx-4">
+                <div>
+                    <h2 className="text-xl font-black font-headline text-primary uppercase tracking-wider">
+                        {isEditing ? 'Editing Creative Brief' : 'Creative Brief Summary'}
+                    </h2>
+                </div>
+                {!isEditing && (
+                    <Button type="button" onClick={() => setIsEditing(true)} className="gap-2 shadow-lg">
+                        <Pencil className="h-4 w-4" /> Edit Brief
+                    </Button>
+                )}
+            </div>
+
             {/* 1. Visual Identity */}
             <Card className="border-primary/15 shadow-sm bg-card/60 backdrop-blur-md overflow-hidden">
                 <CardHeader className="bg-muted/30 border-b border-primary/5 pb-5">
@@ -177,6 +229,7 @@ export function CustomerDataForm({ order, onSave }: CustomerDataFormProps) {
                 <div className="grid gap-8">
                     {order.deliverables.map((item) => {
                         const productDef = productCatalog.find(p => p.id === item.productId);
+                        const briefValue = watch(`productBriefs.${item.id}`);
                         
                         return (
                             <Card key={item.id} className="border-primary/15 bg-card/60 backdrop-blur-md hover:bg-card/80 transition-all duration-300 shadow-sm overflow-hidden group">
@@ -225,11 +278,17 @@ export function CustomerDataForm({ order, onSave }: CustomerDataFormProps) {
                                         </div>
                                     </div>
                                     <div className="space-y-3">
-                                        <Textarea 
-                                            placeholder={`Enter requirements & specific details for ${item.productName}`}
-                                            {...register(`productBriefs.${item.id}`)}
-                                            className="bg-white/90 min-h-[160px] border-primary/20 focus-visible:ring-primary/40 focus-visible:border-primary/40 transition-all duration-200 resize-none shadow-sm p-5 text-sm leading-relaxed font-medium"
-                                        />
+                                        {isEditing ? (
+                                            <Textarea 
+                                                placeholder={`Enter requirements & specific details for ${item.productName}`}
+                                                {...register(`productBriefs.${item.id}`)}
+                                                className="bg-white/90 min-h-[160px] border-primary/20 focus-visible:ring-primary/40 focus-visible:border-primary/40 transition-all duration-200 resize-none shadow-sm p-5 text-sm leading-relaxed font-medium"
+                                            />
+                                        ) : (
+                                            <div className="bg-muted/20 border-2 border-transparent rounded-md p-5 text-sm leading-relaxed font-bold text-foreground/90 whitespace-pre-wrap">
+                                                {briefValue || <span className="text-muted-foreground/40 italic font-medium">No product-specific briefing provided.</span>}
+                                            </div>
+                                        )}
                                     </div>
                                 </CardContent>
                             </Card>
@@ -238,12 +297,26 @@ export function CustomerDataForm({ order, onSave }: CustomerDataFormProps) {
                 </div>
             </div>
 
-            <div className="fixed bottom-10 left-1/2 -translate-x-1/2 w-full max-w-lg px-6 z-50 xl:relative xl:bottom-0 xl:left-0 xl:translate-x-0 xl:max-w-none xl:px-0">
-                <Button type="submit" className="w-full h-16 text-base font-black uppercase tracking-[0.25em] shadow-2xl shadow-primary/30 rounded-2xl transition-all hover:scale-[1.02] active:scale-[0.98]">
-                    <Save className="h-5 w-5 mr-3" />
-                    Save Creative Data
-                </Button>
-            </div>
+            {isEditing && (
+                <div className="fixed bottom-10 left-1/2 -translate-x-1/2 w-full max-w-lg px-6 z-50 flex gap-4">
+                    <Button 
+                        type="button" 
+                        variant="secondary"
+                        onClick={handleCancel}
+                        className="flex-1 h-16 text-base font-black uppercase tracking-[0.25em] shadow-2xl rounded-2xl border-2"
+                    >
+                        <X className="h-5 w-5 mr-3" />
+                        Cancel
+                    </Button>
+                    <Button 
+                        type="submit" 
+                        className="flex-[2] h-16 text-base font-black uppercase tracking-[0.25em] shadow-2xl shadow-primary/30 rounded-2xl transition-all hover:scale-[1.02] active:scale-[0.98]"
+                    >
+                        <Save className="h-5 w-5 mr-3" />
+                        Save Data
+                    </Button>
+                </div>
+            )}
         </form>
     );
 }
