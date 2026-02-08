@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useForm, UseFormRegister } from 'react-hook-form';
 import { Label } from '@/components/ui/label';
-import { Palette, BookOpen, Globe, Sparkles, Box, CheckCircle2, Circle } from 'lucide-react';
+import { Palette, BookOpen, Globe, Sparkles, Box, CheckCircle2, Eye, EyeOff } from 'lucide-react';
 import type { Order, CustomerData, ConfiguredProduct } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -76,19 +76,25 @@ const EditableField = ({
   label, 
   register,
   registerKey,
-  value
+  value,
+  showIfEmpty
 }: { 
   id: string, 
   label: string, 
   register: UseFormRegister<CustomerData>,
   registerKey: any,
-  value: string
+  value: string,
+  showIfEmpty: boolean
 }) => {
+  const isEmpty = !value || value.trim().length === 0;
+  
+  if (!showIfEmpty && isEmpty) return null;
+
   return (
-    <div className="mb-8 group transition-all duration-200 border-l-2 pl-4 border-primary/20 focus-within:border-primary break-inside-avoid-column">
+    <div className="mb-8 group transition-all duration-200 border-l-2 pl-4 border-primary/20 focus-within:border-primary break-inside-avoid">
       <Label 
         htmlFor={id} 
-        className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/80 mb-1 block"
+        className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/80 mb-2 block"
       >
         {label}
       </Label>
@@ -112,6 +118,22 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
   const [selectedProductId, setSelectedProductId] = React.useState<string | null>(
     order.deliverables.length > 0 ? order.deliverables[0].id : null
   );
+
+  const [showEmptyFields, setShowEmptyFields] = React.useState(true);
+
+  // Persistence logic for view preference
+  React.useEffect(() => {
+    const saved = localStorage.getItem('srishbish_brief_view_pref');
+    if (saved !== null) {
+      setShowEmptyFields(saved === 'true');
+    }
+  }, []);
+
+  const toggleViewMode = () => {
+    const next = !showEmptyFields;
+    setShowEmptyFields(next);
+    localStorage.setItem('srishbish_brief_view_pref', String(next));
+  };
 
   const defaultValues = React.useMemo(() => order.customerData || {
     visualIdentity: { moodStyle: '', colorTypography: '', designDislikes: '' },
@@ -175,14 +197,26 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
     <div className="space-y-12 pb-24 max-w-6xl mx-auto">
       <div className="flex items-center justify-between border-b border-primary/10 pb-4">
         <div className="space-y-1">
-          <h2 className="text-xl font-headline font-black text-foreground">Creative Briefing</h2>
+          <h2 className="text-xl font-headline font-black text-foreground uppercase tracking-tight">Creative Briefing</h2>
           <p className="text-xs text-muted-foreground font-medium">Capture visual and narrative context for design production.</p>
         </div>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={toggleViewMode}
+          className="h-8 font-bold gap-2 text-[10px] uppercase tracking-widest border-primary/20"
+        >
+          {showEmptyFields ? (
+            <><EyeOff className="h-3 w-3" /> Hide Empty Fields</>
+          ) : (
+            <><Eye className="h-3 w-3" /> Show All Fields</>
+          )}
+        </Button>
       </div>
 
       {/* Masonry Layout for General Sections */}
-      <section className="columns-1 md:columns-2 gap-x-12">
-        <div className="break-inside-avoid-column mb-12">
+      <section className="columns-1 md:columns-2 gap-8 space-y-8">
+        <div className="break-inside-avoid">
           <SectionHeader title="Visual Identity" icon={Palette} />
           <EditableField 
             id="mood"
@@ -190,6 +224,7 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
             register={register}
             registerKey="visualIdentity.moodStyle"
             value={watchedValues.visualIdentity?.moodStyle || ''}
+            showIfEmpty={showEmptyFields}
           />
           <EditableField 
             id="colors"
@@ -197,6 +232,7 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
             register={register}
             registerKey="visualIdentity.colorTypography"
             value={watchedValues.visualIdentity?.colorTypography || ''}
+            showIfEmpty={showEmptyFields}
           />
           <EditableField 
             id="dislikes"
@@ -204,10 +240,11 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
             register={register}
             registerKey="visualIdentity.designDislikes"
             value={watchedValues.visualIdentity?.designDislikes || ''}
+            showIfEmpty={showEmptyFields}
           />
         </div>
 
-        <div className="break-inside-avoid-column mb-12">
+        <div className="break-inside-avoid">
           <SectionHeader title="The Narrative" icon={BookOpen} />
           <EditableField 
             id="timeline"
@@ -215,6 +252,7 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
             register={register}
             registerKey="narrative.timeline"
             value={watchedValues.narrative?.timeline || ''}
+            showIfEmpty={showEmptyFields}
           />
           <EditableField 
             id="couple"
@@ -222,6 +260,7 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
             register={register}
             registerKey="narrative.coupleWorld"
             value={watchedValues.narrative?.coupleWorld || ''}
+            showIfEmpty={showEmptyFields}
           />
           <EditableField 
             id="eggs"
@@ -229,10 +268,11 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
             register={register}
             registerKey="narrative.easterEggs"
             value={watchedValues.narrative?.easterEggs || ''}
+            showIfEmpty={showEmptyFields}
           />
         </div>
 
-        <div className="break-inside-avoid-column mb-12">
+        <div className="break-inside-avoid">
           <SectionHeader title="Culture & Symbols" icon={Globe} />
           <EditableField 
             id="icons"
@@ -240,6 +280,7 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
             register={register}
             registerKey="cultureSymbols.mandatoryIcons"
             value={watchedValues.cultureSymbols?.mandatoryIcons || ''}
+            showIfEmpty={showEmptyFields}
           />
           <EditableField 
             id="nuances"
@@ -247,10 +288,11 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
             register={register}
             registerKey="cultureSymbols.regionalNuances"
             value={watchedValues.cultureSymbols?.regionalNuances || ''}
+            showIfEmpty={showEmptyFields}
           />
         </div>
 
-        <div className="break-inside-avoid-column mb-12">
+        <div className="break-inside-avoid">
           <SectionHeader title="Atmosphere & Extras" icon={Sparkles} />
           <EditableField 
             id="personality"
@@ -258,6 +300,7 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
             register={register}
             registerKey="atmosphereExtras.venuePersonality"
             value={watchedValues.atmosphereExtras?.venuePersonality || ''}
+            showIfEmpty={showEmptyFields}
           />
           <EditableField 
             id="other"
@@ -265,6 +308,7 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
             register={register}
             registerKey="atmosphereExtras.otherDetails"
             value={watchedValues.atmosphereExtras?.otherDetails || ''}
+            showIfEmpty={showEmptyFields}
           />
         </div>
       </section>
@@ -278,7 +322,7 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
             No products in scope. Add products in the Overview tab.
           </div>
         ) : (
-          <div className="flex flex-col md:flex-row h-[500px] border border-primary/10 rounded-xl overflow-hidden bg-card/5 shadow-sm">
+          <div className="flex flex-col md:flex-row h-[600px] border border-primary/10 rounded-xl overflow-hidden bg-card/5 shadow-sm">
             {/* Master List (Left) */}
             <aside className="w-full md:w-72 border-b md:border-b-0 md:border-r border-primary/10 overflow-y-auto custom-scrollbar bg-card/20 shrink-0">
               <div className="p-2 space-y-1">
@@ -325,7 +369,7 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
             </aside>
 
             {/* Detail View (Right) */}
-            <main className="flex-1 p-8 overflow-y-auto bg-background/50">
+            <main className="flex-1 p-8 overflow-y-auto custom-scrollbar bg-background/50">
               {selectedItem ? (
                 <div className="space-y-6">
                   <div className="space-y-2">
@@ -343,7 +387,7 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
                       {...register(`productBriefs.${selectedItem.id}` as any)}
                       minRows={2}
                       className={cn(
-                        "font-semibold bg-transparent text-foreground min-h-[250px] p-6 transition-all",
+                        "font-semibold bg-transparent text-foreground min-h-[350px] p-6 transition-all",
                         "focus:bg-background focus:ring-2 focus:ring-primary/20",
                         "placeholder:italic placeholder:font-normal placeholder:text-muted-foreground/80 placeholder:text-[11px]"
                       )}
