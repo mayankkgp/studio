@@ -3,10 +3,11 @@
 import * as React from 'react';
 import { useForm, UseFormRegister } from 'react-hook-form';
 import { Label } from '@/components/ui/label';
-import { Palette, BookOpen, Globe, Sparkles, Box, CheckCircle2, Eye, EyeOff, Save, Loader2 } from 'lucide-react';
+import { Palette, BookOpen, Globe, Sparkles, Box, CheckCircle2, Circle, Search, X, Save, Loader2, Eye, EyeOff } from 'lucide-react';
 import type { Order, CustomerData, ConfiguredProduct } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { productCatalog } from '@/lib/product-data';
 
 /**
@@ -120,6 +121,7 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
   );
 
   const [showEmptyFields, setShowEmptyFields] = React.useState(true);
+  const [productSearchQuery, setProductSearchQuery] = React.useState('');
 
   // Persistence logic for view preference
   React.useEffect(() => {
@@ -204,14 +206,24 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
       : null;
   };
 
-  // Filter deliverables based on data presence if "Hide Empty" is on
+  // Filter deliverables based on data presence and search query
   const visibleDeliverables = React.useMemo(() => {
-    if (showEmptyFields) return order.deliverables;
-    return order.deliverables.filter(item => {
-      const brief = (watchedValues.productBriefs as any)?.[item.id];
-      return brief && brief.trim().length > 0;
-    });
-  }, [order.deliverables, showEmptyFields, watchedValues.productBriefs]);
+    let list = order.deliverables;
+    
+    if (!showEmptyFields) {
+      list = list.filter(item => {
+        const brief = (watchedValues.productBriefs as any)?.[item.id];
+        return brief && brief.trim().length > 0;
+      });
+    }
+
+    if (productSearchQuery.trim()) {
+      const q = productSearchQuery.toLowerCase();
+      list = list.filter(item => item.productName.toLowerCase().includes(q));
+    }
+
+    return list;
+  }, [order.deliverables, showEmptyFields, productSearchQuery, watchedValues.productBriefs]);
 
   // Ensure selection stays valid when switching visible list
   React.useEffect(() => {
@@ -373,7 +385,7 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
       <section className="pt-12 border-t border-primary/10">
         <SectionHeader title="Product Specific Briefs" icon={Box} />
         
-        {visibleDeliverables.length === 0 ? (
+        {visibleDeliverables.length === 0 && !productSearchQuery ? (
           <div className="py-20 text-center italic text-muted-foreground text-sm bg-card/10 rounded-xl border border-dashed flex flex-col items-center justify-center">
             <Box className="h-8 w-8 opacity-20 mb-4" />
             {showEmptyFields ? "No products in scope." : "No data recorded."}
@@ -386,47 +398,74 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
         ) : (
           <div className="flex flex-col md:flex-row h-[600px] border border-primary/10 rounded-xl overflow-hidden bg-card/5 shadow-sm">
             {/* Master List (Left) */}
-            <aside className="w-full md:w-72 border-b md:border-b-0 md:border-r border-primary/10 overflow-y-auto custom-scrollbar bg-card/20 shrink-0">
-              <div className="p-2 space-y-1">
-                {visibleDeliverables.map((item) => {
-                  const hasData = (watchedValues.productBriefs as any)?.[item.id]?.trim().length > 0;
-                  const isActive = selectedProductId === item.id;
-                  
-                  return (
-                    <button
-                      key={item.id}
-                      onClick={() => setSelectedProductId(item.id)}
-                      className={cn(
-                        "w-full text-left px-4 py-3 rounded-lg transition-all flex items-center justify-between group",
-                        isActive 
-                          ? "bg-primary text-white shadow-md shadow-primary/20" 
-                          : "hover:bg-primary/5 text-foreground"
-                      )}
+            <aside className="w-full md:w-72 border-b md:border-b-0 md:border-r border-primary/10 overflow-hidden bg-card/20 shrink-0 flex flex-col">
+              <div className="p-3 border-b border-primary/10 bg-background/50">
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                  <Input 
+                    placeholder="Filter products..." 
+                    className="h-8 pl-8 text-[11px] bg-background border-primary/20 focus-visible:ring-primary/20"
+                    value={productSearchQuery}
+                    onChange={(e) => setProductSearchQuery(e.target.value)}
+                  />
+                  {productSearchQuery && (
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 text-muted-foreground hover:text-foreground"
+                      onClick={() => setProductSearchQuery('')}
                     >
-                      <div className="flex-1 min-w-0 mr-3">
-                        <div className={cn(
-                          "font-headline font-black text-xs uppercase tracking-tight truncate",
-                          isActive ? "text-white" : "text-foreground"
-                        )}>
-                          {item.productName}
-                        </div>
-                        <div className={cn(
-                          "text-[9px] font-bold uppercase truncate mt-0.5",
-                          isActive ? "text-white/80" : "text-muted-foreground"
-                        )}>
-                          {item.variant || 'Standard'}
-                        </div>
-                      </div>
-                      <div className="shrink-0">
-                        {hasData ? (
-                          <CheckCircle2 className={cn("h-4 w-4", isActive ? "text-white" : "text-primary")} />
-                        ) : (
-                          <div className={cn("h-2 w-2 rounded-full", isActive ? "bg-white/40" : "bg-primary/20")} />
+                      <X className="h-3 w-3" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+              <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-1">
+                {visibleDeliverables.length === 0 ? (
+                  <div className="py-8 text-center text-[10px] text-muted-foreground italic">
+                    No results for "{productSearchQuery}"
+                  </div>
+                ) : (
+                  visibleDeliverables.map((item) => {
+                    const hasData = (watchedValues.productBriefs as any)?.[item.id]?.trim().length > 0;
+                    const isActive = selectedProductId === item.id;
+                    
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => setSelectedProductId(item.id)}
+                        className={cn(
+                          "w-full text-left px-4 py-3 rounded-lg transition-all flex items-center justify-between group",
+                          isActive 
+                            ? "bg-primary text-white shadow-md shadow-primary/20" 
+                            : "hover:bg-primary/5 text-foreground"
                         )}
-                      </div>
-                    </button>
-                  );
-                })}
+                      >
+                        <div className="flex-1 min-w-0 mr-3">
+                          <div className={cn(
+                            "font-headline font-black text-xs uppercase tracking-tight truncate",
+                            isActive ? "text-white" : "text-foreground"
+                          )}>
+                            {item.productName}
+                          </div>
+                          <div className={cn(
+                            "text-[9px] font-bold uppercase truncate mt-0.5",
+                            isActive ? "text-white/80" : "text-muted-foreground"
+                          )}>
+                            {item.variant || 'Standard'}
+                          </div>
+                        </div>
+                        <div className="shrink-0">
+                          {hasData ? (
+                            <CheckCircle2 className={cn("h-4 w-4", isActive ? "text-white" : "text-green-500")} />
+                          ) : (
+                            <Circle className={cn("h-4 w-4 opacity-40", isActive ? "text-white/40" : "text-muted-foreground/30")} />
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })
+                )}
               </div>
             </aside>
 
