@@ -228,8 +228,8 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
   const selectedItem = order.deliverables.find(d => d.id === selectedProductId);
 
   return (
-    <div className="space-y-12 pb-24 max-w-6xl mx-auto">
-      <div className="flex items-center justify-between border-b border-primary/10 pb-4">
+    <div className="space-y-12 pb-24 max-w-6xl mx-auto relative">
+      <div className="sticky top-0 z-30 bg-background/95 backdrop-blur-sm pt-4 -mt-4 mb-8 border-b border-primary/10 pb-4 flex items-center justify-between">
         <div className="space-y-1">
           <h2 className="text-xl font-headline font-black text-foreground uppercase tracking-tight">Creative Briefing</h2>
           <p className="text-xs text-muted-foreground font-medium">Capture visual and narrative context for design production.</p>
