@@ -528,6 +528,9 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                             </h1>
                         </div>
                     </div>
+                    <div className="hidden sm:block font-mono text-xs font-bold text-muted-foreground uppercase tracking-widest opacity-60">
+                        {activeOrder.orderId}
+                    </div>
                 </header>
 
                 <main className="flex-1 flex overflow-hidden">
@@ -726,6 +729,26 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                     </div>
                 </div>
             </div>
+
+            <AlertDialog open={isExitConfirmOpen} onOpenChange={setIsExitConfirmOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="flex items-center gap-2">
+                            <AlertTriangle className="h-5 w-5 text-orange-500" />
+                            Unsaved Changes Detected
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                            You have open product items with unsaved configurations. Exiting "Modify Order" will discard these changes. Would you like to go back and save them, or discard and exit?
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => setIsExitConfirmOpen(false)}>Go Back to Save</AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmExitEditMode} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                            Discard & Exit
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
 
             <style jsx global>{`
                 .custom-scrollbar::-webkit-scrollbar { width: 5px; }
