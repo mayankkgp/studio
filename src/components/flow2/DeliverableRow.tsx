@@ -5,7 +5,6 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { 
-    AlertCircle,
     Trash2, 
     ShoppingBag,
     Clapperboard,
@@ -253,7 +252,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
 
     const handleRateOverride = (label: string, value: number) => {
         const currentOverrides = getValues('rateOverrides') || {};
-        setValue('rateOverrides', { ...currentOverrides, [label]: value }, { shouldValidate: true });
+        setValue('rateOverrides', { ...currentOverrides, [label]: value }, { shouldValidate: true, shouldDirty: true });
     };
 
     const handleDoneClick = async (e: React.MouseEvent) => {
@@ -386,7 +385,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                         <div className="flex items-center gap-2 overflow-hidden">
                             <h3 className={cn("font-semibold leading-none truncate", isExpanded ? "text-base" : "text-sm")}>
                                 {item.productName}
-                                {isDirty && !isReadOnly && <span className="text-primary ml-1 font-bold">*</span>}
+                                {isDirty && !isReadOnly && <span className="text-primary ml-1 font-bold" aria-hidden="true">*</span>}
                             </h3>
                             {warningData.message && (
                                 <Badge variant={warningData.type === 'hard' ? 'destructive' : 'warning'} className="text-[9px] h-3.5 py-0 px-1 font-bold uppercase shrink-0">
