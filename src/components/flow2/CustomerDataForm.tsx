@@ -108,7 +108,7 @@ const EditableField = ({
           "font-semibold leading-relaxed text-foreground border-2 rounded-md -ml-3",
           "bg-transparent border-transparent hover:bg-primary/5",
           "focus:bg-background focus:border-primary/40 focus:shadow-sm focus:px-3",
-          "placeholder:italic placeholder:font-normal placeholder:text-muted-foreground/90 placeholder:text-[11px]"
+          "placeholder:italic placeholder:font-normal placeholder:text-muted-foreground placeholder:text-[11px] placeholder:opacity-70"
         )}
       />
     </div>
@@ -382,7 +382,7 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
       )}
 
       {/* Master-Detail View for Product Briefs */}
-      <section className="pt-12 border-t border-primary/10">
+      <section className={cn("pt-12", (!isGenericDataEmpty || showEmptyFields) && "border-t border-primary/10")}>
         <SectionHeader title="Product Specific Briefs" icon={Box} />
         
         {visibleDeliverables.length === 0 && !productSearchQuery ? (
@@ -490,7 +490,7 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
                       className={cn(
                         "font-semibold bg-transparent text-foreground min-h-[350px] p-6 transition-all",
                         "focus:bg-background focus:ring-2 focus:ring-primary/20",
-                        "placeholder:italic placeholder:font-normal placeholder:text-muted-foreground/90 placeholder:text-[11px]"
+                        "placeholder:italic placeholder:font-normal placeholder:text-muted-foreground placeholder:text-[11px] placeholder:opacity-70"
                       )}
                     />
                   </div>
