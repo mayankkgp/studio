@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -169,6 +168,7 @@ export function EventDetailsForm({ activeOrder, onUpdate, hideFooters = false }:
   const lastResetId = useRef<string | null>(null);
 
   useEffect(() => {
+    // Reset form when order changes (e.g. from ORD-123 to "" on Cancel)
     const currentId = activeOrder?.orderId || order?.orderId || 'new';
     if (currentId !== lastResetId.current) {
       if (activeOrder) {
@@ -178,7 +178,7 @@ export function EventDetailsForm({ activeOrder, onUpdate, hideFooters = false }:
       }
       lastResetId.current = currentId;
     }
-  }, [isLoaded, order, activeOrder, reset]);
+  }, [isLoaded, order.orderId, activeOrder?.orderId, reset, order.eventDetails]);
   
   const watchedFields = watch();
   const headerSummary = useHeaderSummary(watchedFields);
@@ -187,7 +187,6 @@ export function EventDetailsForm({ activeOrder, onUpdate, hideFooters = false }:
     if (activeOrder && onUpdate) {
       const currentFormValues = getValues();
       const parentValues = activeOrder.eventDetails;
-      // Only notify parent if values actually differ to prevent infinite loops
       if (JSON.stringify(currentFormValues) !== JSON.stringify(parentValues)) {
         onUpdate(currentFormValues as EventDetails);
       }
@@ -618,7 +617,7 @@ export function EventDetailsForm({ activeOrder, onUpdate, hideFooters = false }:
            <p className="text-xs text-muted-foreground uppercase tracking-wider font-bold">Event Details</p>
         </div>
         <div className="hidden lg:block font-mono text-xs opacity-50">
-            {order.orderId}
+            {order.orderId || 'NEW ORDER'}
         </div>
       </header>
       

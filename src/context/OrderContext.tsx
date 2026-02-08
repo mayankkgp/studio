@@ -51,8 +51,13 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, []);
 
   const resetOrder = useCallback(() => {
-    setOrder(initialOrderState);
-  }, []);
+    setOrder({
+      ...initialOrderState,
+      orderId: '', // Ensure ID is cleared
+      eventDetails: { ...initialOrderState.eventDetails } // Fresh object
+    });
+    router.push('/');
+  }, [router]);
 
   const setEventDetails = useCallback((details: EventDetails) => {
     setOrder((prev) => ({ ...prev, eventDetails: details }));
@@ -142,9 +147,8 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     toast({ title: 'Order Activated!', description: `Moved ${order.orderId} to Active Orders.` });
     resetOrder();
-    router.push('/active-orders');
     return true;
-  }, [order, toast, router, resetOrder, saveToLocalStorage]);
+  }, [order, toast, resetOrder, saveToLocalStorage]);
 
   return (
     <OrderContext.Provider
