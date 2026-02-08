@@ -281,6 +281,28 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
             </div>
           )}
 
+          {(!isCultureEmpty || showEmptyFields) && (
+            <div className="break-inside-avoid">
+              <SectionHeader title="Culture & Symbols" icon={Globe} />
+              <EditableField 
+                id="icons"
+                label="Mandatory Icons & Motifs"
+                register={register}
+                registerKey="cultureSymbols.mandatoryIcons"
+                value={watchedValues.cultureSymbols?.mandatoryIcons || ''}
+                showIfEmpty={showEmptyFields}
+              />
+              <EditableField 
+                id="nuances"
+                label="Regional Nuances"
+                register={register}
+                registerKey="cultureSymbols.regionalNuances"
+                value={watchedValues.cultureSymbols?.regionalNuances || ''}
+                showIfEmpty={showEmptyFields}
+              />
+            </div>
+          )}
+
           {(!isNarrativeEmpty || showEmptyFields) && (
             <div className="break-inside-avoid">
               <SectionHeader title="The Narrative" icon={BookOpen} />
@@ -306,28 +328,6 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
                 register={register}
                 registerKey="narrative.easterEggs"
                 value={watchedValues.narrative?.easterEggs || ''}
-                showIfEmpty={showEmptyFields}
-              />
-            </div>
-          )}
-
-          {(!isCultureEmpty || showEmptyFields) && (
-            <div className="break-inside-avoid">
-              <SectionHeader title="Culture & Symbols" icon={Globe} />
-              <EditableField 
-                id="icons"
-                label="Mandatory Icons & Motifs"
-                register={register}
-                registerKey="cultureSymbols.mandatoryIcons"
-                value={watchedValues.cultureSymbols?.mandatoryIcons || ''}
-                showIfEmpty={showEmptyFields}
-              />
-              <EditableField 
-                id="nuances"
-                label="Regional Nuances"
-                register={register}
-                registerKey="cultureSymbols.regionalNuances"
-                value={watchedValues.cultureSymbols?.regionalNuances || ''}
                 showIfEmpty={showEmptyFields}
               />
             </div>
