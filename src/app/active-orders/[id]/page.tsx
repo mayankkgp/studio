@@ -29,7 +29,8 @@ import {
     Copy,
     Search,
     X,
-    ClipboardCheck
+    ClipboardCheck,
+    Save
 } from 'lucide-react';
 import { EventDetailsForm } from '@/components/flow1/EventDetailsForm';
 import { DeliverableRow } from '@/components/flow2/DeliverableRow';
@@ -72,6 +73,7 @@ export default function ActiveOrderCommandCenter() {
     const [isPaymentPopoverOpen, setIsPaymentPopoverOpen] = useState(false);
     const [itemSearchQuery, setItemSearchQuery] = useState('');
     const [activeTab, setActiveTab] = useState('overview');
+    const [isSavingBrief, setIsSavingBrief] = useState(false);
     
     const [projectedTotals, setProjectedTotals] = useState<Record<string, number>>({});
     const [initialTotal, setInitialTotal] = useState(0);
@@ -237,8 +239,12 @@ export default function ActiveOrderCommandCenter() {
 
     const handleSaveCustomerData = (data: CustomerData) => {
         if (!activeOrder) return;
-        syncToStorage({ ...activeOrder, customerData: data });
-        toast({ title: "Success", description: "Customer Data Saved" });
+        setIsSavingBrief(true);
+        setTimeout(() => {
+            syncToStorage({ ...activeOrder, customerData: data });
+            setIsSavingBrief(false);
+            toast({ title: "Brief Saved", description: "Creative data updated successfully." });
+        }, 600);
     };
 
     const handleProjectedTotalChange = useCallback((id: string, total: number) => {
@@ -516,28 +522,37 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                     </Button>
                     <div className="flex-1 overflow-hidden">
                         <div className="flex items-center gap-3">
-                            <h1 className="font-bold text-base md:text-lg font-headline truncate text-foreground flex-1">
+                            <h1 className="font-bold text-base md:text-lg font-headline truncate text-foreground">
                                 {headerSummary}
                             </h1>
                             {activeTab === 'overview' && (
-                                <>
-                                    <Separator orientation="vertical" className="h-6" />
-                                    <Button 
-                                        variant={isEditMode ? "default" : "outline"} 
-                                        size="sm" 
-                                        onClick={handleToggleEditMode}
-                                        className={cn(
-                                            "h-8 font-bold gap-2 transition-all shrink-0",
-                                            isEditMode ? "bg-primary shadow-lg shadow-primary/20" : "border-primary text-primary hover:bg-primary/5"
-                                        )}
-                                    >
-                                        {isEditMode ? (
-                                            <><CheckCircle2 className="h-4 w-4" /> Done Editing</>
-                                        ) : (
-                                            <><Unlock className="h-4 w-4" /> Modify Order</>
-                                        )}
-                                    </Button>
-                                </>
+                                <Button 
+                                    variant={isEditMode ? "default" : "outline"} 
+                                    size="sm" 
+                                    onClick={handleToggleEditMode}
+                                    className={cn(
+                                        "h-8 font-bold gap-2 transition-all shrink-0",
+                                        isEditMode ? "bg-primary shadow-lg shadow-primary/20" : "border-primary text-primary hover:bg-primary/5"
+                                    )}
+                                >
+                                    {isEditMode ? (
+                                        <><CheckCircle2 className="h-4 w-4" /> Done Editing</>
+                                    ) : (
+                                        <><Unlock className="h-4 w-4" /> Modify Order</>
+                                    )}
+                                </Button>
+                            )}
+                            {activeTab === 'customer' && (
+                                <Button 
+                                    size="sm" 
+                                    type="submit"
+                                    form="creative-brief-form"
+                                    disabled={isSavingBrief}
+                                    className="h-8 font-bold gap-2 bg-primary shadow-lg shadow-primary/20 shrink-0"
+                                >
+                                    {isSavingBrief ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                                    Save Creative Brief
+                                </Button>
                             )}
                         </div>
                     </div>
@@ -726,10 +741,11 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                         </TabsContent>
                         
                         <TabsContent value="customer" className="absolute inset-0 m-0 outline-none overflow-y-auto custom-scrollbar bg-background/50">
-                            <div className="max-w-4xl mx-auto p-4 md:p-8">
+                            <div className="max-w-5xl mx-auto p-4 md:p-12">
                                 <CustomerDataForm 
                                     order={activeOrder} 
-                                    onSave={handleSaveCustomerData} 
+                                    onSave={handleSaveCustomerData}
+                                    isSaving={isSavingBrief}
                                 />
                             </div>
                         </TabsContent>

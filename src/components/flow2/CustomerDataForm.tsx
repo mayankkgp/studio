@@ -1,388 +1,345 @@
 'use client';
 
 import * as React from 'react';
-import { useForm } from 'react-hook-form';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useForm, useFieldArray } from 'react-hook-form';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Save, Palette, BookOpen, Globe, Sparkles, Box, MessageSquare, Pencil, X } from 'lucide-react';
+import { Palette, BookOpen, Globe, Sparkles, Box, MessageSquare, ChevronDown, Check } from 'lucide-react';
 import type { Order, CustomerData } from '@/lib/types';
-import { productCatalog } from '@/lib/product-data';
 import { cn } from '@/lib/utils';
 
 interface CustomerDataFormProps {
-    order: Order;
-    onSave: (data: CustomerData) => void;
+  order: Order;
+  onSave: (data: CustomerData) => void;
+  isSaving?: boolean;
 }
 
-const isFormEmpty = (data?: CustomerData) => {
-    if (!data) return true;
-    const hasVisual = Object.values(data.visualIdentity || {}).some(v => !!v);
-    const hasNarrative = Object.values(data.narrative || {}).some(v => !!v);
-    const hasCulture = Object.values(data.cultureSymbols || {}).some(v => !!v);
-    const hasAtmosphere = Object.values(data.atmosphereExtras || {}).some(v => !!v);
-    const hasProductBriefs = Object.values(data.productBriefs || {}).some(v => !!v);
-    return !(hasVisual || hasNarrative || hasCulture || hasAtmosphere || hasProductBriefs);
-};
-
 /**
- * UI Components moved outside to prevent re-creation on every render
- * which was causing focus loss during typing.
+ * Auto-growing Textarea Component
  */
+const AutoGrowingTextarea = React.forwardRef<
+  HTMLTextAreaElement,
+  React.TextareaHTMLAttributes<HTMLTextAreaElement>
+>(({ className, onInput, ...props }, ref) => {
+  const textAreaRef = React.useRef<HTMLTextAreaElement | null>(null);
 
-const SectionHeader = ({ title, icon: Icon, number, subtitle }: { title: string, icon: any, number?: string, subtitle?: string }) => (
-    <div className="flex items-center gap-4">
-        {number && (
-            <div className="h-10 w-10 shrink-0 rounded-xl bg-primary text-white flex items-center justify-center font-black text-base shadow-lg shadow-primary/20">
-                {number}
-            </div>
-        )}
-        {!number && (
-            <div className="h-10 w-10 shrink-0 rounded-xl bg-primary/10 text-primary flex items-center justify-center shadow-sm">
-                <Icon className="h-5 w-5" />
-            </div>
-        )}
-        <div className="flex flex-col">
-            <div className="flex items-center gap-2">
-                {number && <Icon className="h-4 w-4 text-primary opacity-90" />}
-                <h3 className="font-headline text-2xl font-black text-foreground tracking-tight">{title}</h3>
-            </div>
-            {subtitle ? (
-                <p className="text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground/80 mt-0.5">{subtitle}</p>
-            ) : (
-                <div className="h-0.5 w-12 bg-primary/30 mt-1 rounded-full" />
-            )}
-        </div>
+  const adjustHeight = () => {
+    const element = textAreaRef.current;
+    if (element) {
+      element.style.height = 'auto';
+      element.style.height = `${element.scrollHeight}px`;
+    }
+  };
+
+  React.useEffect(() => {
+    adjustHeight();
+  }, [props.value]);
+
+  return (
+    <textarea
+      {...props}
+      ref={(e) => {
+        textAreaRef.current = e;
+        if (typeof ref === 'function') ref(e);
+        else if (ref) ref.current = e;
+      }}
+      rows={3}
+      onInput={(e) => {
+        adjustHeight();
+        if (onInput) onInput(e);
+      }}
+      className={cn(
+        "flex w-full bg-transparent px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground/30 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 resize-none transition-all duration-200",
+        className
+      )}
+    />
+  );
+});
+AutoGrowingTextarea.displayName = "AutoGrowingTextarea";
+
+export function CustomerDataForm({ order, onSave, isSaving }: CustomerDataFormProps) {
+  const [focusedField, setFocusedField] = React.useState<string | null>(null);
+
+  const defaultValues = React.useMemo(() => order.customerData || {
+    visualIdentity: { moodStyle: '', colorTypography: '', designDislikes: '' },
+    narrative: { timeline: '', coupleWorld: '', easterEggs: '' },
+    cultureSymbols: { mandatoryIcons: '', regionalNuances: '' },
+    atmosphereExtras: { venuePersonality: '', otherDetails: '' },
+    productBriefs: {}
+  }, [order.customerData]);
+
+  const { register, handleSubmit, watch, reset, setValue } = useForm<CustomerData>({
+    defaultValues
+  });
+
+  const watchedValues = watch();
+
+  React.useEffect(() => {
+    reset(defaultValues);
+  }, [defaultValues, reset]);
+
+  // Section Header Component
+  const SectionHeader = ({ title, icon: Icon }: { title: string, icon: any }) => (
+    <div className="flex items-center gap-2 mb-6 group">
+      <div className="h-8 w-8 shrink-0 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+        <Icon className="h-4 w-4" />
+      </div>
+      <h3 className="font-headline text-lg font-black text-foreground tracking-tight uppercase">{title}</h3>
     </div>
-);
+  );
 
-const Field = ({ 
+  // Click-to-Edit Field Component
+  const EditableField = ({ 
     id, 
     label, 
     placeholder, 
-    registerKey, 
-    className, 
-    isEditing, 
-    register, 
+    registerKey,
     value 
-}: { 
+  }: { 
     id: string, 
     label: string, 
     placeholder: string, 
-    registerKey: any, 
-    className?: string,
-    isEditing: boolean,
-    register: any,
+    registerKey: any,
     value: string
-}) => (
-    <div className={cn("space-y-2.5", className)}>
-        <Label htmlFor={id} className="text-[10px] font-black uppercase tracking-[0.15em] text-foreground/70 pl-1">{label}</Label>
-        {isEditing ? (
-            <Textarea 
-                id={id} 
-                {...register(registerKey)}
-                placeholder={placeholder}
-                className="min-h-[140px] bg-white/90 border-primary/20 focus-visible:ring-primary/40 focus-visible:border-primary/40 placeholder:text-muted-foreground/50 transition-all duration-200 resize-none shadow-sm p-4 text-sm leading-relaxed font-medium"
+  }) => {
+    const isFocused = focusedField === id;
+    const hasValue = value && value.trim().length > 0;
+
+    // In review mode, if it's empty and not focused, we hide it completely
+    if (!hasValue && !isFocused) {
+      return (
+        <div 
+          className="group cursor-text py-2 opacity-40 hover:opacity-100 transition-opacity"
+          onClick={() => setFocusedField(id)}
+        >
+          <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-1">{label}</div>
+          <div className="text-[10px] italic">Click to add {label.toLowerCase()}...</div>
+        </div>
+      );
+    }
+
+    return (
+      <div className={cn(
+        "space-y-1 group transition-all duration-200 border-l-2 pl-4",
+        isFocused ? "border-primary" : "border-transparent"
+      )}>
+        <Label 
+          htmlFor={id} 
+          className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/80"
+        >
+          {label}
+        </Label>
+        <div className="relative">
+          <AutoGrowingTextarea 
+            id={id} 
+            {...register(registerKey)}
+            placeholder={placeholder}
+            onFocus={() => setFocusedField(id)}
+            onBlur={() => setFocusedField(null)}
+            className={cn(
+              "font-medium leading-relaxed",
+              !isFocused && "border-none shadow-none p-0 cursor-text",
+              isFocused && "bg-white border-primary/20 shadow-sm rounded-md"
+            )}
+          />
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-12 pb-20">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-16">
+        {/* 1. Visual Identity */}
+        <div className="space-y-8">
+          <SectionHeader title="Visual Identity" icon={Palette} />
+          <div className="space-y-6">
+            <EditableField 
+              id="mood"
+              label="Mood & Style Reference"
+              placeholder="Pinterest/Drive link and style keywords e.g., 'Boho, Minimalist, Royal'"
+              registerKey="visualIdentity.moodStyle"
+              value={watchedValues.visualIdentity?.moodStyle || ''}
             />
-        ) : (
-            <div className="min-h-[140px] bg-muted/20 border-2 border-transparent rounded-md p-4 text-sm leading-relaxed font-bold text-foreground/90 whitespace-pre-wrap">
-                {value || <span className="text-muted-foreground/40 italic font-medium">No information provided.</span>}
-            </div>
-        )}
-    </div>
-);
+            <EditableField 
+              id="colors"
+              label="Color Palette & Typography"
+              placeholder="Hex codes/color names e.g., 'Dusty Rose, Gold' and font preferences"
+              registerKey="visualIdentity.colorTypography"
+              value={watchedValues.visualIdentity?.colorTypography || ''}
+            />
+            <EditableField 
+              id="dislikes"
+              label="Design Dislikes"
+              placeholder="Specific symbols, motifs, styles, or objects to strictly exclude"
+              registerKey="visualIdentity.designDislikes"
+              value={watchedValues.visualIdentity?.designDislikes || ''}
+            />
+          </div>
+        </div>
 
-function CustomBadge({ children, variant = 'default', className }: { children: React.ReactNode, variant?: 'default' | 'secondary' | 'outline', className?: string }) {
-    return (
-        <span className={cn(
-            "inline-flex items-center rounded-lg px-3 py-1.5 text-[9px] font-black uppercase tracking-widest transition-all",
-            variant === 'default' && "bg-primary text-white shadow-md",
-            variant === 'secondary' && "bg-primary/10 text-primary border border-primary/20",
-            variant === 'outline' && "border-2 border-stone-200 text-foreground/80 bg-white/60",
-            className
-        )}>
-            {children}
-        </span>
-    );
-}
+        {/* 2. The Narrative */}
+        <div className="space-y-8">
+          <SectionHeader title="The Narrative" icon={BookOpen} />
+          <div className="space-y-6">
+            <EditableField 
+              id="timeline"
+              label="Relationship Timeline"
+              placeholder="Meeting spot, key trips, moving in, and proposal details"
+              registerKey="narrative.timeline"
+              value={watchedValues.narrative?.timeline || ''}
+            />
+            <EditableField 
+              id="couple"
+              label="The Couple's World"
+              placeholder="Shared hobbies, favorite travel destinations, pets, or specific interests"
+              registerKey="narrative.coupleWorld"
+              value={watchedValues.narrative?.coupleWorld || ''}
+            />
+            <EditableField 
+              id="eggs"
+              label="Easter Eggs"
+              placeholder="Inside jokes, specific dates, or objects to subtly hide"
+              registerKey="narrative.easterEggs"
+              value={watchedValues.narrative?.easterEggs || ''}
+            />
+          </div>
+        </div>
 
-export function CustomerDataForm({ order, onSave }: CustomerDataFormProps) {
-    const [isEditing, setIsEditing] = React.useState(isFormEmpty(order.customerData));
+        {/* 3. Culture & Symbols */}
+        <div className="space-y-8">
+          <SectionHeader title="Culture & Symbols" icon={Globe} />
+          <div className="space-y-6">
+            <EditableField 
+              id="icons"
+              label="Mandatory Icons & Motifs"
+              placeholder="Religious icons, specific animals, or ancestral patterns"
+              registerKey="cultureSymbols.mandatoryIcons"
+              value={watchedValues.cultureSymbols?.mandatoryIcons || ''}
+            />
+            <EditableField 
+              id="nuances"
+              label="Regional Nuances"
+              placeholder="Native phrases, Shlokas, or regional elements"
+              registerKey="cultureSymbols.regionalNuances"
+              value={watchedValues.cultureSymbols?.regionalNuances || ''}
+            />
+          </div>
+        </div>
 
-    const defaultValues = React.useMemo(() => order.customerData || {
-        visualIdentity: { moodStyle: '', colorTypography: '', designDislikes: '' },
-        narrative: { timeline: '', coupleWorld: '', easterEggs: '' },
-        cultureSymbols: { mandatoryIcons: '', regionalNuances: '' },
-        atmosphereExtras: { venuePersonality: '', otherDetails: '' },
-        productBriefs: {}
-    }, [order.customerData]);
+        {/* 4. Atmosphere & Extras */}
+        <div className="space-y-8">
+          <SectionHeader title="Atmosphere & Extras" icon={Sparkles} />
+          <div className="space-y-6">
+            <EditableField 
+              id="personality"
+              label="Venue Personality"
+              placeholder="Setting and mood description for each function"
+              registerKey="atmosphereExtras.venuePersonality"
+              value={watchedValues.atmosphereExtras?.venuePersonality || ''}
+            />
+            <EditableField 
+              id="other"
+              label="Other Details"
+              placeholder="Miscellaneous requirements or constraints"
+              registerKey="atmosphereExtras.otherDetails"
+              value={watchedValues.atmosphereExtras?.otherDetails || ''}
+            />
+          </div>
+        </div>
+      </div>
 
-    const { register, handleSubmit, reset, watch } = useForm<CustomerData>({
-        defaultValues
-    });
+      {/* Product Specific Briefs - Compact List Layout */}
+      <div className="pt-8 border-t border-primary/10">
+        <SectionHeader title="Product Specific Briefs" icon={Box} />
+        
+        <div className="grid gap-2">
+          {order.deliverables.map((item) => {
+            const briefKey = `productBriefs.${item.id}`;
+            const briefValue = (watchedValues.productBriefs as any)?.[item.id] || '';
+            const isFocused = focusedField === item.id;
+            const hasValue = briefValue && briefValue.trim().length > 0;
 
-    // Handle incoming order updates
-    React.useEffect(() => {
-        reset(defaultValues);
-    }, [defaultValues, reset]);
-
-    const onSubmit = (data: CustomerData) => {
-        onSave(data);
-        setIsEditing(false);
-    };
-
-    const handleCancel = () => {
-        reset(defaultValues);
-        setIsEditing(false);
-    };
-
-    // Watch values at top level for Field components
-    const watchedValues = watch();
-
-    return (
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-16 pb-32">
-            <div className="flex items-center justify-between px-4 sticky top-0 z-50 py-4 bg-background/95 backdrop-blur-md -mx-4 border-b border-primary/10 mb-8">
-                <div>
-                    <h2 className="text-xl font-black font-headline text-primary uppercase tracking-wider">
-                        {isEditing ? 'Editing Creative Brief' : 'Creative Brief Summary'}
-                    </h2>
-                </div>
-                <div className="flex gap-3">
-                    {isEditing ? (
-                        <>
-                            <Button 
-                                type="button" 
-                                variant="outline"
-                                onClick={handleCancel}
-                                className="h-10 px-4 font-bold border-primary/20 hover:bg-muted"
-                            >
-                                <X className="h-4 w-4 mr-2" />
-                                Cancel
-                            </Button>
-                            <Button 
-                                type="submit" 
-                                className="h-10 px-6 font-bold shadow-lg shadow-primary/20"
-                            >
-                                <Save className="h-4 w-4 mr-2" />
-                                Save Data
-                            </Button>
-                        </>
-                    ) : (
-                        <Button type="button" onClick={() => setIsEditing(true)} className="gap-2 shadow-lg h-10 px-6 font-bold">
-                            <Pencil className="h-4 w-4" /> Edit Brief
-                        </Button>
+            return (
+              <div 
+                key={item.id}
+                className={cn(
+                  "group flex flex-col md:flex-row items-stretch gap-4 p-4 rounded-xl border bg-card/40 transition-all",
+                  isFocused ? "border-primary bg-white shadow-sm ring-1 ring-primary/20" : "border-primary/10 hover:border-primary/20"
+                )}
+              >
+                {/* Left: Metadata */}
+                <div className="md:w-1/3 shrink-0 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-headline font-black text-sm text-foreground uppercase tracking-tight truncate">
+                      {item.productName}
+                    </h4>
+                  </div>
+                  
+                  <div className="flex flex-wrap gap-1.5">
+                    {item.quantity !== undefined && item.quantity !== null && (
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[8px] font-black uppercase">
+                        Qty: {item.quantity}
+                      </span>
                     )}
+                    {item.pages !== undefined && item.pages !== null && (
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[8px] font-black uppercase">
+                        {item.pages} Pages
+                      </span>
+                    )}
+                    {item.variant && (
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-muted text-muted-foreground text-[8px] font-black uppercase">
+                        {item.variant}
+                      </span>
+                    )}
+                    {Object.entries(item.customFieldValues || {}).map(([key, val]) => (
+                      val !== null && (
+                        <span key={key} className="inline-flex items-center px-1.5 py-0.5 rounded border border-primary/10 text-muted-foreground text-[8px] font-black uppercase">
+                          {key}: {val}
+                        </span>
+                      )
+                    ))}
+                    {item.specialRequest && (
+                      <div className="flex items-center gap-1 text-[8px] font-bold text-orange-600 uppercase bg-orange-50 px-1.5 py-0.5 rounded border border-orange-100 w-full mt-1">
+                        <MessageSquare className="h-2 w-2" />
+                        {item.specialRequest}
+                      </div>
+                    )}
+                  </div>
                 </div>
-            </div>
 
-            {/* 1. Visual Identity */}
-            <Card className="border-primary/15 shadow-sm bg-card/60 backdrop-blur-md overflow-hidden">
-                <CardHeader className="bg-muted/30 border-b border-primary/5 pb-5">
-                    <SectionHeader title="Visual Identity" icon={Palette} number="1" />
-                </CardHeader>
-                <CardContent className="pt-8 grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <Field 
-                        id="mood"
-                        label="Mood & Style Reference"
-                        placeholder="Pinterest/Drive link and style keywords e.g., 'Boho, Minimalist, Royal'"
-                        registerKey="visualIdentity.moodStyle"
-                        isEditing={isEditing}
-                        register={register}
-                        value={watchedValues.visualIdentity?.moodStyle || ''}
+                {/* Right: Input */}
+                <div className="flex-1 min-w-0">
+                  {(!hasValue && !isFocused) ? (
+                    <div 
+                      className="h-full flex items-center px-4 cursor-text opacity-30 group-hover:opacity-100 transition-opacity"
+                      onClick={() => setFocusedField(item.id)}
+                    >
+                      <span className="text-[10px] italic">Add requirements for {item.productName.toLowerCase()}...</span>
+                    </div>
+                  ) : (
+                    <AutoGrowingTextarea 
+                      placeholder={`Enter requirements & specific details for ${item.productName}`}
+                      {...register(briefKey as any)}
+                      onFocus={() => setFocusedField(item.id)}
+                      onBlur={() => setFocusedField(null)}
+                      className={cn(
+                        "font-medium bg-transparent",
+                        !isFocused && "border-none shadow-none p-0 cursor-text",
+                        isFocused && "p-3 border-primary/10 bg-white/50 rounded-md"
+                      )}
                     />
-                    <Field 
-                        id="colors"
-                        label="Color Palette & Typography"
-                        placeholder="Hex codes/color names e.g., 'Dusty Rose, Gold' and font preferences"
-                        registerKey="visualIdentity.colorTypography"
-                        isEditing={isEditing}
-                        register={register}
-                        value={watchedValues.visualIdentity?.colorTypography || ''}
-                    />
-                    <Field 
-                        id="dislikes"
-                        label="Design Dislikes"
-                        placeholder="Specific symbols, motifs, styles, or objects to strictly exclude"
-                        registerKey="visualIdentity.designDislikes"
-                        className="md:col-span-2"
-                        isEditing={isEditing}
-                        register={register}
-                        value={watchedValues.visualIdentity?.designDislikes || ''}
-                    />
-                </CardContent>
-            </Card>
-
-            {/* 2. The Narrative */}
-            <Card className="border-primary/15 shadow-sm bg-card/60 backdrop-blur-md overflow-hidden">
-                <CardHeader className="bg-muted/30 border-b border-primary/5 pb-5">
-                    <SectionHeader title="The Narrative" icon={BookOpen} number="2" />
-                </CardHeader>
-                <CardContent className="pt-8 grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <Field 
-                        id="timeline"
-                        label="The Relationship Timeline"
-                        placeholder="Chronological highlights: Meeting spot, key trips, moving in, and proposal details"
-                        registerKey="narrative.timeline"
-                        isEditing={isEditing}
-                        register={register}
-                        value={watchedValues.narrative?.timeline || ''}
-                    />
-                    <Field 
-                        id="couple"
-                        label="The Couple's World"
-                        placeholder="Shared hobbies, favorite travel destinations, pets, or specific interests"
-                        registerKey="narrative.coupleWorld"
-                        isEditing={isEditing}
-                        register={register}
-                        value={watchedValues.narrative?.coupleWorld || ''}
-                    />
-                    <Field 
-                        id="eggs"
-                        label="Easter Eggs"
-                        placeholder="Inside jokes, specific dates, or objects to subtly hide in the artwork"
-                        registerKey="narrative.easterEggs"
-                        className="md:col-span-2"
-                        isEditing={isEditing}
-                        register={register}
-                        value={watchedValues.narrative?.easterEggs || ''}
-                    />
-                </CardContent>
-            </Card>
-
-            {/* 3. Culture & Symbols */}
-            <Card className="border-primary/15 shadow-sm bg-card/60 backdrop-blur-md overflow-hidden">
-                <CardHeader className="bg-muted/30 border-b border-primary/5 pb-5">
-                    <SectionHeader title="Culture & Symbols" icon={Globe} number="3" />
-                </CardHeader>
-                <CardContent className="pt-8 grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <Field 
-                        id="icons"
-                        label="Mandatory Icons & Motifs"
-                        placeholder="Religious icons e.g., Om, Cross, specific animals e.g., Peacocks, or ancestral patterns"
-                        registerKey="cultureSymbols.mandatoryIcons"
-                        isEditing={isEditing}
-                        register={register}
-                        value={watchedValues.cultureSymbols?.mandatoryIcons || ''}
-                    />
-                    <Field 
-                        id="nuances"
-                        label="Linguistic & Regional Nuances"
-                        placeholder="Native phrases, Shlokas, or regional elements e.g., 'Varanasi skyline', 'Punjabi boli'"
-                        registerKey="cultureSymbols.regionalNuances"
-                        isEditing={isEditing}
-                        register={register}
-                        value={watchedValues.cultureSymbols?.regionalNuances || ''}
-                    />
-                </CardContent>
-            </Card>
-
-            {/* 4. Atmosphere & Extras */}
-            <Card className="border-primary/15 shadow-sm bg-card/60 backdrop-blur-md overflow-hidden">
-                <CardHeader className="bg-muted/30 border-b border-primary/5 pb-5">
-                    <SectionHeader title="Atmosphere & Extras" icon={Sparkles} number="4" />
-                </CardHeader>
-                <CardContent className="pt-8 grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <Field 
-                        id="personality"
-                        label="Venue & Function Personality"
-                        placeholder="Setting and mood description for each function e.g., 'Haldi: Yellow garden party'"
-                        registerKey="atmosphereExtras.venuePersonality"
-                        isEditing={isEditing}
-                        register={register}
-                        value={watchedValues.atmosphereExtras?.venuePersonality || ''}
-                    />
-                    <Field 
-                        id="other"
-                        label="Other Details"
-                        placeholder="Any miscellaneous requirements, logistical constraints, or context"
-                        registerKey="atmosphereExtras.otherDetails"
-                        isEditing={isEditing}
-                        register={register}
-                        value={watchedValues.atmosphereExtras?.otherDetails || ''}
-                    />
-                </CardContent>
-            </Card>
-
-            {/* Product Specific Briefs */}
-            <div className="space-y-10">
-                <div className="px-4">
-                    <SectionHeader 
-                        title="Product Specific Briefs" 
-                        icon={Box} 
-                        subtitle="Content & Instructions per Deliverable" 
-                    />
+                  )}
                 </div>
-                <div className="grid gap-8">
-                    {order.deliverables.map((item) => {
-                        const productDef = productCatalog.find(p => p.id === item.productId);
-                        const briefValue = watchedValues.productBriefs?.[item.id] || '';
-                        
-                        return (
-                            <Card key={item.id} className="border-primary/15 bg-card/60 backdrop-blur-md hover:bg-card/80 transition-all duration-300 shadow-sm overflow-hidden group">
-                                <CardContent className="pt-8">
-                                    <div className="flex flex-col md:flex-row md:items-start justify-between mb-8 gap-6">
-                                        <div className="flex flex-col gap-3">
-                                            <h4 className="font-black text-xl text-foreground font-headline tracking-tight group-hover:text-primary transition-colors">{item.productName}</h4>
-                                            <div className="flex items-center gap-4">
-                                                <span className="text-[9px] font-black uppercase text-muted-foreground tracking-widest">Specifications</span>
-                                                <div className="flex flex-wrap gap-2">
-                                                    {item.quantity !== undefined && item.quantity !== null && (
-                                                        <CustomBadge variant="secondary">Qty: {item.quantity}</CustomBadge>
-                                                    )}
-                                                    {item.pages !== undefined && item.pages !== null && (
-                                                        <CustomBadge variant="secondary">{item.pages} Pages</CustomBadge>
-                                                    )}
-                                                    {item.variant && <CustomBadge variant="secondary">{item.variant}</CustomBadge>}
-                                                    {item.specialRequest && (
-                                                        <CustomBadge variant="outline" className="border-orange-200 text-orange-800 bg-orange-50/50 gap-1.5">
-                                                            <MessageSquare className="h-2.5 w-2.5" />
-                                                            Request: {item.specialRequest}
-                                                        </CustomBadge>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-                                        
-                                        <div className="flex flex-wrap gap-2 justify-start md:justify-end max-w-sm">
-                                            {/* Custom Fields */}
-                                            {item.customFieldValues && Object.entries(item.customFieldValues).map(([key, val]) => {
-                                                if (val === null || val === undefined) return null;
-                                                const fieldDef = productDef?.customFields?.find(f => f.id === key);
-                                                return (
-                                                    <CustomBadge key={key} variant="outline">
-                                                        {fieldDef?.name || key}: {val}
-                                                    </CustomBadge>
-                                                );
-                                            })}
+              </div>
+            );
+          })}
+        </div>
+      </div>
 
-                                            {/* Addons */}
-                                            {item.addons.map(a => (
-                                                <CustomBadge key={a.id} variant="outline" className="border-primary/10 text-foreground/70 bg-white/40">
-                                                    {a.name}{typeof a.value === 'number' ? `: ${a.value}` : ''}
-                                                </CustomBadge>
-                                            ))}
-                                        </div>
-                                    </div>
-                                    <div className="space-y-3">
-                                        {isEditing ? (
-                                            <Textarea 
-                                                placeholder={`Enter requirements & specific details for ${item.productName}`}
-                                                {...register(`productBriefs.${item.id}`)}
-                                                className="bg-white/90 min-h-[160px] border-primary/20 focus-visible:ring-primary/40 focus-visible:border-primary/40 transition-all duration-200 resize-none shadow-sm p-5 text-sm leading-relaxed font-medium"
-                                            />
-                                        ) : (
-                                            <div className="bg-muted/20 border-2 border-transparent rounded-md p-5 text-sm leading-relaxed font-bold text-foreground/90 whitespace-pre-wrap">
-                                                {briefValue || <span className="text-muted-foreground/40 italic font-medium">No product-specific briefing provided.</span>}
-                                            </div>
-                                        )}
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        );
-                    })}
-                </div>
-            </div>
-        </form>
-    );
+      {/* Persistence Hook (Exposed via ID for Header Button) */}
+      <form id="creative-brief-form" onSubmit={handleSubmit(onSave)} className="hidden" />
+    </div>
+  );
 }
