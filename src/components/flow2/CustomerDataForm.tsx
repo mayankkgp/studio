@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Save, Palette, BookOpen, Globe, Sparkles, Box } from 'lucide-react';
 import type { Order, CustomerData } from '@/lib/types';
+import { productCatalog } from '@/lib/product-data';
 import { cn } from '@/lib/utils';
 
 interface CustomerDataFormProps {
@@ -38,15 +39,15 @@ export function CustomerDataForm({ order, onSave }: CustomerDataFormProps) {
         </div>
     );
 
-    const Field = ({ id, label, helper, registerKey }: { id: string, label: string, helper: string, registerKey: any }) => (
+    const Field = ({ id, label, placeholder, registerKey }: { id: string, label: string, placeholder: string, registerKey: any }) => (
         <div className="space-y-2">
             <Label htmlFor={id} className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{label}</Label>
             <Textarea 
                 id={id} 
                 {...register(registerKey)}
+                placeholder={placeholder}
                 className="min-h-[100px] border-primary/20 focus-visible:ring-primary"
             />
-            <p className="text-[10px] font-medium text-primary/70">{helper}</p>
         </div>
     );
 
@@ -61,19 +62,19 @@ export function CustomerDataForm({ order, onSave }: CustomerDataFormProps) {
                     <Field 
                         id="mood"
                         label="Mood & Style Reference"
-                        helper="Pinterest/Drive link and style keywords e.g., 'Boho, Minimalist, Royal'"
+                        placeholder="Pinterest/Drive link and style keywords e.g., 'Boho, Minimalist, Royal'"
                         registerKey="visualIdentity.moodStyle"
                     />
                     <Field 
                         id="colors"
                         label="Color Palette & Typography"
-                        helper="Hex codes/color names e.g., 'Dusty Rose, Gold' and font preferences"
+                        placeholder="Hex codes/color names e.g., 'Dusty Rose, Gold' and font preferences"
                         registerKey="visualIdentity.colorTypography"
                     />
                     <Field 
                         id="dislikes"
                         label="Design Dislikes"
-                        helper="Specific symbols, motifs, styles, or objects to strictly exclude"
+                        placeholder="Specific symbols, motifs, styles, or objects to strictly exclude"
                         registerKey="visualIdentity.designDislikes"
                     />
                 </CardContent>
@@ -88,19 +89,19 @@ export function CustomerDataForm({ order, onSave }: CustomerDataFormProps) {
                     <Field 
                         id="timeline"
                         label="The Relationship Timeline"
-                        helper="Chronological highlights: Meeting spot, key trips, moving in, and proposal details"
+                        placeholder="Chronological highlights: Meeting spot, key trips, moving in, and proposal details"
                         registerKey="narrative.timeline"
                     />
                     <Field 
                         id="couple"
                         label="The Couple's World"
-                        helper="Shared hobbies, favorite travel destinations, pets, or specific interests"
+                        placeholder="Shared hobbies, favorite travel destinations, pets, or specific interests"
                         registerKey="narrative.coupleWorld"
                     />
                     <Field 
                         id="eggs"
                         label="Easter Eggs"
-                        helper="Inside jokes, specific dates, or objects to subtly hide in the artwork"
+                        placeholder="Inside jokes, specific dates, or objects to subtly hide in the artwork"
                         registerKey="narrative.easterEggs"
                     />
                 </CardContent>
@@ -115,13 +116,13 @@ export function CustomerDataForm({ order, onSave }: CustomerDataFormProps) {
                     <Field 
                         id="icons"
                         label="Mandatory Icons & Motifs"
-                        helper="Religious icons e.g., Om, Cross, specific animals e.g., Peacocks, or ancestral patterns"
+                        placeholder="Religious icons e.g., Om, Cross, specific animals e.g., Peacocks, or ancestral patterns"
                         registerKey="cultureSymbols.mandatoryIcons"
                     />
                     <Field 
                         id="nuances"
                         label="Linguistic & Regional Nuances"
-                        helper="Native phrases, Shlokas, or regional elements e.g., 'Varanasi skyline', 'Punjabi boli'"
+                        placeholder="Native phrases, Shlokas, or regional elements e.g., 'Varanasi skyline', 'Punjabi boli'"
                         registerKey="cultureSymbols.regionalNuances"
                     />
                 </CardContent>
@@ -136,13 +137,13 @@ export function CustomerDataForm({ order, onSave }: CustomerDataFormProps) {
                     <Field 
                         id="personality"
                         label="Venue & Function Personality"
-                        helper="Setting and mood description for each function e.g., 'Haldi: Yellow garden party'"
+                        placeholder="Setting and mood description for each function e.g., 'Haldi: Yellow garden party'"
                         registerKey="atmosphereExtras.venuePersonality"
                     />
                     <Field 
                         id="other"
                         label="Other Details"
-                        helper="Any miscellaneous requirements, logistical constraints, or context"
+                        placeholder="Any miscellaneous requirements, logistical constraints, or context"
                         registerKey="atmosphereExtras.otherDetails"
                     />
                 </CardContent>
@@ -155,31 +156,53 @@ export function CustomerDataForm({ order, onSave }: CustomerDataFormProps) {
                     <h3 className="font-headline text-2xl font-bold text-foreground">Product Specific Briefs</h3>
                 </div>
                 <div className="grid gap-4">
-                    {order.deliverables.map((item) => (
-                        <Card key={item.id} className="border-primary/20 bg-card/50">
-                            <CardContent className="pt-6">
-                                <div className="flex items-center justify-between mb-4">
-                                    <h4 className="font-bold text-lg text-foreground">{item.productName}</h4>
-                                    <div className="flex gap-2">
-                                        {item.variant && <Badge variant="secondary">{item.variant}</Badge>}
-                                        {item.addons.map(a => (
-                                            <Badge key={a.id} variant="outline" className="text-[10px]">
-                                                {a.name}{typeof a.value === 'number' ? `: ${a.value}` : ''}
-                                            </Badge>
-                                        ))}
+                    {order.deliverables.map((item) => {
+                        const productDef = productCatalog.find(p => p.id === item.productId);
+                        
+                        return (
+                            <Card key={item.id} className="border-primary/20 bg-card/50">
+                                <CardContent className="pt-6">
+                                    <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-3">
+                                        <h4 className="font-bold text-lg text-foreground">{item.productName}</h4>
+                                        <div className="flex flex-wrap gap-2">
+                                            {item.quantity !== undefined && item.quantity !== null && (
+                                                <Badge variant="secondary">Qty: {item.quantity}</Badge>
+                                            )}
+                                            {item.pages !== undefined && item.pages !== null && (
+                                                <Badge variant="secondary">{item.pages} Pages</Badge>
+                                            )}
+                                            {item.variant && <Badge variant="secondary">{item.variant}</Badge>}
+                                            
+                                            {/* Custom Fields */}
+                                            {item.customFieldValues && Object.entries(item.customFieldValues).map(([key, val]) => {
+                                                if (val === null || val === undefined) return null;
+                                                const fieldDef = productDef?.customFields?.find(f => f.id === key);
+                                                return (
+                                                    <Badge key={key} variant="outline" className="text-[10px]">
+                                                        {fieldDef?.name || key}: {val}
+                                                    </Badge>
+                                                );
+                                            })}
+
+                                            {/* Addons */}
+                                            {item.addons.map(a => (
+                                                <Badge key={a.id} variant="outline" className="text-[10px]">
+                                                    {a.name}{typeof a.value === 'number' ? `: ${a.value}` : ''}
+                                                </Badge>
+                                            ))}
+                                        </div>
                                     </div>
-                                </div>
-                                <div className="space-y-2">
-                                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Requirements & Design Instructions</Label>
-                                    <Textarea 
-                                        placeholder={`Enter requirements & specific details for ${item.productName}`}
-                                        {...register(`productBriefs.${item.id}`)}
-                                        className="bg-background/80"
-                                    />
-                                </div>
-                            </CardContent>
-                        </Card>
-                    ))}
+                                    <div className="space-y-2">
+                                        <Textarea 
+                                            placeholder={`Enter requirements & specific details for ${item.productName}`}
+                                            {...register(`productBriefs.${item.id}`)}
+                                            className="bg-background/80 min-h-[100px]"
+                                        />
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        );
+                    })}
                 </div>
             </div>
 
