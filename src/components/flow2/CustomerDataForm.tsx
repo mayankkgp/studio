@@ -238,9 +238,10 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
   }, [visibleDeliverables, selectedProductId]);
 
   const selectedItem = order.deliverables.find(d => d.id === selectedProductId);
+  const showGenericData = !isGenericDataEmpty || showEmptyFields;
 
   return (
-    <div className="space-y-12 pb-24 max-w-6xl mx-auto relative">
+    <div className="pb-24 max-w-6xl mx-auto relative">
       <div className="sticky top-0 z-30 bg-background/95 backdrop-blur-sm pt-4 -mt-4 mb-8 border-b border-primary/10 pb-4 flex items-center justify-between">
         <div className="space-y-1">
           <h2 className="text-xl font-headline font-black text-foreground uppercase tracking-tight">Creative Briefing</h2>
@@ -273,8 +274,8 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
       </div>
 
       {/* Masonry Layout for General Sections */}
-      {(!isGenericDataEmpty || showEmptyFields) && (
-        <section className="columns-1 md:columns-2 gap-8 space-y-8">
+      {showGenericData && (
+        <section className="mt-12 columns-1 md:columns-2 gap-8 space-y-8">
           {(!isVisualEmpty || showEmptyFields) && (
             <div className="break-inside-avoid">
               <SectionHeader title="Visual Identity" icon={Palette} />
@@ -382,7 +383,9 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
       )}
 
       {/* Master-Detail View for Product Briefs */}
-      <section className={cn("pt-12", (!isGenericDataEmpty || showEmptyFields) && "border-t border-primary/10")}>
+      <section className={cn(
+        showGenericData ? "mt-12 pt-12 border-t border-primary/10" : "mt-8"
+      )}>
         <SectionHeader title="Product Specific Briefs" icon={Box} />
         
         {visibleDeliverables.length === 0 && !productSearchQuery ? (
