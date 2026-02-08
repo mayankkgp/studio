@@ -295,22 +295,22 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         const displayValues = isReadOnly ? item : { ...item, ...watchedValues };
 
         if (displayValues.variant) {
-            parts.push(<span key="variant">{displayValues.variant}</span>);
+            parts.push(<span key="variant" className="font-bold">{displayValues.variant}</span>);
         }
 
         if (product.configType === 'A' && typeof displayValues.quantity === 'number') {
             const warning = getLogicWarning(displayValues.quantity, product.softConstraints);
-            parts.push(<span key="qty" className={cn(warning && "text-[#FA7315] font-bold")}>Qty: {displayValues.quantity}</span>);
+            parts.push(<span key="qty" className={cn("font-bold", warning && "text-[#FA7315]")}>Qty: {displayValues.quantity}</span>);
         } else if (product.configType === 'B' && typeof displayValues.pages === 'number') {
             const warning = getLogicWarning(displayValues.pages, product.softConstraints);
-            parts.push(<span key="pages" className={cn(warning && "text-[#FA7315] font-bold")}>{displayValues.pages} Pgs</span>);
+            parts.push(<span key="pages" className={cn("font-bold", warning && "text-[#FA7315]")}>{displayValues.pages} Pgs</span>);
         }
 
         if (product.customFields && displayValues.customFieldValues) {
             product.customFields.forEach(field => {
                 const val = (displayValues.customFieldValues as any)?.[field.id];
                 if (val && typeof val === 'number') {
-                    parts.push(<span key={field.id}>{field.name}: {val}</span>);
+                    parts.push(<span key={field.id} className="font-bold">{field.name}: {val}</span>);
                 }
             });
         }
@@ -318,15 +318,15 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         const activeAddons = (displayValues.addons || []).filter((a: any) => a.value !== undefined && a.value !== false);
         activeAddons.forEach((a: any) => {
             const displayVal = typeof a.value === 'number' ? `: ${a.value}` : '';
-            parts.push(<span key={`addon-${a.id}`}>{a.name}{displayVal}</span>);
+            parts.push(<span key={`addon-${a.id}`} className="font-bold">{a.name}{displayVal}</span>);
         });
 
         if (displayValues.specialRequest) {
-            parts.push(<span key="special" className="italic opacity-80">Note: {displayValues.specialRequest}</span>);
+            parts.push(<span key="special" className="italic opacity-90 font-medium">Note: {displayValues.specialRequest}</span>);
         }
 
         if (parts.length === 0) return null;
-        return parts.reduce((prev, curr, i) => [prev, <span key={`sep-${i}`} className="mx-1 text-muted-foreground/30">•</span>, curr]);
+        return parts.reduce((prev, curr, i) => [prev, <span key={`sep-${i}`} className="mx-1 text-muted-foreground/50 font-black">•</span>, curr]);
     };
 
     const getWarningData = React.useCallback((): { type: 'hard' | 'soft' | null, message: string | null } => {
@@ -367,7 +367,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                 isExpanded 
                     ? "border-l-4 border-primary shadow-md bg-background" 
                     : cn(
-                        "bg-card hover:bg-muted/50",
+                        "bg-card hover:bg-muted/50 border-primary/20",
                         !isValid && "border-destructive border-2 bg-destructive/5"
                     )
             )}
@@ -377,24 +377,24 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                     <div className={cn(
                         "rounded-lg flex items-center justify-center shrink-0 transition-colors",
                         isExpanded ? "h-10 w-10" : "h-7 w-7",
-                        !isValid || warningData.type === 'hard' ? "text-destructive bg-destructive/10" : isExpanded ? "text-blue-600 bg-blue-50" : "text-green-600 bg-green-100"
+                        !isValid || warningData.type === 'hard' ? "text-destructive bg-destructive/15" : isExpanded ? "text-primary bg-primary/15" : "text-primary/80 bg-primary/10"
                     )}>
                         <IconComponent className={isExpanded ? "h-5 w-5" : "h-4 w-4"} />
                     </div>
                     <div className={cn("flex flex-col flex-1 overflow-hidden min-w-0")}>
                         <div className="flex items-center gap-2 overflow-hidden">
-                            <h3 className={cn("font-semibold leading-none truncate", isExpanded ? "text-base" : "text-sm")}>
+                            <h3 className={cn("font-bold leading-none truncate text-foreground", isExpanded ? "text-base" : "text-sm")}>
                                 {item.productName}
-                                {isDirty && !isReadOnly && <span className="text-primary ml-1 font-bold" aria-hidden="true">*</span>}
+                                {isDirty && !isReadOnly && <span className="text-primary ml-1 font-black" aria-hidden="true">*</span>}
                             </h3>
                             {warningData.message && (
-                                <Badge variant={warningData.type === 'hard' ? 'destructive' : 'warning'} className="text-[9px] h-3.5 py-0 px-1 font-bold uppercase shrink-0">
+                                <Badge variant={warningData.type === 'hard' ? 'destructive' : 'warning'} className="text-[9px] h-3.5 py-0 px-1 font-black uppercase shrink-0">
                                     {warningData.message}
                                 </Badge>
                             )}
                         </div>
                         {!isExpanded && (
-                            <div className="text-[10px] sm:text-[11px] text-muted-foreground leading-snug mt-1 line-clamp-2 max-w-full">
+                            <div className="text-[10px] sm:text-[11px] text-muted-foreground leading-snug mt-1.5 line-clamp-2 max-w-full">
                                 {getSummaryText()}
                             </div>
                         )}
@@ -403,7 +403,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
 
                 <div className="flex items-center gap-2 ml-4 shrink-0">
                     {!isReadOnly && (
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={handleDelete}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={handleDelete}>
                             <Trash2 className="h-4 w-4" />
                         </Button>
                     )}
@@ -416,21 +416,21 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                 e.stopPropagation();
                                 isExpanded ? onDone(item.id, true) : onEdit(item.id);
                             }} 
-                            className="gap-2 h-8"
+                            className="gap-2 h-8 border-primary text-primary font-bold hover:bg-primary/5"
                         >
                             {isExpanded ? <><X className="h-3.5 w-3.5" /> Hide</> : <><Info className="h-3.5 w-3.5" /> View</>}
                         </Button>
                     ) : (
                         !isExpanded ? (
-                            <Button size="sm" variant="outline" onClick={handleEditClick} className="gap-2 h-8">
+                            <Button size="sm" variant="outline" onClick={handleEditClick} className="gap-2 h-8 border-primary text-primary font-bold hover:bg-primary/5">
                                 <Pencil className="h-3.5 w-3.5" /> Edit
                             </Button>
                         ) : (
                             <div className="flex items-center gap-2">
-                                <Button size="sm" variant="ghost" onClick={handleCancelClick} className="gap-2 h-8 text-muted-foreground">
+                                <Button size="sm" variant="ghost" onClick={handleCancelClick} className="gap-2 h-8 text-muted-foreground font-bold hover:bg-muted">
                                     Cancel
                                 </Button>
-                                <Button size="sm" onClick={handleDoneClick} className="gap-2 h-8" disabled={!isValid || warningData.type === 'hard'}>
+                                <Button size="sm" onClick={handleDoneClick} className="gap-2 h-8 font-bold" disabled={!isValid || warningData.type === 'hard'}>
                                     <Check className="h-4 w-4" /> Done
                                 </Button>
                             </div>
@@ -439,13 +439,13 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                 </div>
             </div>
 
-            <AccordionContent className="px-4 pb-4 border-t bg-muted/5 relative" forceMount={isExpanded}>
+            <AccordionContent className="px-4 pb-4 border-t border-primary/10 bg-muted/5 relative" forceMount={isExpanded}>
                 <div className="flex flex-col gap-8 pt-6">
                     <div className="space-y-6">
                         <div className="flex flex-wrap items-center gap-x-8 gap-y-6">
                             {product?.variants && product.variants.length > 0 && (
                                 <div className="flex flex-col gap-2">
-                                    <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Variant *</Label>
+                                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Variant *</Label>
                                     <div className="flex flex-wrap gap-2">
                                         {product.variants.map(v => (
                                             <Button
@@ -454,7 +454,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                 variant={watchedValues.variant === v ? "default" : "outline"}
                                                 size="sm"
                                                 disabled={isReadOnly}
-                                                className={cn("h-9 rounded-full px-4", watchedValues.variant === v && "shadow-sm")}
+                                                className={cn("h-9 rounded-full px-4 font-bold", watchedValues.variant === v && "shadow-md")}
                                                 onClick={() => setValue('variant', v, { shouldValidate: true, shouldDirty: true })}
                                             >
                                                 {v}
@@ -466,7 +466,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
 
                             {isBranchA && (
                                 <div className="flex flex-col gap-2">
-                                    <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
                                         {product?.configType === 'A' ? 'Quantity *' : 'Pages *'}
                                     </Label>
                                     <Input 
@@ -476,8 +476,8 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                         onKeyDown={handleEnterToBlur}
                                         {...register(product?.configType === 'A' ? 'quantity' : 'pages', { valueAsNumber: true })}
                                         className={cn(
-                                            "w-24 h-10 text-lg bg-background",
-                                            getLogicWarning(product?.configType === 'A' ? watchedValues.quantity : watchedValues.pages, product?.softConstraints) && "border-[#FA7315] ring-[#FA7315] border-2"
+                                            "w-24 h-10 text-lg bg-background font-bold border-2",
+                                            getLogicWarning(product?.configType === 'A' ? watchedValues.quantity : watchedValues.pages, product?.softConstraints) ? "border-[#FA7315] ring-[#FA7315]" : "border-primary/20"
                                         )}
                                     />
                                 </div>
@@ -485,7 +485,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
 
                             {product?.customFields && product.customFields.map((field) => (
                                 <div key={field.id} className="flex flex-col gap-2">
-                                    <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
                                         {field.name} {product.id !== 5 && "*"}
                                     </Label>
                                     <Input 
@@ -494,8 +494,8 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                         disabled={isReadOnly}
                                         onKeyDown={handleEnterToBlur}
                                         className={cn(
-                                            "w-20 h-10 bg-background",
-                                            getLogicWarning((watchedValues.customFieldValues as any)?.[field.id], field.softConstraints) && "border-[#FA7315] ring-[#FA7315] border-2"
+                                            "w-20 h-10 bg-background font-bold border-2",
+                                            getLogicWarning((watchedValues.customFieldValues as any)?.[field.id], field.softConstraints) ? "border-[#FA7315] ring-[#FA7315]" : "border-primary/20"
                                         )}
                                         {...register(`customFieldValues.${field.id}`, { valueAsNumber: true })} 
                                     />
@@ -522,7 +522,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                 if (!isChecked) {
                                                     return !isReadOnly ? (
                                                         <Button
-                                                            type="button" variant="outline" size="sm" className="h-8 rounded-full px-3 gap-1.5 text-xs"
+                                                            type="button" variant="outline" size="sm" className="h-8 rounded-full px-3 gap-1.5 text-xs font-bold border-primary/40 text-primary"
                                                             onClick={() => { setJustActivatedAddonId(addon.id); field.onChange(addon.type === 'checkbox' ? true : null); }}
                                                         >
                                                             <Plus className="h-3 w-3" /> {addon.name}
@@ -531,8 +531,8 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                 } else {
                                                     const val = field.value ?? '';
                                                     return (
-                                                        <div className={cn("inline-flex items-center rounded-full h-8 pl-4 pr-1.5 gap-2 bg-[#FA7315] text-white shadow-sm transition-colors", isReadOnly && "bg-muted text-muted-foreground")}>
-                                                            <span className="text-xs font-bold uppercase tracking-tight">{addon.name}</span>
+                                                        <div className={cn("inline-flex items-center rounded-full h-8 pl-4 pr-1.5 gap-2 bg-primary text-white shadow-md transition-colors", isReadOnly && "bg-muted text-muted-foreground")}>
+                                                            <span className="text-xs font-black uppercase tracking-tight">{addon.name}</span>
                                                             {addon.type !== 'checkbox' && (
                                                                 <Input
                                                                     type="number" 
@@ -540,7 +540,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                                     disabled={isReadOnly}
                                                                     onKeyDown={handleEnterToBlur}
                                                                     autoFocus={justActivatedAddonId === addon.id}
-                                                                    className="h-6 px-2 py-0 text-xs bg-white border-none focus-visible:ring-0 rounded-md font-bold text-black w-12"
+                                                                    className="h-6 px-2 py-0 text-xs bg-white border-none focus-visible:ring-0 rounded-md font-black text-black w-12"
                                                                     value={val}
                                                                     onChange={(e) => field.onChange(e.target.value === '' ? null : Math.max(0, Number(e.target.value)))}
                                                                 />
@@ -566,45 +566,45 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                         <div className="pt-2">
                             {showNotes ? (
                                 <div className="space-y-2">
-                                    <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Special Instructions</Label>
+                                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Special Instructions</Label>
                                     <Textarea 
                                         {...register('specialRequest')} 
                                         disabled={isReadOnly}
-                                        className="min-h-[60px] bg-background/50 leading-6" 
+                                        className="min-h-[60px] bg-background/50 leading-6 border-primary/20 font-medium" 
                                         placeholder="Add special instructions..."
                                     />
                                 </div>
                             ) : !isReadOnly && (
-                                <Button variant="ghost" size="sm" className="h-8 gap-2 text-muted-foreground px-3" onClick={() => setShowNotes(true)}>
+                                <Button variant="ghost" size="sm" className="h-8 gap-2 text-primary font-bold px-3 hover:bg-primary/5" onClick={() => setShowNotes(true)}>
                                     <MessageSquarePlus className="h-4 w-4" />
-                                    <span className="text-xs font-medium uppercase">Add Note</span>
+                                    <span className="text-xs uppercase">Add Note</span>
                                 </Button>
                             )}
                         </div>
                     </div>
 
                     {showCommercials && (
-                        <div className="border-t pt-8 space-y-4">
+                        <div className="border-t border-primary/10 pt-8 space-y-4">
                             <div className="flex items-center gap-2">
                                 <TrendingUp className="h-4 w-4 text-primary" />
-                                <h4 className="text-sm font-bold uppercase tracking-widest">Commercials &amp; Rates</h4>
+                                <h4 className="text-sm font-black uppercase tracking-widest text-foreground">Commercials &amp; Rates</h4>
                             </div>
                             
-                            <div className="rounded-xl border bg-card/30 overflow-hidden">
+                            <div className="rounded-xl border border-primary/20 bg-card/30 overflow-hidden">
                                 <table className="w-full text-left text-xs">
                                     <thead>
-                                        <tr className="bg-muted/50 border-b">
-                                            <th className="px-4 py-3 font-bold uppercase tracking-wider text-muted-foreground">Label</th>
-                                            <th className="px-4 py-3 font-bold uppercase tracking-wider text-muted-foreground text-center">Multiplier</th>
-                                            <th className="px-4 py-3 font-bold uppercase tracking-wider text-muted-foreground text-right">Unit Rate (₹)</th>
-                                            <th className="px-4 py-3 font-bold uppercase tracking-wider text-muted-foreground text-right">Total</th>
+                                        <tr className="bg-muted/40 border-b border-primary/10">
+                                            <th className="px-4 py-3 font-black uppercase tracking-wider text-foreground">Label</th>
+                                            <th className="px-4 py-3 font-black uppercase tracking-wider text-foreground text-center">Multiplier</th>
+                                            <th className="px-4 py-3 font-black uppercase tracking-wider text-foreground text-right">Unit Rate (₹)</th>
+                                            <th className="px-4 py-3 font-black uppercase tracking-wider text-foreground text-right">Total</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {itemBreakdown.map((comp, i) => (
-                                            <tr key={i} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
-                                                <td className="px-4 py-3 font-medium">{comp.label}</td>
-                                                <td className="px-4 py-3 text-center text-muted-foreground font-mono">{comp.isFixed ? '-' : comp.multiplier}</td>
+                                            <tr key={i} className="border-b border-primary/5 last:border-0 hover:bg-primary/5 transition-colors">
+                                                <td className="px-4 py-3 font-bold text-foreground">{comp.label}</td>
+                                                <td className="px-4 py-3 text-center text-muted-foreground font-mono font-bold">{comp.isFixed ? '-' : comp.multiplier}</td>
                                                 <td className="px-4 py-2 text-right">
                                                     <div className="flex justify-end">
                                                         <input 
@@ -615,19 +615,19 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                             onChange={(e) => handleRateOverride(comp.label, Number(e.target.value))}
                                                             onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
                                                             className={cn(
-                                                                "w-20 h-7 text-right bg-background border rounded px-1.5 font-bold focus:ring-1 focus:ring-primary",
-                                                                isReadOnly && "border-transparent bg-transparent",
+                                                                "w-20 h-7 text-right bg-background border rounded px-1.5 font-black focus:ring-1 focus:ring-primary",
+                                                                isReadOnly ? "border-transparent bg-transparent text-foreground/80" : "border-primary/20",
                                                                 (watchedValues.rateOverrides?.[comp.label] ?? comp.rate) < 0 && "border-destructive text-destructive"
                                                             )}
                                                         />
                                                     </div>
                                                 </td>
-                                                <td className="px-4 py-3 text-right font-bold tabular-nums">₹{comp.total.toLocaleString('en-IN')}</td>
+                                                <td className="px-4 py-3 text-right font-black tabular-nums text-foreground">₹{comp.total.toLocaleString('en-IN')}</td>
                                             </tr>
                                         ))}
-                                        <tr className="bg-muted/10">
-                                            <td colSpan={3} className="px-4 py-4 text-right font-bold uppercase tracking-widest text-muted-foreground">Item Total</td>
-                                            <td className="px-4 py-4 text-right font-black text-sm text-primary">
+                                        <tr className="bg-primary/5">
+                                            <td colSpan={3} className="px-4 py-4 text-right font-black uppercase tracking-widest text-muted-foreground">Item Total</td>
+                                            <td className="px-4 py-4 text-right font-black text-sm text-primary tabular-nums">
                                                 ₹{itemBreakdown.reduce((sum, c) => sum + c.total, 0).toLocaleString('en-IN')}
                                             </td>
                                         </tr>

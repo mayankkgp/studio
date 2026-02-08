@@ -180,7 +180,6 @@ export default function ActiveOrderCommandCenter() {
     const addDeliverable = (del: ConfiguredProduct) => {
         setActiveOrder(prev => {
             if (!prev) return null;
-            // Optimistically add to the current order state in memory
             return { ...prev, deliverables: [del, ...prev.deliverables] };
         });
         setExpandedItems(prev => [...prev, del.id]);
@@ -339,7 +338,7 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
 
     const FinancialSnapshot = (
         <div className="space-y-6">
-            <Card className="shadow-none border-primary/10">
+            <Card className="shadow-none border-primary/20">
                 <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
                     <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Event Snapshot</CardTitle>
                     <Sheet open={isDetailsSheetOpen} onOpenChange={setIsDetailsSheetOpen}>
@@ -369,7 +368,7 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="space-y-1">
-                        <p className="text-lg font-bold font-headline leading-tight">{getClientDisplay()}</p>
+                        <p className="text-lg font-bold font-headline leading-tight text-foreground">{getClientDisplay()}</p>
                         <p className="text-xs text-primary font-bold uppercase">{activeOrder.eventDetails.eventType}</p>
                     </div>
                     <Separator />
@@ -378,7 +377,7 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                             <div className="flex items-center gap-1.5 text-muted-foreground uppercase text-[9px] font-bold">
                                 <CalendarDays className="h-3 w-3" /> Event Date
                             </div>
-                            <p className="text-xs font-semibold">
+                            <p className="text-xs font-bold text-foreground/90">
                                 {activeOrder.eventDetails.eventDate ? new Date(activeOrder.eventDetails.eventDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
                             </p>
                         </div>
@@ -386,7 +385,7 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                             <div className="flex items-center gap-1.5 text-muted-foreground uppercase text-[9px] font-bold">
                                 <MapPin className="h-3 w-3" /> Venue
                             </div>
-                            <p className="text-xs font-semibold truncate" title={activeOrder.eventDetails.venueName || '-'}>
+                            <p className="text-xs font-bold truncate text-foreground/90" title={activeOrder.eventDetails.venueName || '-'}>
                                 {activeOrder.eventDetails.venueName || '-'}
                             </p>
                         </div>
@@ -395,7 +394,7 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
             </Card>
 
             <Card className="shadow-sm border-2 border-primary/20 bg-background overflow-hidden">
-                <CardHeader className="pb-2 bg-muted/20">
+                <CardHeader className="pb-2 bg-muted/30">
                     <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center justify-between">
                         Live Financials
                         <div className="flex items-center gap-2">
@@ -411,19 +410,19 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                         <p className="text-[10px] font-bold uppercase text-muted-foreground">Order Value</p>
                         {hasDiff ? (
                             <div className="space-y-2">
-                                <div className="flex items-center gap-2 text-muted-foreground/50 line-through text-sm">
+                                <div className="flex items-center gap-2 text-muted-foreground line-through text-sm">
                                     ₹{initialTotal.toLocaleString('en-IN')}
                                 </div>
                                 <div className="flex items-center justify-between group">
                                     <p className={cn(
                                         "text-4xl font-bold tracking-tight",
-                                        delta > 0 ? "text-blue-600" : "text-amber-600"
+                                        delta > 0 ? "text-blue-700" : "text-orange-800"
                                     )}>
                                         ₹{workingTotal.toLocaleString('en-IN')}
                                     </p>
                                     <Badge variant="secondary" className={cn(
                                         "h-6 px-2 gap-1 text-[10px] font-black",
-                                        delta > 0 ? "bg-blue-100 text-blue-700" : "bg-amber-100 text-amber-700"
+                                        delta > 0 ? "bg-blue-100 text-blue-800" : "bg-orange-100 text-orange-900"
                                     )}>
                                         {delta > 0 ? '+' : '-'} ₹{Math.abs(delta).toLocaleString('en-IN')}
                                     </Badge>
@@ -439,14 +438,14 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                             <p className="text-[10px] font-bold uppercase text-muted-foreground">Payment Received</p>
                             <Popover open={isPaymentPopoverOpen} onOpenChange={setIsPaymentPopoverOpen}>
                                 <PopoverTrigger asChild>
-                                    <Button variant="outline" size="sm" className="h-6 text-[9px] font-bold uppercase gap-1 text-primary hover:text-primary hover:bg-primary/5 border-primary/30">
+                                    <Button variant="outline" size="sm" className="h-6 text-[9px] font-bold uppercase gap-1 text-primary hover:text-primary hover:bg-primary/5 border-primary/50">
                                         <WalletCards className="h-2.5 w-2.5" /> Record
                                     </Button>
                                 </PopoverTrigger>
                                 <PopoverContent className="w-64 p-4 space-y-4" align="end">
                                     <div className="space-y-1.5">
-                                        <h4 className="font-bold text-xs uppercase tracking-wider">Record Payment</h4>
-                                        <p className="text-[10px] text-muted-foreground">Add new payment received to the current balance.</p>
+                                        <h4 className="font-bold text-xs uppercase tracking-wider text-foreground">Record Payment</h4>
+                                        <p className="text-[10px] text-muted-foreground leading-relaxed">Add new payment received to the current balance.</p>
                                     </div>
                                     <div className="relative">
                                         <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-bold">₹</span>
@@ -460,7 +459,7 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                                                     (e.target as any).blur();
                                                 }
                                             }}
-                                            className="w-full h-10 pl-6 pr-3 text-sm font-bold border rounded-md"
+                                            className="w-full h-10 pl-6 pr-3 text-sm font-bold border-2 border-primary/20 rounded-md focus:border-primary focus:outline-none"
                                         />
                                     </div>
                                     <Button 
@@ -475,7 +474,7 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                                 </PopoverContent>
                             </Popover>
                         </div>
-                        <div className="h-12 flex items-center px-4 bg-muted/30 rounded-lg border-2 border-transparent font-bold text-xl opacity-70 cursor-default">
+                        <div className="h-12 flex items-center px-4 bg-muted/40 rounded-lg border-2 border-transparent font-bold text-xl text-foreground cursor-default">
                             ₹{(activeOrder.paymentReceived || 0).toLocaleString('en-IN')}
                         </div>
                     </div>
@@ -486,11 +485,11 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                         <p className="text-[10px] font-bold uppercase text-muted-foreground">Current Balance Due</p>
                         <p className={cn(
                             "text-2xl font-bold flex items-baseline gap-1.5", 
-                            balance > 0 ? "text-destructive" : "text-green-600"
+                            balance > 0 ? "text-destructive" : "text-green-700"
                         )}>
                             ₹{Math.abs(balance).toLocaleString('en-IN')}
-                            {balance < 0 && <span className="text-xs uppercase ml-1">(Excess)</span>}
-                            {balance === 0 && <span className="text-xs uppercase ml-1">(Paid)</span>}
+                            {balance < 0 && <span className="text-xs uppercase ml-1 font-bold">(Excess)</span>}
+                            {balance === 0 && <span className="text-xs uppercase ml-1 font-bold">(Paid)</span>}
                         </p>
                     </div>
                 </CardContent>
@@ -514,7 +513,7 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                                 onClick={handleToggleEditMode}
                                 className={cn(
                                     "h-8 font-bold gap-2 transition-all",
-                                    isEditMode ? "bg-primary shadow-lg shadow-primary/20" : "border-primary/50 text-primary"
+                                    isEditMode ? "bg-primary shadow-lg shadow-primary/20" : "border-primary text-primary hover:bg-primary/5"
                                 )}
                             >
                                 {isEditMode ? (
@@ -524,7 +523,7 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                                 )}
                             </Button>
                             <Separator orientation="vertical" className="h-6" />
-                            <h1 className="font-semibold text-base md:text-lg font-headline truncate">
+                            <h1 className="font-bold text-base md:text-lg font-headline truncate text-foreground">
                                 {headerSummary}
                             </h1>
                         </div>
@@ -535,7 +534,7 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                     <div className="flex-1 overflow-y-auto bg-background/50 custom-scrollbar relative">
                         <div className="max-w-4xl mx-auto p-4 md:p-8 space-y-8 pb-32">
                             <div className="flex items-center justify-between gap-4">
-                                <h2 className="text-xl font-headline font-bold flex items-center gap-2 shrink-0">
+                                <h2 className="text-xl font-headline font-bold flex items-center gap-2 shrink-0 text-foreground">
                                     <Package className="h-5 w-5 text-primary" />
                                     Scope of Work
                                 </h2>
@@ -546,7 +545,7 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                                             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                                             <Input 
                                                 placeholder="Filter list..." 
-                                                className="h-8 pl-8 text-xs bg-background"
+                                                className="h-8 pl-8 text-xs bg-background border-primary/20"
                                                 value={itemSearchQuery}
                                                 onChange={(e) => setItemSearchQuery(e.target.value)}
                                             />
@@ -554,7 +553,7 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                                                 <Button 
                                                     variant="ghost" 
                                                     size="icon" 
-                                                    className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6"
+                                                    className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 text-muted-foreground"
                                                     onClick={() => setItemSearchQuery('')}
                                                 >
                                                     <X className="h-3 w-3" />
@@ -563,7 +562,7 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                                         </div>
                                     )}
                                     <Tabs value={viewMode} onValueChange={(v: any) => setViewMode(v)} className="w-auto">
-                                        <TabsList className="h-8 p-1 bg-muted/50 border">
+                                        <TabsList className="h-8 p-1 bg-muted/40 border border-primary/20">
                                             <TabsTrigger value="scope" className="text-[10px] font-bold uppercase h-6 px-3">
                                                 <Info className="h-3 w-3 mr-1.5" /> Scope
                                             </TabsTrigger>
@@ -573,7 +572,7 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                                         </TabsList>
                                     </Tabs>
                                     {!isEditMode && (
-                                        <Badge variant="secondary" className="gap-1.5 text-[10px] font-bold uppercase tracking-wider hidden md:flex">
+                                        <Badge variant="secondary" className="gap-1.5 text-[10px] font-bold uppercase tracking-wider hidden md:flex text-muted-foreground border-primary/20">
                                             <Lock className="h-3 w-3" /> Locked
                                         </Badge>
                                     )}
@@ -581,7 +580,7 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                             </div>
 
                             {isEditMode && (
-                                <div className="bg-card p-4 md:p-6 rounded-xl border-2 border-primary/10 shadow-sm sticky top-0 z-40 backdrop-blur-sm bg-card/95">
+                                <div className="bg-card p-4 md:p-6 rounded-xl border-2 border-primary/20 shadow-sm sticky top-0 z-40 backdrop-blur-sm bg-card/95">
                                     <CommandBar onAdd={addDeliverable} />
                                 </div>
                             )}
@@ -592,7 +591,7 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                         <Input 
                                             placeholder="Search products..." 
-                                            className="h-10 pl-10"
+                                            className="h-10 pl-10 border-primary/20"
                                             value={itemSearchQuery}
                                             onChange={(e) => setItemSearchQuery(e.target.value)}
                                         />
@@ -602,36 +601,36 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
 
                             <div className="space-y-4">
                                 {activeOrder.deliverables.length === 0 ? (
-                                    <div className="text-center py-20 border-2 border-dashed rounded-xl bg-muted/30">
+                                    <div className="text-center py-20 border-2 border-dashed rounded-xl bg-muted/20 border-primary/20">
                                         <Package className="h-10 w-10 text-muted-foreground/30 mx-auto mb-4" />
-                                        <p className="text-sm text-muted-foreground font-medium">No deliverables in scope.</p>
+                                        <p className="text-sm text-muted-foreground font-bold">No deliverables in scope.</p>
                                     </div>
                                 ) : viewMode === 'bill' ? (
-                                    <div className="rounded-xl border bg-card overflow-hidden shadow-sm animate-in fade-in slide-in-from-bottom-2">
+                                    <div className="rounded-xl border border-primary/20 bg-card overflow-hidden shadow-sm animate-in fade-in slide-in-from-bottom-2">
                                         <table className="w-full text-left text-xs border-collapse">
                                             <thead>
-                                                <tr className="bg-muted/40 border-b">
-                                                    <th className="px-4 py-3 font-bold uppercase tracking-wider text-muted-foreground">Product / Item</th>
-                                                    <th className="px-4 py-3 font-bold uppercase tracking-wider text-muted-foreground text-center">Multiplier</th>
-                                                    <th className="px-4 py-3 font-bold uppercase tracking-wider text-muted-foreground text-right">Rate (₹)</th>
-                                                    <th className="px-4 py-3 font-bold uppercase tracking-wider text-muted-foreground text-right">Total (₹)</th>
+                                                <tr className="bg-muted/40 border-b border-primary/10">
+                                                    <th className="px-4 py-3 font-bold uppercase tracking-wider text-foreground">Product / Item</th>
+                                                    <th className="px-4 py-3 font-bold uppercase tracking-wider text-foreground text-center">Multiplier</th>
+                                                    <th className="px-4 py-3 font-bold uppercase tracking-wider text-foreground text-right">Rate (₹)</th>
+                                                    <th className="px-4 py-3 font-bold uppercase tracking-wider text-foreground text-right">Total (₹)</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 {billViewData.map((row, i) => (
-                                                    <tr key={i} className="border-b last:border-0 hover:bg-muted/10">
+                                                    <tr key={i} className="border-b border-primary/5 last:border-0 hover:bg-primary/5">
                                                         <td className="px-4 py-3">
                                                             <div className="font-bold text-foreground">{row.productName}</div>
-                                                            <div className="text-[10px] text-muted-foreground font-medium uppercase">{row.label}</div>
+                                                            <div className="text-[10px] text-muted-foreground font-bold uppercase">{row.label}</div>
                                                         </td>
-                                                        <td className="px-4 py-3 text-center font-mono">{row.isFixed ? '-' : row.multiplier}</td>
-                                                        <td className="px-4 py-3 text-right tabular-nums">{row.rate.toLocaleString('en-IN')}</td>
-                                                        <td className="px-4 py-3 text-right font-bold tabular-nums">{row.total.toLocaleString('en-IN')}</td>
+                                                        <td className="px-4 py-3 text-center font-mono font-bold text-foreground/80">{row.isFixed ? '-' : row.multiplier}</td>
+                                                        <td className="px-4 py-3 text-right tabular-nums font-bold text-foreground/80">{row.rate.toLocaleString('en-IN')}</td>
+                                                        <td className="px-4 py-3 text-right font-bold tabular-nums text-foreground">{row.total.toLocaleString('en-IN')}</td>
                                                     </tr>
                                                 ))}
                                                 <tr className="bg-primary/5 font-bold">
-                                                    <td colSpan={3} className="px-4 py-4 text-right uppercase tracking-widest text-[10px]">Total Order Value</td>
-                                                    <td className="px-4 py-4 text-right text-base text-primary tabular-nums">₹{workingTotal.toLocaleString('en-IN')}</td>
+                                                    <td colSpan={3} className="px-4 py-4 text-right uppercase tracking-widest text-[10px] text-muted-foreground">Total Order Value</td>
+                                                    <td className="px-4 py-4 text-right text-base text-primary tabular-nums font-black">₹{workingTotal.toLocaleString('en-IN')}</td>
                                                 </tr>
                                             </tbody>
                                         </table>
@@ -639,9 +638,9 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                                 ) : (
                                     <>
                                         {filteredDeliverables.length === 0 ? (
-                                            <div className="text-center py-20 bg-muted/20 rounded-xl border border-dashed">
-                                                <p className="text-muted-foreground text-sm">No items match "{itemSearchQuery}"</p>
-                                                <Button variant="link" size="sm" onClick={() => setItemSearchQuery('')}>Clear filter</Button>
+                                            <div className="text-center py-20 bg-muted/20 rounded-xl border-2 border-dashed border-primary/20">
+                                                <p className="text-muted-foreground text-sm font-bold">No items match "{itemSearchQuery}"</p>
+                                                <Button variant="link" size="sm" onClick={() => setItemSearchQuery('')} className="font-bold">Clear filter</Button>
                                             </div>
                                         ) : (
                                             <Accordion 
@@ -676,21 +675,21 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                         </div>
                     </div>
 
-                    <aside className="w-[24rem] shrink-0 border-l bg-card/30 hidden xl:flex flex-col p-6 gap-6 overflow-y-auto custom-scrollbar">
+                    <aside className="w-[24rem] shrink-0 border-l border-primary/20 bg-card/30 hidden xl:flex flex-col p-6 gap-6 overflow-y-auto custom-scrollbar">
                         {FinancialSnapshot}
-                        <div className="mt-auto pt-6 border-t flex items-center justify-between px-2">
+                        <div className="mt-auto pt-6 border-t border-primary/20 flex items-center justify-between px-2">
                             <div className="flex items-center gap-2">
                                 <Users className="h-4 w-4 text-muted-foreground" />
                                 <span className="text-[10px] font-bold text-muted-foreground uppercase">Role: Manager</span>
                             </div>
-                            <Button variant="outline" size="sm" onClick={() => router.push('/active-orders')} className="h-8 text-[10px] font-bold uppercase">
+                            <Button variant="outline" size="sm" onClick={() => router.push('/active-orders')} className="h-8 text-[10px] font-bold uppercase border-primary text-primary hover:bg-primary/5">
                                 Exit to List
                             </Button>
                         </div>
                     </aside>
                 </main>
 
-                <div className="xl:hidden fixed bottom-0 left-0 right-0 bg-background border-t z-40 shadow-2xl animate-in slide-in-from-bottom duration-300">
+                <div className="xl:hidden fixed bottom-0 left-0 right-0 bg-background border-t border-primary/20 z-40 shadow-2xl animate-in slide-in-from-bottom duration-300">
                     <div className="flex items-center justify-between px-4 h-20">
                         <div className="space-y-0.5">
                             <p className="text-[9px] font-bold uppercase text-muted-foreground">Order Value</p>
@@ -701,23 +700,23 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                         <div className="flex items-center gap-3">
                             <div className="text-right">
                                 <p className="text-[9px] font-bold uppercase text-muted-foreground">Balance</p>
-                                <p className={cn("text-sm font-bold tabular-nums", balance > 0 ? "text-destructive" : "text-green-600")}>
+                                <p className={cn("text-sm font-bold tabular-nums", balance > 0 ? "text-destructive" : "text-green-700")}>
                                     ₹{Math.abs(balance).toLocaleString('en-IN')}
                                 </p>
                             </div>
                             <Sheet>
                                 <SheetTrigger asChild>
-                                    <Button variant="secondary" size="icon" className="h-10 w-10 rounded-full shadow-lg">
+                                    <Button variant="secondary" size="icon" className="h-10 w-10 rounded-full shadow-lg bg-primary text-white hover:bg-primary/90">
                                         <ChevronUp className="h-5 w-5" />
                                     </Button>
                                 </SheetTrigger>
-                                <SheetContent side="bottom" className="h-[80vh] px-4 pt-10 rounded-t-3xl overflow-y-auto custom-scrollbar">
+                                <SheetContent side="bottom" className="h-[80vh] px-4 pt-10 rounded-t-3xl overflow-y-auto custom-scrollbar border-t-2 border-primary/20">
                                     <SheetHeader className="sr-only">
                                         <SheetTitle>Financial Details</SheetTitle>
                                     </SheetHeader>
                                     {FinancialSnapshot}
                                     <div className="pt-8 pb-10">
-                                        <Button variant="outline" className="w-full h-12 font-bold uppercase" onClick={() => router.push('/active-orders')}>
+                                        <Button variant="outline" className="w-full h-12 font-bold uppercase border-primary text-primary" onClick={() => router.push('/active-orders')}>
                                             Exit to List
                                         </Button>
                                     </div>
@@ -728,30 +727,10 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                 </div>
             </div>
 
-            <AlertDialog open={isExitConfirmOpen} onOpenChange={setIsExitConfirmOpen}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle className="flex items-center gap-2">
-                            <AlertTriangle className="h-5 w-5 text-amber-500" />
-                            Unsaved Data Detected
-                        </AlertDialogTitle>
-                        <AlertDialogDescription>
-                            You have one or more product configurations open. Exiting Edit Mode now will discard any unconfirmed changes in those rows.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Go Back &amp; Save</AlertDialogCancel>
-                        <AlertDialogAction onClick={confirmExitEditMode} className="bg-destructive hover:bg-destructive/90">
-                            Discard Changes
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
-
             <style jsx global>{`
                 .custom-scrollbar::-webkit-scrollbar { width: 5px; }
                 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-                .custom-scrollbar::-webkit-scrollbar-thumb { background: hsl(var(--muted)); border-radius: 10px; }
+                .custom-scrollbar::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 10px; }
                 .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground) / 0.3); }
             `}</style>
         </AppLayout>
