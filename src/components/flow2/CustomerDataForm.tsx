@@ -111,8 +111,8 @@ const EditableField = ({
         className={cn(
           "font-semibold leading-relaxed text-foreground border-2 rounded-md -ml-3",
           "bg-transparent border-transparent hover:bg-primary/5",
-          "focus:bg-background focus:border-primary/40 focus:shadow-sm focus:placeholder:opacity-50",
-          "placeholder:italic placeholder:font-normal placeholder:text-muted-foreground/70"
+          "focus:bg-background focus:border-primary/40 focus:shadow-sm",
+          "placeholder:italic placeholder:font-normal placeholder:text-muted-foreground/60 placeholder:text-[11px]"
         )}
       />
     </div>
@@ -121,6 +121,7 @@ const EditableField = ({
 
 /**
  * Product Brief Row Component
+ * Refactored to remove "boxes" and badges from specs.
  */
 const ProductBriefRow = ({
   item,
@@ -145,32 +146,32 @@ const ProductBriefRow = ({
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-[240px_1fr] gap-6 py-4 border-b border-primary/10 last:border-0 group transition-all">
+    <div className="grid grid-cols-1 md:grid-cols-[240px_1fr] gap-6 py-6 border-b border-primary/10 last:border-0 group transition-all">
       <div className="space-y-2 pt-1">
         <h4 className="font-headline font-black text-xs text-foreground uppercase tracking-tight">
           {item.productName}
         </h4>
-        <div className="flex flex-wrap gap-1">
-          {item.quantity !== undefined && item.quantity !== null && (
-            <span className="px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-bold text-[9px] uppercase border">
-              QTY: {item.quantity}
-            </span>
-          )}
-          {item.pages !== undefined && item.pages !== null && (
-            <span className="px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-bold text-[9px] uppercase border">
-              {item.pages} PGS
-            </span>
-          )}
+        
+        <div className="flex flex-col gap-0.5">
           {item.variant && (
-            <span className="px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-bold text-[9px] uppercase border">
-              {item.variant}
-            </span>
+             <span className="text-[10px] font-bold text-primary uppercase tracking-wide">
+               {item.variant}
+             </span>
           )}
+          <div className="flex flex-wrap gap-x-3 text-[10px] font-bold text-muted-foreground/80 uppercase tracking-tight">
+            {item.quantity !== undefined && item.quantity !== null && (
+              <span>QTY: {item.quantity}</span>
+            )}
+            {item.pages !== undefined && item.pages !== null && (
+              <span>{item.pages} PGS</span>
+            )}
+          </div>
         </div>
+
         {item.specialRequest && (
-          <div className="flex items-center gap-1.5 text-[9px] font-bold text-orange-800 uppercase bg-orange-50 px-1.5 py-1 rounded border border-orange-200">
-            <MessageSquare className="h-2.5 w-2.5 shrink-0" />
-            <span className="line-clamp-1">{item.specialRequest}</span>
+          <div className="flex items-start gap-1.5 text-[10px] font-medium text-orange-800/80 italic leading-tight pt-1">
+            <MessageSquare className="h-3 w-3 shrink-0 mt-0.5" />
+            <span>{item.specialRequest}</span>
           </div>
         )}
       </div>
@@ -183,8 +184,8 @@ const ProductBriefRow = ({
           className={cn(
             "font-semibold bg-transparent text-foreground border-2 rounded-md transition-all -ml-3",
             "border-transparent hover:bg-primary/5",
-            "focus:bg-background focus:border-primary/40 focus:shadow-sm focus:placeholder:opacity-50",
-            "placeholder:italic placeholder:font-normal placeholder:text-muted-foreground/70"
+            "focus:bg-background focus:border-primary/40 focus:shadow-sm",
+            "placeholder:italic placeholder:font-normal placeholder:text-muted-foreground/60 placeholder:text-[11px]"
           )}
         />
       </div>
@@ -237,7 +238,6 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-12 items-start">
-        {/* Row 1, Col 1 */}
         <section className="space-y-6">
           <SectionHeader title="Visual Identity" icon={Palette} />
           <div className="space-y-6">
@@ -268,7 +268,6 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
           </div>
         </section>
 
-        {/* Row 1, Col 2 */}
         <section className="space-y-6">
           <SectionHeader title="The Narrative" icon={BookOpen} />
           <div className="space-y-6">
@@ -299,7 +298,6 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
           </div>
         </section>
 
-        {/* Row 2, Col 1 - Aligned Header */}
         <section className="space-y-6">
           <SectionHeader title="Culture & Symbols" icon={Globe} />
           <div className="space-y-6">
@@ -322,7 +320,6 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
           </div>
         </section>
 
-        {/* Row 2, Col 2 - Aligned Header */}
         <section className="space-y-6">
           <SectionHeader title="Atmosphere & Extras" icon={Sparkles} />
           <div className="space-y-6">
@@ -349,7 +346,7 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
       <section className="pt-8 border-t border-primary/10">
         <SectionHeader title="Product Specific Briefs" icon={Box} />
         
-        <div className="bg-card/30 rounded-xl px-6 border border-primary/5">
+        <div className="bg-card/20 rounded-xl px-4 border border-primary/5">
           {order.deliverables.length === 0 ? (
             <div className="py-8 text-center italic text-muted-foreground text-sm">No products in scope. Add products in the Overview tab.</div>
           ) : (
