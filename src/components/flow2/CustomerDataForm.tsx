@@ -22,7 +22,6 @@ const AutoGrowingTextarea = React.forwardRef<
     const element = textAreaRef.current;
     if (element) {
       element.style.height = 'auto';
-      // Use scrollHeight to match content, fallback to a sensible minimum if needed
       element.style.height = `${element.scrollHeight}px`;
     }
   };
@@ -113,7 +112,7 @@ const EditableField = ({
           "font-semibold leading-relaxed text-foreground border-2 rounded-md -ml-3",
           "bg-transparent border-transparent hover:bg-primary/5",
           "focus:bg-background focus:border-primary/40 focus:shadow-sm focus:placeholder:opacity-50",
-          "placeholder:italic placeholder:font-normal placeholder:text-muted-foreground/60"
+          "placeholder:italic placeholder:font-normal placeholder:text-muted-foreground/70"
         )}
       />
     </div>
@@ -185,7 +184,7 @@ const ProductBriefRow = ({
             "font-semibold bg-transparent text-foreground border-2 rounded-md transition-all -ml-3",
             "border-transparent hover:bg-primary/5",
             "focus:bg-background focus:border-primary/40 focus:shadow-sm focus:placeholder:opacity-50",
-            "placeholder:italic placeholder:font-normal placeholder:text-muted-foreground/60"
+            "placeholder:italic placeholder:font-normal placeholder:text-muted-foreground/70"
           )}
         />
       </div>
@@ -237,114 +236,114 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-12">
-        <div className="space-y-10">
-          <section>
-            <SectionHeader title="Visual Identity" icon={Palette} />
-            <div className="space-y-6">
-              <EditableField 
-                id="mood"
-                label="Mood & Style Reference"
-                register={register}
-                registerKey="visualIdentity.moodStyle"
-                value={watchedValues.visualIdentity?.moodStyle || ''}
-                showEmpty={showEmptyFields}
-              />
-              <EditableField 
-                id="colors"
-                label="Color Palette & Typography"
-                register={register}
-                registerKey="visualIdentity.colorTypography"
-                value={watchedValues.visualIdentity?.colorTypography || ''}
-                showEmpty={showEmptyFields}
-              />
-              <EditableField 
-                id="dislikes"
-                label="Design Dislikes"
-                register={register}
-                registerKey="visualIdentity.designDislikes"
-                value={watchedValues.visualIdentity?.designDislikes || ''}
-                showEmpty={showEmptyFields}
-              />
-            </div>
-          </section>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-12 items-start">
+        {/* Row 1, Col 1 */}
+        <section className="space-y-6">
+          <SectionHeader title="Visual Identity" icon={Palette} />
+          <div className="space-y-6">
+            <EditableField 
+              id="mood"
+              label="Mood & Style Reference"
+              register={register}
+              registerKey="visualIdentity.moodStyle"
+              value={watchedValues.visualIdentity?.moodStyle || ''}
+              showEmpty={showEmptyFields}
+            />
+            <EditableField 
+              id="colors"
+              label="Color Palette & Typography"
+              register={register}
+              registerKey="visualIdentity.colorTypography"
+              value={watchedValues.visualIdentity?.colorTypography || ''}
+              showEmpty={showEmptyFields}
+            />
+            <EditableField 
+              id="dislikes"
+              label="Design Dislikes"
+              register={register}
+              registerKey="visualIdentity.designDislikes"
+              value={watchedValues.visualIdentity?.designDislikes || ''}
+              showEmpty={showEmptyFields}
+            />
+          </div>
+        </section>
 
-          <section>
-            <SectionHeader title="Culture & Symbols" icon={Globe} />
-            <div className="space-y-6">
-              <EditableField 
-                id="icons"
-                label="Mandatory Icons & Motifs"
-                register={register}
-                registerKey="cultureSymbols.mandatoryIcons"
-                value={watchedValues.cultureSymbols?.mandatoryIcons || ''}
-                showEmpty={showEmptyFields}
-              />
-              <EditableField 
-                id="nuances"
-                label="Regional Nuances"
-                register={register}
-                registerKey="cultureSymbols.regionalNuances"
-                value={watchedValues.cultureSymbols?.regionalNuances || ''}
-                showEmpty={showEmptyFields}
-              />
-            </div>
-          </section>
-        </div>
+        {/* Row 1, Col 2 */}
+        <section className="space-y-6">
+          <SectionHeader title="The Narrative" icon={BookOpen} />
+          <div className="space-y-6">
+            <EditableField 
+              id="timeline"
+              label="Relationship Timeline"
+              register={register}
+              registerKey="narrative.timeline"
+              value={watchedValues.narrative?.timeline || ''}
+              showEmpty={showEmptyFields}
+            />
+            <EditableField 
+              id="couple"
+              label="The Couple's World"
+              register={register}
+              registerKey="narrative.coupleWorld"
+              value={watchedValues.narrative?.coupleWorld || ''}
+              showEmpty={showEmptyFields}
+            />
+            <EditableField 
+              id="eggs"
+              label="Easter Eggs"
+              register={register}
+              registerKey="narrative.easterEggs"
+              value={watchedValues.narrative?.easterEggs || ''}
+              showEmpty={showEmptyFields}
+            />
+          </div>
+        </section>
 
-        <div className="space-y-10">
-          <section>
-            <SectionHeader title="The Narrative" icon={BookOpen} />
-            <div className="space-y-6">
-              <EditableField 
-                id="timeline"
-                label="Relationship Timeline"
-                register={register}
-                registerKey="narrative.timeline"
-                value={watchedValues.narrative?.timeline || ''}
-                showEmpty={showEmptyFields}
-              />
-              <EditableField 
-                id="couple"
-                label="The Couple's World"
-                register={register}
-                registerKey="narrative.coupleWorld"
-                value={watchedValues.narrative?.coupleWorld || ''}
-                showEmpty={showEmptyFields}
-              />
-              <EditableField 
-                id="eggs"
-                label="Easter Eggs"
-                register={register}
-                registerKey="narrative.easterEggs"
-                value={watchedValues.narrative?.easterEggs || ''}
-                showEmpty={showEmptyFields}
-              />
-            </div>
-          </section>
+        {/* Row 2, Col 1 - Aligned Header */}
+        <section className="space-y-6">
+          <SectionHeader title="Culture & Symbols" icon={Globe} />
+          <div className="space-y-6">
+            <EditableField 
+              id="icons"
+              label="Mandatory Icons & Motifs"
+              register={register}
+              registerKey="cultureSymbols.mandatoryIcons"
+              value={watchedValues.cultureSymbols?.mandatoryIcons || ''}
+              showEmpty={showEmptyFields}
+            />
+            <EditableField 
+              id="nuances"
+              label="Regional Nuances"
+              register={register}
+              registerKey="cultureSymbols.regionalNuances"
+              value={watchedValues.cultureSymbols?.regionalNuances || ''}
+              showEmpty={showEmptyFields}
+            />
+          </div>
+        </section>
 
-          <section>
-            <SectionHeader title="Atmosphere & Extras" icon={Sparkles} />
-            <div className="space-y-6">
-              <EditableField 
-                id="personality"
-                label="Venue Personality"
-                register={register}
-                registerKey="atmosphereExtras.venuePersonality"
-                value={watchedValues.atmosphereExtras?.venuePersonality || ''}
-                showEmpty={showEmptyFields}
-              />
-              <EditableField 
-                id="other"
-                label="Other Details"
-                register={register}
-                registerKey="atmosphereExtras.otherDetails"
-                value={watchedValues.atmosphereExtras?.otherDetails || ''}
-                showEmpty={showEmptyFields}
-              />
-            </div>
-          </section>
-        </div>
+        {/* Row 2, Col 2 - Aligned Header */}
+        <section className="space-y-6">
+          <SectionHeader title="Atmosphere & Extras" icon={Sparkles} />
+          <div className="space-y-6">
+            <EditableField 
+              id="personality"
+              label="Venue Personality"
+              register={register}
+              registerKey="atmosphereExtras.venuePersonality"
+              value={watchedValues.atmosphereExtras?.venuePersonality || ''}
+              showEmpty={showEmptyFields}
+            />
+            <EditableField 
+              id="other"
+              label="Other Details"
+              register={register}
+              registerKey="atmosphereExtras.otherDetails"
+              value={watchedValues.atmosphereExtras?.otherDetails || ''}
+              showEmpty={showEmptyFields}
+            />
+          </div>
+        </section>
       </div>
 
       <section className="pt-8 border-t border-primary/10">
