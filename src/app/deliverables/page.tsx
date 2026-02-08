@@ -16,7 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function DeliverablesPage() {
     const router = useRouter();
-    const { order, saveAsDraft, updateDeliverable, removeDeliverable } = useOrder();
+    const { order, saveAsDraft, updateDeliverable, removeDeliverable, isLoaded } = useOrder();
     const { toast } = useToast();
     const headerSummary = useHeaderSummary(order.eventDetails);
     
@@ -24,11 +24,17 @@ export default function DeliverablesPage() {
     const [isNavigating, setIsNavigating] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     
-    const [committedItemIds, setCommittedItemIds] = useState<string[]>(() => 
-        (order.deliverables || []).map(item => item.id)
-    );
-    
-    const [openOrderListItems, setOpenOrderListItems] = useState<string[]>([]);
+    // Initialize committed items from order deliverables
+    const [committedItemIds, setCommittedItemIds] = useState<string[]>([]);
+    const lastOrderId = useRef<string | null>(null);
+
+    // Sync committed items when a new order/draft is loaded
+    useEffect(() => {
+        if (isLoaded && order.orderId !== lastOrderId.current) {
+            setCommittedItemIds((order.deliverables || []).map(item => item.id));
+            lastOrderId.current = order.orderId;
+        }
+    }, [isLoaded, order.orderId, order.deliverables]);
 
     const handleValidityChange = useCallback((id: string, isValid: boolean) => {
         setRowStatus(prev => {
@@ -55,6 +61,8 @@ export default function DeliverablesPage() {
         }
     }, [rowStatus, toast]);
 
+    const [openOrderListItems, setOpenOrderListItems] = useState<string[]>([]);
+
     const handleOrderListEdit = useCallback((id: string) => {
         setOpenOrderListItems(prev => Array.from(new Set([...prev, id])));
     }, []);
@@ -73,18 +81,19 @@ export default function DeliverablesPage() {
         return { activeItems: active, orderListItems: list as any[] };
     }, [order.deliverables, committedItemIds]);
 
-    const actionSectionRef = useRef<HTMLHeadingElement>(null);
-
     const isNextStepActive = useMemo(() => {
         const deliverables = order.deliverables || [];
         if (deliverables.length === 0) return false;
+        
+        // If there are items in "Action Required", we can't move forward
         if (activeItems.length > 0) return false;
+        
+        // If any item in the order list is being edited, we wait
         if (openOrderListItems.length > 0) return false;
-        return deliverables.every(item => {
-            if (committedItemIds.includes(item.id)) return true;
-            return rowStatus[item.id]?.isValid === true;
-        });
-    }, [order.deliverables, activeItems.length, openOrderListItems.length, rowStatus, committedItemIds]);
+
+        // Check overall validity from rowStatus (populated by children)
+        return deliverables.every(item => rowStatus[item.id]?.isValid === true);
+    }, [order.deliverables, activeItems.length, openOrderListItems.length, rowStatus]);
 
     const handleNextStep = useCallback(async () => {
         if (!isNextStepActive) return;
@@ -95,8 +104,7 @@ export default function DeliverablesPage() {
                 router.push('/commercials');
             }
         } finally {
-            // Safety timeout to reset navigation state if router takes too long
-            setTimeout(() => setIsNavigating(false), 5000);
+            setTimeout(() => setIsNavigating(false), 2000);
         }
     }, [isNextStepActive, router, saveAsDraft]);
 
@@ -120,7 +128,7 @@ export default function DeliverablesPage() {
                         </h1>
                         <p className="text-xs text-muted-foreground uppercase tracking-wider font-bold">Deliverables</p>
                     </div>
-                    <div className="hidden lg:block font-mono text-xs opacity-50">{order.orderId}</div>
+                    <div className="hidden lg:block font-mono text-xs opacity-50">{order.orderId || 'NEW'}</div>
                 </header>
 
                 <main className="flex-1 overflow-y-auto bg-background">
@@ -132,11 +140,11 @@ export default function DeliverablesPage() {
                         <div className="space-y-12">
                             {activeItems.length > 0 && (
                                 <section className="space-y-4">
-                                    <h2 ref={actionSectionRef} className="text-xs font-bold uppercase tracking-widest text-primary flex items-center gap-2 scroll-mt-48">
+                                    <h2 className="text-xs font-bold uppercase tracking-widest text-primary flex items-center gap-2">
                                         <AlertCircle className="h-4 w-4" />
                                         Action Required ({activeItems.length})
                                     </h2>
-                                    <Accordion type="multiple" value={activeItems.map(i => i.id)} className="space-y-2 pointer-events-auto">
+                                    <Accordion type="multiple" value={activeItems.map(i => i.id)} className="space-y-2">
                                         {activeItems.map((item) => (
                                             <DeliverableRow 
                                                 key={item.id} 

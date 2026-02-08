@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -186,7 +187,7 @@ export function EventDetailsForm({ activeOrder, onUpdate, hideFooters = false }:
     mode: 'onChange'
   });
 
-  const { register, control, watch, handleSubmit, formState: { errors, isValid }, reset, setValue, getValues } = form;
+  const { register, control, watch, handleSubmit, formState: { errors, isValid }, reset, setValue, getValues, trigger } = form;
   
   const lastResetId = useRef<string | null>(null);
 
@@ -198,9 +199,11 @@ export function EventDetailsForm({ activeOrder, onUpdate, hideFooters = false }:
       } else if (isLoaded) {
         reset(order.eventDetails as any);
       }
+      // Trigger validation on mount/load to ensure CTA state is correct
+      trigger();
       lastResetId.current = currentId;
     }
-  }, [isLoaded, order.orderId, activeOrder?.orderId, reset, order.eventDetails]);
+  }, [isLoaded, order.orderId, activeOrder?.orderId, reset, order.eventDetails, trigger]);
   
   const watchedFields = watch();
   const headerSummary = useHeaderSummary(watchedFields);
@@ -240,8 +243,8 @@ export function EventDetailsForm({ activeOrder, onUpdate, hideFooters = false }:
 
   const handleCancel = () => {
     if (window.confirm("Are you sure you want to cancel? All unsaved changes will be lost.")) {
-      resetOrder();
-      reset(DEFAULT_EVENT_VALUES);
+      resetOrder(); // Clears global context
+      reset(DEFAULT_EVENT_VALUES); // Clears local form state
       lastResetId.current = 'new';
     }
   };
