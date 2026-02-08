@@ -5,20 +5,32 @@ import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { MobileNav } from '@/components/layout/MobileNav';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { useHeaderSummary } from '@/hooks/use-header-summary';
 import { useToast } from '@/hooks/use-toast';
-import { Pencil, Save, ChevronLeft, Loader2, DollarSign, Package, CalendarDays } from 'lucide-react';
+import { 
+    Pencil, 
+    ChevronLeft, 
+    Loader2, 
+    DollarSign, 
+    Package, 
+    CalendarDays, 
+    MapPin, 
+    Users,
+    TrendingUp
+} from 'lucide-react';
 import { EventDetailsForm } from '@/components/flow1/EventDetailsForm';
 import { DeliverableRow } from '@/components/flow2/DeliverableRow';
 import { CommandBar } from '@/components/flow2/CommandBar';
 import { Accordion } from '@/components/ui/accordion';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
 import { calculateBillableItems } from '@/lib/pricing';
 import { cn } from '@/lib/utils';
-import type { Order, ConfiguredProduct, BillableItem } from '@/lib/types';
+import type { Order, ConfiguredProduct, EventDetails } from '@/lib/types';
 
-export default function ActiveOrderViewer() {
+export default function ActiveOrderCommandCenter() {
     const params = useParams();
     const id = params.id as string;
     const router = useRouter();
@@ -26,11 +38,7 @@ export default function ActiveOrderViewer() {
 
     const [activeOrder, setActiveOrder] = useState<Order | null>(null);
     const [loading, setLoading] = useState(true);
-    const [editMode, setEditMode] = useState<Record<string, boolean>>({
-        details: false,
-        deliverables: false,
-        commercials: false
-    });
+    const [isDetailsSheetOpen, setIsDetailsSheetOpen] = useState(false);
 
     const headerSummary = useHeaderSummary(activeOrder?.eventDetails || {});
 
@@ -54,40 +62,45 @@ export default function ActiveOrderViewer() {
         loadOrder();
     }, [loadOrder]);
 
-    const saveOrder = async (updatedOrder: Order) => {
+    const syncToStorage = useCallback((updatedOrder: Order) => {
         try {
             const raw = localStorage.getItem('srishbish_active_v1');
             if (raw) {
                 const parsed = JSON.parse(raw);
-                parsed[id] = { ...updatedOrder, activatedAt: new Date().toISOString() };
+                parsed[id] = { ...updatedOrder, lastModifiedAt: new Date().toISOString() };
                 localStorage.setItem('srishbish_active_v1', JSON.stringify(parsed));
                 setActiveOrder(updatedOrder);
-                toast({ title: "Order Updated", description: "Changes saved successfully." });
             }
         } catch (e) {
-            toast({ variant: "destructive", title: "Save Failed", description: "Could not update order." });
+            toast({ variant: "destructive", title: "Sync Failed", description: "Could not save changes to local storage." });
         }
-    };
-
-    const toggleEdit = (tab: string) => {
-        setEditMode(prev => ({ ...prev, [tab]: !prev[tab] }));
-    };
+    }, [id, toast]);
 
     const updateDeliverable = (delId: string, updates: Partial<ConfiguredProduct>) => {
         if (!activeOrder) return;
         const newDeliverables = activeOrder.deliverables.map(d => d.id === delId ? { ...d, ...updates } : d);
-        setActiveOrder({ ...activeOrder, deliverables: newDeliverables });
+        syncToStorage({ ...activeOrder, deliverables: newDeliverables });
     };
 
     const removeDeliverable = (delId: string) => {
         if (!activeOrder) return;
         const newDeliverables = activeOrder.deliverables.filter(d => d.id !== delId);
-        setActiveOrder({ ...activeOrder, deliverables: newDeliverables });
+        syncToStorage({ ...activeOrder, deliverables: newDeliverables });
     };
 
     const addDeliverable = (del: ConfiguredProduct) => {
         if (!activeOrder) return;
-        setActiveOrder({ ...activeOrder, deliverables: [del, ...activeOrder.deliverables] });
+        syncToStorage({ ...activeOrder, deliverables: [del, ...activeOrder.deliverables] });
+    };
+
+    const updateDetails = (details: EventDetails) => {
+        if (!activeOrder) return;
+        syncToStorage({ ...activeOrder, eventDetails: details });
+    };
+
+    const updatePayment = (amount: number) => {
+        if (!activeOrder) return;
+        syncToStorage({ ...activeOrder, paymentReceived: amount });
     };
 
     const billableItems = useMemo(() => {
@@ -101,6 +114,15 @@ export default function ActiveOrderViewer() {
     }, [billableItems]);
 
     const balance = totalValue - (activeOrder?.paymentReceived || 0);
+
+    const getClientDisplay = () => {
+        const d = activeOrder?.eventDetails;
+        if (!d) return 'Unknown Client';
+        if (d.eventType === 'Wedding') return `${d.brideName} & ${d.groomName}`;
+        if (d.eventType === 'Engagement') return `${d.engagementBrideName} & ${d.engagementGroomName}`;
+        if (d.eventType === 'Anniversary') return `${d.wifeName} & ${d.husbandName}`;
+        return d.honoreeNameBirthday || d.honoreeNameOther || d.eventName || 'Unnamed Event';
+    };
 
     if (loading) {
         return (
@@ -128,6 +150,7 @@ export default function ActiveOrderViewer() {
     return (
         <AppLayout>
             <div className="flex flex-col h-screen overflow-hidden bg-background">
+                {/* Header Area */}
                 <header className="flex h-16 shrink-0 items-center gap-4 border-b px-4 md:px-6 bg-background z-50">
                     <MobileNav />
                     <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => router.push('/active-orders')}>
@@ -137,188 +160,185 @@ export default function ActiveOrderViewer() {
                         <h1 className="font-semibold text-base md:text-lg font-headline truncate">
                             {headerSummary}
                         </h1>
-                        <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Active Order View</p>
+                        <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Command Center</p>
                     </div>
-                    <div className="hidden lg:block font-mono text-xs opacity-50">{activeOrder.orderId}</div>
+                    <div className="hidden lg:block font-mono text-xs opacity-50 bg-muted px-2 py-1 rounded">
+                        {activeOrder.orderId}
+                    </div>
                 </header>
 
-                <main className="flex-1 overflow-hidden flex flex-col">
-                    <Tabs defaultValue="details" className="flex-1 flex flex-col overflow-hidden">
-                        <div className="px-4 md:px-6 border-b bg-card/30">
-                            <TabsList className="h-14 bg-transparent gap-6">
-                                <TabsTrigger value="details" className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-primary data-[state=active]:border-b-2 border-primary rounded-none px-0 h-14 font-bold text-xs uppercase tracking-wider gap-2">
-                                    <CalendarDays className="h-3.5 w-3.5" /> Details
-                                </TabsTrigger>
-                                <TabsTrigger value="deliverables" className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-primary data-[state=active]:border-b-2 border-primary rounded-none px-0 h-14 font-bold text-xs uppercase tracking-wider gap-2">
-                                    <Package className="h-3.5 w-3.5" /> Deliverables
-                                </TabsTrigger>
-                                <TabsTrigger value="commercials" className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-primary data-[state=active]:border-b-2 border-primary rounded-none px-0 h-14 font-bold text-xs uppercase tracking-wider gap-2">
-                                    <DollarSign className="h-3.5 w-3.5" /> Commercials
-                                </TabsTrigger>
-                            </TabsList>
+                <main className="flex-1 flex overflow-hidden">
+                    {/* Left Panel: Scope of Work */}
+                    <div className="flex-1 overflow-y-auto bg-background/50 custom-scrollbar">
+                        <div className="max-w-4xl mx-auto p-4 md:p-8 space-y-8 pb-24">
+                            <div className="flex items-center justify-between">
+                                <h2 className="text-xl font-headline font-bold flex items-center gap-2">
+                                    <Package className="h-5 w-5 text-primary" />
+                                    Scope of Work
+                                </h2>
+                                <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                                    {activeOrder.deliverables.length} Items
+                                </span>
+                            </div>
+
+                            {/* Always Active Command Bar */}
+                            <div className="bg-card p-4 md:p-6 rounded-xl border-2 border-primary/10 shadow-sm sticky top-0 z-40 backdrop-blur-sm bg-card/95">
+                                <CommandBar onAdd={addDeliverable} />
+                            </div>
+
+                            {/* Interactive Deliverables List */}
+                            <div className="space-y-4">
+                                {activeOrder.deliverables.length === 0 ? (
+                                    <div className="text-center py-20 border-2 border-dashed rounded-xl bg-muted/30">
+                                        <Package className="h-10 w-10 text-muted-foreground/30 mx-auto mb-4" />
+                                        <p className="text-sm text-muted-foreground font-medium">No deliverables added yet.</p>
+                                        <p className="text-xs text-muted-foreground mt-1">Search products above to build the scope.</p>
+                                    </div>
+                                ) : (
+                                    <Accordion type="multiple" defaultValue={activeOrder.deliverables.map(d => d.id)} className="space-y-3">
+                                        {activeOrder.deliverables.map((item) => (
+                                            <DeliverableRow 
+                                                key={item.id} 
+                                                item={item} 
+                                                isExpanded={true} 
+                                                isNonCollapsible={false}
+                                                onEdit={() => {}}
+                                                onDone={() => {}}
+                                                onValidityChange={() => {}}
+                                                onUpdate={updateDeliverable}
+                                                onRemove={removeDeliverable}
+                                                isPersistent={false}
+                                            />
+                                        ))}
+                                    </Accordion>
+                                )}
+                            </div>
                         </div>
+                    </div>
 
-                        <div className="flex-1 overflow-y-auto bg-background p-4 md:p-8">
-                            <TabsContent value="details" className="mt-0 focus-visible:ring-0">
-                                <div className="max-w-3xl mx-auto space-y-6">
-                                    <div className="flex justify-between items-center">
-                                        <h2 className="text-xl font-headline font-bold">Event Specifics</h2>
-                                        <Button 
-                                            variant={editMode.details ? "default" : "outline"} 
-                                            size="sm" 
-                                            onClick={() => editMode.details ? saveOrder(activeOrder).then(() => toggleEdit('details')) : toggleEdit('details')}
-                                            className="gap-2"
-                                        >
-                                            {editMode.details ? <Save className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
-                                            {editMode.details ? "Save" : "Edit"}
+                    {/* Right Sidebar: Snapshot & Financials */}
+                    <aside className="w-[24rem] shrink-0 border-l bg-card/30 hidden xl:flex flex-col p-6 gap-6 overflow-y-auto custom-scrollbar">
+                        
+                        {/* Event Snapshot */}
+                        <Card className="shadow-none border-primary/10">
+                            <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
+                                <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Event Snapshot</CardTitle>
+                                <Sheet open={isDetailsSheetOpen} onOpenChange={setIsDetailsSheetOpen}>
+                                    <SheetTrigger asChild>
+                                        <Button variant="ghost" size="sm" className="h-7 px-2 text-primary hover:text-primary hover:bg-primary/10">
+                                            <Pencil className="h-3 w-3 mr-1.5" /> Edit
                                         </Button>
+                                    </SheetTrigger>
+                                    <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto">
+                                        <SheetHeader className="mb-6">
+                                            <SheetTitle className="font-headline text-2xl">Modify Event Details</SheetTitle>
+                                        </SheetHeader>
+                                        <EventDetailsForm 
+                                            activeOrder={activeOrder} 
+                                            onUpdate={(details) => {
+                                                updateDetails(details);
+                                            }} 
+                                            hideFooters 
+                                        />
+                                        <div className="mt-8 pt-6 border-t">
+                                            <Button className="w-full" onClick={() => setIsDetailsSheetOpen(false)}>
+                                                Close & Return
+                                            </Button>
+                                        </div>
+                                    </SheetContent>
+                                </Sheet>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div className="space-y-1">
+                                    <p className="text-lg font-bold font-headline leading-tight">{getClientDisplay()}</p>
+                                    <p className="text-xs text-primary font-bold uppercase">{activeOrder.eventDetails.eventType}</p>
+                                </div>
+                                <Separator />
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-1">
+                                        <div className="flex items-center gap-1.5 text-muted-foreground uppercase text-[9px] font-bold">
+                                            <CalendarDays className="h-3 w-3" /> Event Date
+                                        </div>
+                                        <p className="text-xs font-semibold">
+                                            {activeOrder.eventDetails.eventDate ? new Date(activeOrder.eventDetails.eventDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
+                                        </p>
                                     </div>
-                                    <div className={cn("transition-all", !editMode.details && "pointer-events-none opacity-90")}>
-                                        <EventDetailsForm activeOrder={activeOrder} onUpdate={(details) => setActiveOrder({...activeOrder, eventDetails: details})} hideFooters />
+                                    <div className="space-y-1">
+                                        <div className="flex items-center gap-1.5 text-muted-foreground uppercase text-[9px] font-bold">
+                                            <MapPin className="h-3 w-3" /> Venue
+                                        </div>
+                                        <p className="text-xs font-semibold truncate" title={activeOrder.eventDetails.venueName || '-'}>
+                                            {activeOrder.eventDetails.venueName || '-'}
+                                        </p>
                                     </div>
                                 </div>
-                            </TabsContent>
+                            </CardContent>
+                        </Card>
 
-                            <TabsContent value="deliverables" className="mt-0 focus-visible:ring-0">
-                                <div className="max-w-4xl mx-auto space-y-8">
-                                    <div className="flex justify-between items-center">
-                                        <h2 className="text-xl font-headline font-bold">Scope of Work</h2>
-                                        <Button 
-                                            variant={editMode.deliverables ? "default" : "outline"} 
-                                            size="sm" 
-                                            onClick={() => editMode.deliverables ? saveOrder(activeOrder).then(() => toggleEdit('deliverables')) : toggleEdit('deliverables')}
-                                            className="gap-2"
-                                        >
-                                            {editMode.deliverables ? <Save className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
-                                            {editMode.deliverables ? "Save" : "Edit"}
-                                        </Button>
-                                    </div>
-                                    
-                                    {editMode.deliverables && (
-                                        <div className="bg-card p-6 rounded-xl border-2 border-primary/20 shadow-sm">
-                                            <CommandBar onAdd={addDeliverable} />
-                                        </div>
-                                    )}
-
-                                    <div className={cn("space-y-2", !editMode.deliverables && "pointer-events-none")}>
-                                        <Accordion type="multiple" defaultValue={activeOrder.deliverables.map(d => d.id)} className="space-y-3">
-                                            {activeOrder.deliverables.map((item) => (
-                                                <DeliverableRow 
-                                                    key={item.id} 
-                                                    item={item} 
-                                                    isExpanded={editMode.deliverables} 
-                                                    isNonCollapsible={true}
-                                                    onEdit={() => {}}
-                                                    onDone={() => {}}
-                                                    onValidityChange={() => {}}
-                                                    onUpdate={updateDeliverable}
-                                                    onRemove={removeDeliverable}
-                                                    isPersistent={!editMode.deliverables}
-                                                />
-                                            ))}
-                                        </Accordion>
+                        {/* Live Financials */}
+                        <Card className="shadow-sm border-2 border-primary/20 bg-background">
+                            <CardHeader className="pb-2">
+                                <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center justify-between">
+                                    Live Financials
+                                    <TrendingUp className="h-3 w-3 text-primary" />
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-6">
+                                <div className="space-y-1">
+                                    <p className="text-[10px] font-bold uppercase text-muted-foreground">Total Order Value</p>
+                                    <p className="text-4xl font-bold tracking-tight text-foreground">₹{totalValue.toLocaleString('en-IN')}</p>
+                                </div>
+                                
+                                <div className="space-y-2">
+                                    <p className="text-[10px] font-bold uppercase text-muted-foreground">Payment Received</p>
+                                    <div className="relative">
+                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">₹</span>
+                                        <input 
+                                            type="number"
+                                            value={activeOrder.paymentReceived || ''}
+                                            onChange={(e) => updatePayment(Number(e.target.value))}
+                                            className="w-full h-12 pl-7 pr-4 rounded-lg border-2 border-muted bg-muted/20 font-bold text-xl focus:border-primary focus:ring-0 transition-colors"
+                                            placeholder="0"
+                                        />
                                     </div>
                                 </div>
-                            </TabsContent>
 
-                            <TabsContent value="commercials" className="mt-0 focus-visible:ring-0">
-                                <div className="max-w-4xl mx-auto space-y-8 pb-12">
-                                    <div className="flex justify-between items-center">
-                                        <h2 className="text-xl font-headline font-bold">Billing Breakdown</h2>
-                                        <Button 
-                                            variant={editMode.commercials ? "default" : "outline"} 
-                                            size="sm" 
-                                            onClick={() => editMode.commercials ? saveOrder(activeOrder).then(() => toggleEdit('commercials')) : toggleEdit('commercials')}
-                                            className="gap-2"
-                                        >
-                                            {editMode.commercials ? <Save className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
-                                            {editMode.commercials ? "Save" : "Edit"}
-                                        </Button>
-                                    </div>
+                                <Separator />
 
-                                    <div className="grid lg:grid-cols-3 gap-8">
-                                        <div className="lg:col-span-2 space-y-4">
-                                            <div className="rounded-xl border overflow-hidden">
-                                                <table className="w-full text-sm">
-                                                    <thead className="bg-muted/50 border-b">
-                                                        <tr>
-                                                            <th className="p-3 text-left font-bold uppercase text-[10px]">Line Item</th>
-                                                            <th className="p-3 text-center font-bold uppercase text-[10px] w-20">Mult</th>
-                                                            <th className="p-3 text-right font-bold uppercase text-[10px] w-28">Rate (₹)</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody className="divide-y">
-                                                        {billableItems.map((item) => (
-                                                            <React.Fragment key={item.configuredProductId}>
-                                                                <tr className="bg-muted/30">
-                                                                    <td colSpan={3} className="p-3 font-bold text-primary">{item.productName}</td>
-                                                                </tr>
-                                                                {item.components.map((comp, idx) => (
-                                                                    <tr key={idx} className="hover:bg-muted/10">
-                                                                        <td className="p-3 pl-8 text-muted-foreground">{comp.label}</td>
-                                                                        <td className="p-3 text-center font-mono">{comp.isFixed ? "-" : comp.multiplier}</td>
-                                                                        <td className="p-3 text-right">
-                                                                            {editMode.commercials ? (
-                                                                                <input 
-                                                                                    type="number"
-                                                                                    defaultValue={comp.rate}
-                                                                                    className="w-full h-8 text-right bg-background border rounded px-2"
-                                                                                    onBlur={(e) => {
-                                                                                        const deliverable = activeOrder.deliverables.find(d => d.id === item.configuredProductId);
-                                                                                        if (deliverable) {
-                                                                                            const rateOverrides = { ...(deliverable.rateOverrides || {}), [comp.label]: Number(e.target.value) };
-                                                                                            updateDeliverable(deliverable.id, { rateOverrides });
-                                                                                        }
-                                                                                    }}
-                                                                                />
-                                                                            ) : (
-                                                                                <span className="font-semibold">{comp.rate.toLocaleString('en-IN')}</span>
-                                                                            )}
-                                                                        </td>
-                                                                    </tr>
-                                                                ))}
-                                                            </React.Fragment>
-                                                        ))}
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        </div>
-
-                                        <div className="space-y-6 bg-card p-6 rounded-xl border border-primary/20 shadow-sm self-start sticky top-4">
-                                            <div className="space-y-1">
-                                                <p className="text-[10px] font-bold uppercase text-muted-foreground">Total Order Value</p>
-                                                <p className="text-4xl font-bold tracking-tight">₹{totalValue.toLocaleString('en-IN')}</p>
-                                            </div>
-                                            
-                                            <div className="space-y-2">
-                                                <p className="text-[10px] font-bold uppercase text-muted-foreground">Payment Received</p>
-                                                <div className="relative">
-                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">₹</span>
-                                                    <input 
-                                                        disabled={!editMode.commercials}
-                                                        type="number"
-                                                        value={activeOrder.paymentReceived || ''}
-                                                        onChange={(e) => setActiveOrder({...activeOrder, paymentReceived: Number(e.target.value)})}
-                                                        className="w-full h-10 pl-7 pr-4 rounded-md border bg-background font-bold text-lg disabled:bg-muted/50"
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            <div className="pt-4 border-t">
-                                                <p className="text-[10px] font-bold uppercase text-muted-foreground">Balance Due</p>
-                                                <p className={cn("text-2xl font-bold", balance > 0 ? "text-destructive" : "text-green-600")}>
-                                                    ₹{Math.abs(balance).toLocaleString('en-IN')}
-                                                    {balance < 0 && " (Excess)"}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
+                                <div className="space-y-1">
+                                    <p className="text-[10px] font-bold uppercase text-muted-foreground">Current Balance Due</p>
+                                    <p className={cn(
+                                        "text-2xl font-bold flex items-baseline gap-1.5", 
+                                        balance > 0 ? "text-destructive" : "text-green-600"
+                                    )}>
+                                        ₹{Math.abs(balance).toLocaleString('en-IN')}
+                                        {balance < 0 && <span className="text-xs uppercase">(Excess)</span>}
+                                        {balance === 0 && <span className="text-xs uppercase">(Paid)</span>}
+                                    </p>
                                 </div>
-                            </TabsContent>
+                            </CardContent>
+                        </Card>
+
+                        {/* Quick Stats Placeholder */}
+                        <div className="mt-auto pt-6 border-t flex items-center justify-between px-2">
+                            <div className="flex items-center gap-2">
+                                <Users className="h-4 w-4 text-muted-foreground" />
+                                <span className="text-[10px] font-bold text-muted-foreground uppercase">Team Access: Admin</span>
+                            </div>
+                            <Button variant="outline" size="sm" onClick={() => router.push('/active-orders')} className="h-8 text-[10px] font-bold uppercase">
+                                Exit to List
+                            </Button>
                         </div>
-                    </Tabs>
+                    </aside>
                 </main>
             </div>
+
+            <style jsx global>{`
+                .custom-scrollbar::-webkit-scrollbar { width: 5px; }
+                .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+                .custom-scrollbar::-webkit-scrollbar-thumb { background: hsl(var(--muted)); border-radius: 10px; }
+                .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground) / 0.3); }
+            `}</style>
         </AppLayout>
     );
 }
