@@ -472,11 +472,14 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
                         <div className="shrink-0">
                           {hasData ? (
                             <div className={cn(
-                              "h-4 w-4 rounded-full",
-                              isActive ? "bg-white" : "bg-green-600"
+                              "h-4 w-4 rounded-full bg-green-600 transition-colors",
+                              isActive && "ring-2 ring-white shadow-sm"
                             )} />
                           ) : (
-                            <Circle className={cn("h-4 w-4 opacity-40", isActive ? "text-white/40" : "text-muted-foreground/30")} />
+                            <Circle className={cn(
+                              "h-4 w-4 transition-colors opacity-40", 
+                              isActive ? "text-white/40" : "text-muted-foreground/30"
+                            )} />
                           )}
                         </div>
                       </button>
@@ -529,3 +532,4 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
     </div>
   );
 }
+
