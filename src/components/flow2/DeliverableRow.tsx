@@ -106,7 +106,8 @@ export const DeliverableRow = React.memo(function DeliverableRow({
     onUpdate,
     onRemove,
     isPersistent = false,
-    isReadOnly = false
+    isReadOnly = false,
+    manualSyncOnly = false
 }: DeliverableRowProps) {
     const product = React.useMemo(() => productCatalog.find(p => p.id === item.productId) || null, [item.productId]);
     const isBranchA = product?.configType === 'A' || product?.configType === 'B';
@@ -136,8 +137,30 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         mode: 'onChange'
     });
 
-    const { register, control, watch, formState: { errors, isValid }, trigger, getValues, setValue } = form;
+    const { register, control, watch, formState: { errors, isValid }, trigger, getValues, setValue, reset } = form;
     const watchedValues = watch();
+
+    // Re-sync local form state when item data from parent changes (e.g. after a rejection/re-render)
+    React.useEffect(() => {
+        if (!isExpanded) {
+            reset({
+                variant: item.variant,
+                quantity: item.quantity,
+                pages: item.pages,
+                specialRequest: item.specialRequest || '',
+                customFieldValues: item.customFieldValues || {},
+                rateOverrides: item.rateOverrides || {},
+                addons: product?.addons?.map(addon => {
+                    const existingAddon = item.addons?.find(a => a.id === addon.id);
+                    return { 
+                        id: addon.id, 
+                        name: addon.name, 
+                        value: existingAddon?.value ?? undefined
+                    };
+                }) || []
+            });
+        }
+    }, [item, isExpanded, reset, product?.addons]);
 
     const itemBreakdown = React.useMemo(() => {
         const currentItem: ConfiguredProduct = {
@@ -181,7 +204,10 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         });
     }, [getValues, item.id, onUpdate]);
 
+    // Auto-sync only if not in manualSyncOnly mode (usually draft flow vs active order flow)
     React.useEffect(() => {
+        if (manualSyncOnly) return;
+        
         const timer = setTimeout(() => {
             performSyncUpdate();
         }, 300);
@@ -194,7 +220,8 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         watchedValues.addons, 
         watchedValues.variant,
         watchedValues.rateOverrides,
-        performSyncUpdate
+        performSyncUpdate,
+        manualSyncOnly
     ]);
 
     const handleRateOverride = (label: string, value: number) => {
@@ -206,6 +233,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         e.stopPropagation();
         const res = await trigger();
         if (res) {
+            // Explicitly commit changes to parent/storage on "Done"
             performSyncUpdate();
             onDone(item.id, res);
         }
@@ -540,4 +568,5 @@ interface DeliverableRowProps {
     onRemove: (id: string) => void;
     isPersistent?: boolean;
     isReadOnly?: boolean;
+    manualSyncOnly?: boolean;
 }

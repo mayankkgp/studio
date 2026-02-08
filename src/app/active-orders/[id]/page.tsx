@@ -105,7 +105,19 @@ export default function ActiveOrderCommandCenter() {
     };
 
     const handleDoneRow = (rowId: string) => {
+        // When Done is clicked on a row, the DeliverableRow component commits its state via onUpdate
+        // Then we collapse the row
         setExpandedItems(prev => prev.filter(id => id !== rowId));
+    };
+
+    const handleToggleEditMode = () => {
+        if (isEditMode) {
+            // When exiting edit mode, collapse all rows. 
+            // Any rows that were opened but didn't have "Done" clicked will have their unsaved changes rejected
+            // because DeliverableRow in active order view uses manualSyncOnly={true}
+            setExpandedItems([]);
+        }
+        setIsEditMode(!isEditMode);
     };
 
     const updateDetails = (details: EventDetails) => {
@@ -176,7 +188,7 @@ export default function ActiveOrderCommandCenter() {
                             <Button 
                                 variant={isEditMode ? "default" : "outline"} 
                                 size="sm" 
-                                onClick={() => setIsEditMode(!isEditMode)}
+                                onClick={handleToggleEditMode}
                                 className={cn(
                                     "h-8 font-bold gap-2 transition-all",
                                     isEditMode ? "bg-primary shadow-lg shadow-primary/20" : "border-primary/50 text-primary"
@@ -252,6 +264,7 @@ export default function ActiveOrderCommandCenter() {
                                                 onUpdate={updateDeliverable}
                                                 onRemove={removeDeliverable}
                                                 isPersistent={false}
+                                                manualSyncOnly={true} // Enable staged editing
                                             />
                                         ))}
                                     </Accordion>
