@@ -25,6 +25,7 @@ const AutoGrowingTextarea = React.forwardRef<
   };
 
   React.useEffect(() => {
+    // Small delay to ensure styles are applied
     const timer = setTimeout(adjustHeight, 0);
     return () => clearTimeout(timer);
   }, [props.value, className]);
@@ -43,7 +44,7 @@ const AutoGrowingTextarea = React.forwardRef<
         if (onInput) onInput(e);
       }}
       className={cn(
-        "flex w-full bg-transparent px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground/65 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 resize-none transition-all duration-200 overflow-hidden",
+        "flex w-full bg-transparent px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground/70 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 resize-none transition-all duration-200 overflow-hidden",
         className
       )}
     />
@@ -56,10 +57,10 @@ AutoGrowingTextarea.displayName = "AutoGrowingTextarea";
  */
 const SectionHeader = ({ title, icon: Icon }: { title: string, icon: any }) => (
   <div className="flex items-center gap-3 mb-8 group">
-    <div className="h-10 w-10 shrink-0 rounded-xl bg-primary/15 text-primary flex items-center justify-center shadow-sm border border-primary/10">
+    <div className="h-10 w-10 shrink-0 rounded-xl bg-primary/20 text-primary flex items-center justify-center shadow-sm border border-primary/40">
       <Icon className="h-5 w-5" />
     </div>
-    <h3 className="font-headline text-xl font-black text-foreground tracking-tight uppercase border-b-2 border-primary/20 pb-1">
+    <h3 className="font-headline text-xl font-black text-foreground tracking-tight uppercase border-b-2 border-primary/40 pb-1">
       {title}
     </h3>
   </div>
@@ -94,10 +95,10 @@ const EditableField = ({
   if (!hasValue && !isFocused) {
     return (
       <div 
-        className="group cursor-text py-3 border-l-2 border-primary/5 hover:border-primary/20 pl-4 transition-all duration-200"
+        className="group cursor-text py-3 border-l-2 border-primary/20 hover:border-primary/40 pl-4 transition-all duration-200"
         onClick={onFocus}
       >
-        <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1.5">{label}</div>
+        <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/90 mb-1.5">{label}</div>
         <div className="text-xs italic text-muted-foreground/80 font-medium">Click to add {label.toLowerCase()}...</div>
       </div>
     );
@@ -106,11 +107,11 @@ const EditableField = ({
   return (
     <div className={cn(
       "space-y-1.5 group transition-all duration-200 border-l-2 pl-4",
-      isFocused ? "border-primary" : "border-primary/10"
+      isFocused ? "border-primary" : "border-primary/30"
     )}>
       <Label 
         htmlFor={id} 
-        className="text-[10px] font-black uppercase tracking-widest text-muted-foreground"
+        className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/90"
       >
         {label}
       </Label>
@@ -125,7 +126,7 @@ const EditableField = ({
           className={cn(
             "font-medium leading-relaxed text-foreground",
             !isFocused && "border-none shadow-none p-0 cursor-text",
-            isFocused && "bg-background border-2 border-primary/20 shadow-sm rounded-lg"
+            isFocused && "bg-background border-2 border-primary/50 shadow-sm rounded-lg"
           )}
         />
       </div>
@@ -160,7 +161,7 @@ const ProductBriefItem = ({
         "group flex flex-col md:flex-row items-stretch gap-6 p-5 rounded-2xl border transition-all",
         isFocused 
           ? "border-primary bg-background shadow-md ring-2 ring-primary/5" 
-          : "border-primary/10 bg-card/40 hover:bg-card/60 hover:border-primary/20"
+          : "border-primary/30 bg-card/60 hover:bg-card/80 hover:border-primary/50"
       )}
     >
       <div className="md:w-1/3 shrink-0 space-y-3">
@@ -170,12 +171,12 @@ const ProductBriefItem = ({
         
         <div className="flex flex-wrap gap-2">
           {item.quantity !== undefined && item.quantity !== null && (
-            <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-primary/20 text-primary-foreground font-black text-[9px] uppercase border border-primary/20 bg-primary/10 text-primary">
+            <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-primary/10 text-primary font-black text-[9px] uppercase border border-primary/40">
               Qty: {item.quantity}
             </span>
           )}
           {item.pages !== undefined && item.pages !== null && (
-            <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-primary/20 text-primary-foreground font-black text-[9px] uppercase border border-primary/20 bg-primary/10 text-primary">
+            <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-primary/10 text-primary font-black text-[9px] uppercase border border-primary/40">
               {item.pages} Pages
             </span>
           )}
@@ -186,13 +187,13 @@ const ProductBriefItem = ({
           )}
           {Object.entries(item.customFieldValues || {}).map(([key, val]) => (
             val !== null && (
-              <span key={key} className="inline-flex items-center px-2 py-0.5 rounded-md border-2 border-primary/10 text-muted-foreground font-black text-[9px] uppercase">
+              <span key={key} className="inline-flex items-center px-2 py-0.5 rounded-md border-2 border-primary/20 text-muted-foreground font-black text-[9px] uppercase">
                 {key}: {val}
               </span>
             )
           ))}
           {item.specialRequest && (
-            <div className="flex items-center gap-2 text-[9px] font-black text-orange-800 uppercase bg-orange-100 px-2 py-1 rounded-md border border-orange-200 w-full mt-1.5 shadow-sm">
+            <div className="flex items-center gap-2 text-[9px] font-black text-orange-900 uppercase bg-orange-100 px-2 py-1 rounded-md border border-orange-400 w-full mt-1.5 shadow-sm">
               <MessageSquare className="h-3 w-3 shrink-0" />
               <span className="truncate">{item.specialRequest}</span>
             </div>
@@ -203,7 +204,7 @@ const ProductBriefItem = ({
       <div className="flex-1 min-w-0">
         {(!hasValue && !isFocused) ? (
           <div 
-            className="h-full flex items-center px-4 cursor-text opacity-50 group-hover:opacity-100 transition-opacity min-h-[2rem]"
+            className="h-full flex items-center px-4 cursor-text opacity-70 group-hover:opacity-100 transition-opacity min-h-[2rem]"
             onClick={onFocus}
           >
             <span className="text-xs italic font-medium text-muted-foreground">Add brief details for {item.productName.toLowerCase()}...</span>
@@ -218,7 +219,7 @@ const ProductBriefItem = ({
             className={cn(
               "font-medium bg-transparent text-foreground",
               !isFocused && "border-none shadow-none p-0 cursor-text",
-              isFocused && "p-3 border-2 border-primary/10 bg-background/50 rounded-lg"
+              isFocused && "p-3 border-2 border-primary/40 bg-background/50 rounded-lg"
             )}
           />
         )}
@@ -386,7 +387,7 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
         </div>
       </div>
 
-      <div className="pt-12 border-t-2 border-primary/10">
+      <div className="pt-12 border-t-2 border-primary/30">
         <SectionHeader title="Product Specific Briefs" icon={Box} />
         
         <div className="grid gap-4">
