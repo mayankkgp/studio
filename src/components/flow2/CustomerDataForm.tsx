@@ -3,11 +3,9 @@
 import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
 import { Save, Palette, BookOpen, Globe, Sparkles, Box } from 'lucide-react';
 import type { Order, CustomerData } from '@/lib/types';
 import { productCatalog } from '@/lib/product-data';
@@ -30,8 +28,8 @@ export function CustomerDataForm({ order, onSave }: CustomerDataFormProps) {
     });
 
     const SectionHeader = ({ title, icon: Icon, number }: { title: string, icon: any, number: string }) => (
-        <div className="flex items-center gap-4 mb-6">
-            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-bold text-base shadow-sm border border-primary/5">
+        <div className="flex items-center gap-4">
+            <div className="h-10 w-10 shrink-0 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-bold text-base shadow-sm border border-primary/5">
                 {number}
             </div>
             <div className="flex flex-col">
@@ -44,14 +42,14 @@ export function CustomerDataForm({ order, onSave }: CustomerDataFormProps) {
         </div>
     );
 
-    const Field = ({ id, label, placeholder, registerKey }: { id: string, label: string, placeholder: string, registerKey: any }) => (
-        <div className="space-y-3">
+    const Field = ({ id, label, placeholder, registerKey, className }: { id: string, label: string, placeholder: string, registerKey: any, className?: string }) => (
+        <div className={cn("space-y-3", className)}>
             <Label htmlFor={id} className="text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground/80 pl-1">{label}</Label>
             <Textarea 
                 id={id} 
                 {...register(registerKey)}
                 placeholder={placeholder}
-                className="min-h-[120px] bg-background/60 border-primary/15 focus-visible:ring-primary focus-visible:border-primary/40 placeholder:text-muted-foreground/50 transition-all duration-200 resize-none"
+                className="min-h-[140px] bg-background/60 border-primary/15 focus-visible:ring-primary focus-visible:border-primary/40 placeholder:text-muted-foreground/50 transition-all duration-200 resize-none shadow-inner"
             />
         </div>
     );
@@ -63,7 +61,7 @@ export function CustomerDataForm({ order, onSave }: CustomerDataFormProps) {
                 <CardHeader className="bg-muted/20 border-b border-primary/5 pb-4">
                     <SectionHeader title="Visual Identity" icon={Palette} number="1" />
                 </CardHeader>
-                <CardContent className="pt-8 space-y-8">
+                <CardContent className="pt-8 grid grid-cols-1 md:grid-cols-2 gap-8">
                     <Field 
                         id="mood"
                         label="Mood & Style Reference"
@@ -81,6 +79,7 @@ export function CustomerDataForm({ order, onSave }: CustomerDataFormProps) {
                         label="Design Dislikes"
                         placeholder="Specific symbols, motifs, styles, or objects to strictly exclude"
                         registerKey="visualIdentity.designDislikes"
+                        className="md:col-span-2"
                     />
                 </CardContent>
             </Card>
@@ -90,7 +89,7 @@ export function CustomerDataForm({ order, onSave }: CustomerDataFormProps) {
                 <CardHeader className="bg-muted/20 border-b border-primary/5 pb-4">
                     <SectionHeader title="The Narrative" icon={BookOpen} number="2" />
                 </CardHeader>
-                <CardContent className="pt-8 space-y-8">
+                <CardContent className="pt-8 grid grid-cols-1 md:grid-cols-2 gap-8">
                     <Field 
                         id="timeline"
                         label="The Relationship Timeline"
@@ -108,6 +107,7 @@ export function CustomerDataForm({ order, onSave }: CustomerDataFormProps) {
                         label="Easter Eggs"
                         placeholder="Inside jokes, specific dates, or objects to subtly hide in the artwork"
                         registerKey="narrative.easterEggs"
+                        className="md:col-span-2"
                     />
                 </CardContent>
             </Card>
@@ -117,7 +117,7 @@ export function CustomerDataForm({ order, onSave }: CustomerDataFormProps) {
                 <CardHeader className="bg-muted/20 border-b border-primary/5 pb-4">
                     <SectionHeader title="Culture & Symbols" icon={Globe} number="3" />
                 </CardHeader>
-                <CardContent className="pt-8 space-y-8">
+                <CardContent className="pt-8 grid grid-cols-1 md:grid-cols-2 gap-8">
                     <Field 
                         id="icons"
                         label="Mandatory Icons & Motifs"
@@ -138,7 +138,7 @@ export function CustomerDataForm({ order, onSave }: CustomerDataFormProps) {
                 <CardHeader className="bg-muted/20 border-b border-primary/5 pb-4">
                     <SectionHeader title="Atmosphere & Extras" icon={Sparkles} number="4" />
                 </CardHeader>
-                <CardContent className="pt-8 space-y-8">
+                <CardContent className="pt-8 grid grid-cols-1 md:grid-cols-2 gap-8">
                     <Field 
                         id="personality"
                         label="Venue & Function Personality"
@@ -172,11 +172,11 @@ export function CustomerDataForm({ order, onSave }: CustomerDataFormProps) {
                         return (
                             <Card key={item.id} className="border-primary/15 bg-background/40 hover:bg-background/60 transition-colors shadow-none">
                                 <CardContent className="pt-6">
-                                    <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
-                                        <div className="flex flex-col">
-                                            <h4 className="font-black text-lg text-foreground font-headline tracking-tight">{item.productName}</h4>
-                                            <div className="flex items-center gap-2 mt-1">
-                                                <span className="text-[10px] font-black uppercase text-primary/60">Spec:</span>
+                                    <div className="flex flex-col md:flex-row md:items-start justify-between mb-6 gap-6">
+                                        <div className="flex flex-col gap-2">
+                                            <h4 className="font-black text-lg text-foreground font-headline tracking-tight leading-none">{item.productName}</h4>
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-[9px] font-black uppercase text-primary/70 tracking-tighter">Technical Specs:</span>
                                                 <div className="flex flex-wrap gap-1.5">
                                                     {item.quantity !== undefined && item.quantity !== null && (
                                                         <Badge variant="secondary">Qty: {item.quantity}</Badge>
@@ -189,7 +189,7 @@ export function CustomerDataForm({ order, onSave }: CustomerDataFormProps) {
                                             </div>
                                         </div>
                                         
-                                        <div className="flex flex-wrap gap-1.5 justify-end">
+                                        <div className="flex flex-wrap gap-1.5 justify-start md:justify-end max-w-sm">
                                             {/* Custom Fields */}
                                             {item.customFieldValues && Object.entries(item.customFieldValues).map(([key, val]) => {
                                                 if (val === null || val === undefined) return null;
@@ -203,7 +203,7 @@ export function CustomerDataForm({ order, onSave }: CustomerDataFormProps) {
 
                                             {/* Addons */}
                                             {item.addons.map(a => (
-                                                <Badge key={a.id} variant="outline" className="border-primary/10 text-muted-foreground/70">
+                                                <Badge key={a.id} variant="outline" className="border-primary/10 text-muted-foreground/70 bg-stone-50/50">
                                                     {a.name}{typeof a.value === 'number' ? `: ${a.value}` : ''}
                                                 </Badge>
                                             ))}
@@ -213,7 +213,7 @@ export function CustomerDataForm({ order, onSave }: CustomerDataFormProps) {
                                         <Textarea 
                                             placeholder={`Enter requirements & specific details for ${item.productName}`}
                                             {...register(`productBriefs.${item.id}`)}
-                                            className="bg-white/50 min-h-[120px] border-primary/10 focus-visible:ring-primary focus-visible:border-primary/40 resize-none"
+                                            className="bg-white/50 min-h-[140px] border-primary/10 focus-visible:ring-primary focus-visible:border-primary/40 resize-none shadow-sm"
                                         />
                                     </div>
                                 </CardContent>
