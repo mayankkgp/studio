@@ -27,17 +27,28 @@ export function CustomerDataForm({ order, onSave }: CustomerDataFormProps) {
         }
     });
 
-    const SectionHeader = ({ title, icon: Icon, number }: { title: string, icon: any, number: string }) => (
+    const SectionHeader = ({ title, icon: Icon, number, subtitle }: { title: string, icon: any, number?: string, subtitle?: string }) => (
         <div className="flex items-center gap-4">
-            <div className="h-10 w-10 shrink-0 rounded-xl bg-primary text-white flex items-center justify-center font-black text-base shadow-lg shadow-primary/20">
-                {number}
-            </div>
+            {number && (
+                <div className="h-10 w-10 shrink-0 rounded-xl bg-primary text-white flex items-center justify-center font-black text-base shadow-lg shadow-primary/20">
+                    {number}
+                </div>
+            )}
+            {!number && (
+                <div className="h-10 w-10 shrink-0 rounded-xl bg-primary/10 text-primary flex items-center justify-center shadow-sm">
+                    <Icon className="h-5 w-5" />
+                </div>
+            )}
             <div className="flex flex-col">
                 <div className="flex items-center gap-2">
-                    <Icon className="h-4 w-4 text-primary opacity-90" />
+                    {number && <Icon className="h-4 w-4 text-primary opacity-90" />}
                     <h3 className="font-headline text-2xl font-black text-foreground tracking-tight">{title}</h3>
                 </div>
-                <div className="h-0.5 w-12 bg-primary/30 mt-1 rounded-full" />
+                {subtitle ? (
+                    <p className="text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground/80 mt-0.5">{subtitle}</p>
+                ) : (
+                    <div className="h-0.5 w-12 bg-primary/30 mt-1 rounded-full" />
+                )}
             </div>
         </div>
     );
@@ -49,7 +60,7 @@ export function CustomerDataForm({ order, onSave }: CustomerDataFormProps) {
                 id={id} 
                 {...register(registerKey)}
                 placeholder={placeholder}
-                className="min-h-[140px] bg-background/80 border-primary/20 focus-visible:ring-primary/40 focus-visible:border-primary/40 placeholder:text-muted-foreground/60 transition-all duration-200 resize-none shadow-sm p-4 text-sm leading-relaxed font-medium"
+                className="min-h-[140px] bg-white/90 border-primary/20 focus-visible:ring-primary/40 focus-visible:border-primary/40 placeholder:text-muted-foreground/50 transition-all duration-200 resize-none shadow-sm p-4 text-sm leading-relaxed font-medium"
             />
         </div>
     );
@@ -57,7 +68,7 @@ export function CustomerDataForm({ order, onSave }: CustomerDataFormProps) {
     return (
         <form onSubmit={handleSubmit(onSave)} className="space-y-16 pb-32">
             {/* 1. Visual Identity */}
-            <Card className="border-primary/10 shadow-sm bg-card/60 backdrop-blur-md overflow-hidden">
+            <Card className="border-primary/15 shadow-sm bg-card/60 backdrop-blur-md overflow-hidden">
                 <CardHeader className="bg-muted/30 border-b border-primary/5 pb-5">
                     <SectionHeader title="Visual Identity" icon={Palette} number="1" />
                 </CardHeader>
@@ -85,7 +96,7 @@ export function CustomerDataForm({ order, onSave }: CustomerDataFormProps) {
             </Card>
 
             {/* 2. The Narrative */}
-            <Card className="border-primary/10 shadow-sm bg-card/60 backdrop-blur-md overflow-hidden">
+            <Card className="border-primary/15 shadow-sm bg-card/60 backdrop-blur-md overflow-hidden">
                 <CardHeader className="bg-muted/30 border-b border-primary/5 pb-5">
                     <SectionHeader title="The Narrative" icon={BookOpen} number="2" />
                 </CardHeader>
@@ -113,7 +124,7 @@ export function CustomerDataForm({ order, onSave }: CustomerDataFormProps) {
             </Card>
 
             {/* 3. Culture & Symbols */}
-            <Card className="border-primary/10 shadow-sm bg-card/60 backdrop-blur-md overflow-hidden">
+            <Card className="border-primary/15 shadow-sm bg-card/60 backdrop-blur-md overflow-hidden">
                 <CardHeader className="bg-muted/30 border-b border-primary/5 pb-5">
                     <SectionHeader title="Culture & Symbols" icon={Globe} number="3" />
                 </CardHeader>
@@ -134,7 +145,7 @@ export function CustomerDataForm({ order, onSave }: CustomerDataFormProps) {
             </Card>
 
             {/* 4. Atmosphere & Extras */}
-            <Card className="border-primary/10 shadow-sm bg-card/60 backdrop-blur-md overflow-hidden">
+            <Card className="border-primary/15 shadow-sm bg-card/60 backdrop-blur-md overflow-hidden">
                 <CardHeader className="bg-muted/30 border-b border-primary/5 pb-5">
                     <SectionHeader title="Atmosphere & Extras" icon={Sparkles} number="4" />
                 </CardHeader>
@@ -156,21 +167,19 @@ export function CustomerDataForm({ order, onSave }: CustomerDataFormProps) {
 
             {/* Product Specific Briefs */}
             <div className="space-y-10">
-                <div className="flex items-center gap-4 border-b border-primary/20 pb-6">
-                    <div className="h-12 w-12 rounded-2xl bg-primary text-white flex items-center justify-center shadow-xl shadow-primary/20">
-                        <Box className="h-6 w-6" />
-                    </div>
-                    <div>
-                        <h3 className="font-headline text-3xl font-black text-foreground tracking-tight">Product Specific Briefs</h3>
-                        <p className="text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground/80 mt-1">Content & Instructions per Deliverable</p>
-                    </div>
+                <div className="px-4">
+                    <SectionHeader 
+                        title="Product Specific Briefs" 
+                        icon={Box} 
+                        subtitle="Content & Instructions per Deliverable" 
+                    />
                 </div>
                 <div className="grid gap-8">
                     {order.deliverables.map((item) => {
                         const productDef = productCatalog.find(p => p.id === item.productId);
                         
                         return (
-                            <Card key={item.id} className="border-primary/15 bg-background/50 hover:bg-background/80 transition-all duration-300 shadow-sm overflow-hidden group">
+                            <Card key={item.id} className="border-primary/15 bg-card/60 backdrop-blur-md hover:bg-card/80 transition-all duration-300 shadow-sm overflow-hidden group">
                                 <CardContent className="pt-8">
                                     <div className="flex flex-col md:flex-row md:items-start justify-between mb-8 gap-6">
                                         <div className="flex flex-col gap-3">
@@ -203,7 +212,7 @@ export function CustomerDataForm({ order, onSave }: CustomerDataFormProps) {
 
                                             {/* Addons */}
                                             {item.addons.map(a => (
-                                                <CustomBadge key={a.id} variant="outline" className="border-primary/20 text-foreground/70 bg-white/40">
+                                                <CustomBadge key={a.id} variant="outline" className="border-primary/10 text-foreground/70 bg-white/40">
                                                     {a.name}{typeof a.value === 'number' ? `: ${a.value}` : ''}
                                                 </CustomBadge>
                                             ))}
@@ -213,7 +222,7 @@ export function CustomerDataForm({ order, onSave }: CustomerDataFormProps) {
                                         <Textarea 
                                             placeholder={`Enter requirements & specific details for ${item.productName}`}
                                             {...register(`productBriefs.${item.id}`)}
-                                            className="bg-white/90 min-h-[160px] border-primary/20 focus-visible:ring-primary/40 focus-visible:border-primary/40 resize-none shadow-inner p-5 text-sm leading-relaxed font-medium"
+                                            className="bg-white/90 min-h-[160px] border-primary/20 focus-visible:ring-primary/40 focus-visible:border-primary/40 transition-all duration-200 resize-none shadow-sm p-5 text-sm leading-relaxed font-medium"
                                         />
                                     </div>
                                 </CardContent>
