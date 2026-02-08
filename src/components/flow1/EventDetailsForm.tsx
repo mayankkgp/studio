@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
@@ -145,6 +145,17 @@ const formatDisplayDate = (dateValue: any) => {
   return format(date, 'dd MMM yyyy');
 };
 
+const DEFAULT_EVENT_VALUES: EventDetails = {
+  eventType: 'Wedding',
+  brideName: '',
+  groomName: '',
+  eventDate: undefined as any,
+  orderDueDate: undefined as any,
+  venueName: '',
+  shipToCity: '',
+  additionalNotes: '',
+};
+
 export function EventDetailsForm({ activeOrder, onUpdate, hideFooters = false }: { activeOrder?: Order, onUpdate?: (details: EventDetails) => void, hideFooters?: boolean }) {
   const router = useRouter();
   const { order, setEventDetails, saveAsDraft, resetOrder, isLoaded } = useOrder();
@@ -159,7 +170,7 @@ export function EventDetailsForm({ activeOrder, onUpdate, hideFooters = false }:
 
   const form = useForm<EventDetails>({
     resolver: zodResolver(eventDetailsSchema),
-    defaultValues: currentDetails,
+    defaultValues: currentDetails as any,
     mode: 'onChange'
   });
 
@@ -168,13 +179,12 @@ export function EventDetailsForm({ activeOrder, onUpdate, hideFooters = false }:
   const lastResetId = useRef<string | null>(null);
 
   useEffect(() => {
-    // Reset form when order changes (e.g. from ORD-123 to "" on Cancel)
     const currentId = activeOrder?.orderId || order?.orderId || 'new';
     if (currentId !== lastResetId.current) {
       if (activeOrder) {
-        reset(activeOrder.eventDetails);
+        reset(activeOrder.eventDetails as any);
       } else if (isLoaded) {
-        reset(order.eventDetails);
+        reset(order.eventDetails as any);
       }
       lastResetId.current = currentId;
     }
@@ -225,6 +235,8 @@ export function EventDetailsForm({ activeOrder, onUpdate, hideFooters = false }:
   const handleCancel = () => {
     if (window.confirm("Are you sure you want to cancel? All unsaved changes will be lost.")) {
       resetOrder();
+      reset(DEFAULT_EVENT_VALUES);
+      lastResetId.current = 'new';
     }
   };
 

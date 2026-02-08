@@ -30,7 +30,8 @@ const initialOrderState: Order = {
     eventDate: undefined,
     orderDueDate: undefined,
     venueName: '',
-    shipToCity: ''
+    shipToCity: '',
+    additionalNotes: ''
   },
   deliverables: [],
   paymentReceived: 0,
@@ -53,8 +54,8 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const resetOrder = useCallback(() => {
     setOrder({
       ...initialOrderState,
-      orderId: '', // Ensure ID is cleared
-      eventDetails: { ...initialOrderState.eventDetails } // Fresh object
+      orderId: '',
+      eventDetails: { ...initialOrderState.eventDetails }
     });
     router.push('/');
   }, [router]);
