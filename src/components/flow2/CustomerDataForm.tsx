@@ -63,7 +63,7 @@ const SectionHeader = ({ title, icon: Icon }: { title: string, icon: any }) => (
     <div className="h-8 w-8 shrink-0 rounded-lg bg-primary/10 text-primary flex items-center justify-center border border-primary/20">
       <Icon className="h-4 w-4" />
     </div>
-    <h3 className="font-headline text-sm font-black text-foreground tracking-tight uppercase border-b-2 border-primary/10 pb-0.5">
+    <h3 className="font-headline text-[15px] font-black text-foreground tracking-tight uppercase border-b-2 border-primary/10 pb-0.5">
       {title}
     </h3>
   </div>
@@ -95,20 +95,20 @@ const EditableField = ({
     <div className="mb-8 group transition-all duration-200 border-l-2 pl-4 border-primary/20 focus-within:border-primary break-inside-avoid">
       <Label 
         htmlFor={id} 
-        className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/80 mb-2 block"
+        className="text-[11px] font-black uppercase tracking-widest text-muted-foreground mb-2 block"
       >
         {label}
       </Label>
       <AutoGrowingTextarea 
         id={id} 
         {...register(registerKey)}
-        placeholder="Add details..."
+        placeholder="Enter creative brief details..."
         minRows={1}
         className={cn(
           "font-semibold leading-relaxed text-foreground border-2 rounded-md -ml-3",
           "bg-transparent border-transparent hover:bg-primary/5",
-          "focus:bg-background focus:border-primary/40 focus:shadow-sm focus:px-3",
-          "placeholder:italic placeholder:font-normal placeholder:text-muted-foreground placeholder:text-[11px] placeholder:opacity-70"
+          "focus:bg-background focus:border-primary/40 focus:ring-2 focus:ring-primary/10 focus:shadow-sm focus:px-3",
+          "placeholder:italic placeholder:font-normal placeholder:text-muted-foreground/60 placeholder:text-[12px]"
         )}
       />
     </div>
@@ -173,20 +173,20 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
     const parts: React.ReactNode[] = [];
     
     if (item.variant) {
-      parts.push(<span key="variant">{item.variant}</span>);
+      parts.push(<span key="variant" className="font-bold">{item.variant}</span>);
     }
 
     if (product?.configType === 'A' && typeof item.quantity === 'number' && item.quantity > 0) {
-      parts.push(<span key="qty">Qty: {item.quantity}</span>);
+      parts.push(<span key="qty" className="font-bold">Qty: {item.quantity}</span>);
     } else if (product?.configType === 'B' && typeof item.pages === 'number' && item.pages > 0) {
-      parts.push(<span key="pages">{item.pages} Pgs</span>);
+      parts.push(<span key="pages" className="font-bold">{item.pages} Pgs</span>);
     }
 
     if (product?.customFields && item.customFieldValues) {
       product.customFields.forEach(field => {
         const val = (item.customFieldValues as any)?.[field.id];
         if (val && typeof val === 'number' && val > 0) {
-          parts.push(<span key={field.id}>{field.name}: {val}</span>);
+          parts.push(<span key={field.id} className="font-bold">{field.name}: {val}</span>);
         }
       });
     }
@@ -194,15 +194,15 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
     const activeAddons = (item.addons || []).filter((a: any) => a.value !== undefined && a.value !== false && a.value !== null);
     activeAddons.forEach((a: any) => {
       const displayVal = typeof a.value === 'number' ? `: ${a.value}` : '';
-      parts.push(<span key={`addon-${a.id}`}>{a.name}{displayVal}</span>);
+      parts.push(<span key={`addon-${a.id}`} className="font-bold">{a.name}{displayVal}</span>);
     });
 
     if (item.specialRequest) {
-      parts.push(<span key="special" className="italic font-medium">Note: {item.specialRequest}</span>);
+      parts.push(<span key="special" className="italic font-medium opacity-90">Note: {item.specialRequest}</span>);
     }
 
     return parts.length > 0 
-      ? parts.reduce((prev, curr, i) => [prev, <span key={`sep-${i}`} className="mx-1 text-muted-foreground/40 font-black">•</span>, curr])
+      ? parts.reduce((prev, curr, i) => [prev, <span key={`sep-${i}`} className="mx-2 text-muted-foreground/60 font-black">•</span>, curr])
       : null;
   };
 
@@ -245,19 +245,19 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
       <div className="sticky top-0 z-30 bg-background/95 backdrop-blur-sm pt-4 -mt-4 mb-8 border-b border-primary/10 pb-4 flex items-center justify-between">
         <div className="space-y-1">
           <h2 className="text-xl font-headline font-black text-foreground uppercase tracking-tight">Creative Briefing</h2>
-          <p className="text-xs text-muted-foreground font-medium">Capture visual and narrative context for design production.</p>
+          <p className="text-xs text-muted-foreground font-bold uppercase tracking-wide opacity-80">Capture visual and narrative context for design production</p>
         </div>
         <div className="flex items-center gap-3">
           <Button 
             variant="outline" 
             size="sm" 
             onClick={toggleViewMode}
-            className="h-8 font-bold gap-2 text-[10px] uppercase tracking-widest border-primary/20"
+            className="h-8 font-bold gap-2 text-[11px] uppercase tracking-widest border-primary/20 hover:bg-primary/5 hover:text-primary transition-all"
           >
             {showEmptyFields ? (
-              <><EyeOff className="h-3 w-3" /> Hide Empty Fields</>
+              <><EyeOff className="h-3.5 w-3.5" /> Hide Empty Fields</>
             ) : (
-              <><Eye className="h-3 w-3" /> Show All Fields</>
+              <><Eye className="h-3.5 w-3.5" /> Show All Fields</>
             )}
           </Button>
           <Button 
@@ -265,7 +265,7 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
             type="submit"
             form="creative-brief-form"
             disabled={isSaving}
-            className="h-8 font-bold gap-2 bg-primary shadow-lg shadow-primary/20 shrink-0"
+            className="h-8 font-bold gap-2 bg-primary shadow-lg shadow-primary/20 shrink-0 hover:bg-primary/90"
           >
             {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
             Save Creative Brief
@@ -390,10 +390,12 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
         
         {visibleDeliverables.length === 0 && !productSearchQuery ? (
           <div className="py-20 text-center italic text-muted-foreground text-sm bg-card/10 rounded-xl border border-dashed flex flex-col items-center justify-center">
-            <Box className="h-8 w-8 opacity-20 mb-4" />
-            {showEmptyFields ? "No products in scope." : "No data recorded."}
+            <Box className="h-8 w-8 opacity-30 mb-4" />
+            <p className="font-bold uppercase tracking-widest text-[11px]">
+              {showEmptyFields ? "No products in scope" : "No brief data recorded"}
+            </p>
             {!showEmptyFields && order.deliverables.length > 0 && (
-              <Button variant="link" size="sm" onClick={toggleViewMode} className="mt-2 font-bold">
+              <Button variant="link" size="sm" onClick={toggleViewMode} className="mt-2 font-black uppercase text-[10px] tracking-widest">
                 Show empty products
               </Button>
             )}
@@ -401,13 +403,13 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
         ) : (
           <div className="flex flex-col md:flex-row h-[600px] border border-primary/10 rounded-xl overflow-hidden bg-card/5 shadow-sm">
             {/* Master List (Left) */}
-            <aside className="w-full md:w-72 border-b md:border-b-0 md:border-r border-primary/10 overflow-hidden bg-card/20 shrink-0 flex flex-col">
+            <aside className="w-full md:w-80 border-b md:border-b-0 md:border-r border-primary/10 overflow-hidden bg-card/20 shrink-0 flex flex-col">
               <div className="p-3 border-b border-primary/10 bg-background/50">
                 <div className="relative">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/80" />
                   <Input 
                     placeholder="Filter products..." 
-                    className="h-8 pl-8 text-[11px] bg-background border-primary/20 focus-visible:ring-primary/20"
+                    className="h-9 pl-9 text-[12px] bg-background border-primary/20 focus-visible:ring-primary/20 font-medium"
                     value={productSearchQuery}
                     onChange={(e) => setProductSearchQuery(e.target.value)}
                   />
@@ -415,18 +417,18 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
                     <Button 
                       variant="ghost" 
                       size="icon" 
-                      className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 text-muted-foreground hover:text-foreground"
+                      className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground hover:text-foreground"
                       onClick={() => setProductSearchQuery('')}
                     >
-                      <X className="h-3 w-3" />
+                      <X className="h-4 w-4" />
                     </Button>
                   )}
                 </div>
               </div>
               <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-1">
                 {visibleDeliverables.length === 0 ? (
-                  <div className="py-8 text-center text-[10px] text-muted-foreground italic">
-                    No results for "{productSearchQuery}"
+                  <div className="py-12 text-center text-[11px] text-muted-foreground font-bold uppercase tracking-widest opacity-60">
+                    No matching results
                   </div>
                 ) : (
                   visibleDeliverables.map((item) => {
@@ -462,8 +464,8 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
                           </div>
                           {tagsDisplay && (
                             <div className={cn(
-                              "text-[9px] font-bold uppercase truncate mt-0.5",
-                              isActive ? "text-white/80" : "text-muted-foreground"
+                              "text-[10px] font-bold uppercase truncate mt-0.5 tracking-wide",
+                              isActive ? "text-white/90" : "text-muted-foreground/80"
                             )}>
                               {tagsDisplay}
                             </div>
@@ -472,13 +474,13 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
                         <div className="shrink-0">
                           {hasData ? (
                             <div className={cn(
-                              "h-4 w-4 rounded-full bg-green-600 transition-colors",
+                              "h-3.5 w-3.5 rounded-full bg-green-600 transition-colors",
                               isActive && "ring-2 ring-white shadow-sm"
                             )} />
                           ) : (
                             <Circle className={cn(
-                              "h-4 w-4 transition-colors opacity-40", 
-                              isActive ? "text-white/40" : "text-muted-foreground/30"
+                              "h-3.5 w-3.5 transition-colors opacity-40", 
+                              isActive ? "text-white/50" : "text-muted-foreground/40"
                             )} />
                           )}
                         </div>
@@ -494,27 +496,26 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
               {selectedItem ? (
                 <div className="space-y-6">
                   <div className="space-y-2">
-                    <div className="flex flex-wrap items-center text-[10px] font-bold text-muted-foreground/80 uppercase tracking-tight leading-normal">
+                    <div className="flex flex-wrap items-center text-[11px] font-bold text-muted-foreground uppercase tracking-wider leading-relaxed border-b border-primary/10 pb-4">
                       {getProductSpecsSummary(selectedItem)}
                     </div>
                   </div>
 
-                  <div className="relative group focus-within:z-10 bg-background rounded-xl shadow-sm border border-primary/10">
+                  <div className="relative group focus-within:z-10 bg-background rounded-xl shadow-sm border border-primary/10 focus-within:border-primary/40 focus-within:ring-4 focus-within:ring-primary/5 transition-all">
                     <AutoGrowingTextarea 
-                      placeholder="Add product requirements..."
+                      placeholder="Add detailed creative requirements for this product..."
                       {...register(`productBriefs.${selectedItem.id}` as any)}
-                      minRows={2}
+                      minRows={4}
                       className={cn(
-                        "font-semibold bg-transparent text-foreground min-h-[350px] p-6 transition-all",
-                        "focus:bg-background focus:ring-2 focus:ring-primary/20",
-                        "placeholder:italic placeholder:font-normal placeholder:text-muted-foreground placeholder:text-[11px] placeholder:opacity-70"
+                        "font-semibold bg-transparent text-foreground min-h-[350px] p-6 text-sm leading-relaxed",
+                        "placeholder:italic placeholder:font-normal placeholder:text-muted-foreground/60 placeholder:text-[13px]"
                       )}
                     />
                   </div>
                 </div>
               ) : (
-                <div className="h-full flex flex-col items-center justify-center text-muted-foreground text-sm italic">
-                  Select a product to view and edit its creative brief.
+                <div className="h-full flex flex-col items-center justify-center text-muted-foreground/60 text-[11px] font-bold uppercase tracking-widest italic">
+                  Select a product to edit brief
                 </div>
               )}
             </main>
@@ -528,8 +529,8 @@ export function CustomerDataForm({ order, onSave, isSaving }: { order: Order; on
         .custom-scrollbar::-webkit-scrollbar { width: 5px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground) / 0.3); }
       `}</style>
     </div>
   );
 }
-
