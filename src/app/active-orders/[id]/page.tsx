@@ -562,173 +562,175 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                     </div>
 
                     <div className="flex-1 flex overflow-hidden">
-                        <main className="flex-1 flex overflow-hidden">
-                            <TabsContent value="overview" className="flex-1 m-0 overflow-y-auto bg-background/50 custom-scrollbar relative outline-none">
-                                <div className="max-w-4xl mx-auto p-4 md:p-8 space-y-8 pb-32">
-                                    <div className="flex items-center justify-between gap-4">
-                                        <h2 className="text-xl font-headline font-bold flex items-center gap-2 shrink-0 text-foreground">
-                                            <Package className="h-5 w-5 text-primary" />
-                                            Scope of Work
-                                        </h2>
-                                        
-                                        <div className="flex items-center gap-4 flex-1 justify-end">
-                                            {viewMode === 'scope' && (
-                                                <div className="relative max-w-[200px] hidden sm:block">
-                                                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                        <TabsContent value="overview" className="flex-1 flex overflow-hidden m-0 outline-none">
+                            <div className="flex-1 flex overflow-hidden">
+                                <main className="flex-1 overflow-y-auto bg-background/50 custom-scrollbar relative">
+                                    <div className="max-w-4xl mx-auto p-4 md:p-8 space-y-8 pb-32">
+                                        <div className="flex items-center justify-between gap-4">
+                                            <h2 className="text-xl font-headline font-bold flex items-center gap-2 shrink-0 text-foreground">
+                                                <Package className="h-5 w-5 text-primary" />
+                                                Scope of Work
+                                            </h2>
+                                            
+                                            <div className="flex items-center gap-4 flex-1 justify-end">
+                                                {viewMode === 'scope' && (
+                                                    <div className="relative max-w-[200px] hidden sm:block">
+                                                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                                                        <Input 
+                                                            placeholder="Filter list..." 
+                                                            className="h-8 pl-8 text-xs bg-background border-primary/20"
+                                                            value={itemSearchQuery}
+                                                            onChange={(e) => setItemSearchQuery(e.target.value)}
+                                                        />
+                                                        {itemSearchQuery && (
+                                                            <Button 
+                                                                variant="ghost" 
+                                                                size="icon" 
+                                                                className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 text-muted-foreground"
+                                                                onClick={() => setItemSearchQuery('')}
+                                                            >
+                                                                <X className="h-3 w-3" />
+                                                            </Button>
+                                                        )}
+                                                    </div>
+                                                )}
+                                                <Tabs value={viewMode} onValueChange={(v: any) => setViewMode(v)} className="w-auto">
+                                                    <TabsList className="h-8 p-1 bg-muted/40 border border-primary/20">
+                                                        <TabsTrigger value="scope" className="text-[10px] font-bold uppercase h-6 px-3">
+                                                            <Info className="h-3 w-3 mr-1.5" /> Scope
+                                                        </TabsTrigger>
+                                                        <TabsTrigger value="bill" className="text-[10px] font-bold uppercase h-6 px-3">
+                                                            <Receipt className="h-3 w-3 mr-1.5" /> Bill View
+                                                        </TabsTrigger>
+                                                    </TabsList>
+                                                </Tabs>
+                                                {!isEditMode && (
+                                                    <Badge variant="secondary" className="gap-1.5 text-[10px] font-bold uppercase tracking-wider hidden md:flex text-muted-foreground border-primary/20">
+                                                        <Lock className="h-3 w-3" /> Locked
+                                                    </Badge>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {isEditMode && (
+                                            <div className="bg-card p-4 md:p-6 rounded-xl border-2 border-primary/20 shadow-sm sticky top-0 z-40 backdrop-blur-sm bg-card/95">
+                                                <CommandBar onAdd={addDeliverable} />
+                                            </div>
+                                        )}
+
+                                        {viewMode === 'scope' && (
+                                            <div className="sm:hidden mb-4">
+                                                <div className="relative">
+                                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                                     <Input 
-                                                        placeholder="Filter list..." 
-                                                        className="h-8 pl-8 text-xs bg-background border-primary/20"
+                                                        placeholder="Search products..." 
+                                                        className="h-10 pl-10 border-primary/20"
                                                         value={itemSearchQuery}
                                                         onChange={(e) => setItemSearchQuery(e.target.value)}
                                                     />
-                                                    {itemSearchQuery && (
-                                                        <Button 
-                                                            variant="ghost" 
-                                                            size="icon" 
-                                                            className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 text-muted-foreground"
-                                                            onClick={() => setItemSearchQuery('')}
-                                                        >
-                                                            <X className="h-3 w-3" />
-                                                        </Button>
-                                                    )}
                                                 </div>
-                                            )}
-                                            <Tabs value={viewMode} onValueChange={(v: any) => setViewMode(v)} className="w-auto">
-                                                <TabsList className="h-8 p-1 bg-muted/40 border border-primary/20">
-                                                    <TabsTrigger value="scope" className="text-[10px] font-bold uppercase h-6 px-3">
-                                                        <Info className="h-3 w-3 mr-1.5" /> Scope
-                                                    </TabsTrigger>
-                                                    <TabsTrigger value="bill" className="text-[10px] font-bold uppercase h-6 px-3">
-                                                        <Receipt className="h-3 w-3 mr-1.5" /> Bill View
-                                                    </TabsTrigger>
-                                                </TabsList>
-                                            </Tabs>
-                                            {!isEditMode && (
-                                                <Badge variant="secondary" className="gap-1.5 text-[10px] font-bold uppercase tracking-wider hidden md:flex text-muted-foreground border-primary/20">
-                                                    <Lock className="h-3 w-3" /> Locked
-                                                </Badge>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    {isEditMode && (
-                                        <div className="bg-card p-4 md:p-6 rounded-xl border-2 border-primary/20 shadow-sm sticky top-0 z-40 backdrop-blur-sm bg-card/95">
-                                            <CommandBar onAdd={addDeliverable} />
-                                        </div>
-                                    )}
-
-                                    {viewMode === 'scope' && (
-                                        <div className="sm:hidden mb-4">
-                                            <div className="relative">
-                                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                                <Input 
-                                                    placeholder="Search products..." 
-                                                    className="h-10 pl-10 border-primary/20"
-                                                    value={itemSearchQuery}
-                                                    onChange={(e) => setItemSearchQuery(e.target.value)}
-                                                />
                                             </div>
-                                        </div>
-                                    )}
-
-                                    <div className="space-y-4">
-                                        {activeOrder.deliverables.length === 0 ? (
-                                            <div className="text-center py-20 border-2 border-dashed rounded-xl bg-muted/20 border-primary/20">
-                                                <Package className="h-10 w-10 text-muted-foreground/30 mx-auto mb-4" />
-                                                <p className="text-sm text-muted-foreground font-bold">No deliverables in scope.</p>
-                                            </div>
-                                        ) : viewMode === 'bill' ? (
-                                            <div className="rounded-xl border border-primary/20 bg-card overflow-hidden shadow-sm animate-in fade-in slide-in-from-bottom-2">
-                                                <table className="w-full text-left text-xs border-collapse">
-                                                    <thead>
-                                                        <tr className="bg-muted/40 border-b border-primary/10">
-                                                            <th className="px-4 py-3 font-bold uppercase tracking-wider text-foreground">Product / Item</th>
-                                                            <th className="px-4 py-3 font-bold uppercase tracking-wider text-foreground text-center">Multiplier</th>
-                                                            <th className="px-4 py-3 font-bold uppercase tracking-wider text-foreground text-right">Rate (₹)</th>
-                                                            <th className="px-4 py-3 font-bold uppercase tracking-wider text-foreground text-right">Total (₹)</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        {billViewData.map((row, i) => (
-                                                            <tr key={i} className="border-b border-primary/5 last:border-0 hover:bg-primary/5">
-                                                                <td className="px-4 py-3">
-                                                                    <div className="font-bold text-foreground">{row.productName}</div>
-                                                                    <div className="text-[10px] text-muted-foreground font-bold uppercase">{row.label}</div>
-                                                                </td>
-                                                                <td className="px-4 py-3 text-center font-mono font-bold text-foreground/80">{row.isFixed ? '-' : row.multiplier}</td>
-                                                                <td className="px-4 py-3 text-right tabular-nums font-bold text-foreground/80">{row.rate.toLocaleString('en-IN')}</td>
-                                                                <td className="px-4 py-3 text-right font-bold tabular-nums text-foreground">{row.total.toLocaleString('en-IN')}</td>
-                                                            </tr>
-                                                        ))}
-                                                        <tr className="bg-primary/5 font-bold">
-                                                            <td colSpan={3} className="px-4 py-4 text-right uppercase tracking-widest text-[10px] text-muted-foreground">Total Order Value</td>
-                                                            <td className="px-4 py-4 text-right text-base text-primary tabular-nums font-black">₹{workingTotal.toLocaleString('en-IN')}</td>
-                                                        </tr>
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        ) : (
-                                            <>
-                                                {filteredDeliverables.length === 0 ? (
-                                                    <div className="text-center py-20 bg-muted/20 rounded-xl border-2 border-dashed border-primary/20">
-                                                        <p className="text-muted-foreground text-sm font-bold">No items match "{itemSearchQuery}"</p>
-                                                        <Button variant="link" size="sm" onClick={() => setItemSearchQuery('')} className="font-bold">Clear filter</Button>
-                                                    </div>
-                                                ) : (
-                                                    <Accordion 
-                                                        type="multiple" 
-                                                        value={expandedItems} 
-                                                        onValueChange={setExpandedItems}
-                                                        className="space-y-3"
-                                                    >
-                                                        {filteredDeliverables.map((item) => (
-                                                            <DeliverableRow 
-                                                                key={item.id} 
-                                                                item={item} 
-                                                                isReadOnly={!isEditMode}
-                                                                isExpanded={expandedItems.includes(item.id)} 
-                                                                isNonCollapsible={false}
-                                                                onEdit={() => handleEditRow(item.id)}
-                                                                onDone={handleDoneRow}
-                                                                onValidityChange={() => {}}
-                                                                onUpdate={updateDeliverable}
-                                                                onRemove={removeDeliverable}
-                                                                onProjectedTotalChange={handleProjectedTotalChange}
-                                                                isPersistent={false}
-                                                                manualSyncOnly={true}
-                                                                showCommercials={true}
-                                                            />
-                                                        ))}
-                                                    </Accordion>
-                                                )}
-                                            </>
                                         )}
-                                    </div>
-                                </div>
-                            </TabsContent>
-                            
-                            <TabsContent value="customer" className="flex-1 m-0 overflow-y-auto bg-background/50 custom-scrollbar relative outline-none">
-                                <div className="max-w-4xl mx-auto p-4 md:p-8">
-                                    <CustomerDataForm 
-                                        order={activeOrder} 
-                                        onSave={handleSaveCustomerData} 
-                                    />
-                                </div>
-                            </TabsContent>
-                        </main>
 
-                        <aside className="w-[24rem] shrink-0 border-l border-primary/20 bg-card/30 hidden xl:flex flex-col p-6 gap-6 overflow-y-auto custom-scrollbar">
-                            {FinancialSnapshot}
-                            <div className="mt-auto pt-6 border-t border-primary/20 flex items-center justify-between px-2">
-                                <div className="flex items-center gap-2">
-                                    <Users className="h-4 w-4 text-muted-foreground" />
-                                    <span className="text-[10px] font-bold text-muted-foreground uppercase">Role: Manager</span>
-                                </div>
-                                <Button variant="outline" size="sm" onClick={() => router.push('/active-orders')} className="h-8 text-[10px] font-bold uppercase border-primary text-primary hover:bg-primary/5">
-                                    Exit to List
-                                </Button>
+                                        <div className="space-y-4">
+                                            {activeOrder.deliverables.length === 0 ? (
+                                                <div className="text-center py-20 border-2 border-dashed rounded-xl bg-muted/20 border-primary/20">
+                                                    <Package className="h-10 w-10 text-muted-foreground/30 mx-auto mb-4" />
+                                                    <p className="text-sm text-muted-foreground font-bold">No deliverables in scope.</p>
+                                                </div>
+                                            ) : viewMode === 'bill' ? (
+                                                <div className="rounded-xl border border-primary/20 bg-card overflow-hidden shadow-sm animate-in fade-in slide-in-from-bottom-2">
+                                                    <table className="w-full text-left text-xs border-collapse">
+                                                        <thead>
+                                                            <tr className="bg-muted/40 border-b border-primary/10">
+                                                                <th className="px-4 py-3 font-bold uppercase tracking-wider text-foreground">Product / Item</th>
+                                                                <th className="px-4 py-3 font-bold uppercase tracking-wider text-foreground text-center">Multiplier</th>
+                                                                <th className="px-4 py-3 font-bold uppercase tracking-wider text-foreground text-right">Rate (₹)</th>
+                                                                <th className="px-4 py-3 font-bold uppercase tracking-wider text-foreground text-right">Total (₹)</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {billViewData.map((row, i) => (
+                                                                <tr key={i} className="border-b border-primary/5 last:border-0 hover:bg-primary/5">
+                                                                    <td className="px-4 py-3">
+                                                                        <div className="font-bold text-foreground">{row.productName}</div>
+                                                                        <div className="text-[10px] text-muted-foreground font-bold uppercase">{row.label}</div>
+                                                                    </td>
+                                                                    <td className="px-4 py-3 text-center font-mono font-bold text-foreground/80">{row.isFixed ? '-' : row.multiplier}</td>
+                                                                    <td className="px-4 py-3 text-right tabular-nums font-bold text-foreground/80">{row.rate.toLocaleString('en-IN')}</td>
+                                                                    <td className="px-4 py-3 text-right font-bold tabular-nums text-foreground">{row.total.toLocaleString('en-IN')}</td>
+                                                                </tr>
+                                                            ))}
+                                                            <tr className="bg-primary/5 font-bold">
+                                                                <td colSpan={3} className="px-4 py-4 text-right uppercase tracking-widest text-[10px] text-muted-foreground">Total Order Value</td>
+                                                                <td className="px-4 py-4 text-right text-base text-primary tabular-nums font-black">₹{workingTotal.toLocaleString('en-IN')}</td>
+                                                            </tr>
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    {filteredDeliverables.length === 0 ? (
+                                                        <div className="text-center py-20 bg-muted/20 rounded-xl border-2 border-dashed border-primary/20">
+                                                            <p className="text-muted-foreground text-sm font-bold">No items match "{itemSearchQuery}"</p>
+                                                            <Button variant="link" size="sm" onClick={() => setItemSearchQuery('')} className="font-bold">Clear filter</Button>
+                                                        </div>
+                                                    ) : (
+                                                        <Accordion 
+                                                            type="multiple" 
+                                                            value={expandedItems} 
+                                                            onValueChange={setExpandedItems}
+                                                            className="space-y-3"
+                                                        >
+                                                            {filteredDeliverables.map((item) => (
+                                                                <DeliverableRow 
+                                                                    key={item.id} 
+                                                                    item={item} 
+                                                                    isReadOnly={!isEditMode}
+                                                                    isExpanded={expandedItems.includes(item.id)} 
+                                                                    isNonCollapsible={false}
+                                                                    onEdit={() => handleEditRow(item.id)}
+                                                                    onDone={handleDoneRow}
+                                                                    onValidityChange={() => {}}
+                                                                    onUpdate={updateDeliverable}
+                                                                    onRemove={removeDeliverable}
+                                                                    onProjectedTotalChange={handleProjectedTotalChange}
+                                                                    isPersistent={false}
+                                                                    manualSyncOnly={true}
+                                                                    showCommercials={true}
+                                                                />
+                                                            ))}
+                                                        </Accordion>
+                                                    )}
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
+                                </main>
+
+                                <aside className="w-[24rem] shrink-0 border-l border-primary/20 bg-card/30 hidden xl:flex flex-col p-6 gap-6 overflow-y-auto custom-scrollbar">
+                                    {FinancialSnapshot}
+                                    <div className="mt-auto pt-6 border-t border-primary/20 flex items-center justify-between px-2">
+                                        <div className="flex items-center gap-2">
+                                            <Users className="h-4 w-4 text-muted-foreground" />
+                                            <span className="text-[10px] font-bold text-muted-foreground uppercase">Role: Manager</span>
+                                        </div>
+                                        <Button variant="outline" size="sm" onClick={() => router.push('/active-orders')} className="h-8 text-[10px] font-bold uppercase border-primary text-primary hover:bg-primary/5">
+                                            Exit to List
+                                        </Button>
+                                    </div>
+                                </aside>
                             </div>
-                        </aside>
+                        </TabsContent>
+                        
+                        <TabsContent value="customer" className="flex-1 m-0 overflow-y-auto bg-background/50 custom-scrollbar relative outline-none">
+                            <div className="max-w-4xl mx-auto p-4 md:p-8">
+                                <CustomerDataForm 
+                                    order={activeOrder} 
+                                    onSave={handleSaveCustomerData} 
+                                />
+                            </div>
+                        </TabsContent>
                     </div>
                 </Tabs>
 
