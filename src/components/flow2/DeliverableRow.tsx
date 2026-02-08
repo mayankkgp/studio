@@ -144,7 +144,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         mode: 'onChange'
     });
 
-    const { register, control, watch, formState: { errors, isValid }, trigger, getValues, setValue, reset } = form;
+    const { register, control, watch, formState: { errors, isValid, isDirty }, trigger, getValues, setValue, reset } = form;
     const watchedValues = watch();
 
     const handleEnterToBlur = (e: React.KeyboardEvent) => {
@@ -386,6 +386,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                         <div className="flex items-center gap-2 overflow-hidden">
                             <h3 className={cn("font-semibold leading-none truncate", isExpanded ? "text-base" : "text-sm")}>
                                 {item.productName}
+                                {isDirty && !isReadOnly && <span className="text-primary ml-1 font-bold">*</span>}
                             </h3>
                             {warningData.message && (
                                 <Badge variant={warningData.type === 'hard' ? 'destructive' : 'warning'} className="text-[9px] h-3.5 py-0 px-1 font-bold uppercase shrink-0">
@@ -418,8 +419,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                             }} 
                             className="gap-2 h-8"
                         >
-                            {isExpanded ? <X className="h-3.5 w-3.5" /> : <Info className="h-3.5 w-3.5" />}
-                            {isExpanded ? 'Hide' : 'View'}
+                            {isExpanded ? <><X className="h-3.5 w-3.5" /> Hide</> : <><Info className="h-3.5 w-3.5" /> View</>}
                         </Button>
                     ) : (
                         !isExpanded ? (
@@ -456,7 +456,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                 size="sm"
                                                 disabled={isReadOnly}
                                                 className={cn("h-9 rounded-full px-4", watchedValues.variant === v && "shadow-sm")}
-                                                onClick={() => setValue('variant', v, { shouldValidate: true })}
+                                                onClick={() => setValue('variant', v, { shouldValidate: true, shouldDirty: true })}
                                             >
                                                 {v}
                                             </Button>
