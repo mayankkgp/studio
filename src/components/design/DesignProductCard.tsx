@@ -18,7 +18,7 @@ interface DesignProductCardProps {
 }
 
 export function DesignProductCard({ product, isDesigner, onUpdateDesign }: DesignProductCardProps) {
-    // Normalize design data to ensure all required arrays exist
+    // Normalize design data to ensure all required properties and arrays exist
     const designData = useMemo(() => {
         const baseData = product.designData || {
             productId: product.id,
@@ -26,7 +26,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
                 {
                     id: 'comp-1',
                     name: 'Main Layout',
-                    status: 'DRAFT',
+                    status: 'DRAFT' as DesignWorkflowStatus,
                     versions: [],
                     pins: []
                 }
@@ -38,24 +38,25 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
             baseData.components.push({
                 id: 'comp-2',
                 name: 'Envelope',
-                status: 'DRAFT',
+                status: 'DRAFT' as DesignWorkflowStatus,
                 versions: [],
                 pins: []
             });
         }
 
-        // Deeply ensure arrays exist for each component to prevent TypeErrors
+        // Deeply ensure status, versions, and pins arrays exist for each component
         return {
             ...baseData,
             components: baseData.components.map(c => ({
                 ...c,
+                status: c.status || 'DRAFT' as DesignWorkflowStatus,
                 versions: c.versions || [],
                 pins: c.pins || []
             }))
         } as DesignData;
     }, [product.id, product.designData, product.productName]);
 
-    const [activeCompId, setActiveCompId] = useState(designData.components[0].id);
+    const [activeCompId, setActiveCompId] = useState(designData.components[0]?.id);
     const [highlightedPinId, setHighlightedPinId] = useState<string | null>(null);
 
     // Sync activeCompId if the underlying components change
@@ -68,6 +69,9 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
 
     const activeComponent = designData.components.find(c => c.id === activeCompId) || designData.components[0];
     
+    // Safety check for activeComponent to prevent crash if data is corrupted
+    if (!activeComponent) return null;
+
     const currentVersionNum = (activeComponent.versions && activeComponent.versions.length > 0)
         ? activeComponent.versions[activeComponent.versions.length - 1].versionNumber 
         : 0;
@@ -192,7 +196,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
                         pins={activeComponent.pins || []}
                         versions={activeComponent.versions || []}
                         highlightedPinId={highlightedPinId}
-                        status={activeComponent.status}
+                        status={activeComponent.status || 'DRAFT'}
                         isDesigner={isDesigner}
                         currentVersion={currentVersionNum}
                         onUpdatePins={handleUpdatePins}

@@ -43,7 +43,7 @@ export function FeedbackSidebar({
     pins, 
     versions,
     highlightedPinId, 
-    status,
+    status = 'DRAFT', // Default to DRAFT to prevent replace() crash
     onUpdatePins, 
     onPinSelect, 
     onStatusChange,
@@ -140,7 +140,7 @@ export function FeedbackSidebar({
                         status === 'INTERNAL_REVIEW' ? "bg-amber-500" :
                         status === 'CHANGES_REQUESTED' ? "bg-destructive" : "bg-muted text-muted-foreground"
                     )}>
-                        {status.replace('_', ' ')}
+                        {(status || 'DRAFT').replace('_', ' ')}
                     </Badge>
                 </div>
 
