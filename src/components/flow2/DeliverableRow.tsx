@@ -263,8 +263,8 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             const finalData = {
                 ...item,
                 ...currentValues,
-                addons: (currentValues.addons || []).filter((a: any) => a.value !== undefined && a.value !== false) as any
-            };
+                addons: (currentValues.addons || []).filter((currentValues.addons || []).filter((a: any) => a.value !== undefined && a.value !== false) as any)
+            } as any;
             performSyncUpdate(currentValues);
             onDone(item.id, res, finalData);
         }
@@ -310,15 +310,18 @@ export const DeliverableRow = React.memo(function DeliverableRow({
             product.customFields.forEach(field => {
                 const val = (displayValues.customFieldValues as any)?.[field.id];
                 if (val && typeof val === 'number') {
-                    parts.push(<span key={field.id} className="font-bold">{field.name}: {val}</span>);
+                    const warning = getLogicWarning(val, field.softConstraints);
+                    parts.push(<span key={field.id} className={cn("font-bold", warning && "text-[#FA7315]")}>{field.name}: {val}</span>);
                 }
             });
         }
 
         const activeAddons = (displayValues.addons || []).filter((a: any) => a.value !== undefined && a.value !== false);
         activeAddons.forEach((a: any) => {
+            const addonDef = product.addons?.find(def => def.id === a.id);
+            const warning = getLogicWarning(a.value, addonDef?.softConstraints);
             const displayVal = typeof a.value === 'number' ? `: ${a.value}` : '';
-            parts.push(<span key={`addon-${a.id}`} className="font-bold">{a.name}{displayVal}</span>);
+            parts.push(<span key={`addon-${a.id}`} className={cn("font-bold", warning && "text-[#FA7315]")}>{a.name}{displayVal}</span>);
         });
 
         if (displayValues.specialRequest) {
@@ -332,6 +335,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
     const getWarningData = React.useCallback((): { type: 'hard' | 'soft' | null, message: string | null } => {
         if (!isValid) return { type: 'hard', message: 'SETUP REQUIRED' };
 
+        // Quantity/Pages check
         if (product?.configType === 'A') {
             const warning = getLogicWarning(watchedValues.quantity, product.softConstraints);
             if (warning) return { type: 'soft', message: warning };
@@ -339,6 +343,28 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         if (product?.configType === 'B') {
             const warning = getLogicWarning(watchedValues.pages, product.softConstraints);
             if (warning) return { type: 'soft', message: warning };
+        }
+
+        // Custom Fields check
+        if (product?.customFields) {
+            for (const field of product.customFields) {
+                const val = (watchedValues.customFieldValues as any)?.[field.id];
+                const warning = getLogicWarning(val, field.softConstraints);
+                if (warning) return { type: 'soft', message: warning };
+            }
+        }
+
+        // Addons check
+        if (product?.addons) {
+            for (let i = 0; i < product.addons.length; i++) {
+                const addonDef = product.addons[i];
+                const addonVal = watchedValues.addons?.[i]?.value;
+                const isChecked = addonVal !== undefined && addonVal !== false;
+                if (isChecked && addonDef.softConstraints) {
+                    const warning = getLogicWarning(addonVal, addonDef.softConstraints);
+                    if (warning) return { type: 'soft', message: warning };
+                }
+            }
         }
         
         const hasNegativeRate = Object.values(watchedValues.rateOverrides || {}).some(r => (r ?? 0) < 0);
@@ -521,6 +547,7 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                             control={control}
                                             render={({ field }) => {
                                                 const isChecked = field.value !== undefined && field.value !== false;
+                                                const warning = isChecked ? getLogicWarning(field.value, addon.softConstraints) : null;
                                                 
                                                 if (!isChecked) {
                                                     return !isReadOnly ? (
@@ -534,7 +561,10 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                 } else {
                                                     const val = field.value ?? '';
                                                     return (
-                                                        <div className={cn("inline-flex items-center rounded-full h-8 pl-4 pr-1.5 gap-2 bg-primary text-white shadow-md transition-colors", isReadOnly && "bg-muted text-muted-foreground")}>
+                                                        <div className={cn(
+                                                            "inline-flex items-center rounded-full h-8 pl-4 pr-1.5 gap-2 transition-all shadow-md",
+                                                            isReadOnly ? "bg-muted text-muted-foreground" : warning ? "bg-[#FA7315] text-white" : "bg-primary text-white"
+                                                        )}>
                                                             <span className="text-xs font-black uppercase tracking-tight">{addon.name}</span>
                                                             {addon.type !== 'checkbox' && (
                                                                 <Input
@@ -543,7 +573,10 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                                                                     disabled={isReadOnly}
                                                                     onKeyDown={handleEnterToBlur}
                                                                     autoFocus={justActivatedAddonId === addon.id}
-                                                                    className="h-6 px-2 py-0 text-xs bg-white border-none focus-visible:ring-0 rounded-md font-black text-black w-12"
+                                                                    className={cn(
+                                                                        "h-6 px-2 py-0 text-xs border-none focus-visible:ring-0 rounded-md font-black w-12",
+                                                                        warning ? "bg-white text-[#FA7315]" : "bg-white text-black"
+                                                                    )}
                                                                     value={val}
                                                                     onChange={(e) => field.onChange(e.target.value === '' ? null : Math.max(0, Number(e.target.value)))}
                                                                 />
