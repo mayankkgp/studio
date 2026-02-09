@@ -78,7 +78,7 @@ const EditableField = ({
   register,
   registerKey,
   value,
-  showIfEmpty,
+  isEditMode,
   onFocusChange
 }: { 
   id: string, 
@@ -86,14 +86,14 @@ const EditableField = ({
   register: UseFormRegister<CustomerData>,
   registerKey: any,
   value: string,
-  showIfEmpty: boolean,
+  isEditMode: boolean,
   onFocusChange?: (key: string, isFocused: boolean) => void
 }) => {
   const [localFocus, setLocalFocus] = React.useState(false);
   const isEmpty = !value || value.trim().length === 0;
   
   // Don't hide if it's focused, even if empty, to prevent jumping while typing
-  if (!showIfEmpty && isEmpty && !localFocus) return null;
+  if (!isEditMode && isEmpty && !localFocus) return null;
 
   const { onBlur: regOnBlur, onFocus: regOnFocus, ...regRest } = register(registerKey);
 
@@ -108,6 +108,7 @@ const EditableField = ({
       <AutoGrowingTextarea 
         id={id} 
         {...regRest}
+        readOnly={!isEditMode}
         onFocus={(e) => {
           setLocalFocus(true);
           onFocusChange?.(String(registerKey), true);
@@ -117,12 +118,13 @@ const EditableField = ({
           onFocusChange?.(String(registerKey), false);
           regOnBlur(e);
         }}
-        placeholder="Enter creative brief details..."
+        placeholder={isEditMode ? "Enter creative brief details..." : ""}
         minRows={1}
         className={cn(
           "font-semibold leading-relaxed text-foreground border-2 rounded-md -ml-3",
-          "bg-transparent border-transparent hover:bg-primary/5",
-          "focus:bg-background focus:border-primary/40 focus:ring-2 focus:ring-primary/10 focus:shadow-sm focus:px-3",
+          "bg-transparent border-transparent",
+          isEditMode && "hover:bg-primary/5 focus:bg-background focus:border-primary/40 focus:ring-2 focus:ring-primary/10 focus:shadow-sm focus:px-3",
+          !isEditMode && "cursor-default",
           "placeholder:italic placeholder:font-normal placeholder:text-muted-foreground/60 placeholder:text-[13px]"
         )}
       />
@@ -134,12 +136,12 @@ export function CustomerDataForm({
     order, 
     onSave, 
     isSaving,
-    showEmptyFields = true
+    isEditMode = false
 }: { 
     order: Order; 
     onSave: (data: CustomerData) => void; 
     isSaving?: boolean;
-    showEmptyFields?: boolean;
+    isEditMode?: boolean;
 }) {
   const [selectedProductId, setSelectedProductId] = React.useState<string | null>(
     order.deliverables.length > 0 ? order.deliverables[0].id : null
@@ -170,7 +172,7 @@ export function CustomerDataForm({
     setFocusedFields(prev => ({ ...prev, [key]: isFocused }));
   };
 
-  // Section visibility checks for "Hide Empty" mode
+  // Section visibility checks for View Mode
   const isSectionActive = (section: any, prefix: string) => {
     if (!section) return false;
     const hasData = Object.values(section).some(val => val && (typeof val === 'string' && val.trim().length > 0));
@@ -178,10 +180,10 @@ export function CustomerDataForm({
     return hasData || hasFocus;
   };
 
-  const isVisualVisible = showEmptyFields || isSectionActive(watchedValues.visualIdentity, 'visualIdentity');
-  const isNarrativeVisible = showEmptyFields || isSectionActive(watchedValues.narrative, 'narrative');
-  const isCultureVisible = showEmptyFields || isSectionActive(watchedValues.cultureSymbols, 'cultureSymbols');
-  const isAtmosphereVisible = showEmptyFields || isSectionActive(watchedValues.atmosphereExtras, 'atmosphereExtras');
+  const isVisualVisible = isEditMode || isSectionActive(watchedValues.visualIdentity, 'visualIdentity');
+  const isNarrativeVisible = isEditMode || isSectionActive(watchedValues.narrative, 'narrative');
+  const isCultureVisible = isEditMode || isSectionActive(watchedValues.cultureSymbols, 'cultureSymbols');
+  const isAtmosphereVisible = isEditMode || isSectionActive(watchedValues.atmosphereExtras, 'atmosphereExtras');
 
   const isGenericDataVisible = isVisualVisible || isNarrativeVisible || isCultureVisible || isAtmosphereVisible;
 
@@ -227,7 +229,7 @@ export function CustomerDataForm({
   const visibleDeliverables = React.useMemo(() => {
     let list = order.deliverables;
     
-    if (!showEmptyFields) {
+    if (!isEditMode) {
       list = list.filter(item => {
         const brief = (watchedValues.productBriefs as any)?.[item.id];
         const hasData = brief && brief.trim().length > 0;
@@ -243,19 +245,19 @@ export function CustomerDataForm({
     }
 
     return list;
-  }, [order.deliverables, showEmptyFields, productSearchQuery, watchedValues.productBriefs, selectedProductId]);
+  }, [order.deliverables, isEditMode, productSearchQuery, watchedValues.productBriefs, selectedProductId]);
 
   // Ensure selection stays valid when switching visible list
   React.useEffect(() => {
     if (visibleDeliverables.length > 0) {
       const stillVisible = visibleDeliverables.some(d => d.id === selectedProductId);
-      if (!stillVisible && !showEmptyFields) {
+      if (!stillVisible && !isEditMode) {
         setSelectedProductId(visibleDeliverables[0].id);
       }
-    } else if (!showEmptyFields) {
+    } else if (!isEditMode) {
       setSelectedProductId(null);
     }
-  }, [visibleDeliverables, selectedProductId, showEmptyFields]);
+  }, [visibleDeliverables, selectedProductId, isEditMode]);
 
   const selectedItem = order.deliverables.find(d => d.id === selectedProductId);
 
@@ -263,7 +265,10 @@ export function CustomerDataForm({
     <div className="pb-24 max-w-6xl mx-auto relative">
       {/* Masonry Layout for General Sections */}
       {isGenericDataVisible && (
-        <section className="columns-1 md:columns-2 gap-8 space-y-8">
+        <section className={cn(
+          "columns-1 md:columns-2 gap-8 space-y-8",
+          "mt-0"
+        )}>
           {isVisualVisible && (
             <div className="break-inside-avoid">
               <SectionHeader title="Visual Identity" icon={Palette} />
@@ -273,7 +278,7 @@ export function CustomerDataForm({
                 register={register}
                 registerKey="visualIdentity.moodStyle"
                 value={watchedValues.visualIdentity?.moodStyle || ''}
-                showIfEmpty={showEmptyFields}
+                isEditMode={isEditMode}
                 onFocusChange={handleFocusChange}
               />
               <EditableField 
@@ -282,7 +287,7 @@ export function CustomerDataForm({
                 register={register}
                 registerKey="visualIdentity.colorTypography"
                 value={watchedValues.visualIdentity?.colorTypography || ''}
-                showIfEmpty={showEmptyFields}
+                isEditMode={isEditMode}
                 onFocusChange={handleFocusChange}
               />
               <EditableField 
@@ -291,7 +296,7 @@ export function CustomerDataForm({
                 register={register}
                 registerKey="visualIdentity.designDislikes"
                 value={watchedValues.visualIdentity?.designDislikes || ''}
-                showIfEmpty={showEmptyFields}
+                isEditMode={isEditMode}
                 onFocusChange={handleFocusChange}
               />
             </div>
@@ -306,7 +311,7 @@ export function CustomerDataForm({
                 register={register}
                 registerKey="cultureSymbols.mandatoryIcons"
                 value={watchedValues.cultureSymbols?.mandatoryIcons || ''}
-                showIfEmpty={showEmptyFields}
+                isEditMode={isEditMode}
                 onFocusChange={handleFocusChange}
               />
               <EditableField 
@@ -315,7 +320,7 @@ export function CustomerDataForm({
                 register={register}
                 registerKey="cultureSymbols.regionalNuances"
                 value={watchedValues.cultureSymbols?.regionalNuances || ''}
-                showIfEmpty={showEmptyFields}
+                isEditMode={isEditMode}
                 onFocusChange={handleFocusChange}
               />
             </div>
@@ -330,7 +335,7 @@ export function CustomerDataForm({
                 register={register}
                 registerKey="narrative.timeline"
                 value={watchedValues.narrative?.timeline || ''}
-                showIfEmpty={showEmptyFields}
+                isEditMode={isEditMode}
                 onFocusChange={handleFocusChange}
               />
               <EditableField 
@@ -339,7 +344,7 @@ export function CustomerDataForm({
                 register={register}
                 registerKey="narrative.coupleWorld"
                 value={watchedValues.narrative?.coupleWorld || ''}
-                showIfEmpty={showEmptyFields}
+                isEditMode={isEditMode}
                 onFocusChange={handleFocusChange}
               />
               <EditableField 
@@ -348,7 +353,7 @@ export function CustomerDataForm({
                 register={register}
                 registerKey="narrative.easterEggs"
                 value={watchedValues.narrative?.easterEggs || ''}
-                showIfEmpty={showEmptyFields}
+                isEditMode={isEditMode}
                 onFocusChange={handleFocusChange}
               />
             </div>
@@ -363,7 +368,7 @@ export function CustomerDataForm({
                 register={register}
                 registerKey="atmosphereExtras.venuePersonality"
                 value={watchedValues.atmosphereExtras?.venuePersonality || ''}
-                showIfEmpty={showEmptyFields}
+                isEditMode={isEditMode}
                 onFocusChange={handleFocusChange}
               />
               <EditableField 
@@ -372,7 +377,7 @@ export function CustomerDataForm({
                 register={register}
                 registerKey="atmosphereExtras.otherDetails"
                 value={watchedValues.atmosphereExtras?.otherDetails || ''}
-                showIfEmpty={showEmptyFields}
+                isEditMode={isEditMode}
                 onFocusChange={handleFocusChange}
               />
             </div>
@@ -390,7 +395,7 @@ export function CustomerDataForm({
           <div className="py-20 text-center italic text-muted-foreground text-sm bg-card/10 rounded-xl border border-dashed flex flex-col items-center justify-center">
             <Box className="h-8 w-8 opacity-30 mb-4" />
             <p className="font-bold uppercase tracking-widest text-[11px]">
-              {showEmptyFields ? "No products in scope" : "No brief data recorded"}
+              No data recorded
             </p>
           </div>
         ) : (
@@ -440,6 +445,7 @@ export function CustomerDataForm({
                     return (
                       <button
                         key={item.id}
+                        type="button"
                         onClick={() => setSelectedProductId(item.id)}
                         className={cn(
                           "w-full text-left px-4 py-3 rounded-lg transition-all flex items-center justify-between group",
@@ -494,13 +500,18 @@ export function CustomerDataForm({
                     </div>
                   </div>
 
-                  <div className="relative group focus-within:z-10 bg-background rounded-xl shadow-sm border border-primary/10 focus-within:border-primary/40 focus-within:ring-4 focus-within:ring-primary/5 transition-all">
+                  <div className={cn(
+                    "relative group focus-within:z-10 bg-background rounded-xl shadow-sm border border-primary/10 transition-all",
+                    isEditMode && "focus-within:border-primary/40 focus-within:ring-4 focus-within:ring-primary/5"
+                  )}>
                     <AutoGrowingTextarea 
-                      placeholder="Add detailed creative requirements for this product..."
+                      placeholder={isEditMode ? "Add detailed creative requirements for this product..." : ""}
                       {...register(`productBriefs.${selectedItem.id}` as any)}
+                      readOnly={!isEditMode}
                       minRows={4}
                       className={cn(
                         "font-semibold bg-transparent text-foreground min-h-[350px] p-6 text-sm leading-relaxed",
+                        !isEditMode && "cursor-default",
                         "placeholder:italic placeholder:font-normal placeholder:text-muted-foreground/60 placeholder:text-[13px]"
                       )}
                     />
@@ -508,7 +519,7 @@ export function CustomerDataForm({
                 </div>
               ) : (
                 <div className="h-full flex flex-col items-center justify-center text-muted-foreground/60 text-[11px] font-bold uppercase tracking-widest italic">
-                  Select a product to edit brief
+                  Select a product to view brief
                 </div>
               )}
             </main>

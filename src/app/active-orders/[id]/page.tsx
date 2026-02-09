@@ -76,7 +76,8 @@ export default function ActiveOrderCommandCenter() {
     const [itemSearchQuery, setItemSearchQuery] = useState('');
     const [activeTab, setActiveTab] = useState('overview');
     const [isSavingBrief, setIsSavingBrief] = useState(false);
-    const [showEmptyBriefFields, setShowEmptyBriefFields] = useState(true);
+    const [isCustomerEditMode, setIsCustomerEditMode] = useState(false);
+    const [isCustomerCancelConfirmOpen, setIsCustomerCancelConfirmOpen] = useState(false);
     
     const [projectedTotals, setProjectedTotals] = useState<Record<string, number>>({});
     const [initialTotal, setInitialTotal] = useState(0);
@@ -108,19 +109,7 @@ export default function ActiveOrderCommandCenter() {
 
     useEffect(() => {
         loadOrder();
-        
-        // Load brief view preference
-        const savedPref = localStorage.getItem('srishbish_brief_view_pref');
-        if (savedPref !== null) {
-            setShowEmptyBriefFields(savedPref === 'true');
-        }
     }, [loadOrder]);
-
-    const handleToggleBriefView = () => {
-        const next = !showEmptyBriefFields;
-        setShowEmptyBriefFields(next);
-        localStorage.setItem('srishbish_brief_view_pref', String(next));
-    };
 
     const syncToStorage = useCallback((updatedOrder: Order) => {
         try {
@@ -258,8 +247,15 @@ export default function ActiveOrderCommandCenter() {
         setTimeout(() => {
             syncToStorage({ ...activeOrder, customerData: data });
             setIsSavingBrief(false);
+            setIsCustomerEditMode(false);
             toast({ title: "Brief Saved", description: "Creative data updated successfully." });
         }, 600);
+    };
+
+    const handleCancelCustomerData = () => {
+        setIsCustomerEditMode(false);
+        setIsCustomerCancelConfirmOpen(false);
+        loadOrder(); // Reset local state from persistent storage
     };
 
     const handleProjectedTotalChange = useCallback((id: string, total: number) => {
@@ -559,28 +555,37 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                             )}
                             {activeTab === 'customer' && (
                                 <div className="flex items-center gap-2">
-                                    <Button 
-                                        variant="outline" 
-                                        size="sm" 
-                                        onClick={handleToggleBriefView}
-                                        className="h-8 font-bold gap-2 text-[11px] uppercase tracking-widest border-primary/20 hover:bg-primary/5 hover:text-primary transition-all shrink-0"
-                                    >
-                                        {showEmptyBriefFields ? (
-                                            <><EyeOff className="h-3.5 w-3.5" /> Hide Empty Fields</>
-                                        ) : (
-                                            <><Eye className="h-3.5 w-3.5" /> Show All Fields</>
-                                        )}
-                                    </Button>
-                                    <Button 
-                                        size="sm" 
-                                        type="submit"
-                                        form="creative-brief-form"
-                                        disabled={isSavingBrief}
-                                        className="h-8 font-bold gap-2 bg-primary shadow-lg shadow-primary/20 shrink-0 hover:bg-primary/90"
-                                    >
-                                        {isSavingBrief ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                                        Save Creative Brief
-                                    </Button>
+                                    {!isCustomerEditMode ? (
+                                        <Button 
+                                            variant="outline" 
+                                            size="sm" 
+                                            onClick={() => setIsCustomerEditMode(true)}
+                                            className="h-8 font-bold gap-2 text-[11px] uppercase tracking-widest border-primary text-primary hover:bg-primary/5 transition-all shrink-0"
+                                        >
+                                            <Pencil className="h-3.5 w-3.5" /> Edit Creative Brief
+                                        </Button>
+                                    ) : (
+                                        <>
+                                            <Button 
+                                                variant="ghost" 
+                                                size="sm" 
+                                                onClick={() => setIsCustomerCancelConfirmOpen(true)}
+                                                className="h-8 font-bold text-muted-foreground hover:bg-muted transition-all shrink-0"
+                                            >
+                                                Cancel
+                                            </Button>
+                                            <Button 
+                                                size="sm" 
+                                                type="submit"
+                                                form="creative-brief-form"
+                                                disabled={isSavingBrief}
+                                                className="h-8 font-bold gap-2 bg-primary shadow-lg shadow-primary/20 shrink-0 hover:bg-primary/90"
+                                            >
+                                                {isSavingBrief ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                                                Save Creative Brief
+                                            </Button>
+                                        </>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -622,7 +627,7 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                                             </h2>
                                             
                                             <div className="flex items-center gap-4 flex-1 justify-end">
-                                                {viewMode === 'scope' && (
+                                                {viewMode === 'scope' && !isEditMode && (
                                                     <div className="relative max-w-[200px] hidden sm:block">
                                                         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                                                         <Input 
@@ -641,6 +646,17 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                                                                 <X className="h-3 w-3" />
                                                             </Button>
                                                         )}
+                                                    </div>
+                                                )}
+                                                {viewMode === 'scope' && isEditMode && (
+                                                    <div className="relative max-w-[200px] hidden sm:block">
+                                                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                                                        <Input 
+                                                            placeholder="Filter list..." 
+                                                            className="h-8 pl-8 text-xs bg-background border-primary/20"
+                                                            value={itemSearchQuery}
+                                                            onChange={(e) => setItemSearchQuery(e.target.value)}
+                                                        />
                                                     </div>
                                                 )}
                                                 <Tabs value={viewMode} onValueChange={(v: any) => setViewMode(v)} className="w-auto">
@@ -775,7 +791,7 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                                     order={activeOrder} 
                                     onSave={handleSaveCustomerData}
                                     isSaving={isSavingBrief}
-                                    showEmptyFields={showEmptyBriefFields}
+                                    isEditMode={isCustomerEditMode}
                                 />
                             </div>
                         </TabsContent>
@@ -819,6 +835,23 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                     </div>
                 </div>
             </div>
+
+            <AlertDialog open={isCustomerCancelConfirmOpen} onOpenChange={setIsCustomerCancelConfirmOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Discard changes?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            All unsaved changes in the creative brief will be lost. This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Go Back</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleCancelCustomerData} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                            Discard Changes
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
 
             <style jsx global>{`
                 .custom-scrollbar::-webkit-scrollbar { width: 5px; }
