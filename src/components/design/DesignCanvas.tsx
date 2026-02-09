@@ -99,7 +99,7 @@ export function DesignCanvas({
 
     if (!imageUrl) {
         return (
-            <div className="h-full w-full flex flex-col items-center justify-center bg-muted/20 border-dashed border-2 m-4 rounded-xl">
+            <div className="absolute inset-4 flex flex-col items-center justify-center bg-muted/20 border-dashed border-2 rounded-xl">
                 {isDesigner ? (
                     <div className="text-center space-y-4">
                         <div className="h-16 w-16 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto">
