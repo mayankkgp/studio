@@ -859,6 +859,7 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                                     onSave={handleSaveCustomerData}
                                     isSaving={isSavingBrief}
                                     isEditMode={isCustomerEditMode}
+                                    onEnterEditMode={() => setIsCustomerEditMode(true)}
                                 />
                             </div>
                         </TabsContent>
@@ -914,6 +915,40 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                     </div>
                 </div>
             </div>
+
+            <AlertDialog open={isCustomerCancelConfirmOpen} onOpenChange={setIsCustomerCancelConfirmOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Discard Changes?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to cancel? All unsaved creative brief edits will be permanently lost.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Keep Editing</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleCancelCustomerData} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                            Discard Changes
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            <AlertDialog open={isExitConfirmOpen} onOpenChange={setIsExitConfirmOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Discard Modifications?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            You have items currently being modified. These changes will not be saved if you exit now.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Stay &amp; Review</AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmExitEditMode} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                            Discard All Changes
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
 
             <style jsx global>{`
                 .custom-scrollbar::-webkit-scrollbar { width: 5px; }

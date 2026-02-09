@@ -137,12 +137,14 @@ export function CustomerDataForm({
     order, 
     onSave, 
     isSaving,
-    isEditMode = false
+    isEditMode = false,
+    onEnterEditMode
 }: { 
     order: Order; 
     onSave: (data: CustomerData) => void; 
     isSaving?: boolean;
     isEditMode?: boolean;
+    onEnterEditMode?: () => void;
 }) {
   const [selectedProductId, setSelectedProductId] = React.useState<string | null>(
     order.deliverables.length > 0 ? order.deliverables[0].id : null
@@ -207,7 +209,7 @@ export function CustomerDataForm({
         </div>
         <h3 className="text-xl font-headline font-black uppercase tracking-[0.2em] mb-3 text-muted-foreground/80">No Data Recorded</h3>
         <p className="text-sm font-semibold text-center max-w-sm leading-relaxed px-4">
-          The creative brief is currently empty. Switch to <span className="text-primary font-black uppercase tracking-wider">Edit Mode</span> to begin building the narrative.
+          The creative brief is currently empty. Switch to <button type="button" onClick={onEnterEditMode} className="text-primary font-black uppercase tracking-wider hover:underline focus:outline-none">Edit Mode</button> to begin building the narrative.
         </p>
       </div>
     );
