@@ -175,7 +175,6 @@ export function CustomerDataForm({
     setFocusedFields(prev => ({ ...prev, [key]: isFocused }));
   };
 
-  // Section visibility checks for View Mode
   const isSectionActive = (section: any, prefix: string) => {
     if (!section) return false;
     const hasData = Object.values(section).some(val => val && (typeof val === 'string' && val.trim().length > 0));
@@ -190,7 +189,6 @@ export function CustomerDataForm({
 
   const isGenericDataVisible = isVisualVisible || isNarrativeVisible || isCultureVisible || isAtmosphereVisible;
 
-  // Filter deliverables based on data presence and focus
   const visibleDeliverables = React.useMemo(() => {
     let list = order.deliverables;
     
@@ -211,10 +209,8 @@ export function CustomerDataForm({
     return list;
   }, [order.deliverables, isEditMode, productSearchQuery, watchedValues.productBriefs, focusedFields, selectedProductId]);
 
-  // Logic to hide the entire Product Briefs section in View Mode if no data exists
   const isProductBriefsSectionVisible = React.useMemo(() => {
     if (isEditMode) return true;
-    // Section visible if any visible deliverable has content or is focused
     return visibleDeliverables.some(item => {
         const brief = (watchedValues.productBriefs as any)?.[item.id];
         const isFocused = focusedFields[`productBriefs.${item.id}`];
@@ -222,22 +218,7 @@ export function CustomerDataForm({
     });
   }, [isEditMode, visibleDeliverables, watchedValues.productBriefs, focusedFields]);
 
-  // Overall empty state for View Mode
-  if (!isEditMode && !isGenericDataVisible && !isProductBriefsSectionVisible) {
-    return (
-      <div className="flex flex-col items-center justify-center py-32 text-muted-foreground animate-in fade-in zoom-in-95 duration-500">
-        <div className="h-20 w-20 rounded-full bg-muted/20 flex items-center justify-center mb-6 border-2 border-dashed border-muted/50">
-          <Sparkles className="h-10 w-10 opacity-30" />
-        </div>
-        <h3 className="text-xl font-headline font-black uppercase tracking-[0.2em] mb-3 text-muted-foreground">No Data Recorded</h3>
-        <p className="text-sm font-semibold text-center max-w-sm leading-relaxed px-4">
-          The creative brief is currently empty. Switch to <button type="button" onClick={onEnterEditMode} className="text-primary font-black uppercase tracking-wider hover:underline focus:outline-none">EDIT MODE</button> to begin building the narrative.
-        </p>
-      </div>
-    );
-  }
-
-  // Ensure selection stays valid
+  // Ensure selection stays valid - moved above conditional return to fix Rules of Hooks violation
   React.useEffect(() => {
     if (visibleDeliverables.length > 0) {
       const stillVisible = visibleDeliverables.some(d => d.id === selectedProductId);
@@ -248,6 +229,21 @@ export function CustomerDataForm({
       setSelectedProductId(null);
     }
   }, [visibleDeliverables, selectedProductId, isEditMode]);
+
+  // Overall empty state for View Mode
+  if (!isEditMode && !isGenericDataVisible && !isProductBriefsSectionVisible) {
+    return (
+      <div className="flex flex-col items-center justify-center py-32 text-muted-foreground animate-in fade-in zoom-in-95 duration-500">
+        <div className="h-20 w-20 rounded-full bg-muted/20 flex items-center justify-center mb-6 border-2 border-dashed border-muted/50">
+          <Sparkles className="h-10 w-10 opacity-30" />
+        </div>
+        <h3 className="text-xl font-headline text-muted-foreground font-black uppercase tracking-[0.2em] mb-3">No Data Recorded</h3>
+        <p className="text-sm font-semibold text-center max-w-sm leading-relaxed px-4">
+          The creative brief is currently empty. Switch to <button type="button" onClick={onEnterEditMode} className="text-primary font-black uppercase tracking-wider hover:underline focus:outline-none">EDIT MODE</button> to begin building the narrative.
+        </p>
+      </div>
+    );
+  }
 
   const getProductSpecsSummary = (item: ConfiguredProduct) => {
     const product = productCatalog.find(p => p.id === item.productId);
@@ -516,9 +512,9 @@ export function CustomerDataForm({
             </aside>
 
             {/* Detail View (Right) */}
-            <main className="flex-1 pt-4 px-8 pb-8 overflow-y-auto custom-scrollbar bg-background/50">
+            <main className="flex-1 pt-2 px-8 pb-8 overflow-y-auto custom-scrollbar bg-background/50">
               {selectedItem ? (
-                <div className="space-y-4">
+                <div className="space-y-2">
                   <div className="flex flex-wrap items-center text-[11px] font-black text-muted-foreground uppercase tracking-[0.1em]">
                     {getProductSpecsSummary(selectedItem)}
                   </div>
