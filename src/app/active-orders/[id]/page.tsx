@@ -32,14 +32,12 @@ import {
     ClipboardCheck,
     Save,
     Eye,
-    EyeOff,
-    Palette
+    EyeOff
 } from 'lucide-react';
 import { EventDetailsForm } from '@/components/flow1/EventDetailsForm';
 import { DeliverableRow } from '@/components/flow2/DeliverableRow';
 import { CommandBar } from '@/components/flow2/CommandBar';
 import { CustomerDataForm } from '@/components/flow2/CustomerDataForm';
-import { DesignReviewTab } from '@/components/design/DesignReviewTab';
 import { Accordion } from '@/components/ui/accordion';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -668,13 +666,6 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                                 <ClipboardCheck className="h-4 w-4 mr-2" />
                                 Customer Data
                             </TabsTrigger>
-                            <TabsTrigger 
-                                value="design" 
-                                className="h-12 rounded-none border-b-2 border-transparent transition-all hover:bg-primary/5 hover:text-primary data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none font-bold text-xs uppercase tracking-widest"
-                            >
-                                <Palette className="h-4 w-4 mr-2" />
-                                Design
-                            </TabsTrigger>
                         </TabsList>
                     </div>
 
@@ -872,13 +863,6 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                                 />
                             </div>
                         </TabsContent>
-
-                        <TabsContent value="design" className="absolute inset-0 m-0 outline-none overflow-hidden bg-background/50">
-                            <DesignReviewTab 
-                                order={activeOrder} 
-                                onUpdateOrder={(updated) => syncToStorage(updated)} 
-                            />
-                        </TabsContent>
                     </div>
                 </Tabs>
 
@@ -931,40 +915,6 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                     </div>
                 </div>
             </div>
-
-            <AlertDialog open={isCustomerCancelConfirmOpen} onOpenChange={setIsCustomerCancelConfirmOpen}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Discard Changes?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            Are you sure you want to cancel? All unsaved creative brief edits will be permanently lost.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Keep Editing</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleCancelCustomerData} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                            Discard Changes
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
-
-            <AlertDialog open={isExitConfirmOpen} onOpenChange={setIsExitConfirmOpen}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Discard Modifications?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            You have items currently being modified. These changes will not be saved if you exit now.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Stay &amp; Review</AlertDialogCancel>
-                        <AlertDialogAction onClick={confirmExitEditMode} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                            Discard All Changes
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
 
             <style jsx global>{`
                 .custom-scrollbar::-webkit-scrollbar { width: 5px; }
