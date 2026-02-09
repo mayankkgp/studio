@@ -101,7 +101,7 @@ const EditableField = ({
     <div className="mb-8 group transition-all duration-200 border-l-2 pl-4 border-primary/20 focus-within:border-primary break-inside-avoid">
       <Label 
         htmlFor={id} 
-        className="text-[11px] font-black uppercase tracking-widest text-muted-foreground mb-2 block"
+        className="text-[11px] font-black uppercase tracking-widest text-muted-foreground/80 mb-2 block"
       >
         {label}
       </Label>
@@ -126,7 +126,7 @@ const EditableField = ({
           "bg-transparent border-transparent",
           isEditMode && "hover:bg-primary/5 focus:bg-background focus:border-primary/40 focus:ring-4 focus:ring-primary/5 focus:shadow-sm focus:px-3",
           !isEditMode && "cursor-default",
-          "placeholder:italic placeholder:font-normal placeholder:text-muted-foreground/50 placeholder:text-[13px] placeholder:opacity-100"
+          "placeholder:italic placeholder:font-normal placeholder:text-muted-foreground/60 placeholder:text-[13px] placeholder:opacity-100"
         )}
       />
     </div>
@@ -198,7 +198,8 @@ export function CustomerDataForm({
       list = list.filter(item => {
         const brief = (watchedValues.productBriefs as any)?.[item.id];
         const isFocused = focusedFields[`productBriefs.${item.id}`];
-        return (brief && brief.trim().length > 0) || isFocused;
+        const isSelected = selectedProductId === item.id;
+        return (brief && brief.trim().length > 0) || isFocused || isSelected;
       });
     }
 
@@ -208,13 +209,18 @@ export function CustomerDataForm({
     }
 
     return list;
-  }, [order.deliverables, isEditMode, productSearchQuery, watchedValues.productBriefs, focusedFields]);
+  }, [order.deliverables, isEditMode, productSearchQuery, watchedValues.productBriefs, focusedFields, selectedProductId]);
 
   // Logic to hide the entire Product Briefs section in View Mode if no data exists
   const isProductBriefsSectionVisible = React.useMemo(() => {
     if (isEditMode) return true;
-    return visibleDeliverables.length > 0;
-  }, [isEditMode, visibleDeliverables]);
+    // Section visible if any visible deliverable has content or is focused
+    return visibleDeliverables.some(item => {
+        const brief = (watchedValues.productBriefs as any)?.[item.id];
+        const isFocused = focusedFields[`productBriefs.${item.id}`];
+        return (brief && brief.trim().length > 0) || isFocused;
+    });
+  }, [isEditMode, visibleDeliverables, watchedValues.productBriefs, focusedFields]);
 
   // Ensure selection stays valid
   React.useEffect(() => {
@@ -274,7 +280,7 @@ export function CustomerDataForm({
         </div>
         <h3 className="text-xl font-headline font-black uppercase tracking-[0.2em] mb-3 text-muted-foreground/80">No Data Recorded</h3>
         <p className="text-sm font-semibold text-center max-w-sm leading-relaxed px-4">
-          The creative brief is currently empty. Switch to <button type="button" onClick={onEnterEditMode} className="text-primary font-black uppercase tracking-wider hover:underline focus:outline-none">Edit Mode</button> to begin building the narrative.
+          The creative brief is currently empty. Switch to <button type="button" onClick={onEnterEditMode} className="text-primary font-black uppercase tracking-wider hover:underline focus:outline-none">EDIT MODE</button> to begin building the narrative.
         </p>
       </div>
     );
@@ -439,7 +445,7 @@ export function CustomerDataForm({
               </div>
               <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-1">
                 {visibleDeliverables.length === 0 ? (
-                  <div className="py-12 text-center text-[11px] text-muted-foreground font-black uppercase tracking-[0.15em] opacity-40 italic">
+                  <div className="py-12 text-center text-[11px] text-muted-foreground/40 font-black uppercase tracking-[0.15em] opacity-40 italic">
                     No matching results
                   </div>
                 ) : (
@@ -508,8 +514,8 @@ export function CustomerDataForm({
             {/* Detail View (Right) */}
             <main className="flex-1 p-8 overflow-y-auto custom-scrollbar bg-background/50">
               {selectedItem ? (
-                <div className="space-y-3">
-                  <div className="flex flex-wrap items-center text-[11px] font-black text-muted-foreground uppercase tracking-[0.1em] leading-tight">
+                <div className="space-y-1">
+                  <div className="flex flex-wrap items-center text-[11px] font-black text-muted-foreground/80 uppercase tracking-[0.1em] leading-none mb-1">
                     {getProductSpecsSummary(selectedItem)}
                   </div>
 
@@ -527,7 +533,7 @@ export function CustomerDataForm({
                       className={cn(
                         "font-semibold bg-transparent text-foreground min-h-[350px] p-6 text-[14px] leading-relaxed",
                         !isEditMode && "cursor-default",
-                        "placeholder:italic placeholder:font-normal placeholder:text-muted-foreground/40 placeholder:text-[13px] placeholder:opacity-100"
+                        "placeholder:italic placeholder:font-normal placeholder:text-muted-foreground/50 placeholder:text-[13px] placeholder:opacity-100"
                       )}
                     />
                   </div>
