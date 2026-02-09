@@ -514,8 +514,8 @@ export function CustomerDataForm({
             {/* Detail View (Right) */}
             <main className="flex-1 pt-4 px-8 pb-8 overflow-y-auto custom-scrollbar bg-background/50">
               {selectedItem ? (
-                <div className="space-y-1">
-                  <div className="flex flex-wrap items-center text-[11px] font-black text-muted-foreground uppercase tracking-[0.1em] leading-none mb-1">
+                <div className="space-y-4">
+                  <div className="flex flex-wrap items-center text-[11px] font-black text-muted-foreground uppercase tracking-[0.1em]">
                     {getProductSpecsSummary(selectedItem)}
                   </div>
 
