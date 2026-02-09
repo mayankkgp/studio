@@ -259,11 +259,15 @@ export function CustomerDataForm({
 
     const activeAddons = (item.addons || []).filter((a: any) => a.value !== undefined && a.value !== false && a.value !== null);
     if (activeAddons.length > 0) {
-      parts.push(<span key="addons-label" className="font-black text-primary">Add-on: {activeAddons.map(a => a.name).join(', ')}</span>);
+      const addonsDisplay = activeAddons.map(a => {
+        const valDisplay = typeof a.value === 'number' ? `: ${a.value}` : '';
+        return `${a.name}${valDisplay}`;
+      }).join(', ');
+      parts.push(<span key="addons-label" className="font-black text-primary">Add-on: {addonsDisplay}</span>);
     }
 
     if (item.specialRequest) {
-      parts.push(<span key="special" className="italic font-bold text-destructive">Special Request Included</span>);
+      parts.push(<span key="special" className="italic font-bold text-destructive">Note: {item.specialRequest}</span>);
     }
 
     return parts.length > 0 
