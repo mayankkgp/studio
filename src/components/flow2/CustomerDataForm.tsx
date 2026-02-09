@@ -190,15 +190,43 @@ export function CustomerDataForm({
 
   const isGenericDataVisible = isVisualVisible || isNarrativeVisible || isCultureVisible || isAtmosphereVisible;
 
+  // Filter deliverables based on data presence and focus
+  const visibleDeliverables = React.useMemo(() => {
+    let list = order.deliverables;
+    
+    if (!isEditMode) {
+      list = list.filter(item => {
+        const brief = (watchedValues.productBriefs as any)?.[item.id];
+        const isFocused = focusedFields[`productBriefs.${item.id}`];
+        return (brief && brief.trim().length > 0) || isFocused;
+      });
+    }
+
+    if (productSearchQuery.trim()) {
+      const q = productSearchQuery.toLowerCase();
+      list = list.filter(item => item.productName.toLowerCase().includes(q));
+    }
+
+    return list;
+  }, [order.deliverables, isEditMode, productSearchQuery, watchedValues.productBriefs, focusedFields]);
+
   // Logic to hide the entire Product Briefs section in View Mode if no data exists
   const isProductBriefsSectionVisible = React.useMemo(() => {
     if (isEditMode) return true;
-    return order.deliverables.some(item => {
-      const brief = (watchedValues.productBriefs as any)?.[item.id];
-      const isFocused = focusedFields[`productBriefs.${item.id}`];
-      return (brief && brief.trim().length > 0) || isFocused;
-    });
-  }, [isEditMode, order.deliverables, watchedValues.productBriefs, focusedFields]);
+    return visibleDeliverables.length > 0;
+  }, [isEditMode, visibleDeliverables]);
+
+  // Ensure selection stays valid
+  React.useEffect(() => {
+    if (visibleDeliverables.length > 0) {
+      const stillVisible = visibleDeliverables.some(d => d.id === selectedProductId);
+      if (!stillVisible) {
+        setSelectedProductId(visibleDeliverables[0].id);
+      }
+    } else if (!isEditMode) {
+      setSelectedProductId(null);
+    }
+  }, [visibleDeliverables, selectedProductId, isEditMode]);
 
   const getProductSpecsSummary = (item: ConfiguredProduct) => {
     const product = productCatalog.find(p => p.id === item.productId);
@@ -237,39 +265,7 @@ export function CustomerDataForm({
       : null;
   };
 
-  // Filter deliverables based on data presence and focus
-  const visibleDeliverables = React.useMemo(() => {
-    let list = order.deliverables;
-    
-    if (!isEditMode) {
-      list = list.filter(item => {
-        const brief = (watchedValues.productBriefs as any)?.[item.id];
-        const isFocused = focusedFields[`productBriefs.${item.id}`];
-        return (brief && brief.trim().length > 0) || isFocused;
-      });
-    }
-
-    if (productSearchQuery.trim()) {
-      const q = productSearchQuery.toLowerCase();
-      list = list.filter(item => item.productName.toLowerCase().includes(q));
-    }
-
-    return list;
-  }, [order.deliverables, isEditMode, productSearchQuery, watchedValues.productBriefs, focusedFields]);
-
-  // Ensure selection stays valid
-  React.useEffect(() => {
-    if (visibleDeliverables.length > 0) {
-      const stillVisible = visibleDeliverables.some(d => d.id === selectedProductId);
-      if (!stillVisible) {
-        setSelectedProductId(visibleDeliverables[0].id);
-      }
-    } else if (!isEditMode) {
-      setSelectedProductId(null);
-    }
-  }, [visibleDeliverables, selectedProductId, isEditMode]);
-
-  // Overall empty state for View Mode (Must come after all Hooks)
+  // Overall empty state for View Mode
   if (!isEditMode && !isGenericDataVisible && !isProductBriefsSectionVisible) {
     return (
       <div className="flex flex-col items-center justify-center py-32 text-muted-foreground/60 animate-in fade-in zoom-in-95 duration-500">
@@ -512,11 +508,9 @@ export function CustomerDataForm({
             {/* Detail View (Right) */}
             <main className="flex-1 p-8 overflow-y-auto custom-scrollbar bg-background/50">
               {selectedItem ? (
-                <div className="space-y-6">
-                  <div className="space-y-2">
-                    <div className="flex flex-wrap items-center text-[11px] font-black text-muted-foreground uppercase tracking-[0.1em] leading-relaxed border-b border-primary/10 pb-4">
-                      {getProductSpecsSummary(selectedItem)}
-                    </div>
+                <div className="space-y-3">
+                  <div className="flex flex-wrap items-center text-[11px] font-black text-muted-foreground uppercase tracking-[0.1em] leading-tight">
+                    {getProductSpecsSummary(selectedItem)}
                   </div>
 
                   <div className={cn(
