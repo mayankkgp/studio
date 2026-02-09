@@ -10,6 +10,7 @@ import { DesignCanvas } from './DesignCanvas';
 import { FeedbackSidebar } from './FeedbackSidebar';
 import { cn } from '@/lib/utils';
 import { Package, Circle } from 'lucide-react';
+import { productCatalog } from '@/lib/product-data';
 
 interface DesignProductCardProps {
     product: ConfiguredProduct;
@@ -47,7 +48,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
         // Deeply ensure status, versions, and pins arrays exist for each component
         return {
             ...baseData,
-            components: baseData.components.map(c => ({
+            components: (baseData.components || []).map(c => ({
                 ...c,
                 status: c.status || 'DRAFT' as DesignWorkflowStatus,
                 versions: c.versions || [],
@@ -76,7 +77,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
         ? activeComponent.versions[activeComponent.versions.length - 1].versionNumber 
         : 0;
     
-    const activeVersion = activeComponent.versions && activeComponent.versions.length > 0
+    const activeVersion = (activeComponent.versions && activeComponent.versions.length > 0)
         ? activeComponent.versions[activeComponent.versions.length - 1] 
         : null;
 
@@ -119,6 +120,47 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
         reader.readAsDataURL(file);
     };
 
+    const getProductSpecsSummary = () => {
+        const catalogItem = productCatalog.find(p => p.id === product.productId);
+        const parts: React.ReactNode[] = [];
+        
+        if (product.variant) {
+            parts.push(<span key="variant" className="font-black text-foreground">{product.variant}</span>);
+        }
+
+        if (catalogItem?.configType === 'A' && typeof product.quantity === 'number' && product.quantity > 0) {
+            parts.push(<span key="qty" className="font-bold">Qty: {product.quantity}</span>);
+        } else if (catalogItem?.configType === 'B' && typeof product.pages === 'number' && product.pages > 0) {
+            parts.push(<span key="pages" className="font-bold">{product.pages} Pgs</span>);
+        }
+
+        if (catalogItem?.customFields && product.customFieldValues) {
+            catalogItem.customFields.forEach(field => {
+                const val = (product.customFieldValues as any)?.[field.id];
+                if (val && typeof val === 'number' && val > 0) {
+                    parts.push(<span key={field.id} className="font-bold">{field.name}: {val}</span>);
+                }
+            });
+        }
+
+        const activeAddons = (product.addons || []).filter((a: any) => a.value !== undefined && a.value !== false && a.value !== null);
+        if (activeAddons.length > 0) {
+            const addonsDisplay = activeAddons.map(a => {
+                const valDisplay = typeof a.value === 'number' ? `: ${a.value}` : '';
+                return `${a.name}${valDisplay}`;
+            }).join(', ');
+            parts.push(<span key="addons-label" className="font-black text-primary">Add-on: {addonsDisplay}</span>);
+        }
+
+        if (product.specialRequest) {
+            parts.push(<span key="special" className="italic font-bold text-destructive">Note: {product.specialRequest}</span>);
+        }
+
+        return parts.length > 0 
+            ? parts.reduce((prev, curr, i) => [prev, <span key={`sep-${i}`} className="mx-2 text-muted-foreground/30 font-black tracking-tighter">•</span>, curr])
+            : null;
+    };
+
     return (
         <Card className="overflow-hidden border-2 border-primary/10 shadow-lg bg-card/50 backdrop-blur-sm">
             <CardHeader className="bg-muted/30 border-b py-3 px-4">
@@ -129,13 +171,8 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
                         </div>
                         <div>
                             <CardTitle className="text-sm font-headline font-black text-foreground">{product.productName}</CardTitle>
-                            <div className="flex items-center gap-2 mt-0.5">
-                                <Badge variant="secondary" className="text-[8px] font-black uppercase h-3.5 px-1">
-                                    {product.variant || 'Standard'}
-                                </Badge>
-                                {product.quantity && (
-                                    <span className="text-[9px] text-muted-foreground font-bold uppercase">Qty: {product.quantity}</span>
-                                )}
+                            <div className="flex items-center text-[9px] text-muted-foreground uppercase tracking-wider mt-0.5">
+                                {getProductSpecsSummary()}
                             </div>
                         </div>
                     </div>
@@ -148,7 +185,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
                         <div className="p-2 border-b bg-background/50 flex items-center justify-between">
                             <Tabs value={activeCompId} onValueChange={setActiveCompId} className="w-auto">
                                 <TabsList className="h-8 bg-muted/40 p-1">
-                                    {designData.components.map(comp => {
+                                    {(designData.components || []).map(comp => {
                                         const dotColor = comp.status === 'APPROVED' ? 'text-green-500' :
                                                         comp.status === 'CHANGES_REQUESTED' ? 'text-destructive' :
                                                         comp.status === 'INTERNAL_REVIEW' ? 'text-amber-500' : 'text-muted-foreground/30';
