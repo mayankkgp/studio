@@ -17,10 +17,32 @@ const navItems = [
 export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { order, resetOrder } = useOrder();
+  const { order, resetOrder, navigationLocked, triggerNavigationAttempt } = useOrder();
   const { toast } = useToast();
 
+  const handleNavClick = (e: React.MouseEvent, href: string) => {
+    if (navigationLocked) {
+      e.preventDefault();
+      triggerNavigationAttempt();
+      toast({
+        variant: "destructive",
+        title: "Unsaved Changes",
+        description: "Please save or cancel your edits before leaving this page."
+      });
+      return;
+    }
+  };
+
   const handleCreateOrder = () => {
+    if (navigationLocked) {
+      triggerNavigationAttempt();
+      toast({
+        variant: "destructive",
+        title: "Unsaved Changes",
+        description: "Please save or cancel your edits before creating a new order."
+      });
+      return;
+    }
     resetOrder();
     router.push('/new-order');
   };
@@ -37,7 +59,11 @@ export function Sidebar() {
     <div className="hidden border-r bg-card lg:block lg:w-64 fixed h-full">
       <div className="flex h-full max-h-screen flex-col gap-2">
         <div className="flex h-16 items-center border-b px-6">
-          <Link href="/" className="flex items-center gap-2 font-semibold">
+          <Link 
+            href="/" 
+            className="flex items-center gap-2 font-semibold"
+            onClick={(e) => handleNavClick(e, '/')}
+          >
             <Logo className="h-6 w-auto" />
           </Link>
         </div>
@@ -58,6 +84,7 @@ export function Sidebar() {
               <Link
                 key={item.label}
                 href={item.href}
+                onClick={(e) => handleNavClick(e, item.href)}
                 className={cn(
                   'flex items-center gap-3 rounded-lg px-3 py-2 text-card-foreground/70 transition-all hover:bg-primary/5 hover:text-primary',
                   pathname === item.href && 'bg-primary/15 text-primary font-bold'

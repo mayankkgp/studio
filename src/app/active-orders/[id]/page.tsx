@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { MobileNav } from '@/components/layout/MobileNav';
@@ -58,12 +58,14 @@ import {
 import { calculateBillableItems, calculateItemBreakdown } from '@/lib/pricing';
 import { cn } from '@/lib/utils';
 import type { Order, ConfiguredProduct, EventDetails, CustomerData } from '@/lib/types';
+import { useOrder } from '@/context/OrderContext';
 
 export default function ActiveOrderCommandCenter() {
     const params = useParams();
     const id = params.id as string;
     const router = useRouter();
     const { toast } = useToast();
+    const { setNavigationLocked, navigationAttemptCount } = useOrder();
 
     const [activeOrder, setActiveOrder] = useState<Order | null>(null);
     const [loading, setLoading] = useState(true);
@@ -81,6 +83,25 @@ export default function ActiveOrderCommandCenter() {
     
     const [projectedTotals, setProjectedTotals] = useState<Record<string, number>>({});
     const [initialTotal, setInitialTotal] = useState(0);
+
+    const [shakeHeaderButton, setShakeHeaderButton] = useState(false);
+    const headerButtonRef = useRef<HTMLButtonElement>(null);
+
+    const hasUnsavedChanges = isEditMode || isCustomerEditMode;
+
+    // Sync global navigation lock state
+    useEffect(() => {
+        setNavigationLocked(hasUnsavedChanges);
+    }, [hasUnsavedChanges, setNavigationLocked]);
+
+    // Handle shake trigger from global navigation attempts
+    useEffect(() => {
+        if (navigationAttemptCount > 0 && hasUnsavedChanges) {
+            setShakeHeaderButton(true);
+            const timer = setTimeout(() => setShakeHeaderButton(false), 500);
+            return () => clearTimeout(timer);
+        }
+    }, [navigationAttemptCount, hasUnsavedChanges]);
 
     const headerSummary = useHeaderSummary(activeOrder?.eventDetails || {});
 
@@ -255,7 +276,7 @@ export default function ActiveOrderCommandCenter() {
     const handleCancelCustomerData = () => {
         setIsCustomerEditMode(false);
         setIsCustomerCancelConfirmOpen(false);
-        loadOrder(); // Reset local state from persistent storage
+        loadOrder(); 
     };
 
     const handleProjectedTotalChange = useCallback((id: string, total: number) => {
@@ -313,6 +334,20 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                 description: "Order details have been copied to your clipboard.",
             });
         });
+    };
+
+    const handleTabChange = (val: string) => {
+        if (hasUnsavedChanges) {
+            setShakeHeaderButton(true);
+            setTimeout(() => setShakeHeaderButton(false), 500);
+            toast({
+                variant: "destructive",
+                title: "Unsaved Changes",
+                description: "Please save or cancel your current edits before switching tabs."
+            });
+            return;
+        }
+        setActiveTab(val);
     };
 
     const billViewData = useMemo(() => {
@@ -528,7 +563,20 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
             <div className="flex flex-col h-screen overflow-hidden bg-background">
                 <header className="flex h-16 shrink-0 items-center gap-4 border-b px-4 md:px-6 bg-background z-50">
                     <MobileNav />
-                    <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => router.push('/active-orders')}>
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="lg:hidden" 
+                        onClick={() => {
+                            if (hasUnsavedChanges) {
+                                setShakeHeaderButton(true);
+                                setTimeout(() => setShakeHeaderButton(false), 500);
+                                toast({ variant: "destructive", title: "Unsaved Changes", description: "Save or cancel edits first." });
+                                return;
+                            }
+                            router.push('/active-orders');
+                        }}
+                    >
                         <ChevronLeft className="h-5 w-5" />
                     </Button>
                     <div className="flex-1 overflow-hidden">
@@ -538,12 +586,14 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                             </h1>
                             {activeTab === 'overview' && (
                                 <Button 
+                                    ref={headerButtonRef}
                                     variant={isEditMode ? "default" : "outline"} 
                                     size="sm" 
                                     onClick={handleToggleEditMode}
                                     className={cn(
                                         "h-8 font-bold gap-2 transition-all shrink-0",
-                                        isEditMode ? "bg-primary shadow-lg shadow-primary/20" : "border-primary text-primary hover:bg-primary/5"
+                                        isEditMode ? "bg-primary shadow-lg shadow-primary/20" : "border-primary text-primary hover:bg-primary/5",
+                                        shakeHeaderButton && isEditMode && "animate-shake"
                                     )}
                                 >
                                     {isEditMode ? (
@@ -575,11 +625,15 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                                                 Cancel
                                             </Button>
                                             <Button 
+                                                ref={headerButtonRef}
                                                 size="sm" 
                                                 type="submit"
                                                 form="creative-brief-form"
                                                 disabled={isSavingBrief}
-                                                className="h-8 font-bold gap-2 bg-primary shadow-lg shadow-primary/20 shrink-0 hover:bg-primary/90"
+                                                className={cn(
+                                                    "h-8 font-bold gap-2 bg-primary shadow-lg shadow-primary/20 shrink-0 hover:bg-primary/90",
+                                                    shakeHeaderButton && isCustomerEditMode && "animate-shake"
+                                                )}
                                             >
                                                 {isSavingBrief ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                                                 Save Creative Brief
@@ -595,7 +649,7 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                     </div>
                 </header>
 
-                <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
+                <Tabs value={activeTab} onValueChange={handleTabChange} className="flex-1 flex flex-col overflow-hidden">
                     <div className="px-4 md:px-8 border-b bg-muted/20">
                         <TabsList className="h-12 bg-transparent p-0 gap-8">
                             <TabsTrigger 
@@ -777,7 +831,20 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                                             <Users className="h-4 w-4 text-muted-foreground" />
                                             <span className="text-[10px] font-bold text-muted-foreground uppercase">Role: Manager</span>
                                         </div>
-                                        <Button variant="outline" size="sm" onClick={() => router.push('/active-orders')} className="h-8 text-[10px] font-bold uppercase border-primary text-primary hover:bg-primary/5">
+                                        <Button 
+                                            variant="outline" 
+                                            size="sm" 
+                                            onClick={() => {
+                                                if (hasUnsavedChanges) {
+                                                    setShakeHeaderButton(true);
+                                                    setTimeout(() => setShakeHeaderButton(false), 500);
+                                                    toast({ variant: "destructive", title: "Unsaved Changes", description: "Save or cancel edits first." });
+                                                    return;
+                                                }
+                                                router.push('/active-orders');
+                                            }} 
+                                            className="h-8 text-[10px] font-bold uppercase border-primary text-primary hover:bg-primary/5"
+                                        >
                                             Exit to List
                                         </Button>
                                     </div>
@@ -825,7 +892,19 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                                     </SheetHeader>
                                     {FinancialSnapshot}
                                     <div className="pt-8 pb-10">
-                                        <Button variant="outline" className="w-full h-12 font-bold uppercase border-primary text-primary" onClick={() => router.push('/active-orders')}>
+                                        <Button 
+                                            variant="outline" 
+                                            className="w-full h-12 font-bold uppercase border-primary text-primary" 
+                                            onClick={() => {
+                                                if (hasUnsavedChanges) {
+                                                    setShakeHeaderButton(true);
+                                                    setTimeout(() => setShakeHeaderButton(false), 500);
+                                                    toast({ variant: "destructive", title: "Unsaved Changes", description: "Save or cancel edits first." });
+                                                    return;
+                                                }
+                                                router.push('/active-orders');
+                                            }}
+                                        >
                                             Exit to List
                                         </Button>
                                     </div>

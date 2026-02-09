@@ -17,6 +17,12 @@ type OrderContextType = {
   loadDraft: (draftOrder: Order) => void;
   resetOrder: () => void;
   isLoaded: boolean;
+  
+  // Navigation Guard State
+  navigationLocked: boolean;
+  setNavigationLocked: (locked: boolean) => void;
+  navigationAttemptCount: number;
+  triggerNavigationAttempt: () => void;
 };
 
 const OrderContext = createContext<OrderContextType | undefined>(undefined);
@@ -55,6 +61,9 @@ const LS_ACTIVE_KEY = 'srishbish_active_v1';
 export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [order, setOrder] = useState<Order>(initialOrderState);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [navigationLocked, setNavigationLocked] = useState(false);
+  const [navigationAttemptCount, setNavigationAttemptCount] = useState(0);
+  
   const { toast } = useToast();
   const pathname = usePathname();
   const router = useRouter();
@@ -69,6 +78,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       orderId: '',
       eventDetails: { ...initialOrderState.eventDetails }
     });
+    setNavigationLocked(false);
     router.push('/');
   }, [router]);
 
@@ -100,7 +110,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const loadDraft = useCallback((draftOrder: Order) => {
     setOrder(draftOrder);
-    // Success toast removed as requested
+    setNavigationLocked(false);
   }, []);
 
   const saveToLocalStorage = useCallback((key: string, data: any) => {
@@ -130,8 +140,6 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
 
     saveToLocalStorage(LS_DRAFTS_KEY, orderToSave);
-    
-    // Success toast removed as requested
     return true;
   }, [order, pathname, saveToLocalStorage]);
 
@@ -155,10 +163,13 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       localStorage.setItem(LS_DRAFTS_KEY, JSON.stringify(existingDrafts));
     } catch (e) {}
 
-    // Success toast removed as requested
     resetOrder();
     return true;
   }, [order, toast, resetOrder, saveToLocalStorage]);
+
+  const triggerNavigationAttempt = useCallback(() => {
+    setNavigationAttemptCount(prev => prev + 1);
+  }, []);
 
   return (
     <OrderContext.Provider
@@ -174,6 +185,10 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         loadDraft,
         resetOrder,
         isLoaded,
+        navigationLocked,
+        setNavigationLocked,
+        navigationAttemptCount,
+        triggerNavigationAttempt
       }}
     >
       {children}

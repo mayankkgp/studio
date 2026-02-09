@@ -9,6 +9,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTr
 import { Button } from '@/components/ui/button';
 import { useOrder } from '@/context/OrderContext';
 import { useToast } from '@/hooks/use-toast';
+import * as React from 'react';
 
 const navItems = [
   { href: '/', label: 'My Drafts', icon: FileText },
@@ -18,11 +19,36 @@ const navItems = [
 export function MobileNav() {
   const pathname = usePathname();
   const router = useRouter();
-  const { order, resetOrder } = useOrder();
+  const { order, resetOrder, navigationLocked, triggerNavigationAttempt } = useOrder();
   const { toast } = useToast();
+  const [open, setOpen] = React.useState(false);
+
+  const handleNavClick = (e: React.MouseEvent, href: string) => {
+    if (navigationLocked) {
+      e.preventDefault();
+      triggerNavigationAttempt();
+      toast({
+        variant: "destructive",
+        title: "Unsaved Changes",
+        description: "Please save or cancel your edits before leaving this page."
+      });
+      return;
+    }
+    setOpen(false);
+  };
 
   const handleCreateOrder = () => {
+    if (navigationLocked) {
+      triggerNavigationAttempt();
+      toast({
+        variant: "destructive",
+        title: "Unsaved Changes",
+        description: "Please save or cancel your edits before creating a new order."
+      });
+      return;
+    }
     resetOrder();
+    setOpen(false);
     router.push('/new-order');
   };
 
@@ -35,7 +61,7 @@ export function MobileNav() {
   };
 
   return (
-    <Sheet>
+    <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
         <Button size="icon" variant="ghost" className="lg:hidden">
           <PanelLeft className="h-5 w-5" />
@@ -69,6 +95,7 @@ export function MobileNav() {
             <Link
               key={item.label}
               href={item.href}
+              onClick={(e) => handleNavClick(e, item.href)}
               className={cn(
                 'flex items-center gap-4 px-2.5 text-muted-foreground transition-all hover:bg-primary/5 hover:text-primary rounded-lg py-2',
                 pathname === item.href && 'bg-primary/15 text-primary font-bold'
