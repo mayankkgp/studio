@@ -126,7 +126,7 @@ const EditableField = ({
           "bg-transparent border-transparent",
           isEditMode && "hover:bg-primary/5 focus:bg-background focus:border-primary/40 focus:ring-4 focus:ring-primary/5 focus:shadow-sm focus:px-3",
           !isEditMode && "cursor-default",
-          "placeholder:italic placeholder:font-normal placeholder:text-muted-foreground placeholder:text-[13px] placeholder:opacity-100"
+          "placeholder:italic placeholder:font-normal placeholder:text-muted-foreground placeholder:text-[13px] placeholder:opacity-70"
         )}
       />
     </div>
@@ -222,6 +222,21 @@ export function CustomerDataForm({
     });
   }, [isEditMode, visibleDeliverables, watchedValues.productBriefs, focusedFields]);
 
+  // Overall empty state for View Mode
+  if (!isEditMode && !isGenericDataVisible && !isProductBriefsSectionVisible) {
+    return (
+      <div className="flex flex-col items-center justify-center py-32 text-muted-foreground animate-in fade-in zoom-in-95 duration-500">
+        <div className="h-20 w-20 rounded-full bg-muted/20 flex items-center justify-center mb-6 border-2 border-dashed border-muted/50">
+          <Sparkles className="h-10 w-10 opacity-30" />
+        </div>
+        <h3 className="text-xl font-headline font-black uppercase tracking-[0.2em] mb-3 text-muted-foreground">No Data Recorded</h3>
+        <p className="text-sm font-semibold text-center max-w-sm leading-relaxed px-4">
+          The creative brief is currently empty. Switch to <button type="button" onClick={onEnterEditMode} className="text-primary font-black uppercase tracking-wider hover:underline focus:outline-none">EDIT MODE</button> to begin building the narrative.
+        </p>
+      </div>
+    );
+  }
+
   // Ensure selection stays valid
   React.useEffect(() => {
     if (visibleDeliverables.length > 0) {
@@ -274,21 +289,6 @@ export function CustomerDataForm({
       ? parts.reduce((prev, curr, i) => [prev, <span key={`sep-${i}`} className="mx-2 text-muted-foreground/30 font-black tracking-tighter">•</span>, curr])
       : null;
   };
-
-  // Overall empty state for View Mode
-  if (!isEditMode && !isGenericDataVisible && !isProductBriefsSectionVisible) {
-    return (
-      <div className="flex flex-col items-center justify-center py-32 text-muted-foreground animate-in fade-in zoom-in-95 duration-500">
-        <div className="h-20 w-20 rounded-full bg-muted/20 flex items-center justify-center mb-6 border-2 border-dashed border-muted/50">
-          <Sparkles className="h-10 w-10 opacity-30" />
-        </div>
-        <h3 className="text-xl font-headline font-black uppercase tracking-[0.2em] mb-3 text-muted-foreground">No Data Recorded</h3>
-        <p className="text-sm font-semibold text-center max-w-sm leading-relaxed px-4">
-          The creative brief is currently empty. Switch to <button type="button" onClick={onEnterEditMode} className="text-primary font-black uppercase tracking-wider hover:underline focus:outline-none">EDIT MODE</button> to begin building the narrative.
-        </p>
-      </div>
-    );
-  }
 
   const selectedItem = order.deliverables.find(d => d.id === selectedProductId);
 
@@ -537,7 +537,7 @@ export function CustomerDataForm({
                       className={cn(
                         "font-semibold bg-transparent text-foreground min-h-[350px] p-6 text-[14px] leading-relaxed",
                         !isEditMode && "cursor-default",
-                        "placeholder:italic placeholder:font-normal placeholder:text-muted-foreground placeholder:text-[13px] placeholder:opacity-100"
+                        "placeholder:italic placeholder:font-normal placeholder:text-muted-foreground placeholder:text-[13px] placeholder:opacity-70"
                       )}
                     />
                   </div>
