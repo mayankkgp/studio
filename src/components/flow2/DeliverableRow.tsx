@@ -362,8 +362,9 @@ export const DeliverableRow = React.memo(function DeliverableRow({
     return (
         <AccordionItem 
             value={item.id} 
+            id={`row-${item.id}`}
             className={cn(
-                "border rounded-xl transition-all duration-200 overflow-hidden mb-2 last:mb-0",
+                "border rounded-xl transition-all duration-200 overflow-hidden mb-2 last:mb-0 scroll-mt-40",
                 isExpanded 
                     ? "border-l-4 border-primary shadow-md bg-background" 
                     : cn(

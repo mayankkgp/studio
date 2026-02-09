@@ -1,4 +1,3 @@
-
 'use client';
 
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -24,6 +23,9 @@ export default function DeliverablesPage() {
     const [isNavigating, setIsNavigating] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     
+    // Track previous IDs to detect additions for autoscrolling
+    const prevDeliverableIds = useRef<string[]>([]);
+    
     // Initialize committed items from order deliverables
     const [committedItemIds, setCommittedItemIds] = useState<string[]>([]);
     const lastOrderId = useRef<string | null>(null);
@@ -35,6 +37,29 @@ export default function DeliverablesPage() {
             lastOrderId.current = order.orderId;
         }
     }, [isLoaded, order.orderId, order.deliverables]);
+
+    // Autoscroll logic for new items
+    useEffect(() => {
+        if (!isLoaded) return;
+        
+        const currentIds = (order.deliverables || []).map(d => d.id);
+        const addedIds = currentIds.filter(id => !prevDeliverableIds.current.includes(id));
+
+        if (addedIds.length > 0) {
+            // The newest item is added to the front of the array in OrderContext
+            const latestId = addedIds[0];
+            
+            // Wait for DOM update
+            requestAnimationFrame(() => {
+                const element = document.getElementById(`row-${latestId}`);
+                if (element) {
+                    element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+        }
+        
+        prevDeliverableIds.current = currentIds;
+    }, [order.deliverables, isLoaded]);
 
     const handleValidityChange = useCallback((id: string, isValid: boolean) => {
         setRowStatus(prev => {
