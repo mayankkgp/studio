@@ -4,7 +4,7 @@ import * as React from 'react';
 import { useState, useRef, useEffect } from 'react';
 import type { DesignPin, DesignPinStatus } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { ZoomIn, ZoomOut, RotateCcw, Crosshair } from 'lucide-react';
+import { ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -56,7 +56,6 @@ export function DesignCanvas({ imageUrl, pins, highlightedPinId, onAddPin, onPin
     const handleMouseUp = () => setIsDragging(false);
 
     const handleCanvasClick = (e: React.MouseEvent) => {
-        // Only add pin if it's a direct click on the image container and not dragging
         if (isDragging || (e.target as HTMLElement).closest('.pin-bubble')) return;
         
         const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
@@ -66,7 +65,6 @@ export function DesignCanvas({ imageUrl, pins, highlightedPinId, onAddPin, onPin
         onAddPin(x, y);
     };
 
-    // Scroll highlighted pin into view if container is zoomed
     useEffect(() => {
         if (highlightedPinId && zoom > 1) {
             const pin = pins.find(p => p.id === highlightedPinId);
@@ -82,7 +80,6 @@ export function DesignCanvas({ imageUrl, pins, highlightedPinId, onAddPin, onPin
 
     return (
         <div className="h-full flex flex-col relative group/canvas">
-            {/* Control HUD */}
             <div className="absolute top-4 right-4 z-50 flex flex-col gap-2 opacity-0 group-hover/canvas:opacity-100 transition-opacity">
                 <div className="bg-background/90 backdrop-blur-md border border-primary/20 rounded-lg p-1 shadow-2xl flex flex-col gap-1">
                     <TooltipProvider>
@@ -110,7 +107,7 @@ export function DesignCanvas({ imageUrl, pins, highlightedPinId, onAddPin, onPin
                             </TooltipTrigger>
                             <TooltipContent side="left">Reset View</TooltipContent>
                         </Tooltip>
-                    </Badge>
+                    </TooltipProvider>
                 </div>
             </div>
 
