@@ -47,7 +47,7 @@ const AutoGrowingTextarea = React.forwardRef<
         if (onInput) onInput(e);
       }}
       className={cn(
-        "flex w-full bg-transparent px-3 py-2 text-sm transition-all duration-200 overflow-hidden resize-none focus:outline-none",
+        "flex w-full bg-transparent px-3 py-2 text-[14px] transition-all duration-200 overflow-hidden resize-none focus:outline-none",
         className
       )}
     />
@@ -112,20 +112,21 @@ const EditableField = ({
         onFocus={(e) => {
           setLocalFocus(true);
           onFocusChange?.(String(registerKey), true);
+          if (regOnFocus) regOnFocus(e);
         }}
         onBlur={(e) => {
           setLocalFocus(false);
           onFocusChange?.(String(registerKey), false);
-          regOnBlur(e);
+          if (regOnBlur) regOnBlur(e);
         }}
-        placeholder={isEditMode ? "Enter creative brief details..." : ""}
+        placeholder={isEditMode ? "Enter creative brief details..." : "No data recorded"}
         minRows={1}
         className={cn(
           "font-semibold leading-relaxed text-foreground border-2 rounded-md -ml-3",
           "bg-transparent border-transparent",
-          isEditMode && "hover:bg-primary/5 focus:bg-background focus:border-primary/40 focus:ring-2 focus:ring-primary/10 focus:shadow-sm focus:px-3",
+          isEditMode && "hover:bg-primary/5 focus:bg-background focus:border-primary/40 focus:ring-4 focus:ring-primary/5 focus:shadow-sm focus:px-3",
           !isEditMode && "cursor-default",
-          "placeholder:italic placeholder:font-normal placeholder:text-muted-foreground/60 placeholder:text-[13px] placeholder:opacity-100"
+          "placeholder:italic placeholder:font-normal placeholder:text-muted-foreground/50 placeholder:text-[13px] placeholder:opacity-100"
         )}
       />
     </div>
@@ -192,16 +193,32 @@ export function CustomerDataForm({
     if (isEditMode) return true;
     return order.deliverables.some(item => {
       const brief = (watchedValues.productBriefs as any)?.[item.id];
-      return brief && brief.trim().length > 0;
+      const isFocused = focusedFields[`productBriefs.${item.id}`];
+      return (brief && brief.trim().length > 0) || isFocused;
     });
-  }, [isEditMode, order.deliverables, watchedValues.productBriefs]);
+  }, [isEditMode, order.deliverables, watchedValues.productBriefs, focusedFields]);
+
+  // Overall empty state for View Mode
+  if (!isEditMode && !isGenericDataVisible && !isProductBriefsSectionVisible) {
+    return (
+      <div className="flex flex-col items-center justify-center py-32 text-muted-foreground/60 animate-in fade-in zoom-in-95 duration-500">
+        <div className="h-20 w-20 rounded-full bg-muted/20 flex items-center justify-center mb-6 border-2 border-dashed border-muted/50">
+          <Sparkles className="h-10 w-10 opacity-30" />
+        </div>
+        <h3 className="text-xl font-headline font-black uppercase tracking-[0.2em] mb-3 text-muted-foreground/80">No Data Recorded</h3>
+        <p className="text-sm font-semibold text-center max-w-sm leading-relaxed px-4">
+          The creative brief is currently empty. Switch to <span className="text-primary font-black uppercase tracking-wider">Edit Mode</span> to begin building the narrative.
+        </p>
+      </div>
+    );
+  }
 
   const getProductSpecsSummary = (item: ConfiguredProduct) => {
     const product = productCatalog.find(p => p.id === item.productId);
     const parts: React.ReactNode[] = [];
     
     if (item.variant) {
-      parts.push(<span key="variant" className="font-bold">{item.variant}</span>);
+      parts.push(<span key="variant" className="font-black text-foreground">{item.variant}</span>);
     }
 
     if (product?.configType === 'A' && typeof item.quantity === 'number' && item.quantity > 0) {
@@ -220,30 +237,28 @@ export function CustomerDataForm({
     }
 
     const activeAddons = (item.addons || []).filter((a: any) => a.value !== undefined && a.value !== false && a.value !== null);
-    activeAddons.forEach((a: any) => {
-      const displayVal = typeof a.value === 'number' ? `: ${a.value}` : '';
-      parts.push(<span key={`addon-${a.id}`} className="font-bold">{a.name}{displayVal}</span>);
-    });
+    if (activeAddons.length > 0) {
+      parts.push(<span key="addons-label" className="font-black text-primary">Add-on: {activeAddons.map(a => a.name).join(', ')}</span>);
+    }
 
     if (item.specialRequest) {
-      parts.push(<span key="special" className="italic font-bold opacity-90">Special Request</span>);
+      parts.push(<span key="special" className="italic font-bold text-destructive/80">Special Request Included</span>);
     }
 
     return parts.length > 0 
-      ? parts.reduce((prev, curr, i) => [prev, <span key={`sep-${i}`} className="mx-2 text-muted-foreground/60 font-black tracking-tighter">•</span>, curr])
+      ? parts.reduce((prev, curr, i) => [prev, <span key={`sep-${i}`} className="mx-2 text-muted-foreground/30 font-black tracking-tighter">•</span>, curr])
       : null;
   };
 
-  // Filter deliverables based on data presence and search query
+  // Filter deliverables based on data presence and focus
   const visibleDeliverables = React.useMemo(() => {
     let list = order.deliverables;
     
     if (!isEditMode) {
       list = list.filter(item => {
         const brief = (watchedValues.productBriefs as any)?.[item.id];
-        const hasData = brief && brief.trim().length > 0;
-        // In view mode, we don't force selection visible if empty
-        return hasData;
+        const isFocused = focusedFields[`productBriefs.${item.id}`];
+        return (brief && brief.trim().length > 0) || isFocused;
       });
     }
 
@@ -253,9 +268,9 @@ export function CustomerDataForm({
     }
 
     return list;
-  }, [order.deliverables, isEditMode, productSearchQuery, watchedValues.productBriefs]);
+  }, [order.deliverables, isEditMode, productSearchQuery, watchedValues.productBriefs, focusedFields]);
 
-  // Ensure selection stays valid when switching visible list
+  // Ensure selection stays valid
   React.useEffect(() => {
     if (visibleDeliverables.length > 0) {
       const stillVisible = visibleDeliverables.some(d => d.id === selectedProductId);
@@ -270,11 +285,12 @@ export function CustomerDataForm({
   const selectedItem = order.deliverables.find(d => d.id === selectedProductId);
 
   return (
-    <div className="pb-24 max-w-6xl mx-auto relative">
+    <div className="pb-24 max-w-6xl mx-auto relative animate-in fade-in duration-500">
       {/* Masonry Layout for General Sections */}
       {isGenericDataVisible && (
         <section className={cn(
-          "columns-1 md:columns-2 gap-8 space-y-8 mt-0"
+          "columns-1 md:columns-2 gap-8 space-y-8",
+          isEditMode ? "mt-12" : "mt-4"
         )}>
           {isVisualVisible && (
             <div className="break-inside-avoid">
@@ -395,145 +411,138 @@ export function CustomerDataForm({
       {/* Master-Detail View for Product Briefs */}
       {isProductBriefsSectionVisible && (
         <section className={cn(
-          isGenericDataVisible ? "mt-12 pt-12 border-t border-primary/10" : "mt-0"
+          isGenericDataVisible ? "mt-16 pt-16 border-t border-primary/10" : "mt-8"
         )}>
           <SectionHeader title="Product Specific Briefs" icon={Box} />
           
-          {visibleDeliverables.length === 0 && !productSearchQuery ? (
-            <div className="py-20 text-center italic text-muted-foreground text-sm bg-card/10 rounded-xl border border-dashed flex flex-col items-center justify-center">
-              <Box className="h-8 w-8 opacity-30 mb-4" />
-              <p className="font-bold uppercase tracking-widest text-[11px]">
-                No data recorded
-              </p>
-            </div>
-          ) : (
-            <div className="flex flex-col md:flex-row h-[600px] border border-primary/10 rounded-xl overflow-hidden bg-card/5 shadow-sm">
-              {/* Master List (Left) */}
-              <aside className="w-full md:w-80 border-b md:border-b-0 md:border-r border-primary/10 overflow-hidden bg-card/20 shrink-0 flex flex-col">
-                <div className="p-3 border-b border-primary/10 bg-background/50">
-                  <div className="relative">
-                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/80" />
-                    <Input 
-                      placeholder="Filter products..." 
-                      className="h-9 pl-9 text-[12px] bg-background border-primary/20 focus-visible:ring-primary/20 font-medium"
-                      value={productSearchQuery}
-                      onChange={(e) => setProductSearchQuery(e.target.value)}
-                    />
-                    {productSearchQuery && (
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground hover:text-foreground"
-                        onClick={() => setProductSearchQuery('')}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                </div>
-                <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-1">
-                  {visibleDeliverables.length === 0 ? (
-                    <div className="py-12 text-center text-[11px] text-muted-foreground font-bold uppercase tracking-widest opacity-60">
-                      No matching results
-                    </div>
-                  ) : (
-                    visibleDeliverables.map((item) => {
-                      const brief = (watchedValues.productBriefs as any)?.[item.id];
-                      const hasData = brief && brief.trim().length > 0;
-                      const isActive = selectedProductId === item.id;
-                      const hasAddons = (item.addons || []).some((a: any) => a.value !== undefined && a.value !== false && a.value !== null);
-                      const hasSpecial = item.specialRequest && item.specialRequest.trim().length > 0;
-                      
-                      // Build technical tags string
-                      const tags = [];
-                      if (item.variant) tags.push(item.variant);
-                      if (hasAddons) tags.push("Add-on");
-                      if (hasSpecial) tags.push("Special Request");
-                      const tagsDisplay = tags.join(" • ");
-
-                      return (
-                        <button
-                          key={item.id}
-                          type="button"
-                          onClick={() => setSelectedProductId(item.id)}
-                          className={cn(
-                            "w-full text-left px-4 py-3 rounded-lg transition-all flex items-center justify-between group",
-                            isActive 
-                              ? "bg-primary text-white shadow-md shadow-primary/20" 
-                              : "hover:bg-primary/5 text-foreground"
-                          )}
-                        >
-                          <div className="flex-1 min-w-0 mr-3">
-                            <div className={cn(
-                              "font-headline font-black text-xs uppercase tracking-tight truncate",
-                              isActive ? "text-white" : "text-foreground"
-                            )}>
-                              {item.productName}
-                            </div>
-                            {tagsDisplay && (
-                              <div className={cn(
-                                "text-[11px] font-bold uppercase truncate mt-0.5 tracking-wide",
-                                isActive ? "text-white/90" : "text-muted-foreground/80"
-                              )}>
-                                {tagsDisplay}
-                              </div>
-                            )}
-                          </div>
-                          <div className="shrink-0">
-                            {hasData ? (
-                              <div className={cn(
-                                "h-3.5 w-3.5 rounded-full bg-green-600 transition-colors",
-                                isActive && "ring-2 ring-white shadow-sm"
-                              )} />
-                            ) : (
-                              <Circle className={cn(
-                                "h-3.5 w-3.5 transition-colors opacity-40", 
-                                isActive ? "text-white/50" : "text-muted-foreground/40"
-                              )} />
-                            )}
-                          </div>
-                        </button>
-                      );
-                    })
+          <div className="flex flex-col md:flex-row h-[600px] border border-primary/10 rounded-xl overflow-hidden bg-card/5 shadow-sm">
+            {/* Master List (Left) */}
+            <aside className="w-full md:w-80 border-b md:border-b-0 md:border-r border-primary/10 overflow-hidden bg-card/20 shrink-0 flex flex-col">
+              <div className="p-3 border-b border-primary/10 bg-background/50">
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
+                  <Input 
+                    placeholder="Filter products..." 
+                    className="h-9 pl-9 text-[11px] bg-background border-primary/20 focus-visible:ring-primary/20 font-bold uppercase tracking-widest"
+                    value={productSearchQuery}
+                    onChange={(e) => setProductSearchQuery(e.target.value)}
+                  />
+                  {productSearchQuery && (
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground hover:text-foreground"
+                      onClick={() => setProductSearchQuery('')}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
                   )}
                 </div>
-              </aside>
-
-              {/* Detail View (Right) */}
-              <main className="flex-1 p-8 overflow-y-auto custom-scrollbar bg-background/50">
-                {selectedItem ? (
-                  <div className="space-y-6">
-                    <div className="space-y-2">
-                      <div className="flex flex-wrap items-center text-[11px] font-bold text-muted-foreground uppercase tracking-wider leading-relaxed border-b border-primary/10 pb-4">
-                        {getProductSpecsSummary(selectedItem)}
-                      </div>
-                    </div>
-
-                    <div className={cn(
-                      "relative group focus-within:z-10 bg-background rounded-xl shadow-sm border border-primary/10 transition-all",
-                      isEditMode && "focus-within:border-primary/40 focus-within:ring-4 focus-within:ring-primary/5"
-                    )}>
-                      <AutoGrowingTextarea 
-                        placeholder={isEditMode ? "Add detailed creative requirements for this product..." : ""}
-                        {...register(`productBriefs.${selectedItem.id}` as any)}
-                        readOnly={!isEditMode}
-                        minRows={4}
-                        className={cn(
-                          "font-semibold bg-transparent text-foreground min-h-[350px] p-6 text-sm leading-relaxed",
-                          !isEditMode && "cursor-default",
-                          "placeholder:italic placeholder:font-normal placeholder:text-muted-foreground placeholder:text-[13px] placeholder:opacity-100"
-                        )}
-                      />
-                    </div>
+              </div>
+              <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-1">
+                {visibleDeliverables.length === 0 ? (
+                  <div className="py-12 text-center text-[11px] text-muted-foreground font-black uppercase tracking-[0.15em] opacity-40 italic">
+                    No matching results
                   </div>
                 ) : (
-                  <div className="h-full flex flex-col items-center justify-center text-muted-foreground/60 text-[11px] font-bold uppercase tracking-widest italic">
-                    Select a product to view brief
-                  </div>
+                  visibleDeliverables.map((item) => {
+                    const brief = (watchedValues.productBriefs as any)?.[item.id];
+                    const isFocused = focusedFields[`productBriefs.${item.id}`];
+                    const hasData = (brief && brief.trim().length > 0) || isFocused;
+                    const isActive = selectedProductId === item.id;
+                    const hasAddons = (item.addons || []).some((a: any) => a.value !== undefined && a.value !== false && a.value !== null);
+                    const hasSpecial = item.specialRequest && item.specialRequest.trim().length > 0;
+                    
+                    const tags = [];
+                    if (item.variant) tags.push(item.variant);
+                    if (hasAddons) tags.push("Add-on");
+                    if (hasSpecial) tags.push("Special Request");
+                    const tagsDisplay = tags.join(" • ");
+
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => setSelectedProductId(item.id)}
+                        className={cn(
+                          "w-full text-left px-4 py-3 rounded-lg transition-all flex items-center justify-between group",
+                          isActive 
+                            ? "bg-primary text-white shadow-md shadow-primary/20" 
+                            : "hover:bg-primary/5 text-foreground"
+                        )}
+                      >
+                        <div className="flex-1 min-w-0 mr-3">
+                          <div className={cn(
+                            "font-headline font-black text-xs uppercase tracking-tight truncate",
+                            isActive ? "text-white" : "text-foreground"
+                          )}>
+                            {item.productName}
+                          </div>
+                          {tagsDisplay && (
+                            <div className={cn(
+                              "text-[10px] font-black uppercase truncate mt-0.5 tracking-[0.05em]",
+                              isActive ? "text-white/80" : "text-muted-foreground/60"
+                            )}>
+                              {tagsDisplay}
+                            </div>
+                          )}
+                        </div>
+                        <div className="shrink-0">
+                          {hasData ? (
+                            <div className={cn(
+                              "h-3.5 w-3.5 rounded-full bg-green-600 transition-colors ring-offset-background",
+                              isActive && "ring-2 ring-white shadow-sm ring-offset-0"
+                            )} />
+                          ) : (
+                            <Circle className={cn(
+                              "h-3.5 w-3.5 transition-colors opacity-30", 
+                              isActive ? "text-white/50" : "text-muted-foreground/30"
+                            )} />
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })
                 )}
-              </main>
-            </div>
-          )}
+              </div>
+            </aside>
+
+            {/* Detail View (Right) */}
+            <main className="flex-1 p-8 overflow-y-auto custom-scrollbar bg-background/50">
+              {selectedItem ? (
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap items-center text-[11px] font-black text-muted-foreground uppercase tracking-[0.1em] leading-relaxed border-b border-primary/10 pb-4">
+                      {getProductSpecsSummary(selectedItem)}
+                    </div>
+                  </div>
+
+                  <div className={cn(
+                    "relative group focus-within:z-10 bg-background rounded-xl shadow-sm border border-primary/10 transition-all",
+                    isEditMode && "focus-within:border-primary/40 focus-within:ring-8 focus-within:ring-primary/5"
+                  )}>
+                    <AutoGrowingTextarea 
+                      placeholder={isEditMode ? "Add detailed creative requirements for this product..." : "No brief provided"}
+                      {...register(`productBriefs.${selectedItem.id}` as any)}
+                      readOnly={!isEditMode}
+                      minRows={4}
+                      onFocus={() => handleFocusChange(`productBriefs.${selectedItem.id}`, true)}
+                      onBlur={() => handleFocusChange(`productBriefs.${selectedItem.id}`, false)}
+                      className={cn(
+                        "font-semibold bg-transparent text-foreground min-h-[350px] p-6 text-[14px] leading-relaxed",
+                        !isEditMode && "cursor-default",
+                        "placeholder:italic placeholder:font-normal placeholder:text-muted-foreground/40 placeholder:text-[13px] placeholder:opacity-100"
+                      )}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="h-full flex flex-col items-center justify-center text-muted-foreground/40 text-[11px] font-black uppercase tracking-[0.2em] italic">
+                  Select a product to view brief
+                </div>
+              )}
+            </main>
+          </div>
         </section>
       )}
 
