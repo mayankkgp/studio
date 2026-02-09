@@ -9,8 +9,25 @@ import { Badge } from '@/components/ui/badge';
 import { DesignCanvas } from './DesignCanvas';
 import { FeedbackSidebar } from './FeedbackSidebar';
 import { cn } from '@/lib/utils';
-import { Package, Circle } from 'lucide-react';
+import { Package, Circle, Plus, Pencil, Trash2, MoreVertical } from 'lucide-react';
 import { productCatalog } from '@/lib/product-data';
+import { Button } from '@/components/ui/button';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+    DialogDescription
+} from "@/components/ui/dialog";
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 interface DesignProductCardProps {
     product: ConfiguredProduct;
@@ -19,6 +36,12 @@ interface DesignProductCardProps {
 }
 
 export function DesignProductCard({ product, isDesigner, onUpdateDesign }: DesignProductCardProps) {
+    // State for Component Management Modals
+    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
+    const [compNameInput, setCompNameInput] = useState('');
+    const [editingCompId, setEditingCompId] = useState<string | null>(null);
+
     // Normalize design data to ensure all required properties and arrays exist
     const designData = useMemo(() => {
         const baseData = product.designData || {
@@ -34,17 +57,6 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
             ]
         };
 
-        // Add Envelope if it's an invite and doesn't exist
-        if (product.productName.toLowerCase().includes('invite') && baseData.components.length === 1) {
-            baseData.components.push({
-                id: 'comp-2',
-                name: 'Envelope',
-                status: 'DRAFT' as DesignWorkflowStatus,
-                versions: [],
-                pins: []
-            });
-        }
-
         // Deeply ensure status, versions, and pins arrays exist for each component
         return {
             ...baseData,
@@ -55,7 +67,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
                 pins: c.pins || []
             }))
         } as DesignData;
-    }, [product.id, product.designData, product.productName]);
+    }, [product.id, product.designData]);
 
     const [activeCompId, setActiveCompId] = useState(designData.components[0]?.id);
     const [highlightedPinId, setHighlightedPinId] = useState<string | null>(null);
@@ -70,7 +82,6 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
 
     const activeComponent = designData.components.find(c => c.id === activeCompId) || designData.components[0];
     
-    // Safety check for activeComponent to prevent crash if data is corrupted
     if (!activeComponent) return null;
 
     const currentVersionNum = (activeComponent.versions && activeComponent.versions.length > 0)
@@ -80,6 +91,43 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
     const activeVersion = (activeComponent.versions && activeComponent.versions.length > 0)
         ? activeComponent.versions[activeComponent.versions.length - 1] 
         : null;
+
+    // --- Component Management Logic ---
+
+    const handleAddComponent = () => {
+        if (!compNameInput.trim()) return;
+        const newComp: DesignComponent = {
+            id: `comp-${Date.now()}`,
+            name: compNameInput.trim(),
+            status: 'DRAFT',
+            versions: [],
+            pins: []
+        };
+        const updated = { ...designData, components: [...designData.components, newComp] };
+        onUpdateDesign(updated);
+        setActiveCompId(newComp.id);
+        setIsAddModalOpen(false);
+        setCompNameInput('');
+    };
+
+    const handleRenameComponent = () => {
+        if (!compNameInput.trim() || !editingCompId) return;
+        const updatedComponents = designData.components.map(c => 
+            c.id === editingCompId ? { ...c, name: compNameInput.trim() } : c
+        );
+        onUpdateDesign({ ...designData, components: updatedComponents });
+        setIsRenameModalOpen(false);
+        setCompNameInput('');
+        setEditingCompId(null);
+    };
+
+    const handleDeleteComponent = (compId: string) => {
+        if (designData.components.length <= 1) return; // Prevent deleting last component
+        const updatedComponents = designData.components.filter(c => c.id !== compId);
+        onUpdateDesign({ ...designData, components: updatedComponents });
+    };
+
+    // --- Data Update Logic ---
 
     const handleUpdatePins = (newPins: DesignPin[]) => {
         const updatedComponents = designData.components.map(c => 
@@ -183,21 +231,57 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
                 <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] h-[600px]">
                     <div className="flex flex-col border-r border-primary/10 overflow-hidden bg-stone-50/50">
                         <div className="p-2 border-b bg-background/50 flex items-center justify-between">
-                            <Tabs value={activeCompId} onValueChange={setActiveCompId} className="w-auto">
-                                <TabsList className="h-8 bg-muted/40 p-1">
-                                    {(designData.components || []).map(comp => {
-                                        const dotColor = comp.status === 'APPROVED' ? 'text-green-500' :
-                                                        comp.status === 'CHANGES_REQUESTED' ? 'text-destructive' :
-                                                        comp.status === 'INTERNAL_REVIEW' ? 'text-amber-500' : 'text-muted-foreground/30';
-                                        return (
-                                            <TabsTrigger key={comp.id} value={comp.id} className="text-[9px] font-black uppercase px-2 h-6 gap-1.5">
-                                                <Circle className={cn("h-1.5 w-1.5 fill-current", dotColor)} />
-                                                {comp.name}
-                                            </TabsTrigger>
-                                        );
-                                    })}
-                                </TabsList>
-                            </Tabs>
+                            <div className="flex items-center gap-2">
+                                <Tabs value={activeCompId} onValueChange={setActiveCompId} className="w-auto">
+                                    <TabsList className="h-8 bg-muted/40 p-1">
+                                        {(designData.components || []).map(comp => {
+                                            const dotColor = comp.status === 'APPROVED' ? 'text-green-500' :
+                                                            comp.status === 'CHANGES_REQUESTED' ? 'text-destructive' :
+                                                            comp.status === 'INTERNAL_REVIEW' ? 'text-amber-500' : 'text-muted-foreground/30';
+                                            return (
+                                                <TabsTrigger key={comp.id} value={comp.id} className="text-[9px] font-black uppercase px-2 h-6 gap-1.5">
+                                                    <Circle className={cn("h-1.5 w-1.5 fill-current", dotColor)} />
+                                                    {comp.name}
+                                                </TabsTrigger>
+                                            );
+                                        })}
+                                    </TabsList>
+                                </Tabs>
+                                <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-7 w-7 text-primary hover:bg-primary/10"
+                                    onClick={() => { setCompNameInput(''); setIsAddModalOpen(true); }}
+                                >
+                                    <Plus className="h-4 w-4" />
+                                </Button>
+                            </div>
+
+                            <div className="flex items-center gap-1">
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground">
+                                            <MoreVertical className="h-4 w-4" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuItem onClick={() => {
+                                            setEditingCompId(activeComponent.id);
+                                            setCompNameInput(activeComponent.name);
+                                            setIsRenameModalOpen(true);
+                                        }}>
+                                            <Pencil className="h-3.5 w-3.5 mr-2" /> Rename Component
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem 
+                                            className="text-destructive focus:text-destructive"
+                                            disabled={designData.components.length <= 1}
+                                            onClick={() => handleDeleteComponent(activeComponent.id)}
+                                        >
+                                            <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete Component
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </div>
                         </div>
                         
                         <div className="flex-1 relative">
@@ -242,6 +326,55 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
                     />
                 </div>
             </CardContent>
+
+            {/* Modals for Component Management */}
+            <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Add Design Component</DialogTitle>
+                        <DialogDescription>Create a new design area for this product (e.g. Back Side, Custom Envelope).</DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="name">Component Name</Label>
+                            <Input 
+                                id="name" 
+                                placeholder="e.g. Back Design" 
+                                value={compNameInput}
+                                onChange={(e) => setCompNameInput(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && handleAddComponent()}
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="ghost" onClick={() => setIsAddModalOpen(false)}>Cancel</Button>
+                        <Button onClick={handleAddComponent} disabled={!compNameInput.trim()}>Create Component</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={isRenameModalOpen} onOpenChange={setIsRenameModalOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Rename Component</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="rename">New Name</Label>
+                            <Input 
+                                id="rename" 
+                                value={compNameInput}
+                                onChange={(e) => setCompNameInput(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && handleRenameComponent()}
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="ghost" onClick={() => setIsRenameModalOpen(false)}>Cancel</Button>
+                        <Button onClick={handleRenameComponent} disabled={!compNameInput.trim()}>Save Changes</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </Card>
     );
 }
