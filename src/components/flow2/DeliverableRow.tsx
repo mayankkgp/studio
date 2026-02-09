@@ -260,10 +260,11 @@ export const DeliverableRow = React.memo(function DeliverableRow({
         const res = await trigger();
         if (res) {
             const currentValues = getValues();
+            const filteredAddons = (currentValues.addons || []).filter((a: any) => a.value !== undefined && a.value !== false);
             const finalData = {
                 ...item,
                 ...currentValues,
-                addons: (currentValues.addons || []).filter((currentValues.addons || []).filter((a: any) => a.value !== undefined && a.value !== false) as any)
+                addons: filteredAddons
             } as any;
             performSyncUpdate(currentValues);
             onDone(item.id, res, finalData);
