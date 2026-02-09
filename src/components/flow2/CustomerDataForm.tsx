@@ -200,21 +200,6 @@ export function CustomerDataForm({
     });
   }, [isEditMode, order.deliverables, watchedValues.productBriefs, focusedFields]);
 
-  // Overall empty state for View Mode
-  if (!isEditMode && !isGenericDataVisible && !isProductBriefsSectionVisible) {
-    return (
-      <div className="flex flex-col items-center justify-center py-32 text-muted-foreground/60 animate-in fade-in zoom-in-95 duration-500">
-        <div className="h-20 w-20 rounded-full bg-muted/20 flex items-center justify-center mb-6 border-2 border-dashed border-muted/50">
-          <Sparkles className="h-10 w-10 opacity-30" />
-        </div>
-        <h3 className="text-xl font-headline font-black uppercase tracking-[0.2em] mb-3 text-muted-foreground/80">No Data Recorded</h3>
-        <p className="text-sm font-semibold text-center max-w-sm leading-relaxed px-4">
-          The creative brief is currently empty. Switch to <button type="button" onClick={onEnterEditMode} className="text-primary font-black uppercase tracking-wider hover:underline focus:outline-none">Edit Mode</button> to begin building the narrative.
-        </p>
-      </div>
-    );
-  }
-
   const getProductSpecsSummary = (item: ConfiguredProduct) => {
     const product = productCatalog.find(p => p.id === item.productId);
     const parts: React.ReactNode[] = [];
@@ -283,6 +268,21 @@ export function CustomerDataForm({
       setSelectedProductId(null);
     }
   }, [visibleDeliverables, selectedProductId, isEditMode]);
+
+  // Overall empty state for View Mode (Must come after all Hooks)
+  if (!isEditMode && !isGenericDataVisible && !isProductBriefsSectionVisible) {
+    return (
+      <div className="flex flex-col items-center justify-center py-32 text-muted-foreground/60 animate-in fade-in zoom-in-95 duration-500">
+        <div className="h-20 w-20 rounded-full bg-muted/20 flex items-center justify-center mb-6 border-2 border-dashed border-muted/50">
+          <Sparkles className="h-10 w-10 opacity-30" />
+        </div>
+        <h3 className="text-xl font-headline font-black uppercase tracking-[0.2em] mb-3 text-muted-foreground/80">No Data Recorded</h3>
+        <p className="text-sm font-semibold text-center max-w-sm leading-relaxed px-4">
+          The creative brief is currently empty. Switch to <button type="button" onClick={onEnterEditMode} className="text-primary font-black uppercase tracking-wider hover:underline focus:outline-none">Edit Mode</button> to begin building the narrative.
+        </p>
+      </div>
+    );
+  }
 
   const selectedItem = order.deliverables.find(d => d.id === selectedProductId);
 
