@@ -33,7 +33,8 @@ import {
     Save,
     Eye,
     EyeOff,
-    Palette
+    Palette,
+    UserCircle
 } from 'lucide-react';
 import { EventDetailsForm } from '@/components/flow1/EventDetailsForm';
 import { DeliverableRow } from '@/components/flow2/DeliverableRow';
@@ -82,6 +83,7 @@ export default function ActiveOrderCommandCenter() {
     const [isSavingBrief, setIsSavingBrief] = useState(false);
     const [isCustomerEditMode, setIsCustomerEditMode] = useState(false);
     const [isCustomerCancelConfirmOpen, setIsCustomerCancelConfirmOpen] = useState(false);
+    const [simulationRole, setSimulationRole] = useState<'MANAGER' | 'DESIGNER'>('MANAGER');
     
     const [projectedTotals, setProjectedTotals] = useState<Record<string, number>>({});
     const [initialTotal, setInitialTotal] = useState(0);
@@ -644,6 +646,27 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                                     )}
                                 </div>
                             )}
+                            {activeTab === 'design' && (
+                                <div className="flex items-center gap-4 ml-auto">
+                                    <span className="text-[9px] font-black uppercase text-muted-foreground tracking-widest hidden sm:inline">Role Simulation:</span>
+                                    <Tabs value={simulationRole} onValueChange={(v: any) => setSimulationRole(v)}>
+                                        <TabsList className="h-8 bg-muted/40 border border-primary/20 p-1">
+                                            <TabsTrigger 
+                                                value="MANAGER" 
+                                                className="text-[10px] font-black uppercase px-3 h-6 gap-1.5 transition-all data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-lg"
+                                            >
+                                                <Users className="h-3 w-3" /> Manager
+                                            </TabsTrigger>
+                                            <TabsTrigger 
+                                                value="DESIGNER" 
+                                                className="text-[10px] font-black uppercase px-3 h-6 gap-1.5 transition-all data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-lg"
+                                            >
+                                                <UserCircle className="h-3 w-3" /> Designer
+                                            </TabsTrigger>
+                                        </TabsList>
+                                    </Tabs>
+                                </div>
+                            )}
                         </div>
                     </div>
                     <div className="hidden sm:block font-mono text-xs font-bold text-muted-foreground uppercase tracking-widest opacity-60">
@@ -874,7 +897,11 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                         </TabsContent>
 
                         <TabsContent value="design" className="absolute inset-0 m-0 outline-none overflow-hidden">
-                            <DesignReviewTab order={activeOrder} onUpdateOrder={syncToStorage} />
+                            <DesignReviewTab 
+                                order={activeOrder} 
+                                onUpdateOrder={syncToStorage} 
+                                role={simulationRole}
+                            />
                         </TabsContent>
                     </div>
                 </Tabs>

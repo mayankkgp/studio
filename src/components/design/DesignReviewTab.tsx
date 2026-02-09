@@ -4,17 +4,15 @@ import * as React from 'react';
 import type { Order, DesignData } from '@/lib/types';
 import { DesignProductCard } from './DesignProductCard';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Palette, UserCircle, Users } from 'lucide-react';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Palette } from 'lucide-react';
 
 interface DesignReviewTabProps {
     order: Order;
     onUpdateOrder: (updatedOrder: Order) => void;
+    role: 'MANAGER' | 'DESIGNER';
 }
 
-export function DesignReviewTab({ order, onUpdateOrder }: DesignReviewTabProps) {
-    const [role, setRole] = React.useState<'MANAGER' | 'DESIGNER'>('MANAGER');
-
+export function DesignReviewTab({ order, onUpdateOrder, role }: DesignReviewTabProps) {
     const handleUpdateProductDesign = (productId: string, designData: DesignData) => {
         const updatedDeliverables = order.deliverables.map(d => 
             d.id === productId ? { ...d, designData } : d
@@ -47,20 +45,6 @@ export function DesignReviewTab({ order, onUpdateOrder }: DesignReviewTabProps) 
                     <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">
                         Collaborative feedback loop
                     </p>
-                </div>
-
-                <div className="flex items-center gap-4">
-                    <span className="text-[9px] font-black uppercase text-muted-foreground tracking-widest">Simulation Role:</span>
-                    <Tabs value={role} onValueChange={(v: any) => setRole(v)}>
-                        <TabsList className="h-8 bg-background border border-primary/10">
-                            <TabsTrigger value="MANAGER" className="text-[9px] font-black uppercase px-3 h-6 gap-1.5">
-                                <Users className="h-3 w-3" /> Manager
-                            </TabsTrigger>
-                            <TabsTrigger value="DESIGNER" className="text-[9px] font-black uppercase px-3 h-6 gap-1.5">
-                                <UserCircle className="h-3 w-3" /> Designer
-                            </TabsTrigger>
-                        </TabsList>
-                    </Tabs>
                 </div>
             </div>
 
