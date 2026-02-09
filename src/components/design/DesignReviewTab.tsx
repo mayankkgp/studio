@@ -1,10 +1,11 @@
 'use client';
 
 import * as React from 'react';
-import type { Order, DesignData, DesignComponent, DesignPin } from '@/lib/types';
+import type { Order, DesignData } from '@/lib/types';
 import { DesignProductCard } from './DesignProductCard';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Palette, Sparkles } from 'lucide-react';
+import { Palette, UserCircle, Users } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface DesignReviewTabProps {
     order: Order;
@@ -12,6 +13,8 @@ interface DesignReviewTabProps {
 }
 
 export function DesignReviewTab({ order, onUpdateOrder }: DesignReviewTabProps) {
+    const [role, setRole] = React.useState<'MANAGER' | 'DESIGNER'>('MANAGER');
+
     const handleUpdateProductDesign = (productId: string, designData: DesignData) => {
         const updatedDeliverables = order.deliverables.map(d => 
             d.id === productId ? { ...d, designData } : d
@@ -34,28 +37,47 @@ export function DesignReviewTab({ order, onUpdateOrder }: DesignReviewTabProps) 
     }
 
     return (
-        <ScrollArea className="h-full">
-            <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-12 pb-32">
-                <div className="flex flex-col gap-1">
-                    <h2 className="text-2xl font-headline font-black text-foreground flex items-center gap-2">
-                        <Palette className="h-6 w-6 text-primary" />
-                        Visual Collaboration
+        <div className="flex flex-col h-full overflow-hidden">
+            <div className="p-4 border-b bg-muted/20 flex items-center justify-between">
+                <div>
+                    <h2 className="text-lg font-headline font-black text-foreground flex items-center gap-2">
+                        <Palette className="h-5 w-5 text-primary" />
+                        Proofing & Approval
                     </h2>
-                    <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest">
-                        Review and provide feedback on design iterations
+                    <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">
+                        Collaborative feedback loop
                     </p>
                 </div>
 
-                <div className="grid grid-cols-1 gap-12">
-                    {order.deliverables.map((product) => (
-                        <DesignProductCard 
-                            key={product.id} 
-                            product={product} 
-                            onUpdateDesign={(data) => handleUpdateProductDesign(product.id, data)}
-                        />
-                    ))}
+                <div className="flex items-center gap-4">
+                    <span className="text-[9px] font-black uppercase text-muted-foreground tracking-widest">Simulation Role:</span>
+                    <Tabs value={role} onValueChange={(v: any) => setRole(v)}>
+                        <TabsList className="h-8 bg-background border border-primary/10">
+                            <TabsTrigger value="MANAGER" className="text-[9px] font-black uppercase px-3 h-6 gap-1.5">
+                                <Users className="h-3 w-3" /> Manager
+                            </TabsTrigger>
+                            <TabsTrigger value="DESIGNER" className="text-[9px] font-black uppercase px-3 h-6 gap-1.5">
+                                <UserCircle className="h-3 w-3" /> Designer
+                            </TabsTrigger>
+                        </TabsList>
+                    </Tabs>
                 </div>
             </div>
-        </ScrollArea>
+
+            <ScrollArea className="flex-1 bg-background/50">
+                <div className="max-w-6xl mx-auto p-4 md:p-8 space-y-12 pb-32">
+                    <div className="grid grid-cols-1 gap-12">
+                        {order.deliverables.map((product) => (
+                            <DesignProductCard 
+                                key={product.id} 
+                                product={product} 
+                                isDesigner={role === 'DESIGNER'}
+                                onUpdateDesign={(data) => handleUpdateProductDesign(product.id, data)}
+                            />
+                        ))}
+                    </div>
+                </div>
+            </ScrollArea>
+        </div>
     );
 }

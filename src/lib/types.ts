@@ -52,6 +52,7 @@ export type ConfiguredProductAddon = {
 };
 
 export type DesignPinStatus = 'open' | 'mistake' | 'fixed' | 'resolved';
+export type DesignWorkflowStatus = 'DRAFT' | 'INTERNAL_REVIEW' | 'CHANGES_REQUESTED' | 'APPROVED';
 
 export type DesignReply = {
   author: string;
@@ -71,15 +72,24 @@ export type DesignPin = {
   replies: DesignReply[];
 };
 
+export type DesignVersion = {
+  id: string;
+  versionNumber: number;
+  imageUrl: string;
+  timestamp: string;
+  author: string;
+};
+
 export type DesignComponent = {
   id: string;
   name: string;
-  imageUrl: string;
+  status: DesignWorkflowStatus;
+  versions: DesignVersion[];
   pins: DesignPin[];
 };
 
 export type DesignData = {
-  currentVersion: number;
+  productId: string;
   components: DesignComponent[];
 };
 

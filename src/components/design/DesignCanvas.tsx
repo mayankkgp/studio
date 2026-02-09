@@ -4,16 +4,18 @@ import * as React from 'react';
 import { useState, useRef, useEffect } from 'react';
 import type { DesignPin, DesignPinStatus } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import { ZoomIn, ZoomOut, RotateCcw, Upload, Image as ImageIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface DesignCanvasProps {
-    imageUrl: string;
+    imageUrl: string | null;
     pins: DesignPin[];
     highlightedPinId: string | null;
     onAddPin: (x: number, y: number) => void;
     onPinClick: (id: string) => void;
+    onUpload?: (file: File) => void;
+    isDesigner: boolean;
     version: number;
 }
 
@@ -24,13 +26,23 @@ const PIN_COLORS: Record<DesignPinStatus, string> = {
     resolved: 'bg-green-600'
 };
 
-export function DesignCanvas({ imageUrl, pins, highlightedPinId, onAddPin, onPinClick, version }: DesignCanvasProps) {
+export function DesignCanvas({ 
+    imageUrl, 
+    pins, 
+    highlightedPinId, 
+    onAddPin, 
+    onPinClick, 
+    onUpload,
+    isDesigner,
+    version 
+}: DesignCanvasProps) {
     const [zoom, setZoom] = useState(1);
     const [position, setPosition] = useState({ x: 0, y: 0 });
     const [isDragging, setIsDragging] = useState(false);
     const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
     const containerRef = useRef<HTMLDivElement>(null);
     const imageRef = useRef<HTMLImageElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleZoomIn = () => setZoom(prev => Math.min(prev + 0.25, 4));
     const handleZoomOut = () => setZoom(prev => Math.max(prev - 0.25, 0.5));
@@ -40,7 +52,7 @@ export function DesignCanvas({ imageUrl, pins, highlightedPinId, onAddPin, onPin
     };
 
     const handleMouseDown = (e: React.MouseEvent) => {
-        if (e.button !== 0 || zoom === 1) return;
+        if (!imageUrl || e.button !== 0 || zoom === 1) return;
         setIsDragging(true);
         setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y });
     };
@@ -56,13 +68,20 @@ export function DesignCanvas({ imageUrl, pins, highlightedPinId, onAddPin, onPin
     const handleMouseUp = () => setIsDragging(false);
 
     const handleCanvasClick = (e: React.MouseEvent) => {
-        if (isDragging || (e.target as HTMLElement).closest('.pin-bubble')) return;
+        if (!imageUrl || isDragging || (e.target as HTMLElement).closest('.pin-bubble')) return;
         
         const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
         const x = ((e.clientX - rect.left) / rect.width) * 100;
         const y = ((e.clientY - rect.top) / rect.height) * 100;
         
         onAddPin(x, y);
+    };
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file && onUpload) {
+            onUpload(file);
+        }
     };
 
     useEffect(() => {
@@ -77,6 +96,39 @@ export function DesignCanvas({ imageUrl, pins, highlightedPinId, onAddPin, onPin
             }
         }
     }, [highlightedPinId, pins, zoom]);
+
+    if (!imageUrl) {
+        return (
+            <div className="h-full w-full flex flex-col items-center justify-center bg-muted/20 border-dashed border-2 m-4 rounded-xl">
+                {isDesigner ? (
+                    <div className="text-center space-y-4">
+                        <div className="h-16 w-16 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto">
+                            <Upload className="h-8 w-8" />
+                        </div>
+                        <div className="space-y-1">
+                            <h4 className="font-bold">No Design Uploaded</h4>
+                            <p className="text-xs text-muted-foreground">Upload your first proof to begin collaboration.</p>
+                        </div>
+                        <input 
+                            type="file" 
+                            ref={fileInputRef} 
+                            onChange={handleFileChange} 
+                            accept="image/*" 
+                            className="hidden" 
+                        />
+                        <Button onClick={() => fileInputRef.current?.click()} size="sm">
+                            Select Design File
+                        </Button>
+                    </div>
+                ) : (
+                    <div className="text-center space-y-2 opacity-50">
+                        <ImageIcon className="h-12 w-12 mx-auto" />
+                        <p className="text-sm font-medium">Design proof not yet submitted</p>
+                    </div>
+                )}
+            </div>
+        );
+    }
 
     return (
         <div className="h-full flex flex-col relative group/canvas">

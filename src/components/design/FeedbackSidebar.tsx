@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useState, useRef, useEffect } from 'react';
-import type { DesignPin, DesignPinStatus, DesignReply } from '@/lib/types';
+import type { DesignPin, DesignPinStatus, DesignReply, DesignWorkflowStatus, DesignVersion } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -16,25 +16,40 @@ import {
     AlertCircle, 
     CheckCircle2, 
     History, 
-    Filter, 
     CornerDownRight, 
     Send,
-    Loader2,
     Check,
     X,
-    MoreHorizontal
+    Clock,
+    UserCircle,
+    RotateCcw,
+    Zap
 } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface FeedbackSidebarProps {
     pins: DesignPin[];
+    versions: DesignVersion[];
     highlightedPinId: string | null;
+    status: DesignWorkflowStatus;
     onUpdatePins: (pins: DesignPin[]) => void;
     onPinSelect: (id: string) => void;
+    onStatusChange: (status: DesignWorkflowStatus) => void;
+    isDesigner: boolean;
     currentVersion: number;
 }
 
-export function FeedbackSidebar({ pins, highlightedPinId, onUpdatePins, onPinSelect, currentVersion }: FeedbackSidebarProps) {
+export function FeedbackSidebar({ 
+    pins, 
+    versions,
+    highlightedPinId, 
+    status,
+    onUpdatePins, 
+    onPinSelect, 
+    onStatusChange,
+    isDesigner,
+    currentVersion 
+}: FeedbackSidebarProps) {
     const [filter, setFilter] = useState<'all' | 'open' | 'mistakes'>('all');
     const [editingPinId, setEditingPinId] = useState<string | null>(null);
     const [replyingPinId, setReplyingPinId] = useState<string | null>(null);
@@ -44,8 +59,6 @@ export function FeedbackSidebar({ pins, highlightedPinId, onUpdatePins, onPinSel
     const [isMistakeDraft, setIsMistakeDraft] = useState(false);
     const [shakeId, setShakeId] = useState<string | null>(null);
     
-    const scrollAreaRef = useRef<HTMLDivElement>(null);
-
     // Auto-focus and scroll to highlighted pin
     useEffect(() => {
         if (highlightedPinId) {
@@ -102,7 +115,7 @@ export function FeedbackSidebar({ pins, highlightedPinId, onUpdatePins, onPinSel
         }
 
         const newReply: DesignReply = {
-            author: 'Designer Team',
+            author: isDesigner ? 'Designer' : 'Manager',
             text: draftText,
             timestamp: new Date().toISOString()
         };
@@ -116,19 +129,84 @@ export function FeedbackSidebar({ pins, highlightedPinId, onUpdatePins, onPinSel
     };
 
     return (
-        <div className="flex flex-col h-full bg-card/20 backdrop-blur-md">
-            {/* Header / Filters */}
-            <div className="p-4 border-b space-y-4">
+        <div className="flex flex-col h-full bg-card/10 backdrop-blur-md">
+            {/* Workflow Actions */}
+            <div className="p-4 border-b bg-background/50 space-y-4">
                 <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-black uppercase tracking-[0.15em] text-foreground flex items-center gap-2">
-                        <MessageSquare className="h-4 w-4 text-primary" />
-                        Feedback Loop
-                    </h3>
-                    <Badge variant="secondary" className="font-mono text-[10px]">
-                        {pins.length} ITEMS
+                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Status</span>
+                    <Badge className={cn(
+                        "font-black text-[10px] tracking-wider",
+                        status === 'APPROVED' ? "bg-green-600" :
+                        status === 'INTERNAL_REVIEW' ? "bg-amber-500" :
+                        status === 'CHANGES_REQUESTED' ? "bg-destructive" : "bg-muted text-muted-foreground"
+                    )}>
+                        {status.replace('_', ' ')}
                     </Badge>
                 </div>
 
+                <div className="flex gap-2">
+                    {isDesigner ? (
+                        status !== 'APPROVED' && (
+                            <Button 
+                                className="w-full h-9 text-[10px] font-black uppercase tracking-widest gap-2" 
+                                size="sm"
+                                onClick={() => onStatusChange('INTERNAL_REVIEW')}
+                                disabled={status === 'INTERNAL_REVIEW' || versions.length === 0}
+                            >
+                                <Send className="h-3 w-3" />
+                                {status === 'INTERNAL_REVIEW' ? 'Waiting for Review' : 'Submit for Review'}
+                            </Button>
+                        )
+                    ) : (
+                        status === 'INTERNAL_REVIEW' && (
+                            <>
+                                <Button 
+                                    className="flex-1 h-9 bg-green-600 hover:bg-green-700 text-[10px] font-black uppercase tracking-widest" 
+                                    size="sm"
+                                    onClick={() => onStatusChange('APPROVED')}
+                                >
+                                    Approve
+                                </Button>
+                                <Button 
+                                    variant="destructive" 
+                                    className="flex-1 h-9 text-[10px] font-black uppercase tracking-widest" 
+                                    size="sm"
+                                    onClick={() => onStatusChange('CHANGES_REQUESTED')}
+                                >
+                                    Reject
+                                </Button>
+                            </>
+                        )
+                    )}
+                </div>
+            </div>
+
+            {/* Version History */}
+            <div className="p-4 border-b bg-muted/30">
+                <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2 mb-3">
+                    <History className="h-3.5 w-3.5" />
+                    Version History
+                </h4>
+                <div className="space-y-2">
+                    {versions.map((v) => (
+                        <div key={v.id} className="flex items-center justify-between p-2 rounded-lg bg-background border border-primary/5 text-[11px]">
+                            <div className="flex items-center gap-2">
+                                <Badge variant="secondary" className="h-5 px-1.5 font-mono">V{v.versionNumber}</Badge>
+                                <span className="font-bold">{v.author}</span>
+                            </div>
+                            <span className="text-muted-foreground text-[10px] font-medium">{format(new Date(v.timestamp), 'MMM dd, HH:mm')}</span>
+                        </div>
+                    ))}
+                    {versions.length === 0 && (
+                        <div className="text-center py-4 border border-dashed rounded-lg opacity-40 italic text-[10px]">
+                            No versions uploaded
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Feedback Filter */}
+            <div className="p-4 border-b">
                 <div className="flex bg-muted/50 p-1 rounded-lg">
                     {(['all', 'open', 'mistakes'] as const).map((f) => (
                         <button
@@ -147,21 +225,19 @@ export function FeedbackSidebar({ pins, highlightedPinId, onUpdatePins, onPinSel
                 </div>
             </div>
 
-            {/* Content Area */}
+            {/* Feedback Stream */}
             <ScrollArea className="flex-1">
-                <div className="p-4 space-y-6">
+                <div className="p-4 space-y-4">
                     {filteredPins.length === 0 ? (
-                        <div className="py-20 text-center space-y-3 opacity-40">
-                            <History className="h-10 w-10 mx-auto text-muted-foreground" />
-                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                                No feedback recorded yet
-                            </p>
+                        <div className="py-12 text-center opacity-30">
+                            <MessageSquare className="h-8 w-8 mx-auto mb-2" />
+                            <p className="text-[10px] font-black uppercase tracking-widest">No Feedback</p>
                         </div>
                     ) : (
                         filteredPins.map((pin) => {
                             const isHighlighted = highlightedPinId === pin.id;
                             const pinNumber = pins.findIndex(p => p.id === pin.id) + 1;
-                            const isManager = true; // Mock context
+                            const isMistake = pin.status === 'mistake';
 
                             return (
                                 <div 
@@ -169,168 +245,153 @@ export function FeedbackSidebar({ pins, highlightedPinId, onUpdatePins, onPinSel
                                     id={`comment-${pin.id}`}
                                     onClick={() => onPinSelect(pin.id)}
                                     className={cn(
-                                        "group/card p-4 rounded-xl border-2 transition-all duration-300 relative overflow-hidden",
+                                        "group p-3 rounded-xl border-2 transition-all duration-300 relative",
                                         isHighlighted 
                                             ? "border-primary bg-background shadow-xl scale-[1.02] z-10" 
                                             : "border-primary/5 bg-background/50 hover:border-primary/20",
+                                        pin.status === 'mistake' && !isHighlighted && "border-destructive/20 bg-destructive/5",
+                                        pin.status === 'resolved' && "opacity-60",
                                         shakeId === pin.id && "animate-shake"
                                     )}
                                 >
-                                    {/* Pin Marker */}
-                                    <div className={cn(
-                                        "absolute top-0 right-0 h-10 w-10 flex items-center justify-center text-[10px] font-black text-white rounded-bl-2xl shadow-sm",
-                                        pin.status === 'open' && "bg-blue-600",
-                                        pin.status === 'mistake' && "bg-destructive",
-                                        pin.status === 'fixed' && "bg-amber-500",
-                                        pin.status === 'resolved' && "bg-green-600"
-                                    )}>
-                                        #{pinNumber}
+                                    <div className="flex items-center justify-between mb-2">
+                                        <div className="flex items-center gap-2">
+                                            <div className={cn(
+                                                "h-5 w-5 rounded flex items-center justify-center text-[10px] font-black text-white",
+                                                pin.status === 'open' && "bg-blue-600",
+                                                pin.status === 'mistake' && "bg-destructive",
+                                                pin.status === 'fixed' && "bg-amber-500",
+                                                pin.status === 'resolved' && "bg-green-600"
+                                            )}>
+                                                {pinNumber}
+                                            </div>
+                                            <span className="text-[10px] font-black uppercase">{pin.author}</span>
+                                        </div>
+                                        <span className="text-[9px] font-bold text-muted-foreground uppercase opacity-60">
+                                            {format(new Date(pin.timestamp), 'h:mm a')} • V{pin.version}
+                                        </span>
                                     </div>
 
-                                    <div className="space-y-3">
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-[10px] font-black uppercase text-foreground">{pin.author}</span>
-                                            <span className="text-[9px] font-bold text-muted-foreground uppercase opacity-60">
-                                                {format(new Date(pin.timestamp), 'h:mm a')}
-                                            </span>
-                                            <Badge variant="outline" className="text-[8px] h-3.5 px-1 font-mono uppercase border-primary/20">
-                                                v{pin.version}
-                                            </Badge>
-                                        </div>
-
-                                        {editingPinId === pin.id ? (
-                                            <div className="space-y-3 animate-in fade-in slide-in-from-top-2">
-                                                <Textarea 
-                                                    autoFocus
-                                                    placeholder="Describe the change required..."
-                                                    className="min-h-[80px] text-xs font-semibold leading-relaxed border-primary/20"
-                                                    value={draftText}
-                                                    onChange={(e) => setDraftText(e.target.value)}
-                                                />
-                                                <div className="flex items-center justify-between">
+                                    {editingPinId === pin.id ? (
+                                        <div className="space-y-2">
+                                            <Textarea 
+                                                autoFocus
+                                                placeholder="Comment..."
+                                                className="min-h-[60px] text-xs font-semibold leading-relaxed"
+                                                value={draftText}
+                                                onChange={(e) => setDraftText(e.target.value)}
+                                            />
+                                            <div className="flex items-center justify-between">
+                                                {!isDesigner && (
                                                     <div className="flex items-center space-x-2">
                                                         <Checkbox 
                                                             id={`mistake-${pin.id}`} 
                                                             checked={isMistakeDraft}
                                                             onCheckedChange={(val) => setIsMistakeDraft(!!val)}
                                                         />
-                                                        <label htmlFor={`mistake-${pin.id}`} className="text-[10px] font-black uppercase tracking-wider text-destructive cursor-pointer">
-                                                            Mark as Mistake
+                                                        <label htmlFor={`mistake-${pin.id}`} className="text-[9px] font-black uppercase tracking-wider text-destructive cursor-pointer">
+                                                            Mistake
                                                         </label>
                                                     </div>
-                                                    <div className="flex gap-2">
-                                                        <Button variant="ghost" size="sm" className="h-7 text-[9px] font-black uppercase px-2" onClick={() => setEditingPinId(null)}>
-                                                            Cancel
-                                                        </Button>
-                                                        <Button size="sm" className="h-7 text-[9px] font-black uppercase px-3" onClick={() => handleSaveComment(pin.id)}>
-                                                            Save Feedback
-                                                        </Button>
-                                                    </div>
+                                                )}
+                                                <div className="flex gap-1 ml-auto">
+                                                    <Button variant="ghost" size="sm" className="h-6 text-[8px] font-black" onClick={() => setEditingPinId(null)}>Cancel</Button>
+                                                    <Button size="sm" className="h-6 text-[8px] font-black" onClick={() => handleSaveComment(pin.id)}>Save</Button>
                                                 </div>
                                             </div>
-                                        ) : (
-                                            <div className="space-y-4">
-                                                <p className="text-xs font-semibold leading-relaxed text-foreground/90">
-                                                    {pin.text || <span className="italic opacity-40">Writing draft...</span>}
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-3">
+                                            <div className="relative">
+                                                {isMistake && <AlertCircle className="absolute -left-1 -top-1 h-3 w-3 text-destructive animate-pulse" />}
+                                                <p className="text-[11px] font-semibold leading-relaxed text-foreground/90 pl-3">
+                                                    {pin.text || "Drafting feedback..."}
                                                 </p>
+                                            </div>
 
-                                                {pin.replies.length > 0 && (
-                                                    <div className="pl-4 border-l-2 border-primary/10 space-y-3 mt-4">
-                                                        {pin.replies.map((reply, i) => (
-                                                            <div key={i} className="space-y-1">
-                                                                <div className="flex items-center gap-2 text-[9px] font-black uppercase text-muted-foreground">
-                                                                    <CornerDownRight className="h-3 w-3" />
-                                                                    {reply.author}
-                                                                </div>
-                                                                <p className="text-[11px] font-medium leading-relaxed bg-muted/30 p-2 rounded-md">
-                                                                    {reply.text}
-                                                                </p>
-                                                            </div>
-                                                        ))}
+                                            {pin.replies.map((reply, i) => (
+                                                <div key={i} className="pl-3 border-l-2 border-primary/10 space-y-0.5">
+                                                    <div className="flex items-center gap-1.5 text-[8px] font-black uppercase text-muted-foreground">
+                                                        <CornerDownRight className="h-3 w-3" />
+                                                        {reply.author}
                                                     </div>
-                                                )}
+                                                    <p className="text-[10px] font-medium leading-relaxed bg-muted/40 p-1.5 rounded-md">
+                                                        {reply.text}
+                                                    </p>
+                                                </div>
+                                            ))}
 
-                                                <div className="flex items-center justify-between gap-2 pt-2 border-t border-primary/5">
-                                                    <div className="flex gap-1">
-                                                        {pin.status === 'open' || pin.status === 'mistake' ? (
-                                                            <Button 
-                                                                variant="outline" 
-                                                                size="sm" 
-                                                                className="h-6 text-[8px] font-black uppercase tracking-tighter px-2 border-primary/20 text-primary hover:bg-primary/5"
-                                                                onClick={(e) => { e.stopPropagation(); setReplyingPinId(pin.id); setDraftText(''); }}
-                                                            >
-                                                                Reply
-                                                            </Button>
-                                                        ) : null}
-                                                        
-                                                        {/* Role specific actions */}
-                                                        {(pin.status === 'open' || pin.status === 'mistake') && (
-                                                            <Button 
-                                                                variant="secondary" 
-                                                                size="sm" 
-                                                                className="h-6 text-[8px] font-black uppercase tracking-tighter px-2 bg-amber-100 text-amber-800 hover:bg-amber-200"
-                                                                onClick={(e) => { e.stopPropagation(); handleUpdateStatus(pin.id, 'fixed'); }}
-                                                            >
-                                                                Mark Fixed
-                                                            </Button>
-                                                        )}
-
-                                                        {pin.status === 'fixed' && isManager && (
-                                                            <div className="flex gap-1">
-                                                                <Button 
-                                                                    size="sm" 
-                                                                    className="h-6 text-[8px] font-black uppercase tracking-tighter px-2 bg-green-600 text-white"
-                                                                    onClick={(e) => { e.stopPropagation(); handleUpdateStatus(pin.id, 'resolved'); }}
-                                                                >
-                                                                    Approve
-                                                                </Button>
-                                                                <Button 
-                                                                    variant="ghost" 
-                                                                    size="sm" 
-                                                                    className="h-6 text-[8px] font-black uppercase tracking-tighter px-2 text-destructive"
-                                                                    onClick={(e) => { e.stopPropagation(); handleUpdateStatus(pin.id, 'open'); }}
-                                                                >
-                                                                    Reject
-                                                                </Button>
-                                                            </div>
-                                                        )}
-                                                    </div>
+                                            <div className="flex items-center justify-between pt-2 border-t border-primary/5">
+                                                <div className="flex gap-1">
+                                                    {(pin.status === 'open' || pin.status === 'mistake') && (
+                                                        <Button 
+                                                            variant="ghost" 
+                                                            size="sm" 
+                                                            className="h-6 text-[8px] font-black uppercase px-2"
+                                                            onClick={(e) => { e.stopPropagation(); setReplyingPinId(pin.id); setDraftText(''); }}
+                                                        >
+                                                            Reply
+                                                        </Button>
+                                                    )}
                                                     
-                                                    {pin.status === 'resolved' && (
-                                                        <div className="flex items-center gap-1.5 text-[9px] font-black uppercase text-green-600">
-                                                            <CheckCircle2 className="h-3.5 w-3.5" />
-                                                            Resolved
-                                                        </div>
+                                                    {isDesigner && (pin.status === 'open' || pin.status === 'mistake') && (
+                                                        <Button 
+                                                            variant="secondary" 
+                                                            size="sm" 
+                                                            className="h-6 text-[8px] font-black uppercase px-2 bg-amber-100 text-amber-800"
+                                                            onClick={(e) => { e.stopPropagation(); handleUpdateStatus(pin.id, 'fixed'); }}
+                                                        >
+                                                            Mark Fixed
+                                                        </Button>
+                                                    )}
+
+                                                    {!isDesigner && pin.status === 'fixed' && (
+                                                        <>
+                                                            <Button 
+                                                                size="sm" 
+                                                                className="h-6 text-[8px] font-black uppercase px-2 bg-green-600 text-white"
+                                                                onClick={(e) => { e.stopPropagation(); handleUpdateStatus(pin.id, 'resolved'); }}
+                                                            >
+                                                                Resolve
+                                                            </Button>
+                                                            <Button 
+                                                                variant="ghost" 
+                                                                size="sm" 
+                                                                className="h-6 text-[8px] font-black uppercase px-2 text-destructive"
+                                                                onClick={(e) => { e.stopPropagation(); handleUpdateStatus(pin.id, 'open'); }}
+                                                            >
+                                                                Reject
+                                                            </Button>
+                                                        </>
                                                     )}
                                                 </div>
+                                                
+                                                {pin.status === 'resolved' && (
+                                                    <div className="flex items-center gap-1 text-[8px] font-black text-green-600">
+                                                        <CheckCircle2 className="h-3 w-3" />
+                                                        RESOLVED
+                                                    </div>
+                                                )}
                                             </div>
-                                        )}
+                                        </div>
+                                    )}
 
-                                        {replyingPinId === pin.id && (
-                                            <div className={cn(
-                                                "mt-3 space-y-2 p-3 bg-muted/40 rounded-lg animate-in slide-in-from-bottom-2",
-                                                shakeId === `reply-${pin.id}` && "animate-shake"
-                                            )}>
-                                                <Input 
-                                                    autoFocus
-                                                    placeholder="Write your reply..."
-                                                    className="h-8 text-[11px] font-semibold"
-                                                    value={draftText}
-                                                    onChange={(e) => setDraftText(e.target.value)}
-                                                    onKeyDown={(e) => e.key === 'Enter' && handleAddReply(pin.id)}
-                                                />
-                                                <div className="flex justify-end gap-2">
-                                                    <Button variant="ghost" size="sm" className="h-6 text-[8px] font-black" onClick={() => setReplyingPinId(null)}>
-                                                        Cancel
-                                                    </Button>
-                                                    <Button size="sm" className="h-6 text-[8px] font-black gap-1" onClick={() => handleAddReply(pin.id)}>
-                                                        <Send className="h-2.5 w-2.5" />
-                                                        Send Reply
-                                                    </Button>
-                                                </div>
+                                    {replyingPinId === pin.id && (
+                                        <div className="mt-2 space-y-2 p-2 bg-muted/30 rounded-lg animate-in slide-in-from-bottom-2">
+                                            <Input 
+                                                autoFocus
+                                                placeholder="Reply..."
+                                                className="h-7 text-[10px] font-semibold"
+                                                value={draftText}
+                                                onChange={(e) => setDraftText(e.target.value)}
+                                                onKeyDown={(e) => e.key === 'Enter' && handleAddReply(pin.id)}
+                                            />
+                                            <div className="flex justify-end gap-1">
+                                                <Button variant="ghost" size="sm" className="h-5 text-[8px] font-black" onClick={() => setReplyingPinId(null)}>X</Button>
+                                                <Button size="sm" className="h-5 text-[8px] font-black" onClick={() => handleAddReply(pin.id)}>Send</Button>
                                             </div>
-                                        )}
-                                    </div>
+                                        </div>
+                                    )}
                                 </div>
                             );
                         })
