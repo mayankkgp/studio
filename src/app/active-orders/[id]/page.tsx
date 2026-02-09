@@ -811,7 +811,7 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                                                                     onUpdate={updateDeliverable}
                                                                     onRemove={removeDeliverable}
                                                                     onProjectedTotalChange={handleProjectedTotalChange}
-                                                                    isPersistent={false}
+                                                                    isPersistent={true}
                                                                     manualSyncOnly={true}
                                                                     showCommercials={true}
                                                                 />
@@ -914,23 +914,6 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                     </div>
                 </div>
             </div>
-
-            <AlertDialog open={isCustomerCancelConfirmOpen} onOpenChange={setIsCustomerCancelConfirmOpen}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Discard changes?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            All unsaved changes in the creative brief will be lost. This action cannot be undone.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Go Back</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleCancelCustomerData} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                            Discard Changes
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
 
             <style jsx global>{`
                 .custom-scrollbar::-webkit-scrollbar { width: 5px; }

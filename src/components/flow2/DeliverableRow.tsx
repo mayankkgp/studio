@@ -427,9 +427,11 @@ export const DeliverableRow = React.memo(function DeliverableRow({
                             </Button>
                         ) : (
                             <div className="flex items-center gap-2">
-                                <Button size="sm" variant="ghost" onClick={handleCancelClick} className="gap-2 h-8 text-muted-foreground font-bold hover:bg-muted">
-                                    Cancel
-                                </Button>
+                                {isPersistent && (
+                                    <Button size="sm" variant="ghost" onClick={handleCancelClick} className="gap-2 h-8 text-muted-foreground font-bold hover:bg-muted">
+                                        Cancel
+                                    </Button>
+                                )}
                                 <Button size="sm" onClick={handleDoneClick} className="gap-2 h-8 font-bold" disabled={!isValid || warningData.type === 'hard'}>
                                     <Check className="h-4 w-4" /> Done
                                 </Button>
