@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import type { ConfiguredProduct, DesignData, DesignComponent, DesignPin, DesignWorkflowStatus } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { DesignCanvas } from './DesignCanvas';
 import { FeedbackSidebar } from './FeedbackSidebar';
 import { cn } from '@/lib/utils';
-import { Package, Layers, Circle } from 'lucide-react';
+import { Package, Circle } from 'lucide-react';
 
 interface DesignProductCardProps {
     product: ConfiguredProduct;
@@ -18,22 +18,24 @@ interface DesignProductCardProps {
 }
 
 export function DesignProductCard({ product, isDesigner, onUpdateDesign }: DesignProductCardProps) {
+    // Normalize design data to ensure all required arrays exist
     const designData = useMemo(() => {
-        if (product.designData) return product.designData;
-        
-        // Mock default structure if none exists
-        const components: DesignComponent[] = [
-            {
-                id: 'comp-1',
-                name: 'Main Layout',
-                status: 'DRAFT',
-                versions: [],
-                pins: []
-            }
-        ];
+        const baseData = product.designData || {
+            productId: product.id,
+            components: [
+                {
+                    id: 'comp-1',
+                    name: 'Main Layout',
+                    status: 'DRAFT',
+                    versions: [],
+                    pins: []
+                }
+            ]
+        };
 
-        if (product.productName.toLowerCase().includes('invite')) {
-            components.push({
+        // Add Envelope if it's an invite and doesn't exist
+        if (product.productName.toLowerCase().includes('invite') && baseData.components.length === 1) {
+            baseData.components.push({
                 id: 'comp-2',
                 name: 'Envelope',
                 status: 'DRAFT',
@@ -42,21 +44,37 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
             });
         }
 
+        // Deeply ensure arrays exist for each component to prevent TypeErrors
         return {
-            productId: product.id,
-            components
+            ...baseData,
+            components: baseData.components.map(c => ({
+                ...c,
+                versions: c.versions || [],
+                pins: c.pins || []
+            }))
         } as DesignData;
     }, [product.id, product.designData, product.productName]);
 
     const [activeCompId, setActiveCompId] = useState(designData.components[0].id);
     const [highlightedPinId, setHighlightedPinId] = useState<string | null>(null);
 
-    const activeComponent = designData.components.find(c => c.id === activeCompId)!;
-    const currentVersionNum = activeComponent.versions.length > 0 
+    // Sync activeCompId if the underlying components change
+    useEffect(() => {
+        const currentStillExists = designData.components.some(c => c.id === activeCompId);
+        if (!currentStillExists && designData.components.length > 0) {
+            setActiveCompId(designData.components[0].id);
+        }
+    }, [designData.components, activeCompId]);
+
+    const activeComponent = designData.components.find(c => c.id === activeCompId) || designData.components[0];
+    
+    const currentVersionNum = (activeComponent.versions && activeComponent.versions.length > 0)
         ? activeComponent.versions[activeComponent.versions.length - 1].versionNumber 
         : 0;
     
-    const activeVersion = activeComponent.versions[activeComponent.versions.length - 1] || null;
+    const activeVersion = activeComponent.versions && activeComponent.versions.length > 0
+        ? activeComponent.versions[activeComponent.versions.length - 1] 
+        : null;
 
     const handleUpdatePins = (newPins: DesignPin[]) => {
         const updatedComponents = designData.components.map(c => 
@@ -82,13 +100,13 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
                 versionNumber: newVersionNum,
                 imageUrl: result,
                 timestamp: new Date().toISOString(),
-                author: 'Designer Team'
+                author: isDesigner ? 'Designer Team' : 'Manager Team'
             };
 
             const updatedComponents = designData.components.map(c => 
                 c.id === activeCompId ? { 
                     ...c, 
-                    versions: [...c.versions, newVersion],
+                    versions: [...(c.versions || []), newVersion],
                     status: 'DRAFT' as DesignWorkflowStatus
                 } : c
             );
@@ -144,7 +162,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
                         <div className="flex-1 relative">
                             <DesignCanvas 
                                 imageUrl={activeVersion?.imageUrl || null}
-                                pins={activeComponent.pins}
+                                pins={activeComponent.pins || []}
                                 highlightedPinId={highlightedPinId}
                                 isDesigner={isDesigner}
                                 version={currentVersionNum}
@@ -161,7 +179,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
                                         text: '',
                                         replies: []
                                     };
-                                    handleUpdatePins([...activeComponent.pins, newPin]);
+                                    handleUpdatePins([...(activeComponent.pins || []), newPin]);
                                     setHighlightedPinId(newPin.id);
                                 }}
                                 onPinClick={setHighlightedPinId}
@@ -171,8 +189,8 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
                     </div>
 
                     <FeedbackSidebar 
-                        pins={activeComponent.pins}
-                        versions={activeComponent.versions}
+                        pins={activeComponent.pins || []}
+                        versions={activeComponent.versions || []}
                         highlightedPinId={highlightedPinId}
                         status={activeComponent.status}
                         isDesigner={isDesigner}
