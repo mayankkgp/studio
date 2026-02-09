@@ -51,6 +51,38 @@ export type ConfiguredProductAddon = {
   value: boolean | number | null;
 };
 
+export type DesignPinStatus = 'open' | 'mistake' | 'fixed' | 'resolved';
+
+export type DesignReply = {
+  author: string;
+  text: string;
+  timestamp: string;
+};
+
+export type DesignPin = {
+  id: string;
+  x: number; // percentage
+  y: number; // percentage
+  status: DesignPinStatus;
+  author: string;
+  timestamp: string;
+  version: number;
+  text: string;
+  replies: DesignReply[];
+};
+
+export type DesignComponent = {
+  id: string;
+  name: string;
+  imageUrl: string;
+  pins: DesignPin[];
+};
+
+export type DesignData = {
+  currentVersion: number;
+  components: DesignComponent[];
+};
+
 export type ConfiguredProduct = {
   id: string; 
   productId: number;
@@ -63,6 +95,7 @@ export type ConfiguredProduct = {
   specialRequest?: string;
   warning?: string;
   rateOverrides?: Record<string, number>; // Maps component label to custom rate
+  designData?: DesignData;
 };
 
 export type BillableComponent = {
