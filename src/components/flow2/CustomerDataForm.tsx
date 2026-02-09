@@ -101,7 +101,7 @@ const EditableField = ({
     <div className="mb-8 group transition-all duration-200 border-l-2 pl-4 border-primary/20 focus-within:border-primary break-inside-avoid">
       <Label 
         htmlFor={id} 
-        className="text-[11px] font-black uppercase tracking-widest text-muted-foreground/80 mb-2 block"
+        className="text-[11px] font-black uppercase tracking-widest text-muted-foreground mb-2 block"
       >
         {label}
       </Label>
@@ -126,7 +126,7 @@ const EditableField = ({
           "bg-transparent border-transparent",
           isEditMode && "hover:bg-primary/5 focus:bg-background focus:border-primary/40 focus:ring-4 focus:ring-primary/5 focus:shadow-sm focus:px-3",
           !isEditMode && "cursor-default",
-          "placeholder:italic placeholder:font-normal placeholder:text-muted-foreground/60 placeholder:text-[13px] placeholder:opacity-100"
+          "placeholder:italic placeholder:font-normal placeholder:text-muted-foreground placeholder:text-[13px] placeholder:opacity-100"
         )}
       />
     </div>
@@ -263,7 +263,7 @@ export function CustomerDataForm({
     }
 
     if (item.specialRequest) {
-      parts.push(<span key="special" className="italic font-bold text-destructive/80">Special Request Included</span>);
+      parts.push(<span key="special" className="italic font-bold text-destructive">Special Request Included</span>);
     }
 
     return parts.length > 0 
@@ -274,11 +274,11 @@ export function CustomerDataForm({
   // Overall empty state for View Mode
   if (!isEditMode && !isGenericDataVisible && !isProductBriefsSectionVisible) {
     return (
-      <div className="flex flex-col items-center justify-center py-32 text-muted-foreground/60 animate-in fade-in zoom-in-95 duration-500">
+      <div className="flex flex-col items-center justify-center py-32 text-muted-foreground animate-in fade-in zoom-in-95 duration-500">
         <div className="h-20 w-20 rounded-full bg-muted/20 flex items-center justify-center mb-6 border-2 border-dashed border-muted/50">
           <Sparkles className="h-10 w-10 opacity-30" />
         </div>
-        <h3 className="text-xl font-headline font-black uppercase tracking-[0.2em] mb-3 text-muted-foreground/80">No Data Recorded</h3>
+        <h3 className="text-xl font-headline font-black uppercase tracking-[0.2em] mb-3 text-muted-foreground">No Data Recorded</h3>
         <p className="text-sm font-semibold text-center max-w-sm leading-relaxed px-4">
           The creative brief is currently empty. Switch to <button type="button" onClick={onEnterEditMode} className="text-primary font-black uppercase tracking-wider hover:underline focus:outline-none">EDIT MODE</button> to begin building the narrative.
         </p>
@@ -424,7 +424,7 @@ export function CustomerDataForm({
             <aside className="w-full md:w-80 border-b md:border-b-0 md:border-r border-primary/10 overflow-hidden bg-card/20 shrink-0 flex flex-col">
               <div className="p-3 border-b border-primary/10 bg-background/50">
                 <div className="relative">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input 
                     placeholder="Filter products..." 
                     className="h-9 pl-9 text-[11px] bg-background border-primary/20 focus-visible:ring-primary/20 font-bold uppercase tracking-widest"
@@ -445,7 +445,7 @@ export function CustomerDataForm({
               </div>
               <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-1">
                 {visibleDeliverables.length === 0 ? (
-                  <div className="py-12 text-center text-[11px] text-muted-foreground/40 font-black uppercase tracking-[0.15em] opacity-40 italic">
+                  <div className="py-12 text-center text-[11px] text-muted-foreground font-black uppercase tracking-[0.15em] opacity-40 italic">
                     No matching results
                   </div>
                 ) : (
@@ -485,7 +485,7 @@ export function CustomerDataForm({
                           {tagsDisplay && (
                             <div className={cn(
                               "text-[10px] font-black uppercase truncate mt-0.5 tracking-[0.05em]",
-                              isActive ? "text-white/80" : "text-muted-foreground/60"
+                              isActive ? "text-white/80" : "text-muted-foreground"
                             )}>
                               {tagsDisplay}
                             </div>
@@ -500,7 +500,7 @@ export function CustomerDataForm({
                           ) : (
                             <Circle className={cn(
                               "h-3.5 w-3.5 transition-colors opacity-30", 
-                              isActive ? "text-white/50" : "text-muted-foreground/30"
+                              isActive ? "text-white/50" : "text-muted-foreground"
                             )} />
                           )}
                         </div>
@@ -512,10 +512,10 @@ export function CustomerDataForm({
             </aside>
 
             {/* Detail View (Right) */}
-            <main className="flex-1 p-8 overflow-y-auto custom-scrollbar bg-background/50">
+            <main className="flex-1 pt-4 px-8 pb-8 overflow-y-auto custom-scrollbar bg-background/50">
               {selectedItem ? (
                 <div className="space-y-1">
-                  <div className="flex flex-wrap items-center text-[11px] font-black text-muted-foreground/80 uppercase tracking-[0.1em] leading-none mb-1">
+                  <div className="flex flex-wrap items-center text-[11px] font-black text-muted-foreground uppercase tracking-[0.1em] leading-none mb-1">
                     {getProductSpecsSummary(selectedItem)}
                   </div>
 
@@ -533,13 +533,13 @@ export function CustomerDataForm({
                       className={cn(
                         "font-semibold bg-transparent text-foreground min-h-[350px] p-6 text-[14px] leading-relaxed",
                         !isEditMode && "cursor-default",
-                        "placeholder:italic placeholder:font-normal placeholder:text-muted-foreground/50 placeholder:text-[13px] placeholder:opacity-100"
+                        "placeholder:italic placeholder:font-normal placeholder:text-muted-foreground placeholder:text-[13px] placeholder:opacity-100"
                       )}
                     />
                   </div>
                 </div>
               ) : (
-                <div className="h-full flex flex-col items-center justify-center text-muted-foreground/40 text-[11px] font-black uppercase tracking-[0.2em] italic">
+                <div className="h-full flex flex-col items-center justify-center text-muted-foreground text-[11px] font-black uppercase tracking-[0.2em] italic">
                   Select a product to view brief
                 </div>
               )}
