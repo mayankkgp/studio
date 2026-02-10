@@ -70,7 +70,13 @@ export function FeedbackSidebar({
     const [shakeId, setShakeId] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    // Reset editing state when selection changes
     useEffect(() => {
+        setDraftText('');
+        setIsMistakeDraft(false);
+        setReplyingPinId(null);
+        setEditingPinId(null);
+        
         if (highlightedPinId) {
             const el = document.getElementById(`comment-${highlightedPinId}`);
             if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -78,7 +84,6 @@ export function FeedbackSidebar({
             const pin = pins.find(p => p.id === highlightedPinId);
             if (pin && !pin.text && pin.version <= viewedVersion) {
                 setEditingPinId(highlightedPinId);
-                setDraftText('');
             }
         }
     }, [highlightedPinId, pins, viewedVersion]);
@@ -105,7 +110,7 @@ export function FeedbackSidebar({
             if (p.id === pinId) {
                 return {
                     ...p,
-                    text: draftText,
+                    text: draftText.trim(),
                     status: isMistakeDraft ? 'mistake' : 'open'
                 } as DesignPin;
             }
@@ -114,7 +119,6 @@ export function FeedbackSidebar({
         onUpdatePins(updatedPins);
         setEditingPinId(null);
         setDraftText('');
-        setIsMistakeDraft(false);
     };
 
     const handleAddReply = (pinId: string) => {
@@ -126,7 +130,7 @@ export function FeedbackSidebar({
 
         const newReply: DesignReply = {
             author: isDesigner ? 'Designer' : 'Manager',
-            text: draftText,
+            text: draftText.trim(),
             timestamp: new Date().toISOString()
         };
 
@@ -231,7 +235,7 @@ export function FeedbackSidebar({
                 {renderActions()}
             </div>
 
-            <div className="p-4 border-b bg-muted/30 shrink-0 max-h-[180px] overflow-y-auto">
+            <div className="p-4 border-b bg-muted/30 shrink-0 max-h-[180px] overflow-y-auto custom-scrollbar">
                 <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2 mb-3"><History className="h-3.5 w-3.5" /> Version History</h4>
                 <div className="space-y-2">
                     {versions.map((v) => (
@@ -303,7 +307,7 @@ export function FeedbackSidebar({
                                                 value={draftText} 
                                                 onChange={(e) => setDraftText(e.target.value)}
                                                 onBlur={(e) => {
-                                                    // Discard if blurred and empty
+                                                    // Discard if blurred and empty when creating a new pin
                                                     const relatedTarget = e.relatedTarget as HTMLElement;
                                                     if (!relatedTarget?.closest('.space-y-2')) {
                                                         if (!draftText.trim()) {
