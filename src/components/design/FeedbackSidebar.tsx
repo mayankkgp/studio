@@ -68,15 +68,11 @@ export function FeedbackSidebar({
     const [draftText, setDraftText] = useState('');
     const [isMistakeDraft, setIsMistakeDraft] = useState(false);
     const [shakeId, setShakeId] = useState<string | null>(null);
+    const isSavingRef = useRef(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    // Reset editing state when selection changes
+    // Sync state when highlighted pin changes
     useEffect(() => {
-        setDraftText('');
-        setIsMistakeDraft(false);
-        setReplyingPinId(null);
-        setEditingPinId(null);
-        
         if (highlightedPinId) {
             const el = document.getElementById(`comment-${highlightedPinId}`);
             if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -84,7 +80,13 @@ export function FeedbackSidebar({
             const pin = pins.find(p => p.id === highlightedPinId);
             if (pin && !pin.text && pin.version <= viewedVersion) {
                 setEditingPinId(highlightedPinId);
+                setDraftText('');
+                setIsMistakeDraft(false);
             }
+        } else {
+            setEditingPinId(null);
+            setReplyingPinId(null);
+            setDraftText('');
         }
     }, [highlightedPinId, pins, viewedVersion]);
 
@@ -106,6 +108,7 @@ export function FeedbackSidebar({
             return;
         }
 
+        isSavingRef.current = true;
         const updatedPins = pins.map(p => {
             if (p.id === pinId) {
                 return {
@@ -119,6 +122,7 @@ export function FeedbackSidebar({
         onUpdatePins(updatedPins);
         setEditingPinId(null);
         setDraftText('');
+        setTimeout(() => { isSavingRef.current = false; }, 100);
     };
 
     const handleAddReply = (pinId: string) => {
@@ -128,6 +132,7 @@ export function FeedbackSidebar({
             return;
         }
 
+        isSavingRef.current = true;
         const newReply: DesignReply = {
             author: isDesigner ? 'Designer' : 'Manager',
             text: draftText.trim(),
@@ -140,16 +145,21 @@ export function FeedbackSidebar({
         onUpdatePins(updatedPins);
         setReplyingPinId(null);
         setDraftText('');
+        setTimeout(() => { isSavingRef.current = false; }, 100);
     };
 
-    const handleDeleteDraft = () => {
-        if (onDeleteDraft) {
-            onDeleteDraft();
-        } else if (versions.length > 0) {
-            const newVersions = [...versions];
-            newVersions.pop();
-            onUpdateVersions(newVersions);
-        }
+    const handleDiscardIfEmpty = (pinId: string) => {
+        // Give a tiny delay to see if we clicked "Save"
+        setTimeout(() => {
+            if (isSavingRef.current) return;
+            
+            const pin = pins.find(p => p.id === pinId);
+            if (pin && !pin.text && !draftText.trim()) {
+                onUpdatePins(pins.filter(p => p.id !== pinId));
+                onPinSelect(null);
+            }
+            setEditingPinId(null);
+        }, 150);
     };
 
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -177,7 +187,7 @@ export function FeedbackSidebar({
                     return (
                         <div className="flex flex-col gap-2">
                             <Button className="w-full h-10 font-black uppercase tracking-widest gap-2 bg-green-600 hover:bg-green-700" onClick={() => onStatusChange('INTERNAL_REVIEW')}><Send className="h-4 w-4" /> Submit for Review</Button>
-                            <Button variant="ghost" className="w-full h-8 text-[10px] font-black uppercase tracking-widest text-destructive" onClick={handleDeleteDraft}><Trash2 className="h-3 w-3 mr-1.5" /> Delete Draft</Button>
+                            <Button variant="ghost" className="w-full h-8 text-[10px] font-black uppercase tracking-widest text-destructive" onClick={() => onDeleteDraft?.()}><Trash2 className="h-3 w-3 mr-1.5" /> Delete Draft</Button>
                         </div>
                     );
                 default:
@@ -212,13 +222,7 @@ export function FeedbackSidebar({
 
     return (
         <div className="flex flex-col h-full bg-card/10 backdrop-blur-md overflow-hidden">
-            <input 
-                type="file" 
-                ref={fileInputRef} 
-                onChange={handleFileSelect} 
-                className="hidden" 
-                accept="image/*" 
-            />
+            <input type="file" ref={fileInputRef} onChange={handleFileSelect} className="hidden" accept="image/*" />
 
             <div className="p-4 border-b bg-background/50 space-y-4 shrink-0">
                 <div className="flex items-center justify-between">
@@ -240,13 +244,10 @@ export function FeedbackSidebar({
                 <div className="space-y-2">
                     {versions.map((v) => (
                         <button 
-                            key={v.id} 
-                            onClick={() => onVersionSelect(v.id)}
+                            key={v.id} onClick={() => onVersionSelect(v.id)}
                             className={cn(
                                 "w-full flex items-center justify-between p-2 rounded-lg border transition-all text-[11px]",
-                                selectedVersionId === v.id 
-                                    ? "bg-primary/10 border-primary text-primary shadow-sm" 
-                                    : "bg-background border-primary/5 text-foreground hover:border-primary/20"
+                                selectedVersionId === v.id ? "bg-primary/10 border-primary text-primary shadow-sm" : "bg-background border-primary/5 text-foreground hover:border-primary/20"
                             )}
                         >
                             <div className="flex items-center gap-2">
@@ -283,7 +284,7 @@ export function FeedbackSidebar({
                                 <div 
                                     key={pin.id} id={`comment-${pin.id}`} onClick={() => onPinSelect(pin.id)}
                                     className={cn(
-                                        "p-3 rounded-xl border-2 transition-all duration-300 relative", 
+                                        "p-3 rounded-xl border-2 transition-all duration-300 relative cursor-pointer", 
                                         isHighlighted ? "border-primary bg-background shadow-xl scale-[1.02] z-10" : "border-primary/5 bg-background/50 hover:border-primary/20", 
                                         pin.status === 'mistake' && !isHighlighted && "border-destructive/20 bg-destructive/5", 
                                         pin.status === 'resolved' && "opacity-60", 
@@ -301,23 +302,9 @@ export function FeedbackSidebar({
                                     {editingPinId === pin.id ? (
                                         <div className="space-y-2">
                                             <Textarea 
-                                                autoFocus 
-                                                placeholder="Enter feedback..." 
-                                                className="min-h-[60px] text-xs font-semibold" 
-                                                value={draftText} 
-                                                onChange={(e) => setDraftText(e.target.value)}
-                                                onBlur={(e) => {
-                                                    // Discard if blurred and empty when creating a new pin
-                                                    const relatedTarget = e.relatedTarget as HTMLElement;
-                                                    if (!relatedTarget?.closest('.space-y-2')) {
-                                                        if (!draftText.trim()) {
-                                                            if (!pin.text) {
-                                                                onUpdatePins(pins.filter(p => p.id !== pin.id));
-                                                            }
-                                                            setEditingPinId(null);
-                                                        }
-                                                    }
-                                                }}
+                                                autoFocus placeholder="Enter feedback..." className="min-h-[60px] text-xs font-semibold" 
+                                                value={draftText} onChange={(e) => setDraftText(e.target.value)}
+                                                onBlur={() => handleDiscardIfEmpty(pin.id)}
                                             />
                                             <div className="flex items-center justify-between">
                                                 {!isDesigner && <div className="flex items-center space-x-2"><Checkbox id={`mistake-${pin.id}`} checked={isMistakeDraft} onCheckedChange={(val) => setIsMistakeDraft(!!val)} /><label htmlFor={`mistake-${pin.id}`} className="text-[9px] font-black uppercase tracking-wider text-destructive cursor-pointer">Mistake</label></div>}
@@ -338,20 +325,12 @@ export function FeedbackSidebar({
                                             ))}
                                             <div className="flex items-center justify-between pt-2 border-t border-primary/5">
                                                 <div className="flex gap-1">
-                                                    {canAddFeedback && (pin.status === 'open' || pin.status === 'mistake' || pin.status === 'fixed') && <Button variant="ghost" size="sm" className="h-6 text-[8px] font-black uppercase px-2" onClick={(e) => { e.stopPropagation(); setReplyingPinId(pin.id); setDraftText(''); }}>Reply</Button>}
-                                                    
-                                                    {isDesigner && status === 'DRAFT' && (pin.status === 'open' || pin.status === 'mistake') && (
-                                                        <Button variant="secondary" size="sm" className="h-6 text-[8px] font-black uppercase px-2 bg-amber-100 text-amber-800" onClick={(e) => { e.stopPropagation(); onUpdatePins(pins.map(p => p.id === pin.id ? { ...p, status: 'fixed' } : p)); }}>Mark Fixed</Button>
-                                                    )}
-
+                                                    {canAddFeedback && (pin.status !== 'resolved') && <Button variant="ghost" size="sm" className="h-6 text-[8px] font-black uppercase px-2" onClick={(e) => { e.stopPropagation(); setReplyingPinId(pin.id); setDraftText(''); }}>Reply</Button>}
+                                                    {isDesigner && status === 'DRAFT' && (pin.status === 'open' || pin.status === 'mistake') && <Button variant="secondary" size="sm" className="h-6 text-[8px] font-black uppercase px-2 bg-amber-100 text-amber-800" onClick={(e) => { e.stopPropagation(); onUpdatePins(pins.map(p => p.id === pin.id ? { ...p, status: 'fixed' } : p)); }}>Mark Fixed</Button>}
                                                     {!isDesigner && (status === 'INTERNAL_REVIEW' || status === 'CUSTOMER_REVIEW') && (
                                                         <>
-                                                            {(pin.status === 'open' || pin.status === 'mistake' || pin.status === 'fixed') && (
-                                                                <Button size="sm" className="h-6 text-[8px] font-black uppercase px-2 bg-green-600 text-white" onClick={(e) => { e.stopPropagation(); onUpdatePins(pins.map(p => p.id === pin.id ? { ...p, status: 'resolved' } : p)); }}>Resolve</Button>
-                                                            )}
-                                                            {pin.status === 'fixed' && (
-                                                                <Button variant="ghost" size="sm" className="h-6 text-[8px] font-black uppercase px-2 text-destructive" onClick={(e) => { e.stopPropagation(); onUpdatePins(pins.map(p => p.id === pin.id ? { ...p, status: 'open' } : p)); }}>Reject Fix</Button>
-                                                            )}
+                                                            {(pin.status !== 'resolved') && <Button size="sm" className="h-6 text-[8px] font-black uppercase px-2 bg-green-600 text-white" onClick={(e) => { e.stopPropagation(); onUpdatePins(pins.map(p => p.id === pin.id ? { ...p, status: 'resolved' } : p)); }}>Resolve</Button>}
+                                                            {pin.status === 'fixed' && <Button variant="ghost" size="sm" className="h-6 text-[8px] font-black uppercase px-2 text-destructive" onClick={(e) => { e.stopPropagation(); onUpdatePins(pins.map(p => p.id === pin.id ? { ...p, status: 'open' } : p)); }}>Reject Fix</Button>}
                                                         </>
                                                     )}
                                                 </div>
@@ -363,14 +342,11 @@ export function FeedbackSidebar({
                                     {replyingPinId === pin.id && (
                                         <div className="mt-2 space-y-2 p-2 bg-muted/30 rounded-lg animate-in slide-in-from-bottom-2">
                                             <Input 
-                                                autoFocus 
-                                                placeholder="Reply..." 
-                                                className="h-7 text-[10px] font-semibold" 
-                                                value={draftText} 
-                                                onChange={(e) => setDraftText(e.target.value)} 
-                                                onKeyDown={(e) => e.key === 'Enter' && handleAddReply(pin.id)}
+                                                autoFocus placeholder="Reply..." className="h-7 text-[10px] font-semibold" 
+                                                value={draftText} onChange={(e) => setDraftText(e.target.value)} 
+                                                onKeyDown={(e) => { if (e.key === 'Enter') handleAddReply(pin.id); }}
                                                 onBlur={() => {
-                                                    if (!draftText.trim()) setReplyingPinId(null);
+                                                    setTimeout(() => { if (!isSavingRef.current && !draftText.trim()) setReplyingPinId(null); }, 150);
                                                 }}
                                             />
                                             <div className="flex justify-end gap-1"><Button variant="ghost" size="sm" className="h-5 text-[8px] font-black" onClick={() => setReplyingPinId(null)}>X</Button><Button size="sm" className="h-5 text-[8px] font-black" onClick={() => handleAddReply(pin.id)}>Send</Button></div>

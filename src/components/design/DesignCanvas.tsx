@@ -66,20 +66,31 @@ export function DesignCanvas({
     const [position, setPosition] = useState({ x: 0, y: 0 });
     const [isDragging, setIsDragging] = useState(false);
     const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+    
+    // Feedback Drafting State
     const [draftText, setDraftText] = useState('');
     const [replyingPinId, setReplyingPinId] = useState<string | null>(null);
     const [isMistakeDraft, setIsMistakeDraft] = useState(false);
+    const isSavingRef = useRef(false);
     
     const containerRef = useRef<HTMLDivElement>(null);
     const imageRef = useRef<HTMLImageElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    // Reset local drafting state when the active pin changes
+    // Sync draft state when a pin is selected/opened
     useEffect(() => {
-        setDraftText('');
-        setIsMistakeDraft(false);
-        setReplyingPinId(null);
-    }, [highlightedPinId]);
+        if (highlightedPinId) {
+            const activePin = pins.find(p => p.id === highlightedPinId);
+            if (activePin) {
+                setDraftText(''); // Reset text for new/replies
+                setIsMistakeDraft(activePin.status === 'mistake');
+            }
+        } else {
+            setDraftText('');
+            setIsMistakeDraft(false);
+            setReplyingPinId(null);
+        }
+    }, [highlightedPinId, pins]);
 
     const handleZoomIn = () => setZoom(prev => Math.min(prev + 0.25, 4));
     const handleZoomOut = () => setZoom(prev => Math.max(prev - 0.25, 0.5));
@@ -105,10 +116,8 @@ export function DesignCanvas({
     const handleMouseUp = () => setIsDragging(false);
 
     const handleCanvasClick = (e: React.MouseEvent) => {
-        // Prevent click if dragging or clicking existing pin
         if (!imageUrl || isDragging || (e.target as HTMLElement).closest('.pin-bubble')) return;
         
-        // Retain existing conditions: Designer can add in DRAFT, Manager can add in Review states
         const canAddPin = (isDesigner && status === 'DRAFT') || (!isDesigner && (status === 'INTERNAL_REVIEW' || status === 'CUSTOMER_REVIEW'));
         if (!canAddPin) return;
 
@@ -122,6 +131,7 @@ export function DesignCanvas({
     const handleSaveComment = (pinId: string) => {
         if (!draftText.trim()) return;
 
+        isSavingRef.current = true;
         const updatedPins = pins.map(p => {
             if (p.id === pinId) {
                 return {
@@ -133,12 +143,14 @@ export function DesignCanvas({
             return p;
         });
         onUpdatePins(updatedPins);
-        onPinClick(null); // Close popover after save
+        onPinClick(null);
+        setTimeout(() => { isSavingRef.current = false; }, 100);
     };
 
     const handleAddReply = (pinId: string) => {
         if (!draftText.trim()) return;
 
+        isSavingRef.current = true;
         const newReply: DesignReply = {
             author: isDesigner ? 'Designer' : 'Manager',
             text: draftText.trim(),
@@ -151,6 +163,7 @@ export function DesignCanvas({
         onUpdatePins(updatedPins);
         setReplyingPinId(null);
         setDraftText('');
+        setTimeout(() => { isSavingRef.current = false; }, 100);
     };
 
     const handleStatusChange = (pinId: string, newStatus: DesignPinStatus) => {
@@ -291,7 +304,6 @@ export function DesignCanvas({
                     />
                     
                     {pins.map((pin, index) => {
-                        // Only show pins from current version or earlier
                         if (pin.version > version) return null;
 
                         return (
@@ -300,8 +312,8 @@ export function DesignCanvas({
                                 open={highlightedPinId === pin.id} 
                                 onOpenChange={(open) => {
                                     if (!open) {
-                                        // Auto-discard empty pins when clicking away
-                                        if (!pin.text && !draftText.trim()) {
+                                        // Discard if empty and not currently saving
+                                        if (!pin.text && !draftText.trim() && !isSavingRef.current) {
                                             onUpdatePins(pins.filter(p => p.id !== pin.id));
                                         }
                                         onPinClick(null);
@@ -337,7 +349,6 @@ export function DesignCanvas({
                                     sideOffset={10} 
                                     align="center"
                                     onOpenAutoFocus={(e) => {
-                                        // Auto-focus the textarea for new pins
                                         if (!pin.text) {
                                             const textarea = e.currentTarget.querySelector('textarea');
                                             textarea?.focus();
@@ -411,7 +422,12 @@ export function DesignCanvas({
                                                                 className="h-8 text-[10px] font-semibold" 
                                                                 value={draftText} 
                                                                 onChange={(e) => setDraftText(e.target.value)} 
-                                                                onKeyDown={(e) => e.key === 'Enter' && handleAddReply(pin.id)}
+                                                                onKeyDown={(e) => {
+                                                                    if (e.key === 'Enter') handleAddReply(pin.id);
+                                                                }}
+                                                                onBlur={() => {
+                                                                    if (!draftText.trim() && !isSavingRef.current) setReplyingPinId(null);
+                                                                }}
                                                             />
                                                             <div className="flex justify-end gap-1">
                                                                 <Button variant="ghost" size="sm" className="h-6 text-[8px] font-black" onClick={() => setReplyingPinId(null)}>Cancel</Button>
@@ -423,7 +439,11 @@ export function DesignCanvas({
                                                     <div className="flex items-center justify-between pt-2 border-t border-primary/5">
                                                         <div className="flex gap-1.5">
                                                             {canInteractWithFeedback && !replyingPinId && (pin.status !== 'resolved') && (
-                                                                <Button variant="ghost" size="sm" className="h-7 text-[9px] font-black uppercase px-2" onClick={() => { setReplyingPinId(pin.id); setDraftText(''); }}>
+                                                                <Button variant="ghost" size="sm" className="h-7 text-[9px] font-black uppercase px-2" onClick={(e) => { 
+                                                                    e.stopPropagation();
+                                                                    setReplyingPinId(pin.id); 
+                                                                    setDraftText(''); 
+                                                                }}>
                                                                     Reply
                                                                 </Button>
                                                             )}
