@@ -40,6 +40,9 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
     const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
     const [compNameInput, setCompNameInput] = useState('');
     const [editingCompId, setEditingCompId] = useState<string | null>(null);
+    
+    // Tracker for new uploads in the current session (Work Started vs Draft Pending)
+    const [newDrafts, setNewDrafts] = useState<Record<string, boolean>>({});
 
     const designData = useMemo(() => {
         const baseData = product.designData || {
@@ -129,6 +132,11 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
     };
 
     const handleStatusChange = (status: DesignWorkflowStatus) => {
+        // Clear new draft flag if submitting or reverting
+        if (status === 'INTERNAL_REVIEW' || status === 'PENDING') {
+            setNewDrafts(prev => ({ ...prev, [activeCompId]: false }));
+        }
+        
         const updatedComponents = designData.components.map(c => 
             c.id === activeCompId ? { ...c, status } : c
         );
@@ -156,6 +164,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
                 } : c
             );
             onUpdateDesign({ ...designData, components: updatedComponents });
+            setNewDrafts(prev => ({ ...prev, [activeCompId]: true }));
         };
         reader.readAsDataURL(file);
     };
@@ -169,6 +178,15 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
             return c;
         });
         onUpdateDesign({ ...designData, components: updatedComponents });
+    };
+
+    const handleDeleteDraft = () => {
+        if (activeComponent.versions.length > 0) {
+            const newVersions = [...activeComponent.versions];
+            newVersions.pop(); // Remove most recently added version
+            handleUpdateVersions(newVersions);
+            setNewDrafts(prev => ({ ...prev, [activeCompId]: false }));
+        }
     };
 
     const getProductSpecsSummary = () => {
@@ -328,6 +346,8 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
                         onPinSelect={setHighlightedPinId}
                         onStatusChange={handleStatusChange}
                         onUpdateVersions={handleUpdateVersions}
+                        onDeleteDraft={handleDeleteDraft}
+                        hasNewDraft={!!newDrafts[activeCompId]}
                         onUpload={handleUpload}
                     />
                 </div>

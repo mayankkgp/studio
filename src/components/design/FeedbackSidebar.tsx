@@ -19,10 +19,7 @@ import {
     Send,
     Trash2,
     Play,
-    Pause,
     Lock,
-    Check,
-    X,
     Upload,
     RotateCcw
 } from 'lucide-react';
@@ -37,6 +34,8 @@ interface FeedbackSidebarProps {
     onPinSelect: (id: string) => void;
     onStatusChange: (status: DesignWorkflowStatus) => void;
     onUpdateVersions: (versions: DesignVersion[]) => void;
+    onDeleteDraft?: () => void;
+    hasNewDraft?: boolean;
     onUpload: (file: File) => void;
     isDesigner: boolean;
     currentVersion: number;
@@ -51,6 +50,8 @@ export function FeedbackSidebar({
     onPinSelect, 
     onStatusChange,
     onUpdateVersions,
+    onDeleteDraft,
+    hasNewDraft = false,
     onUpload,
     isDesigner,
     currentVersion 
@@ -129,7 +130,9 @@ export function FeedbackSidebar({
     };
 
     const handleDeleteDraft = () => {
-        if (versions.length > 0) {
+        if (onDeleteDraft) {
+            onDeleteDraft();
+        } else if (versions.length > 0) {
             const newVersions = [...versions];
             newVersions.pop();
             onUpdateVersions(newVersions);
@@ -150,10 +153,10 @@ export function FeedbackSidebar({
                 case 'PENDING':
                     return <Button className="w-full h-10 font-black uppercase tracking-widest gap-2" onClick={() => onStatusChange('DRAFT')}><Play className="h-4 w-4" /> Start Design</Button>;
                 case 'DRAFT':
-                    if (versions.length === 0) {
+                    if (!hasNewDraft) {
                         return (
                             <div className="flex flex-col gap-2">
-                                <Button className="w-full h-10 font-black uppercase tracking-widest gap-2" onClick={() => fileInputRef.current?.click()}><Upload className="h-4 w-4" /> Upload Draft</Button>
+                                <Button className="w-full h-10 font-black uppercase tracking-widest gap-2" onClick={() => fileInputRef.current?.click()}><Upload className="h-4 w-4" /> Upload Design</Button>
                                 <Button variant="ghost" className="w-full h-8 text-[10px] font-black uppercase tracking-widest text-muted-foreground" onClick={() => onStatusChange('PENDING')}>Stop Work</Button>
                             </div>
                         );
@@ -161,8 +164,7 @@ export function FeedbackSidebar({
                     return (
                         <div className="flex flex-col gap-2">
                             <Button className="w-full h-10 font-black uppercase tracking-widest gap-2 bg-green-600 hover:bg-green-700" onClick={() => onStatusChange('INTERNAL_REVIEW')}><Send className="h-4 w-4" /> Submit for Review</Button>
-                            <Button variant="outline" className="w-full h-8 text-[10px] font-black uppercase tracking-widest" onClick={() => fileInputRef.current?.click()}>Upload New Version</Button>
-                            <Button variant="ghost" className="w-full h-8 text-[10px] font-black uppercase tracking-widest text-destructive" onClick={handleDeleteDraft}><Trash2 className="h-3 w-3 mr-1.5" /> Delete Draft Version</Button>
+                            <Button variant="ghost" className="w-full h-8 text-[10px] font-black uppercase tracking-widest text-destructive" onClick={handleDeleteDraft}><Trash2 className="h-3 w-3 mr-1.5" /> Delete Draft</Button>
                         </div>
                     );
                 default:
