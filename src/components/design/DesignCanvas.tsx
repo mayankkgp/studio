@@ -41,7 +41,7 @@ export function DesignCanvas({
     const [zoom, setZoom] = useState(1);
     const [position, setPosition] = useState({ x: 0, y: 0 });
     const [isDragging, setIsDragging] = useState(false);
-    const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+    const [dragStart, setDragStart] = useState({ x: e.clientX - position.x, y: e.clientY - position.y });
     const containerRef = useRef<HTMLDivElement>(null);
     const imageRef = useRef<HTMLImageElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -108,6 +108,13 @@ export function DesignCanvas({
     if (!imageUrl) {
         return (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-muted/20 border-dashed border-2 rounded-xl m-4">
+                <input 
+                    type="file" 
+                    ref={fileInputRef} 
+                    onChange={handleFileChange} 
+                    accept="image/*" 
+                    className="hidden" 
+                />
                 {showUploadArea ? (
                     <div className="text-center space-y-4">
                         <div className="h-16 w-16 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto">
@@ -117,13 +124,6 @@ export function DesignCanvas({
                             <h4 className="font-bold">Ready to Start</h4>
                             <p className="text-xs text-muted-foreground">Upload the first draft to begin.</p>
                         </div>
-                        <input 
-                            type="file" 
-                            ref={fileInputRef} 
-                            onChange={handleFileChange} 
-                            accept="image/*" 
-                            className="hidden" 
-                        />
                         <Button onClick={() => fileInputRef.current?.click()} size="sm">
                             Select Design File
                         </Button>
@@ -131,7 +131,7 @@ export function DesignCanvas({
                 ) : (
                     <div className="text-center space-y-2 opacity-50 px-8">
                         <ImageIcon className="h-12 w-12 mx-auto" />
-                        <p className="text-sm font-medium">
+                        <p className="text-sm font-medium text-balance">
                             {status === 'PENDING' ? 'Waiting for designer to start work' : 'Design proof not yet submitted'}
                         </p>
                     </div>
@@ -169,7 +169,7 @@ export function DesignCanvas({
                                     <RotateCcw className="h-4 w-4" />
                                 </Button>
                             </TooltipTrigger>
-                            <TooltipContent side="left">Reset View</TooltipContent>
+                            <TooltipContent side="left">Reset View</TooltipProvider>
                         </Tooltip>
                     </TooltipProvider>
                 </div>

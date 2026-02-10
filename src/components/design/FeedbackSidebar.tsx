@@ -23,7 +23,8 @@ import {
     Lock,
     Check,
     X,
-    Upload
+    Upload,
+    RotateCcw
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -137,7 +138,11 @@ export function FeedbackSidebar({
 
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (file) onUpload(file);
+        if (file) {
+            onUpload(file);
+            // Reset input so the same file can be selected again if needed
+            e.target.value = '';
+        }
     };
 
     // UI Logic per State
@@ -152,7 +157,6 @@ export function FeedbackSidebar({
                             <div className="flex flex-col gap-2">
                                 <Button className="w-full h-10 font-black uppercase tracking-widest gap-2" onClick={() => fileInputRef.current?.click()}><Upload className="h-4 w-4" /> Upload Draft</Button>
                                 <Button variant="ghost" className="w-full h-8 text-[10px] font-black uppercase tracking-widest text-muted-foreground" onClick={() => onStatusChange('PENDING')}>Stop Work</Button>
-                                <input type="file" ref={fileInputRef} onChange={handleFileSelect} className="hidden" accept="image/*" />
                             </div>
                         );
                     }
@@ -161,7 +165,6 @@ export function FeedbackSidebar({
                             <Button className="w-full h-10 font-black uppercase tracking-widest gap-2 bg-green-600 hover:bg-green-700" onClick={() => onStatusChange('INTERNAL_REVIEW')}><Send className="h-4 w-4" /> Submit for Review</Button>
                             <Button variant="outline" className="w-full h-8 text-[10px] font-black uppercase tracking-widest" onClick={() => fileInputRef.current?.click()}>Upload New Version</Button>
                             <Button variant="ghost" className="w-full h-8 text-[10px] font-black uppercase tracking-widest text-destructive" onClick={handleDeleteDraft}><Trash2 className="h-3 w-3 mr-1.5" /> Delete Draft Version</Button>
-                            <input type="file" ref={fileInputRef} onChange={handleFileSelect} className="hidden" accept="image/*" />
                         </div>
                     );
                 default:
@@ -197,6 +200,15 @@ export function FeedbackSidebar({
 
     return (
         <div className="flex flex-col h-full bg-card/10 backdrop-blur-md">
+            {/* Hidden stable file input */}
+            <input 
+                type="file" 
+                ref={fileInputRef} 
+                onChange={handleFileSelect} 
+                className="hidden" 
+                accept="image/*" 
+            />
+
             <div className="p-4 border-b bg-background/50 space-y-4">
                 <div className="flex items-center justify-between">
                     <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Workflow State</span>
