@@ -316,9 +316,9 @@ export function DesignCanvas({
                                         if (!pin.text && !draftText.trim() && !isSavingRef.current) {
                                             onUpdatePins(pins.filter(p => p.id !== pin.id));
                                         }
-                                        onPinClick(null);
+                                        onPinSelect(null);
                                     } else {
-                                        onPinClick(pin.id);
+                                        onPinSelect(pin.id);
                                     }
                                 }}
                             >
@@ -426,7 +426,9 @@ export function DesignCanvas({
                                                                     if (e.key === 'Enter') handleAddReply(pin.id);
                                                                 }}
                                                                 onBlur={() => {
-                                                                    if (!draftText.trim() && !isSavingRef.current) setReplyingPinId(null);
+                                                                    setTimeout(() => {
+                                                                        if (!draftText.trim() && !isSavingRef.current) setReplyingPinId(null);
+                                                                    }, 150);
                                                                 }}
                                                             />
                                                             <div className="flex justify-end gap-1">

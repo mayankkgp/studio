@@ -76,19 +76,12 @@ export function FeedbackSidebar({
         if (highlightedPinId) {
             const el = document.getElementById(`comment-${highlightedPinId}`);
             if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            
-            const pin = pins.find(p => p.id === highlightedPinId);
-            if (pin && !pin.text && pin.version <= viewedVersion) {
-                setEditingPinId(highlightedPinId);
-                setDraftText('');
-                setIsMistakeDraft(false);
-            }
         } else {
             setEditingPinId(null);
             setReplyingPinId(null);
             setDraftText('');
         }
-    }, [highlightedPinId, pins, viewedVersion]);
+    }, [highlightedPinId]);
 
     const filteredPins = useMemo(() => {
         return pins.filter(pin => {
@@ -149,16 +142,16 @@ export function FeedbackSidebar({
     };
 
     const handleDiscardIfEmpty = (pinId: string) => {
-        // Give a tiny delay to see if we clicked "Save"
         setTimeout(() => {
             if (isSavingRef.current) return;
             
             const pin = pins.find(p => p.id === pinId);
-            if (pin && !pin.text && !draftText.trim()) {
-                onUpdatePins(pins.filter(p => p.id !== pinId));
-                onPinSelect(null);
+            // We only reset the local editing/reply state. 
+            // New pin deletion is handled by DesignCanvas Popover's lifecycle.
+            if (!draftText.trim()) {
+                setEditingPinId(null);
+                setReplyingPinId(null);
             }
-            setEditingPinId(null);
         }, 150);
     };
 
