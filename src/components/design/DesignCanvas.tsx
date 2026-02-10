@@ -72,7 +72,6 @@ export function DesignCanvas({
     const handleCanvasClick = (e: React.MouseEvent) => {
         if (!imageUrl || isDragging || (e.target as HTMLElement).closest('.pin-bubble')) return;
         
-        // Permission Check for Adding Pins
         const canAddPin = (isDesigner && status === 'DRAFT') || (!isDesigner && (status === 'INTERNAL_REVIEW' || status === 'CUSTOMER_REVIEW'));
         if (!canAddPin) return;
 
@@ -87,7 +86,6 @@ export function DesignCanvas({
         const file = e.target.files?.[0];
         if (file && onUpload) {
             onUpload(file);
-            // Reset input
             e.target.value = '';
         }
     };

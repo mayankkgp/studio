@@ -140,12 +140,10 @@ export function FeedbackSidebar({
         const file = e.target.files?.[0];
         if (file) {
             onUpload(file);
-            // Reset input so the same file can be selected again if needed
             e.target.value = '';
         }
     };
 
-    // UI Logic per State
     const renderActions = () => {
         if (isDesigner) {
             switch (status) {
@@ -171,7 +169,6 @@ export function FeedbackSidebar({
                     return <div className="flex items-center justify-center p-3 bg-muted/20 rounded-lg text-muted-foreground gap-2 font-black uppercase text-[10px] tracking-widest"><Lock className="h-3 w-3" /> Design Locked</div>;
             }
         } else {
-            // Manager Actions
             switch (status) {
                 case 'PENDING':
                 case 'DRAFT':
@@ -200,7 +197,6 @@ export function FeedbackSidebar({
 
     return (
         <div className="flex flex-col h-full bg-card/10 backdrop-blur-md">
-            {/* Hidden stable file input */}
             <input 
                 type="file" 
                 ref={fileInputRef} 
@@ -291,12 +287,20 @@ export function FeedbackSidebar({
                                             ))}
                                             <div className="flex items-center justify-between pt-2 border-t border-primary/5">
                                                 <div className="flex gap-1">
-                                                    {canAddFeedback && (pin.status === 'open' || pin.status === 'mistake') && <Button variant="ghost" size="sm" className="h-6 text-[8px] font-black uppercase px-2" onClick={(e) => { e.stopPropagation(); setReplyingPinId(pin.id); setDraftText(''); }}>Reply</Button>}
-                                                    {isDesigner && status === 'DRAFT' && (pin.status === 'open' || pin.status === 'mistake') && <Button variant="secondary" size="sm" className="h-6 text-[8px] font-black uppercase px-2 bg-amber-100 text-amber-800" onClick={(e) => { e.stopPropagation(); onUpdatePins(pins.map(p => p.id === pin.id ? { ...p, status: 'fixed' } : p)); }}>Mark Fixed</Button>}
-                                                    {!isDesigner && status === 'INTERNAL_REVIEW' && pin.status === 'fixed' && (
+                                                    {canAddFeedback && (pin.status === 'open' || pin.status === 'mistake' || pin.status === 'fixed') && <Button variant="ghost" size="sm" className="h-6 text-[8px] font-black uppercase px-2" onClick={(e) => { e.stopPropagation(); setReplyingPinId(pin.id); setDraftText(''); }}>Reply</Button>}
+                                                    
+                                                    {isDesigner && status === 'DRAFT' && (pin.status === 'open' || pin.status === 'mistake') && (
+                                                        <Button variant="secondary" size="sm" className="h-6 text-[8px] font-black uppercase px-2 bg-amber-100 text-amber-800" onClick={(e) => { e.stopPropagation(); onUpdatePins(pins.map(p => p.id === pin.id ? { ...p, status: 'fixed' } : p)); }}>Mark Fixed</Button>
+                                                    )}
+
+                                                    {!isDesigner && (status === 'INTERNAL_REVIEW' || status === 'CUSTOMER_REVIEW') && (
                                                         <>
-                                                            <Button size="sm" className="h-6 text-[8px] font-black uppercase px-2 bg-green-600 text-white" onClick={(e) => { e.stopPropagation(); onUpdatePins(pins.map(p => p.id === pin.id ? { ...p, status: 'resolved' } : p)); }}>Resolve</Button>
-                                                            <Button variant="ghost" size="sm" className="h-6 text-[8px] font-black uppercase px-2 text-destructive" onClick={(e) => { e.stopPropagation(); onUpdatePins(pins.map(p => p.id === pin.id ? { ...p, status: 'open' } : p)); }}>Reject</Button>
+                                                            {(pin.status === 'open' || pin.status === 'mistake' || pin.status === 'fixed') && (
+                                                                <Button size="sm" className="h-6 text-[8px] font-black uppercase px-2 bg-green-600 text-white" onClick={(e) => { e.stopPropagation(); onUpdatePins(pins.map(p => p.id === pin.id ? { ...p, status: 'resolved' } : p)); }}>Resolve</Button>
+                                                            )}
+                                                            {pin.status === 'fixed' && (
+                                                                <Button variant="ghost" size="sm" className="h-6 text-[8px] font-black uppercase px-2 text-destructive" onClick={(e) => { e.stopPropagation(); onUpdatePins(pins.map(p => p.id === pin.id ? { ...p, status: 'open' } : p)); }}>Reject Fix</Button>
+                                                            )}
                                                         </>
                                                     )}
                                                 </div>
