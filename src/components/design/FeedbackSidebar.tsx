@@ -75,7 +75,13 @@ export function FeedbackSidebar({
     useEffect(() => {
         if (highlightedPinId) {
             const el = document.getElementById(`comment-${highlightedPinId}`);
-            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            if (el) {
+                el.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'nearest', // Use nearest to minimize layout shifts
+                    inline: 'nearest' 
+                });
+            }
         } else {
             setEditingPinId(null);
             setReplyingPinId(null);
@@ -145,9 +151,6 @@ export function FeedbackSidebar({
         setTimeout(() => {
             if (isSavingRef.current) return;
             
-            const pin = pins.find(p => p.id === pinId);
-            // We only reset the local editing/reply state. 
-            // New pin deletion is handled by DesignCanvas Popover's lifecycle.
             if (!draftText.trim()) {
                 setEditingPinId(null);
                 setReplyingPinId(null);

@@ -82,7 +82,7 @@ export function DesignCanvas({
         if (highlightedPinId) {
             const activePin = pins.find(p => p.id === highlightedPinId);
             if (activePin) {
-                setDraftText(''); // Reset text for new/replies
+                setDraftText(''); 
                 setIsMistakeDraft(activePin.status === 'mistake');
             }
         } else {
@@ -316,9 +316,9 @@ export function DesignCanvas({
                                         if (!pin.text && !draftText.trim() && !isSavingRef.current) {
                                             onUpdatePins(pins.filter(p => p.id !== pin.id));
                                         }
-                                        onPinSelect(null);
+                                        onPinClick(null);
                                     } else {
-                                        onPinSelect(pin.id);
+                                        onPinClick(pin.id);
                                     }
                                 }}
                             >
@@ -349,9 +349,13 @@ export function DesignCanvas({
                                     sideOffset={10} 
                                     align="center"
                                     onOpenAutoFocus={(e) => {
+                                        // CRITICAL: Prevent scrolling when focus moves to popover
+                                        e.preventDefault();
                                         if (!pin.text) {
                                             const textarea = e.currentTarget.querySelector('textarea');
-                                            textarea?.focus();
+                                            textarea?.focus({ preventScroll: true });
+                                        } else {
+                                            (e.currentTarget as HTMLElement).focus({ preventScroll: true });
                                         }
                                     }}
                                 >
