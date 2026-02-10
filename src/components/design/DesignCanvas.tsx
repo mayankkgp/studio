@@ -4,7 +4,20 @@ import * as React from 'react';
 import { useState, useRef, useEffect } from 'react';
 import type { DesignPin, DesignPinStatus, DesignWorkflowStatus, DesignReply } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { ZoomIn, ZoomOut, RotateCcw, Upload, Image as ImageIcon, X, Maximize2, MessageSquare, AlertCircle, CornerDownRight, CheckCircle2, Send } from 'lucide-react';
+import { 
+    ZoomIn, 
+    ZoomOut, 
+    RotateCcw, 
+    Upload, 
+    Image as ImageIcon, 
+    X, 
+    Maximize2, 
+    MessageSquare, 
+    AlertCircle, 
+    CornerDownRight, 
+    CheckCircle2, 
+    Send 
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -12,6 +25,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import { format } from 'date-fns';
 
 interface DesignCanvasProps {
