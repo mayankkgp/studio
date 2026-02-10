@@ -78,7 +78,7 @@ export function FeedbackSidebar({
             if (el) {
                 el.scrollIntoView({ 
                     behavior: 'smooth', 
-                    block: 'nearest', // Use nearest to minimize layout shifts
+                    block: 'nearest',
                     inline: 'nearest' 
                 });
             }
@@ -122,6 +122,11 @@ export function FeedbackSidebar({
         setEditingPinId(null);
         setDraftText('');
         setTimeout(() => { isSavingRef.current = false; }, 100);
+    };
+
+    const handleDeletePin = (pinId: string) => {
+        onUpdatePins(pins.filter(p => p.id !== pinId));
+        if (highlightedPinId === pinId) onPinSelect(null);
     };
 
     const handleAddReply = (pinId: string) => {
@@ -292,7 +297,19 @@ export function FeedbackSidebar({
                                             <div className={cn("h-5 w-5 rounded flex items-center justify-center text-[10px] font-black text-white", pin.status === 'open' ? "bg-blue-600" : pin.status === 'mistake' ? "bg-destructive" : pin.status === 'fixed' ? "bg-amber-500" : "bg-green-600")}>{pinNumber}</div>
                                             <span className="text-[10px] font-black uppercase">{pin.author}</span>
                                         </div>
-                                        <span className="text-[9px] font-bold text-muted-foreground uppercase opacity-60">{format(new Date(pin.timestamp), 'h:mm a')} • V{pin.version}</span>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-[9px] font-bold text-muted-foreground uppercase opacity-60">{format(new Date(pin.timestamp), 'h:mm a')} • V{pin.version}</span>
+                                            {canAddFeedback && (
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="icon" 
+                                                    className="h-6 w-6 text-destructive opacity-0 group-hover:opacity-100 transition-opacity" 
+                                                    onClick={(e) => { e.stopPropagation(); handleDeletePin(pin.id); }}
+                                                >
+                                                    <Trash2 className="h-3 w-3" />
+                                                </Button>
+                                            )}
+                                        </div>
                                     </div>
 
                                     {editingPinId === pin.id ? (
@@ -330,7 +347,19 @@ export function FeedbackSidebar({
                                                         </>
                                                     )}
                                                 </div>
-                                                {pin.status === 'resolved' && <div className="flex items-center gap-1 text-[8px] font-black text-green-600"><CheckCircle2 className="h-3 w-3" /> RESOLVED</div>}
+                                                <div className="flex items-center gap-2">
+                                                    {pin.status === 'resolved' && <div className="flex items-center gap-1 text-[8px] font-black text-green-600"><CheckCircle2 className="h-3 w-3" /> RESOLVED</div>}
+                                                    {canAddFeedback && pin.status !== 'resolved' && (
+                                                        <Button 
+                                                            variant="ghost" 
+                                                            size="icon" 
+                                                            className="h-6 w-6 text-destructive" 
+                                                            onClick={(e) => { e.stopPropagation(); handleDeletePin(pin.id); }}
+                                                        >
+                                                            <Trash2 className="h-3 w-3" />
+                                                        </Button>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
                                     )}

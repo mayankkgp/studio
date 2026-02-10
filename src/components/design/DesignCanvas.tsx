@@ -16,7 +16,8 @@ import {
     AlertCircle, 
     CornerDownRight, 
     CheckCircle2, 
-    Send 
+    Send,
+    Trash2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -147,6 +148,11 @@ export function DesignCanvas({
         setTimeout(() => { isSavingRef.current = false; }, 100);
     };
 
+    const handleDeletePin = (pinId: string) => {
+        onUpdatePins(pins.filter(p => p.id !== pinId));
+        onPinClick(null);
+    };
+
     const handleAddReply = (pinId: string) => {
         if (!draftText.trim()) return;
 
@@ -168,6 +174,15 @@ export function DesignCanvas({
 
     const handleStatusChange = (pinId: string, newStatus: DesignPinStatus) => {
         onUpdatePins(pins.map(p => p.id === pinId ? { ...p, status: newStatus } : p));
+    };
+
+    const handleClosePopover = (pinId: string) => {
+        const pin = pins.find(p => p.id === pinId);
+        // If the pin is unsaved (no text) and we close it, remove it
+        if (pin && !pin.text && !draftText.trim() && !isSavingRef.current) {
+            onUpdatePins(pins.filter(p => p.id !== pinId));
+        }
+        onPinClick(null);
     };
 
     const canInteractWithFeedback = (isDesigner && status === 'DRAFT') || (!isDesigner && (status === 'INTERNAL_REVIEW' || status === 'CUSTOMER_REVIEW'));
@@ -312,11 +327,7 @@ export function DesignCanvas({
                                 open={highlightedPinId === pin.id} 
                                 onOpenChange={(open) => {
                                     if (!open) {
-                                        // Discard if empty and not currently saving
-                                        if (!pin.text && !draftText.trim() && !isSavingRef.current) {
-                                            onUpdatePins(pins.filter(p => p.id !== pin.id));
-                                        }
-                                        onPinClick(null);
+                                        handleClosePopover(pin.id);
                                     } else {
                                         onPinClick(pin.id);
                                     }
@@ -349,7 +360,6 @@ export function DesignCanvas({
                                     sideOffset={10} 
                                     align="center"
                                     onOpenAutoFocus={(e) => {
-                                        // CRITICAL: Prevent scrolling when focus moves to popover
                                         e.preventDefault();
                                         if (!pin.text) {
                                             const textarea = e.currentTarget.querySelector('textarea');
@@ -367,7 +377,17 @@ export function DesignCanvas({
                                                 </div>
                                                 <span className="text-[10px] font-black uppercase tracking-widest">{pin.author}</span>
                                             </div>
-                                            <span className="text-[9px] font-bold text-muted-foreground uppercase opacity-60">{format(new Date(pin.timestamp), 'h:mm a')} • V{pin.version}</span>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-[9px] font-bold text-muted-foreground uppercase opacity-60">{format(new Date(pin.timestamp), 'h:mm a')} • V{pin.version}</span>
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="icon" 
+                                                    className="h-6 w-6 text-muted-foreground hover:text-foreground" 
+                                                    onClick={() => handleClosePopover(pin.id)}
+                                                >
+                                                    <X className="h-3.5 w-3.5" />
+                                                </Button>
+                                            </div>
                                         </div>
 
                                         <div className="p-4 space-y-4">
@@ -392,6 +412,9 @@ export function DesignCanvas({
                                                             </div>
                                                         )}
                                                         <div className="flex gap-2 ml-auto">
+                                                            <Button variant="ghost" size="sm" className="h-7 text-[10px] font-black uppercase px-3" onClick={() => handleClosePopover(pin.id)}>
+                                                                Cancel
+                                                            </Button>
                                                             <Button size="sm" className="h-7 text-[10px] font-black uppercase px-3" onClick={() => handleSaveComment(pin.id)}>
                                                                 Save Feedback
                                                             </Button>
@@ -475,11 +498,17 @@ export function DesignCanvas({
                                                                 </>
                                                             )}
                                                         </div>
-                                                        {pin.status === 'resolved' && (
-                                                            <div className="flex items-center gap-1 text-[9px] font-black text-green-600">
-                                                                <CheckCircle2 className="h-3.5 w-3.5" /> RESOLVED
-                                                            </div>
-                                                        )}
+                                                        <div className="flex items-center gap-2">
+                                                            {pin.status === 'resolved' ? (
+                                                                <div className="flex items-center gap-1 text-[9px] font-black text-green-600">
+                                                                    <CheckCircle2 className="h-3.5 w-3.5" /> RESOLVED
+                                                                </div>
+                                                            ) : canInteractWithFeedback && (
+                                                                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:bg-destructive/10" onClick={() => handleDeletePin(pin.id)}>
+                                                                    <Trash2 className="h-3.5 w-3.5" />
+                                                                </Button>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </div>
                                             )}
