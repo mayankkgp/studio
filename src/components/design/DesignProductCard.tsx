@@ -4,7 +4,7 @@ import * as React from 'react';
 import { useState, useMemo, useEffect } from 'react';
 import type { ConfiguredProduct, DesignData, DesignComponent, DesignPin, DesignWorkflowStatus, DesignVersion } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/tabs';
 import { Badge } from '@/components/ui/badge';
 import { DesignCanvas } from './DesignCanvas';
 import { FeedbackSidebar } from './FeedbackSidebar';
@@ -32,16 +32,16 @@ import { Label } from '@/components/ui/label';
 interface DesignProductCardProps {
     product: ConfiguredProduct;
     isDesigner: boolean;
-    onUpdateDesign: (data: DesignData) => void;
+    onUpdateOrderDesign: (productId: string, data: DesignData) => void;
 }
 
-export function DesignProductCard({ product, isDesigner, onUpdateDesign }: DesignProductCardProps) {
+export function DesignProductCard({ product, isDesigner, onUpdateOrderDesign }: DesignProductCardProps) {
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
     const [compNameInput, setCompNameInput] = useState('');
     const [editingCompId, setEditingCompId] = useState<string | null>(null);
     
-    // Tracker for new uploads in the current session (Work Started vs Draft Pending)
+    // Tracker for new uploads in the current session
     const [newDrafts, setNewDrafts] = useState<Record<string, boolean>>({});
 
     const designData = useMemo(() => {
@@ -71,6 +71,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
 
     const [activeCompId, setActiveCompId] = useState(designData.components[0]?.id);
     const [highlightedPinId, setHighlightedPinId] = useState<string | null>(null);
+    const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
 
     useEffect(() => {
         const currentStillExists = designData.components.some(c => c.id === activeCompId);
@@ -78,6 +79,11 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
             setActiveCompId(designData.components[0].id);
         }
     }, [designData.components, activeCompId]);
+
+    // Reset selected version when component changes
+    useEffect(() => {
+        setSelectedVersionId(null);
+    }, [activeCompId]);
 
     const activeComponent = designData.components.find(c => c.id === activeCompId) || designData.components[0];
     
@@ -87,9 +93,17 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
         ? activeComponent.versions[activeComponent.versions.length - 1].versionNumber 
         : 0;
     
-    const activeVersion = (activeComponent.versions && activeComponent.versions.length > 0)
-        ? activeComponent.versions[activeComponent.versions.length - 1] 
-        : null;
+    const activeVersion = useMemo(() => {
+        if (!activeComponent.versions || activeComponent.versions.length === 0) return null;
+        if (selectedVersionId) {
+            return activeComponent.versions.find(v => v.id === selectedVersionId) || activeComponent.versions[activeComponent.versions.length - 1];
+        }
+        return activeComponent.versions[activeComponent.versions.length - 1];
+    }, [activeComponent.versions, selectedVersionId]);
+
+    const handleUpdateDesign = (updatedData: DesignData) => {
+        onUpdateOrderDesign(product.id, updatedData);
+    };
 
     const handleAddComponent = () => {
         if (!compNameInput.trim()) return;
@@ -101,7 +115,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
             pins: []
         };
         const updated = { ...designData, components: [...designData.components, newComp] };
-        onUpdateDesign(updated);
+        handleUpdateDesign(updated);
         setActiveCompId(newComp.id);
         setIsAddModalOpen(false);
         setCompNameInput('');
@@ -112,7 +126,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
         const updatedComponents = designData.components.map(c => 
             c.id === editingCompId ? { ...c, name: compNameInput.trim() } : c
         );
-        onUpdateDesign({ ...designData, components: updatedComponents });
+        handleUpdateDesign({ ...designData, components: updatedComponents });
         setIsRenameModalOpen(false);
         setCompNameInput('');
         setEditingCompId(null);
@@ -121,18 +135,17 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
     const handleDeleteComponent = (compId: string) => {
         if (designData.components.length <= 1) return;
         const updatedComponents = designData.components.filter(c => c.id !== compId);
-        onUpdateDesign({ ...designData, components: updatedComponents });
+        handleUpdateDesign({ ...designData, components: updatedComponents });
     };
 
     const handleUpdatePins = (newPins: DesignPin[]) => {
         const updatedComponents = designData.components.map(c => 
             c.id === activeCompId ? { ...c, pins: newPins } : c
         );
-        onUpdateDesign({ ...designData, components: updatedComponents });
+        handleUpdateDesign({ ...designData, components: updatedComponents });
     };
 
     const handleStatusChange = (status: DesignWorkflowStatus) => {
-        // Clear new draft flag if submitting or reverting
         if (status === 'INTERNAL_REVIEW' || status === 'PENDING') {
             setNewDrafts(prev => ({ ...prev, [activeCompId]: false }));
         }
@@ -140,7 +153,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
         const updatedComponents = designData.components.map(c => 
             c.id === activeCompId ? { ...c, status } : c
         );
-        onUpdateDesign({ ...designData, components: updatedComponents });
+        handleUpdateDesign({ ...designData, components: updatedComponents });
     };
 
     const handleUpload = (file: File) => {
@@ -153,7 +166,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
                 versionNumber: newVersionNum,
                 imageUrl: result,
                 timestamp: new Date().toISOString(),
-                author: isDesigner ? 'Designer Team' : 'Manager Team'
+                author: isDesigner ? 'Designer' : 'Manager'
             };
 
             const updatedComponents = designData.components.map(c => 
@@ -163,8 +176,9 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
                     status: 'DRAFT' as DesignWorkflowStatus
                 } : c
             );
-            onUpdateDesign({ ...designData, components: updatedComponents });
+            handleUpdateDesign({ ...designData, components: updatedComponents });
             setNewDrafts(prev => ({ ...prev, [activeCompId]: true }));
+            setSelectedVersionId(newVersion.id); // View the newly uploaded version
         };
         reader.readAsDataURL(file);
     };
@@ -177,15 +191,16 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
             }
             return c;
         });
-        onUpdateDesign({ ...designData, components: updatedComponents });
+        handleUpdateDesign({ ...designData, components: updatedComponents });
     };
 
     const handleDeleteDraft = () => {
         if (activeComponent.versions.length > 0) {
             const newVersions = [...activeComponent.versions];
-            newVersions.pop(); // Remove most recently added version
+            newVersions.pop(); 
             handleUpdateVersions(newVersions);
             setNewDrafts(prev => ({ ...prev, [activeCompId]: false }));
+            setSelectedVersionId(null); // Return to latest
         }
     };
 
@@ -312,7 +327,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
                                 pins={activeComponent.pins || []}
                                 highlightedPinId={highlightedPinId}
                                 isDesigner={isDesigner}
-                                version={currentVersionNum}
+                                version={activeVersion?.versionNumber || currentVersionNum}
                                 status={activeComponent.status || 'PENDING'}
                                 onAddPin={(x, y) => {
                                     const newPin: DesignPin = {
@@ -322,7 +337,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
                                         status: 'open',
                                         author: isDesigner ? 'Designer' : 'Manager',
                                         timestamp: new Date().toISOString(),
-                                        version: currentVersionNum,
+                                        version: activeVersion?.versionNumber || currentVersionNum,
                                         text: '',
                                         replies: []
                                     };
@@ -339,11 +354,13 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
                         pins={activeComponent.pins || []}
                         versions={activeComponent.versions || []}
                         highlightedPinId={highlightedPinId}
+                        selectedVersionId={activeVersion?.id || null}
                         status={activeComponent.status || 'PENDING'}
                         isDesigner={isDesigner}
                         currentVersion={currentVersionNum}
                         onUpdatePins={handleUpdatePins}
                         onPinSelect={setHighlightedPinId}
+                        onVersionSelect={setSelectedVersionId}
                         onStatusChange={handleStatusChange}
                         onUpdateVersions={handleUpdateVersions}
                         onDeleteDraft={handleDeleteDraft}

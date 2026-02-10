@@ -29,9 +29,11 @@ interface FeedbackSidebarProps {
     pins: DesignPin[];
     versions: DesignVersion[];
     highlightedPinId: string | null;
+    selectedVersionId: string | null;
     status: DesignWorkflowStatus;
     onUpdatePins: (pins: DesignPin[]) => void;
     onPinSelect: (id: string) => void;
+    onVersionSelect: (id: string) => void;
     onStatusChange: (status: DesignWorkflowStatus) => void;
     onUpdateVersions: (versions: DesignVersion[]) => void;
     onDeleteDraft?: () => void;
@@ -45,9 +47,11 @@ export function FeedbackSidebar({
     pins, 
     versions,
     highlightedPinId, 
+    selectedVersionId,
     status = 'PENDING',
     onUpdatePins, 
     onPinSelect, 
+    onVersionSelect,
     onStatusChange,
     onUpdateVersions,
     onDeleteDraft,
@@ -226,13 +230,22 @@ export function FeedbackSidebar({
                 <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2 mb-3"><History className="h-3.5 w-3.5" /> Version History</h4>
                 <div className="space-y-2">
                     {versions.map((v) => (
-                        <div key={v.id} className="flex items-center justify-between p-2 rounded-lg bg-background border border-primary/5 text-[11px]">
+                        <button 
+                            key={v.id} 
+                            onClick={() => onVersionSelect(v.id)}
+                            className={cn(
+                                "w-full flex items-center justify-between p-2 rounded-lg border transition-all text-[11px]",
+                                selectedVersionId === v.id 
+                                    ? "bg-primary/10 border-primary text-primary shadow-sm" 
+                                    : "bg-background border-primary/5 text-foreground hover:border-primary/20"
+                            )}
+                        >
                             <div className="flex items-center gap-2">
-                                <Badge variant="secondary" className="h-5 px-1.5 font-mono">V{v.versionNumber}</Badge>
+                                <Badge variant={selectedVersionId === v.id ? "default" : "secondary"} className="h-5 px-1.5 font-mono">V{v.versionNumber}</Badge>
                                 <span className="font-bold">{v.author}</span>
                             </div>
                             <span className="text-muted-foreground text-[10px] font-medium">{format(new Date(v.timestamp), 'MMM dd, HH:mm')}</span>
-                        </div>
+                        </button>
                     ))}
                     {versions.length === 0 && <div className="text-center py-4 border border-dashed rounded-lg opacity-40 italic text-[10px]">No versions uploaded</div>}
                 </div>
