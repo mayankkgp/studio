@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { DesignCanvas } from './DesignCanvas';
 import { FeedbackSidebar } from './FeedbackSidebar';
 import { cn } from '@/lib/utils';
-import { Package, Circle, Plus, Pencil, Trash2, MoreVertical } from 'lucide-react';
+import { Package, Circle, Plus, Pencil, Trash2, MoreVertical, Maximize2, X } from 'lucide-react';
 import { productCatalog } from '@/lib/product-data';
 import { Button } from '@/components/ui/button';
 import {
@@ -24,7 +24,9 @@ import {
     DialogHeader,
     DialogTitle,
     DialogFooter,
-    DialogDescription
+    DialogDescription,
+    DialogPortal,
+    DialogOverlay
 } from "@/components/ui/dialog";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -38,10 +40,10 @@ interface DesignProductCardProps {
 export function DesignProductCard({ product, isDesigner, onUpdateOrderDesign }: DesignProductCardProps) {
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
+    const [isFullscreen, setIsFullscreen] = useState(false);
     const [compNameInput, setCompNameInput] = useState('');
     const [editingCompId, setEditingCompId] = useState<string | null>(null);
     
-    // Tracker for new uploads in the current session
     const [newDrafts, setNewDrafts] = useState<Record<string, boolean>>({});
 
     const designData = useMemo(() => {
@@ -80,7 +82,6 @@ export function DesignProductCard({ product, isDesigner, onUpdateOrderDesign }: 
         }
     }, [designData.components, activeCompId]);
 
-    // Reset selected version when component changes
     useEffect(() => {
         setSelectedVersionId(null);
     }, [activeCompId]);
@@ -178,7 +179,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateOrderDesign }: 
             );
             handleUpdateDesign({ ...designData, components: updatedComponents });
             setNewDrafts(prev => ({ ...prev, [activeCompId]: true }));
-            setSelectedVersionId(newVersion.id); // View the newly uploaded version
+            setSelectedVersionId(newVersion.id);
         };
         reader.readAsDataURL(file);
     };
@@ -200,7 +201,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateOrderDesign }: 
             newVersions.pop(); 
             handleUpdateVersions(newVersions);
             setNewDrafts(prev => ({ ...prev, [activeCompId]: false }));
-            setSelectedVersionId(null); // Return to latest
+            setSelectedVersionId(null);
         }
     };
 
@@ -245,6 +246,117 @@ export function DesignProductCard({ product, isDesigner, onUpdateOrderDesign }: 
             : null;
     };
 
+    const renderDesignLayout = (isFull: boolean = false) => (
+        <div className={cn(
+            "grid grid-cols-1 lg:grid-cols-[1fr_320px]",
+            isFull ? "flex-1 overflow-hidden" : "h-[600px]"
+        )}>
+            <div className="flex flex-col border-r border-primary/10 overflow-hidden bg-stone-50/50">
+                <div className="p-2 border-b bg-background/50 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <Tabs value={activeCompId} onValueChange={setActiveCompId} className="w-auto">
+                            <TabsList className="h-8 bg-muted/40 p-1">
+                                {(designData.components || []).map(comp => {
+                                    const dotColor = comp.status === 'APPROVED' ? 'text-green-500' :
+                                                    comp.status === 'CUSTOMER_REVIEW' ? 'text-blue-500' :
+                                                    comp.status === 'INTERNAL_REVIEW' ? 'text-amber-500' : 
+                                                    comp.status === 'PENDING' ? 'text-muted-foreground/30' : 'text-primary/50';
+                                    return (
+                                        <TabsTrigger key={comp.id} value={comp.id} className="text-[9px] font-black uppercase px-2 h-6 gap-1.5">
+                                            <Circle className={cn("h-1.5 w-1.5 fill-current", dotColor)} />
+                                            {comp.name}
+                                        </TabsTrigger>
+                                    );
+                                })}
+                            </TabsList>
+                        </Tabs>
+                        <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-7 w-7 text-primary hover:bg-primary/10"
+                            onClick={() => { setCompNameInput(''); setIsAddModalOpen(true); }}
+                        >
+                            <Plus className="h-4 w-4" />
+                        </Button>
+                    </div>
+
+                    <div className="flex items-center gap-1">
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground">
+                                    <MoreVertical className="h-4 w-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => {
+                                    setEditingCompId(activeComponent.id);
+                                    setCompNameInput(activeComponent.name);
+                                    setIsRenameModalOpen(true);
+                                }}>
+                                    <Pencil className="h-3.5 w-3.5 mr-2" /> Rename Component
+                                </DropdownMenuItem>
+                                <DropdownMenuItem 
+                                    className="text-destructive focus:text-destructive"
+                                    disabled={designData.components.length <= 1}
+                                    onClick={() => handleDeleteComponent(activeComponent.id)}
+                                >
+                                    <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete Component
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
+                </div>
+                
+                <div className="flex-1 relative">
+                    <DesignCanvas 
+                        imageUrl={activeVersion?.imageUrl || null}
+                        pins={activeComponent.pins || []}
+                        highlightedPinId={highlightedPinId}
+                        isDesigner={isDesigner}
+                        version={activeVersion?.versionNumber || currentVersionNum}
+                        status={activeComponent.status || 'PENDING'}
+                        onAddPin={(x, y) => {
+                            const newPin: DesignPin = {
+                                id: `pin-${Date.now()}`,
+                                x,
+                                y,
+                                status: 'open',
+                                author: isDesigner ? 'Designer' : 'Manager',
+                                timestamp: new Date().toISOString(),
+                                version: activeVersion?.versionNumber || currentVersionNum,
+                                text: '',
+                                replies: []
+                            };
+                            handleUpdatePins([...(activeComponent.pins || []), newPin]);
+                            setHighlightedPinId(newPin.id);
+                        }}
+                        onPinClick={setHighlightedPinId}
+                        onUpload={handleUpload}
+                        onToggleFullscreen={() => setIsFullscreen(!isFull)}
+                    />
+                </div>
+            </div>
+
+            <FeedbackSidebar 
+                pins={activeComponent.pins || []}
+                versions={activeComponent.versions || []}
+                highlightedPinId={highlightedPinId}
+                selectedVersionId={activeVersion?.id || null}
+                status={activeComponent.status || 'PENDING'}
+                isDesigner={isDesigner}
+                currentVersion={currentVersionNum}
+                onUpdatePins={handleUpdatePins}
+                onPinSelect={setHighlightedPinId}
+                onVersionSelect={setSelectedVersionId}
+                onStatusChange={handleStatusChange}
+                onUpdateVersions={handleUpdateVersions}
+                onDeleteDraft={handleDeleteDraft}
+                hasNewDraft={!!newDrafts[activeCompId]}
+                onUpload={handleUpload}
+            />
+        </div>
+    );
+
     return (
         <Card className="overflow-hidden border-2 border-primary/10 shadow-lg bg-card/50 backdrop-blur-sm">
             <CardHeader className="bg-muted/30 border-b py-3 px-4">
@@ -264,111 +376,31 @@ export function DesignProductCard({ product, isDesigner, onUpdateOrderDesign }: 
             </CardHeader>
 
             <CardContent className="p-0">
-                <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] h-[600px]">
-                    <div className="flex flex-col border-r border-primary/10 overflow-hidden bg-stone-50/50">
-                        <div className="p-2 border-b bg-background/50 flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <Tabs value={activeCompId} onValueChange={setActiveCompId} className="w-auto">
-                                    <TabsList className="h-8 bg-muted/40 p-1">
-                                        {(designData.components || []).map(comp => {
-                                            const dotColor = comp.status === 'APPROVED' ? 'text-green-500' :
-                                                            comp.status === 'CUSTOMER_REVIEW' ? 'text-blue-500' :
-                                                            comp.status === 'INTERNAL_REVIEW' ? 'text-amber-500' : 
-                                                            comp.status === 'PENDING' ? 'text-muted-foreground/30' : 'text-primary/50';
-                                            return (
-                                                <TabsTrigger key={comp.id} value={comp.id} className="text-[9px] font-black uppercase px-2 h-6 gap-1.5">
-                                                    <Circle className={cn("h-1.5 w-1.5 fill-current", dotColor)} />
-                                                    {comp.name}
-                                                </TabsTrigger>
-                                            );
-                                        })}
-                                    </TabsList>
-                                </Tabs>
-                                <Button 
-                                    variant="ghost" 
-                                    size="icon" 
-                                    className="h-7 w-7 text-primary hover:bg-primary/10"
-                                    onClick={() => { setCompNameInput(''); setIsAddModalOpen(true); }}
-                                >
-                                    <Plus className="h-4 w-4" />
-                                </Button>
-                            </div>
+                {renderDesignLayout(false)}
+            </CardContent>
 
-                            <div className="flex items-center gap-1">
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground">
-                                            <MoreVertical className="h-4 w-4" />
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                        <DropdownMenuItem onClick={() => {
-                                            setEditingCompId(activeComponent.id);
-                                            setCompNameInput(activeComponent.name);
-                                            setIsRenameModalOpen(true);
-                                        }}>
-                                            <Pencil className="h-3.5 w-3.5 mr-2" /> Rename Component
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem 
-                                            className="text-destructive focus:text-destructive"
-                                            disabled={designData.components.length <= 1}
-                                            onClick={() => handleDeleteComponent(activeComponent.id)}
-                                        >
-                                            <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete Component
-                                        </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
+            <Dialog open={isFullscreen} onOpenChange={setIsFullscreen}>
+                <DialogContent className="max-w-[100vw] w-screen h-screen p-0 gap-0 border-none rounded-none flex flex-col">
+                    <div className="flex items-center justify-between px-6 h-14 border-b bg-background shrink-0">
+                        <div className="flex items-center gap-3">
+                            <Package className="h-5 w-5 text-primary" />
+                            <div className="flex flex-col">
+                                <h2 className="font-headline font-black text-base leading-tight">{product.productName}</h2>
+                                <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">{activeComponent.name} — Workspace</p>
                             </div>
                         </div>
-                        
-                        <div className="flex-1 relative">
-                            <DesignCanvas 
-                                imageUrl={activeVersion?.imageUrl || null}
-                                pins={activeComponent.pins || []}
-                                highlightedPinId={highlightedPinId}
-                                isDesigner={isDesigner}
-                                version={activeVersion?.versionNumber || currentVersionNum}
-                                status={activeComponent.status || 'PENDING'}
-                                onAddPin={(x, y) => {
-                                    const newPin: DesignPin = {
-                                        id: `pin-${Date.now()}`,
-                                        x,
-                                        y,
-                                        status: 'open',
-                                        author: isDesigner ? 'Designer' : 'Manager',
-                                        timestamp: new Date().toISOString(),
-                                        version: activeVersion?.versionNumber || currentVersionNum,
-                                        text: '',
-                                        replies: []
-                                    };
-                                    handleUpdatePins([...(activeComponent.pins || []), newPin]);
-                                    setHighlightedPinId(newPin.id);
-                                }}
-                                onPinClick={setHighlightedPinId}
-                                onUpload={handleUpload}
-                            />
+                        <div className="flex items-center gap-4">
+                            <Badge variant="outline" className="font-black text-[10px] h-6 border-primary/20">
+                                VERSION {currentVersionNum}
+                            </Badge>
+                            <Button variant="ghost" size="icon" className="h-10 w-10 hover:bg-primary/5 rounded-full" onClick={() => setIsFullscreen(false)}>
+                                <X className="h-5 w-5" />
+                            </Button>
                         </div>
                     </div>
-
-                    <FeedbackSidebar 
-                        pins={activeComponent.pins || []}
-                        versions={activeComponent.versions || []}
-                        highlightedPinId={highlightedPinId}
-                        selectedVersionId={activeVersion?.id || null}
-                        status={activeComponent.status || 'PENDING'}
-                        isDesigner={isDesigner}
-                        currentVersion={currentVersionNum}
-                        onUpdatePins={handleUpdatePins}
-                        onPinSelect={setHighlightedPinId}
-                        onVersionSelect={setSelectedVersionId}
-                        onStatusChange={handleStatusChange}
-                        onUpdateVersions={handleUpdateVersions}
-                        onDeleteDraft={handleDeleteDraft}
-                        hasNewDraft={!!newDrafts[activeCompId]}
-                        onUpload={handleUpload}
-                    />
-                </div>
-            </CardContent>
+                    {renderDesignLayout(true)}
+                </DialogContent>
+            </Dialog>
 
             <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
                 <DialogContent>

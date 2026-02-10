@@ -4,7 +4,7 @@ import * as React from 'react';
 import { useState, useRef, useEffect } from 'react';
 import type { DesignPin, DesignPinStatus, DesignWorkflowStatus } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { ZoomIn, ZoomOut, RotateCcw, Upload, Image as ImageIcon, X } from 'lucide-react';
+import { ZoomIn, ZoomOut, RotateCcw, Upload, Image as ImageIcon, X, Maximize2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -15,6 +15,7 @@ interface DesignCanvasProps {
     onAddPin: (x: number, y: number) => void;
     onPinClick: (id: string) => void;
     onUpload?: (file: File) => void;
+    onToggleFullscreen?: () => void;
     isDesigner: boolean;
     version: number;
     status: DesignWorkflowStatus;
@@ -34,6 +35,7 @@ export function DesignCanvas({
     onAddPin, 
     onPinClick, 
     onUpload,
+    onToggleFullscreen,
     isDesigner,
     version,
     status
@@ -103,7 +105,7 @@ export function DesignCanvas({
         }
     }, [highlightedPinId, pins, zoom]);
 
-    const showUploadArea = isDesigner && status === 'DRAFT' && !imageUrl;
+    const showUploadArea = isDesigner && (status === 'DRAFT' || status === 'PENDING') && !imageUrl;
 
     if (!imageUrl) {
         return (
@@ -179,6 +181,16 @@ export function DesignCanvas({
                             </TooltipTrigger>
                             <TooltipContent side="left">Reset View</TooltipContent>
                         </Tooltip>
+                        {onToggleFullscreen && (
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-primary/10" onClick={onToggleFullscreen}>
+                                        <Maximize2 className="h-4 w-4" />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent side="left">Full Screen</TooltipContent>
+                            </Tooltip>
+                        )}
                     </TooltipProvider>
                 </div>
             </div>
