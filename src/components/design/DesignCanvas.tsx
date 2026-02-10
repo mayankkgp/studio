@@ -4,7 +4,7 @@ import * as React from 'react';
 import { useState, useRef, useEffect } from 'react';
 import type { DesignPin, DesignPinStatus, DesignWorkflowStatus } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { ZoomIn, ZoomOut, RotateCcw, Upload, Image as ImageIcon } from 'lucide-react';
+import { ZoomIn, ZoomOut, RotateCcw, Upload, Image as ImageIcon, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -41,7 +41,7 @@ export function DesignCanvas({
     const [zoom, setZoom] = useState(1);
     const [position, setPosition] = useState({ x: 0, y: 0 });
     const [isDragging, setIsDragging] = useState(false);
-    const [dragStart, setDragStart] = useState({ x: e.clientX - position.x, y: e.clientY - position.y });
+    const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
     const containerRef = useRef<HTMLDivElement>(null);
     const imageRef = useRef<HTMLImageElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -87,6 +87,8 @@ export function DesignCanvas({
         const file = e.target.files?.[0];
         if (file && onUpload) {
             onUpload(file);
+            // Reset input
+            e.target.value = '';
         }
     };
 
@@ -144,6 +146,14 @@ export function DesignCanvas({
 
     return (
         <div className="h-full flex flex-col relative group/canvas">
+            <input 
+                type="file" 
+                ref={fileInputRef} 
+                onChange={handleFileChange} 
+                accept="image/*" 
+                className="hidden" 
+            />
+            
             <div className="absolute top-4 right-4 z-50 flex flex-col gap-2 opacity-0 group-hover/canvas:opacity-100 transition-opacity">
                 <div className="bg-background/90 backdrop-blur-md border border-primary/20 rounded-lg p-1 shadow-2xl flex flex-col gap-1">
                     <TooltipProvider>
@@ -169,7 +179,7 @@ export function DesignCanvas({
                                     <RotateCcw className="h-4 w-4" />
                                 </Button>
                             </TooltipTrigger>
-                            <TooltipContent side="left">Reset View</TooltipProvider>
+                            <TooltipContent side="left">Reset View</TooltipContent>
                         </Tooltip>
                     </TooltipProvider>
                 </div>
