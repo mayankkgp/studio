@@ -154,7 +154,8 @@ export function DesignCanvas({
                 className="hidden" 
             />
             
-            <div className="absolute top-4 right-4 z-50 flex flex-col gap-2 opacity-0 group-hover/canvas:opacity-100 transition-opacity">
+            {/* Zoom Toolbar - Positioned top-24 to clear fullscreen modal controls */}
+            <div className="absolute top-24 right-4 z-50 flex flex-col gap-2 opacity-0 group-hover/canvas:opacity-100 transition-opacity">
                 <div className="bg-background/90 backdrop-blur-md border border-primary/20 rounded-lg p-1 shadow-2xl flex flex-col gap-1">
                     <TooltipProvider>
                         <Tooltip>
