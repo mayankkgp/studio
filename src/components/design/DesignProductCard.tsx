@@ -372,6 +372,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
                                 status={activeComponent.status || 'PENDING'}
                                 onAddPin={handleAddPin}
                                 onPinClick={setHighlightedPinId}
+                                onUpdatePins={handleUpdatePins}
                                 onUpload={handleUpload}
                                 onToggleFullscreen={() => setIsFullscreen(true)}
                             />
@@ -432,6 +433,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
                                     status={activeComponent.status || 'PENDING'}
                                     onAddPin={handleAddPin}
                                     onPinClick={setHighlightedPinId}
+                                    onUpdatePins={handleUpdatePins}
                                     onUpload={handleUpload}
                                 />
                             </div>
