@@ -4,7 +4,7 @@ import * as React from 'react';
 import { useState, useMemo, useEffect } from 'react';
 import type { ConfiguredProduct, DesignData, DesignComponent, DesignPin, DesignWorkflowStatus, DesignVersion } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsList, TabsTrigger } from '@/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { DesignCanvas } from './DesignCanvas';
 import { FeedbackSidebar } from './FeedbackSidebar';
