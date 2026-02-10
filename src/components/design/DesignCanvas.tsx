@@ -107,6 +107,7 @@ export function DesignCanvas({
         const x = ((e.clientX - rect.left) / rect.width) * 100;
         const y = ((e.clientY - rect.top) / rect.height) * 100;
         
+        setDraftText('');
         onAddPin(x, y);
     };
 
@@ -289,7 +290,13 @@ export function DesignCanvas({
                             <Popover 
                                 key={pin.id} 
                                 open={highlightedPinId === pin.id} 
-                                onOpenChange={(open) => onPinClick(open ? pin.id : null)}
+                                onOpenChange={(open) => {
+                                    if (!open && !pin.text && !draftText.trim()) {
+                                        // Discard pin if empty when clicking away
+                                        onUpdatePins(pins.filter(p => p.id !== pin.id));
+                                    }
+                                    onPinClick(open ? pin.id : null);
+                                }}
                             >
                                 <PopoverTrigger asChild>
                                     <button
@@ -312,7 +319,19 @@ export function DesignCanvas({
                                         {index + 1}
                                     </button>
                                 </PopoverTrigger>
-                                <PopoverContent className="w-80 p-0 overflow-hidden shadow-2xl border-primary/20" side="top" sideOffset={10} align="center">
+                                <PopoverContent 
+                                    className="w-80 p-0 overflow-hidden shadow-2xl border-primary/20" 
+                                    side="top" 
+                                    sideOffset={10} 
+                                    align="center"
+                                    onOpenAutoFocus={(e) => {
+                                        // Ensure the textarea gets focus when opened for a new pin
+                                        if (!pin.text) {
+                                            const textarea = e.currentTarget.querySelector('textarea');
+                                            textarea?.focus();
+                                        }
+                                    }}
+                                >
                                     <div className="bg-background">
                                         <div className="p-3 border-b bg-muted/20 flex items-center justify-between">
                                             <div className="flex items-center gap-2">
@@ -328,11 +347,15 @@ export function DesignCanvas({
                                             {!pin.text ? (
                                                 <div className="space-y-3">
                                                     <Textarea 
-                                                        autoFocus 
                                                         placeholder="Enter feedback details..." 
                                                         className="min-h-[80px] text-xs font-semibold" 
                                                         value={draftText} 
-                                                        onChange={(e) => setDraftText(e.target.value)} 
+                                                        onChange={(e) => setDraftText(e.target.value)}
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                                                                handleSaveComment(pin.id);
+                                                            }
+                                                        }}
                                                     />
                                                     <div className="flex items-center justify-between">
                                                         {!isDesigner && (
@@ -376,7 +399,10 @@ export function DesignCanvas({
                                                                 className="h-8 text-[10px] font-semibold" 
                                                                 value={draftText} 
                                                                 onChange={(e) => setDraftText(e.target.value)} 
-                                                                onKeyDown={(e) => e.key === 'Enter' && handleAddReply(pin.id)} 
+                                                                onKeyDown={(e) => e.key === 'Enter' && handleAddReply(pin.id)}
+                                                                onBlur={() => {
+                                                                    if (!draftText.trim()) setReplyingPinId(null);
+                                                                }}
                                                             />
                                                             <div className="flex justify-end gap-1">
                                                                 <Button variant="ghost" size="sm" className="h-6 text-[8px] font-black" onClick={() => setReplyingPinId(null)}>Cancel</Button>

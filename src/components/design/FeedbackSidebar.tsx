@@ -32,7 +32,7 @@ interface FeedbackSidebarProps {
     selectedVersionId: string | null;
     status: DesignWorkflowStatus;
     onUpdatePins: (pins: DesignPin[]) => void;
-    onPinSelect: (id: string) => void;
+    onPinSelect: (id: string | null) => void;
     onVersionSelect: (id: string) => void;
     onStatusChange: (status: DesignWorkflowStatus) => void;
     onUpdateVersions: (versions: DesignVersion[]) => void;
@@ -296,7 +296,25 @@ export function FeedbackSidebar({
 
                                     {editingPinId === pin.id ? (
                                         <div className="space-y-2">
-                                            <Textarea autoFocus placeholder="Enter feedback..." className="min-h-[60px] text-xs font-semibold" value={draftText} onChange={(e) => setDraftText(e.target.value)} />
+                                            <Textarea 
+                                                autoFocus 
+                                                placeholder="Enter feedback..." 
+                                                className="min-h-[60px] text-xs font-semibold" 
+                                                value={draftText} 
+                                                onChange={(e) => setDraftText(e.target.value)}
+                                                onBlur={(e) => {
+                                                    // Discard if blurred and empty
+                                                    const relatedTarget = e.relatedTarget as HTMLElement;
+                                                    if (!relatedTarget?.closest('.space-y-2')) {
+                                                        if (!draftText.trim()) {
+                                                            if (!pin.text) {
+                                                                onUpdatePins(pins.filter(p => p.id !== pin.id));
+                                                            }
+                                                            setEditingPinId(null);
+                                                        }
+                                                    }
+                                                }}
+                                            />
                                             <div className="flex items-center justify-between">
                                                 {!isDesigner && <div className="flex items-center space-x-2"><Checkbox id={`mistake-${pin.id}`} checked={isMistakeDraft} onCheckedChange={(val) => setIsMistakeDraft(!!val)} /><label htmlFor={`mistake-${pin.id}`} className="text-[9px] font-black uppercase tracking-wider text-destructive cursor-pointer">Mistake</label></div>}
                                                 <div className="flex gap-1 ml-auto"><Button variant="ghost" size="sm" className="h-6 text-[8px] font-black" onClick={() => setEditingPinId(null)}>Cancel</Button><Button size="sm" className="h-6 text-[8px] font-black" onClick={() => handleSaveComment(pin.id)}>Save</Button></div>
@@ -340,7 +358,17 @@ export function FeedbackSidebar({
 
                                     {replyingPinId === pin.id && (
                                         <div className="mt-2 space-y-2 p-2 bg-muted/30 rounded-lg animate-in slide-in-from-bottom-2">
-                                            <Input autoFocus placeholder="Reply..." className="h-7 text-[10px] font-semibold" value={draftText} onChange={(e) => setDraftText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAddReply(pin.id)} />
+                                            <Input 
+                                                autoFocus 
+                                                placeholder="Reply..." 
+                                                className="h-7 text-[10px] font-semibold" 
+                                                value={draftText} 
+                                                onChange={(e) => setDraftText(e.target.value)} 
+                                                onKeyDown={(e) => e.key === 'Enter' && handleAddReply(pin.id)}
+                                                onBlur={() => {
+                                                    if (!draftText.trim()) setReplyingPinId(null);
+                                                }}
+                                            />
                                             <div className="flex justify-end gap-1"><Button variant="ghost" size="sm" className="h-5 text-[8px] font-black" onClick={() => setReplyingPinId(null)}>X</Button><Button size="sm" className="h-5 text-[8px] font-black" onClick={() => handleAddReply(pin.id)}>Send</Button></div>
                                         </div>
                                     )}
