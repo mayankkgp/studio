@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useState, useRef, useEffect } from 'react';
-import type { DesignPin, DesignPinStatus } from '@/lib/types';
+import type { DesignPin, DesignPinStatus, DesignWorkflowStatus } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { ZoomIn, ZoomOut, RotateCcw, Upload, Image as ImageIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -17,6 +17,7 @@ interface DesignCanvasProps {
     onUpload?: (file: File) => void;
     isDesigner: boolean;
     version: number;
+    status: DesignWorkflowStatus;
 }
 
 const PIN_COLORS: Record<DesignPinStatus, string> = {
@@ -34,7 +35,8 @@ export function DesignCanvas({
     onPinClick, 
     onUpload,
     isDesigner,
-    version 
+    version,
+    status
 }: DesignCanvasProps) {
     const [zoom, setZoom] = useState(1);
     const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -70,6 +72,10 @@ export function DesignCanvas({
     const handleCanvasClick = (e: React.MouseEvent) => {
         if (!imageUrl || isDragging || (e.target as HTMLElement).closest('.pin-bubble')) return;
         
+        // Permission Check for Adding Pins
+        const canAddPin = (isDesigner && status === 'DRAFT') || (!isDesigner && (status === 'INTERNAL_REVIEW' || status === 'CUSTOMER_REVIEW'));
+        if (!canAddPin) return;
+
         const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
         const x = ((e.clientX - rect.left) / rect.width) * 100;
         const y = ((e.clientY - rect.top) / rect.height) * 100;
@@ -97,17 +103,19 @@ export function DesignCanvas({
         }
     }, [highlightedPinId, pins, zoom]);
 
+    const showUploadArea = isDesigner && status === 'DRAFT' && !imageUrl;
+
     if (!imageUrl) {
         return (
-            <div className="absolute inset-4 flex flex-col items-center justify-center bg-muted/20 border-dashed border-2 rounded-xl">
-                {isDesigner ? (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-muted/20 border-dashed border-2 rounded-xl m-4">
+                {showUploadArea ? (
                     <div className="text-center space-y-4">
                         <div className="h-16 w-16 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto">
                             <Upload className="h-8 w-8" />
                         </div>
                         <div className="space-y-1">
-                            <h4 className="font-bold">No Design Uploaded</h4>
-                            <p className="text-xs text-muted-foreground">Upload your first proof to begin collaboration.</p>
+                            <h4 className="font-bold">Ready to Start</h4>
+                            <p className="text-xs text-muted-foreground">Upload the first draft to begin.</p>
                         </div>
                         <input 
                             type="file" 
@@ -121,14 +129,18 @@ export function DesignCanvas({
                         </Button>
                     </div>
                 ) : (
-                    <div className="text-center space-y-2 opacity-50">
+                    <div className="text-center space-y-2 opacity-50 px-8">
                         <ImageIcon className="h-12 w-12 mx-auto" />
-                        <p className="text-sm font-medium">Design proof not yet submitted</p>
+                        <p className="text-sm font-medium">
+                            {status === 'PENDING' ? 'Waiting for designer to start work' : 'Design proof not yet submitted'}
+                        </p>
                     </div>
                 )}
             </div>
         );
     }
+
+    const canAddPin = (isDesigner && status === 'DRAFT') || (!isDesigner && (status === 'INTERNAL_REVIEW' || status === 'CUSTOMER_REVIEW'));
 
     return (
         <div className="h-full flex flex-col relative group/canvas">
@@ -163,14 +175,17 @@ export function DesignCanvas({
                 </div>
             </div>
 
-            <div className="absolute bottom-4 left-4 z-50 bg-background/80 backdrop-blur-md border px-2 py-1 rounded text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground shadow-sm">
-                Click design to drop a feedback pin
-            </div>
+            {canAddPin && (
+                <div className="absolute bottom-4 left-4 z-50 bg-background/80 backdrop-blur-md border px-2 py-1 rounded text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground shadow-sm pointer-events-none">
+                    Click design to drop a feedback pin
+                </div>
+            )}
 
             <div 
                 ref={containerRef}
                 className={cn(
-                    "flex-1 overflow-hidden cursor-crosshair relative select-none bg-stone-100",
+                    "flex-1 overflow-hidden relative select-none bg-stone-100",
+                    canAddPin ? "cursor-crosshair" : "cursor-default",
                     zoom > 1 && isDragging && "cursor-grabbing",
                     zoom > 1 && !isDragging && "cursor-grab"
                 )}

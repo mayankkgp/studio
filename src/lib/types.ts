@@ -52,7 +52,7 @@ export type ConfiguredProductAddon = {
 };
 
 export type DesignPinStatus = 'open' | 'mistake' | 'fixed' | 'resolved';
-export type DesignWorkflowStatus = 'DRAFT' | 'INTERNAL_REVIEW' | 'CHANGES_REQUESTED' | 'APPROVED';
+export type DesignWorkflowStatus = 'PENDING' | 'DRAFT' | 'INTERNAL_REVIEW' | 'CUSTOMER_REVIEW' | 'APPROVED';
 
 export type DesignReply = {
   author: string;

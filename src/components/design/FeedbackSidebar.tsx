@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { DesignPin, DesignPinStatus, DesignReply, DesignWorkflowStatus, DesignVersion } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,7 +9,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { 
     MessageSquare, 
@@ -18,12 +17,13 @@ import {
     History, 
     CornerDownRight, 
     Send,
+    Trash2,
+    Play,
+    Pause,
+    Lock,
     Check,
     X,
-    Clock,
-    UserCircle,
-    RotateCcw,
-    Zap
+    Upload
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -35,6 +35,8 @@ interface FeedbackSidebarProps {
     onUpdatePins: (pins: DesignPin[]) => void;
     onPinSelect: (id: string) => void;
     onStatusChange: (status: DesignWorkflowStatus) => void;
+    onUpdateVersions: (versions: DesignVersion[]) => void;
+    onUpload: (file: File) => void;
     isDesigner: boolean;
     currentVersion: number;
 }
@@ -43,23 +45,23 @@ export function FeedbackSidebar({
     pins, 
     versions,
     highlightedPinId, 
-    status = 'DRAFT', // Default to DRAFT to prevent replace() crash
+    status = 'PENDING',
     onUpdatePins, 
     onPinSelect, 
     onStatusChange,
+    onUpdateVersions,
+    onUpload,
     isDesigner,
     currentVersion 
 }: FeedbackSidebarProps) {
-    const [filter, setFilter] = useState<'all' | 'open' | 'mistakes'>('all');
+    const [filter, setFilter] = useState<'all' | 'open' | 'mistakes'>('open');
     const [editingPinId, setEditingPinId] = useState<string | null>(null);
     const [replyingPinId, setReplyingPinId] = useState<string | null>(null);
-    
-    // Draft states
     const [draftText, setDraftText] = useState('');
     const [isMistakeDraft, setIsMistakeDraft] = useState(false);
     const [shakeId, setShakeId] = useState<string | null>(null);
-    
-    // Auto-focus and scroll to highlighted pin
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
     useEffect(() => {
         if (highlightedPinId) {
             const el = document.getElementById(`comment-${highlightedPinId}`);
@@ -74,10 +76,12 @@ export function FeedbackSidebar({
     }, [highlightedPinId, pins]);
 
     const filteredPins = pins.filter(pin => {
-        if (filter === 'open') return pin.status === 'open' || pin.status === 'mistake';
+        if (filter === 'open') return pin.status === 'open' || pin.status === 'mistake' || pin.status === 'fixed';
         if (filter === 'mistakes') return pin.status === 'mistake';
         return true;
     }).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+    const hasOpenItems = pins.some(p => p.status === 'open' || p.status === 'mistake' || p.status === 'fixed');
 
     const handleSaveComment = (pinId: string) => {
         if (!draftText.trim()) {
@@ -102,11 +106,6 @@ export function FeedbackSidebar({
         setIsMistakeDraft(false);
     };
 
-    const handleUpdateStatus = (pinId: string, newStatus: DesignPinStatus) => {
-        const updatedPins = pins.map(p => p.id === pinId ? { ...p, status: newStatus } : p);
-        onUpdatePins(updatedPins);
-    };
-
     const handleAddReply = (pinId: string) => {
         if (!draftText.trim()) {
             setShakeId(`reply-${pinId}`);
@@ -128,65 +127,93 @@ export function FeedbackSidebar({
         setDraftText('');
     };
 
+    const handleDeleteDraft = () => {
+        if (versions.length > 0) {
+            const newVersions = [...versions];
+            newVersions.pop();
+            onUpdateVersions(newVersions);
+        }
+    };
+
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) onUpload(file);
+    };
+
+    // UI Logic per State
+    const renderActions = () => {
+        if (isDesigner) {
+            switch (status) {
+                case 'PENDING':
+                    return <Button className="w-full h-10 font-black uppercase tracking-widest gap-2" onClick={() => onStatusChange('DRAFT')}><Play className="h-4 w-4" /> Start Design</Button>;
+                case 'DRAFT':
+                    if (versions.length === 0) {
+                        return (
+                            <div className="flex flex-col gap-2">
+                                <Button className="w-full h-10 font-black uppercase tracking-widest gap-2" onClick={() => fileInputRef.current?.click()}><Upload className="h-4 w-4" /> Upload Draft</Button>
+                                <Button variant="ghost" className="w-full h-8 text-[10px] font-black uppercase tracking-widest text-muted-foreground" onClick={() => onStatusChange('PENDING')}>Stop Work</Button>
+                                <input type="file" ref={fileInputRef} onChange={handleFileSelect} className="hidden" accept="image/*" />
+                            </div>
+                        );
+                    }
+                    return (
+                        <div className="flex flex-col gap-2">
+                            <Button className="w-full h-10 font-black uppercase tracking-widest gap-2 bg-green-600 hover:bg-green-700" onClick={() => onStatusChange('INTERNAL_REVIEW')}><Send className="h-4 w-4" /> Submit for Review</Button>
+                            <Button variant="outline" className="w-full h-8 text-[10px] font-black uppercase tracking-widest" onClick={() => fileInputRef.current?.click()}>Upload New Version</Button>
+                            <Button variant="ghost" className="w-full h-8 text-[10px] font-black uppercase tracking-widest text-destructive" onClick={handleDeleteDraft}><Trash2 className="h-3 w-3 mr-1.5" /> Delete Draft Version</Button>
+                            <input type="file" ref={fileInputRef} onChange={handleFileSelect} className="hidden" accept="image/*" />
+                        </div>
+                    );
+                default:
+                    return <div className="flex items-center justify-center p-3 bg-muted/20 rounded-lg text-muted-foreground gap-2 font-black uppercase text-[10px] tracking-widest"><Lock className="h-3 w-3" /> Design Locked</div>;
+            }
+        } else {
+            // Manager Actions
+            switch (status) {
+                case 'PENDING':
+                case 'DRAFT':
+                    return <div className="p-3 border-2 border-dashed rounded-lg text-center text-muted-foreground text-[10px] font-black uppercase tracking-widest">Waiting for designer...</div>;
+                case 'INTERNAL_REVIEW':
+                    return (
+                        <div className="grid grid-cols-2 gap-2">
+                            <Button variant="destructive" className="h-10 text-[10px] font-black uppercase tracking-widest" onClick={() => onStatusChange('PENDING')}>Request Changes</Button>
+                            <Button className="h-10 text-[10px] font-black uppercase tracking-widest bg-green-600 hover:bg-green-700" disabled={hasOpenItems} onClick={() => onStatusChange('CUSTOMER_REVIEW')}>Approve for Client</Button>
+                        </div>
+                    );
+                case 'CUSTOMER_REVIEW':
+                    return (
+                        <div className="grid grid-cols-2 gap-2">
+                            <Button variant="outline" className="h-10 text-[10px] font-black uppercase tracking-widest border-destructive text-destructive" onClick={() => onStatusChange('PENDING')}>Customer Changes</Button>
+                            <Button className="h-10 text-[10px] font-black uppercase tracking-widest" onClick={() => onStatusChange('APPROVED')}>Mark Final</Button>
+                        </div>
+                    );
+                case 'APPROVED':
+                    return <Button variant="outline" className="w-full h-10 text-[10px] font-black uppercase tracking-widest border-primary text-primary" onClick={() => onStatusChange('INTERNAL_REVIEW')}><RotateCcw className="h-3.5 w-3.5 mr-2" /> Re-open Design</Button>;
+            }
+        }
+    };
+
+    const canAddFeedback = (isDesigner && status === 'DRAFT') || (!isDesigner && (status === 'INTERNAL_REVIEW' || status === 'CUSTOMER_REVIEW'));
+
     return (
         <div className="flex flex-col h-full bg-card/10 backdrop-blur-md">
-            {/* Workflow Actions */}
             <div className="p-4 border-b bg-background/50 space-y-4">
                 <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Status</span>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Workflow State</span>
                     <Badge className={cn(
                         "font-black text-[10px] tracking-wider",
                         status === 'APPROVED' ? "bg-green-600" :
                         status === 'INTERNAL_REVIEW' ? "bg-amber-500" :
-                        status === 'CHANGES_REQUESTED' ? "bg-destructive" : "bg-muted text-muted-foreground"
+                        status === 'CUSTOMER_REVIEW' ? "bg-blue-600" : "bg-muted text-muted-foreground"
                     )}>
-                        {(status || 'DRAFT').replace('_', ' ')}
+                        {status.replace('_', ' ')}
                     </Badge>
                 </div>
-
-                <div className="flex gap-2">
-                    {isDesigner ? (
-                        status !== 'APPROVED' && (
-                            <Button 
-                                className="w-full h-9 text-[10px] font-black uppercase tracking-widest gap-2" 
-                                size="sm"
-                                onClick={() => onStatusChange('INTERNAL_REVIEW')}
-                                disabled={status === 'INTERNAL_REVIEW' || versions.length === 0}
-                            >
-                                <Send className="h-3 w-3" />
-                                {status === 'INTERNAL_REVIEW' ? 'Waiting for Review' : 'Submit for Review'}
-                            </Button>
-                        )
-                    ) : (
-                        status === 'INTERNAL_REVIEW' && (
-                            <>
-                                <Button 
-                                    className="flex-1 h-9 bg-green-600 hover:bg-green-700 text-[10px] font-black uppercase tracking-widest" 
-                                    size="sm"
-                                    onClick={() => onStatusChange('APPROVED')}
-                                >
-                                    Approve
-                                </Button>
-                                <Button 
-                                    variant="destructive" 
-                                    className="flex-1 h-9 text-[10px] font-black uppercase tracking-widest" 
-                                    size="sm"
-                                    onClick={() => onStatusChange('CHANGES_REQUESTED')}
-                                >
-                                    Reject
-                                </Button>
-                            </>
-                        )
-                    )}
-                </div>
+                {renderActions()}
             </div>
 
-            {/* Version History */}
             <div className="p-4 border-b bg-muted/30">
-                <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2 mb-3">
-                    <History className="h-3.5 w-3.5" />
-                    Version History
-                </h4>
+                <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2 mb-3"><History className="h-3.5 w-3.5" /> Version History</h4>
                 <div className="space-y-2">
                     {versions.map((v) => (
                         <div key={v.id} className="flex items-center justify-between p-2 rounded-lg bg-background border border-primary/5 text-[11px]">
@@ -197,42 +224,20 @@ export function FeedbackSidebar({
                             <span className="text-muted-foreground text-[10px] font-medium">{format(new Date(v.timestamp), 'MMM dd, HH:mm')}</span>
                         </div>
                     ))}
-                    {versions.length === 0 && (
-                        <div className="text-center py-4 border border-dashed rounded-lg opacity-40 italic text-[10px]">
-                            No versions uploaded
-                        </div>
-                    )}
+                    {versions.length === 0 && <div className="text-center py-4 border border-dashed rounded-lg opacity-40 italic text-[10px]">No versions uploaded</div>}
                 </div>
             </div>
 
-            {/* Feedback Filter */}
-            <div className="p-4 border-b">
-                <div className="flex bg-muted/50 p-1 rounded-lg">
-                    {(['all', 'open', 'mistakes'] as const).map((f) => (
-                        <button
-                            key={f}
-                            onClick={() => setFilter(f)}
-                            className={cn(
-                                "flex-1 text-[9px] font-black uppercase tracking-widest h-7 rounded-md transition-all",
-                                filter === f 
-                                    ? "bg-background text-primary shadow-sm" 
-                                    : "text-muted-foreground hover:text-foreground hover:bg-background/40"
-                            )}
-                        >
-                            {f}
-                        </button>
-                    ))}
-                </div>
+            <div className="p-4 border-b flex gap-1 bg-muted/10">
+                {(['all', 'open', 'mistakes'] as const).map((f) => (
+                    <button key={f} onClick={() => setFilter(f)} className={cn("flex-1 text-[9px] font-black uppercase tracking-widest h-7 rounded-md transition-all", filter === f ? "bg-background text-primary shadow-sm" : "text-muted-foreground hover:text-foreground")}>{f}</button>
+                ))}
             </div>
 
-            {/* Feedback Stream */}
             <ScrollArea className="flex-1">
-                <div className="p-4 space-y-4">
+                <div className="p-4 space-y-4 pb-32">
                     {filteredPins.length === 0 ? (
-                        <div className="py-12 text-center opacity-30">
-                            <MessageSquare className="h-8 w-8 mx-auto mb-2" />
-                            <p className="text-[10px] font-black uppercase tracking-widest">No Feedback</p>
-                        </div>
+                        <div className="py-12 text-center opacity-30"><MessageSquare className="h-8 w-8 mx-auto mb-2" /><p className="text-[10px] font-black uppercase tracking-widest">No Feedback</p></div>
                     ) : (
                         filteredPins.map((pin) => {
                             const isHighlighted = highlightedPinId === pin.id;
@@ -241,155 +246,57 @@ export function FeedbackSidebar({
 
                             return (
                                 <div 
-                                    key={pin.id} 
-                                    id={`comment-${pin.id}`}
-                                    onClick={() => onPinSelect(pin.id)}
-                                    className={cn(
-                                        "group p-3 rounded-xl border-2 transition-all duration-300 relative",
-                                        isHighlighted 
-                                            ? "border-primary bg-background shadow-xl scale-[1.02] z-10" 
-                                            : "border-primary/5 bg-background/50 hover:border-primary/20",
-                                        pin.status === 'mistake' && !isHighlighted && "border-destructive/20 bg-destructive/5",
-                                        pin.status === 'resolved' && "opacity-60",
-                                        shakeId === pin.id && "animate-shake"
-                                    )}
+                                    key={pin.id} id={`comment-${pin.id}`} onClick={() => onPinSelect(pin.id)}
+                                    className={cn("p-3 rounded-xl border-2 transition-all duration-300 relative", isHighlighted ? "border-primary bg-background shadow-xl scale-[1.02] z-10" : "border-primary/5 bg-background/50 hover:border-primary/20", pin.status === 'mistake' && !isHighlighted && "border-destructive/20 bg-destructive/5", pin.status === 'resolved' && "opacity-60", shakeId === pin.id && "animate-shake")}
                                 >
                                     <div className="flex items-center justify-between mb-2">
                                         <div className="flex items-center gap-2">
-                                            <div className={cn(
-                                                "h-5 w-5 rounded flex items-center justify-center text-[10px] font-black text-white",
-                                                pin.status === 'open' && "bg-blue-600",
-                                                pin.status === 'mistake' && "bg-destructive",
-                                                pin.status === 'fixed' && "bg-amber-500",
-                                                pin.status === 'resolved' && "bg-green-600"
-                                            )}>
-                                                {pinNumber}
-                                            </div>
+                                            <div className={cn("h-5 w-5 rounded flex items-center justify-center text-[10px] font-black text-white", pin.status === 'open' ? "bg-blue-600" : pin.status === 'mistake' ? "bg-destructive" : pin.status === 'fixed' ? "bg-amber-500" : "bg-green-600")}>{pinNumber}</div>
                                             <span className="text-[10px] font-black uppercase">{pin.author}</span>
                                         </div>
-                                        <span className="text-[9px] font-bold text-muted-foreground uppercase opacity-60">
-                                            {format(new Date(pin.timestamp), 'h:mm a')} • V{pin.version}
-                                        </span>
+                                        <span className="text-[9px] font-bold text-muted-foreground uppercase opacity-60">{format(new Date(pin.timestamp), 'h:mm a')} • V{pin.version}</span>
                                     </div>
 
                                     {editingPinId === pin.id ? (
                                         <div className="space-y-2">
-                                            <Textarea 
-                                                autoFocus
-                                                placeholder="Comment..."
-                                                className="min-h-[60px] text-xs font-semibold leading-relaxed"
-                                                value={draftText}
-                                                onChange={(e) => setDraftText(e.target.value)}
-                                            />
+                                            <Textarea autoFocus placeholder="Enter feedback..." className="min-h-[60px] text-xs font-semibold" value={draftText} onChange={(e) => setDraftText(e.target.value)} />
                                             <div className="flex items-center justify-between">
-                                                {!isDesigner && (
-                                                    <div className="flex items-center space-x-2">
-                                                        <Checkbox 
-                                                            id={`mistake-${pin.id}`} 
-                                                            checked={isMistakeDraft}
-                                                            onCheckedChange={(val) => setIsMistakeDraft(!!val)}
-                                                        />
-                                                        <label htmlFor={`mistake-${pin.id}`} className="text-[9px] font-black uppercase tracking-wider text-destructive cursor-pointer">
-                                                            Mistake
-                                                        </label>
-                                                    </div>
-                                                )}
-                                                <div className="flex gap-1 ml-auto">
-                                                    <Button variant="ghost" size="sm" className="h-6 text-[8px] font-black" onClick={() => setEditingPinId(null)}>Cancel</Button>
-                                                    <Button size="sm" className="h-6 text-[8px] font-black" onClick={() => handleSaveComment(pin.id)}>Save</Button>
-                                                </div>
+                                                {!isDesigner && <div className="flex items-center space-x-2"><Checkbox id={`mistake-${pin.id}`} checked={isMistakeDraft} onCheckedChange={(val) => setIsMistakeDraft(!!val)} /><label htmlFor={`mistake-${pin.id}`} className="text-[9px] font-black uppercase tracking-wider text-destructive cursor-pointer">Mistake</label></div>}
+                                                <div className="flex gap-1 ml-auto"><Button variant="ghost" size="sm" className="h-6 text-[8px] font-black" onClick={() => setEditingPinId(null)}>Cancel</Button><Button size="sm" className="h-6 text-[8px] font-black" onClick={() => handleSaveComment(pin.id)}>Save</Button></div>
                                             </div>
                                         </div>
                                     ) : (
                                         <div className="space-y-3">
                                             <div className="relative">
                                                 {isMistake && <AlertCircle className="absolute -left-1 -top-1 h-3 w-3 text-destructive animate-pulse" />}
-                                                <p className="text-[11px] font-semibold leading-relaxed text-foreground/90 pl-3">
-                                                    {pin.text || "Drafting feedback..."}
-                                                </p>
+                                                <p className="text-[11px] font-semibold leading-relaxed text-foreground/90 pl-3">{pin.text || "Drafting feedback..."}</p>
                                             </div>
-
                                             {pin.replies.map((reply, i) => (
                                                 <div key={i} className="pl-3 border-l-2 border-primary/10 space-y-0.5">
-                                                    <div className="flex items-center gap-1.5 text-[8px] font-black uppercase text-muted-foreground">
-                                                        <CornerDownRight className="h-3 w-3" />
-                                                        {reply.author}
-                                                    </div>
-                                                    <p className="text-[10px] font-medium leading-relaxed bg-muted/40 p-1.5 rounded-md">
-                                                        {reply.text}
-                                                    </p>
+                                                    <div className="flex items-center gap-1.5 text-[8px] font-black uppercase text-muted-foreground"><CornerDownRight className="h-3 w-3" /> {reply.author}</div>
+                                                    <p className="text-[10px] font-medium leading-relaxed bg-muted/40 p-1.5 rounded-md">{reply.text}</p>
                                                 </div>
                                             ))}
-
                                             <div className="flex items-center justify-between pt-2 border-t border-primary/5">
                                                 <div className="flex gap-1">
-                                                    {(pin.status === 'open' || pin.status === 'mistake') && (
-                                                        <Button 
-                                                            variant="ghost" 
-                                                            size="sm" 
-                                                            className="h-6 text-[8px] font-black uppercase px-2"
-                                                            onClick={(e) => { e.stopPropagation(); setReplyingPinId(pin.id); setDraftText(''); }}
-                                                        >
-                                                            Reply
-                                                        </Button>
-                                                    )}
-                                                    
-                                                    {isDesigner && (pin.status === 'open' || pin.status === 'mistake') && (
-                                                        <Button 
-                                                            variant="secondary" 
-                                                            size="sm" 
-                                                            className="h-6 text-[8px] font-black uppercase px-2 bg-amber-100 text-amber-800"
-                                                            onClick={(e) => { e.stopPropagation(); handleUpdateStatus(pin.id, 'fixed'); }}
-                                                        >
-                                                            Mark Fixed
-                                                        </Button>
-                                                    )}
-
-                                                    {!isDesigner && pin.status === 'fixed' && (
+                                                    {canAddFeedback && (pin.status === 'open' || pin.status === 'mistake') && <Button variant="ghost" size="sm" className="h-6 text-[8px] font-black uppercase px-2" onClick={(e) => { e.stopPropagation(); setReplyingPinId(pin.id); setDraftText(''); }}>Reply</Button>}
+                                                    {isDesigner && status === 'DRAFT' && (pin.status === 'open' || pin.status === 'mistake') && <Button variant="secondary" size="sm" className="h-6 text-[8px] font-black uppercase px-2 bg-amber-100 text-amber-800" onClick={(e) => { e.stopPropagation(); onUpdatePins(pins.map(p => p.id === pin.id ? { ...p, status: 'fixed' } : p)); }}>Mark Fixed</Button>}
+                                                    {!isDesigner && status === 'INTERNAL_REVIEW' && pin.status === 'fixed' && (
                                                         <>
-                                                            <Button 
-                                                                size="sm" 
-                                                                className="h-6 text-[8px] font-black uppercase px-2 bg-green-600 text-white"
-                                                                onClick={(e) => { e.stopPropagation(); handleUpdateStatus(pin.id, 'resolved'); }}
-                                                            >
-                                                                Resolve
-                                                            </Button>
-                                                            <Button 
-                                                                variant="ghost" 
-                                                                size="sm" 
-                                                                className="h-6 text-[8px] font-black uppercase px-2 text-destructive"
-                                                                onClick={(e) => { e.stopPropagation(); handleUpdateStatus(pin.id, 'open'); }}
-                                                            >
-                                                                Reject
-                                                            </Button>
+                                                            <Button size="sm" className="h-6 text-[8px] font-black uppercase px-2 bg-green-600 text-white" onClick={(e) => { e.stopPropagation(); onUpdatePins(pins.map(p => p.id === pin.id ? { ...p, status: 'resolved' } : p)); }}>Resolve</Button>
+                                                            <Button variant="ghost" size="sm" className="h-6 text-[8px] font-black uppercase px-2 text-destructive" onClick={(e) => { e.stopPropagation(); onUpdatePins(pins.map(p => p.id === pin.id ? { ...p, status: 'open' } : p)); }}>Reject</Button>
                                                         </>
                                                     )}
                                                 </div>
-                                                
-                                                {pin.status === 'resolved' && (
-                                                    <div className="flex items-center gap-1 text-[8px] font-black text-green-600">
-                                                        <CheckCircle2 className="h-3 w-3" />
-                                                        RESOLVED
-                                                    </div>
-                                                )}
+                                                {pin.status === 'resolved' && <div className="flex items-center gap-1 text-[8px] font-black text-green-600"><CheckCircle2 className="h-3 w-3" /> RESOLVED</div>}
                                             </div>
                                         </div>
                                     )}
 
                                     {replyingPinId === pin.id && (
                                         <div className="mt-2 space-y-2 p-2 bg-muted/30 rounded-lg animate-in slide-in-from-bottom-2">
-                                            <Input 
-                                                autoFocus
-                                                placeholder="Reply..."
-                                                className="h-7 text-[10px] font-semibold"
-                                                value={draftText}
-                                                onChange={(e) => setDraftText(e.target.value)}
-                                                onKeyDown={(e) => e.key === 'Enter' && handleAddReply(pin.id)}
-                                            />
-                                            <div className="flex justify-end gap-1">
-                                                <Button variant="ghost" size="sm" className="h-5 text-[8px] font-black" onClick={() => setReplyingPinId(null)}>X</Button>
-                                                <Button size="sm" className="h-5 text-[8px] font-black" onClick={() => handleAddReply(pin.id)}>Send</Button>
-                                            </div>
+                                            <Input autoFocus placeholder="Reply..." className="h-7 text-[10px] font-semibold" value={draftText} onChange={(e) => setDraftText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAddReply(pin.id)} />
+                                            <div className="flex justify-end gap-1"><Button variant="ghost" size="sm" className="h-5 text-[8px] font-black" onClick={() => setReplyingPinId(null)}>X</Button><Button size="sm" className="h-5 text-[8px] font-black" onClick={() => handleAddReply(pin.id)}>Send</Button></div>
                                         </div>
                                     )}
                                 </div>

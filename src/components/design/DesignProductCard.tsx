@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useState, useMemo, useEffect } from 'react';
-import type { ConfiguredProduct, DesignData, DesignComponent, DesignPin, DesignWorkflowStatus } from '@/lib/types';
+import type { ConfiguredProduct, DesignData, DesignComponent, DesignPin, DesignWorkflowStatus, DesignVersion } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -36,13 +36,11 @@ interface DesignProductCardProps {
 }
 
 export function DesignProductCard({ product, isDesigner, onUpdateDesign }: DesignProductCardProps) {
-    // State for Component Management Modals
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
     const [compNameInput, setCompNameInput] = useState('');
     const [editingCompId, setEditingCompId] = useState<string | null>(null);
 
-    // Normalize design data to ensure all required properties and arrays exist
     const designData = useMemo(() => {
         const baseData = product.designData || {
             productId: product.id,
@@ -50,19 +48,18 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
                 {
                     id: 'comp-1',
                     name: 'Main Layout',
-                    status: 'DRAFT' as DesignWorkflowStatus,
+                    status: 'PENDING' as DesignWorkflowStatus,
                     versions: [],
                     pins: []
                 }
             ]
         };
 
-        // Deeply ensure status, versions, and pins arrays exist for each component
         return {
             ...baseData,
             components: (baseData.components || []).map(c => ({
                 ...c,
-                status: c.status || 'DRAFT' as DesignWorkflowStatus,
+                status: c.status || 'PENDING' as DesignWorkflowStatus,
                 versions: c.versions || [],
                 pins: c.pins || []
             }))
@@ -72,7 +69,6 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
     const [activeCompId, setActiveCompId] = useState(designData.components[0]?.id);
     const [highlightedPinId, setHighlightedPinId] = useState<string | null>(null);
 
-    // Sync activeCompId if the underlying components change
     useEffect(() => {
         const currentStillExists = designData.components.some(c => c.id === activeCompId);
         if (!currentStillExists && designData.components.length > 0) {
@@ -92,14 +88,12 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
         ? activeComponent.versions[activeComponent.versions.length - 1] 
         : null;
 
-    // --- Component Management Logic ---
-
     const handleAddComponent = () => {
         if (!compNameInput.trim()) return;
         const newComp: DesignComponent = {
             id: `comp-${Date.now()}`,
             name: compNameInput.trim(),
-            status: 'DRAFT',
+            status: 'PENDING',
             versions: [],
             pins: []
         };
@@ -122,12 +116,10 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
     };
 
     const handleDeleteComponent = (compId: string) => {
-        if (designData.components.length <= 1) return; // Prevent deleting last component
+        if (designData.components.length <= 1) return;
         const updatedComponents = designData.components.filter(c => c.id !== compId);
         onUpdateDesign({ ...designData, components: updatedComponents });
     };
-
-    // --- Data Update Logic ---
 
     const handleUpdatePins = (newPins: DesignPin[]) => {
         const updatedComponents = designData.components.map(c => 
@@ -148,7 +140,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
         reader.onload = (e) => {
             const result = e.target?.result as string;
             const newVersionNum = currentVersionNum + 1;
-            const newVersion = {
+            const newVersion: DesignVersion = {
                 id: `v-${Date.now()}`,
                 versionNumber: newVersionNum,
                 imageUrl: result,
@@ -166,6 +158,17 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
             onUpdateDesign({ ...designData, components: updatedComponents });
         };
         reader.readAsDataURL(file);
+    };
+
+    const handleUpdateVersions = (newVersions: DesignVersion[]) => {
+        const updatedComponents = designData.components.map(c => {
+            if (c.id === activeCompId) {
+                const nextStatus: DesignWorkflowStatus = newVersions.length === 0 ? 'PENDING' : c.status;
+                return { ...c, versions: newVersions, status: nextStatus };
+            }
+            return c;
+        });
+        onUpdateDesign({ ...designData, components: updatedComponents });
     };
 
     const getProductSpecsSummary = () => {
@@ -236,8 +239,9 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
                                     <TabsList className="h-8 bg-muted/40 p-1">
                                         {(designData.components || []).map(comp => {
                                             const dotColor = comp.status === 'APPROVED' ? 'text-green-500' :
-                                                            comp.status === 'CHANGES_REQUESTED' ? 'text-destructive' :
-                                                            comp.status === 'INTERNAL_REVIEW' ? 'text-amber-500' : 'text-muted-foreground/30';
+                                                            comp.status === 'CUSTOMER_REVIEW' ? 'text-blue-500' :
+                                                            comp.status === 'INTERNAL_REVIEW' ? 'text-amber-500' : 
+                                                            comp.status === 'PENDING' ? 'text-muted-foreground/30' : 'text-primary/50';
                                             return (
                                                 <TabsTrigger key={comp.id} value={comp.id} className="text-[9px] font-black uppercase px-2 h-6 gap-1.5">
                                                     <Circle className={cn("h-1.5 w-1.5 fill-current", dotColor)} />
@@ -291,8 +295,8 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
                                 highlightedPinId={highlightedPinId}
                                 isDesigner={isDesigner}
                                 version={currentVersionNum}
+                                status={activeComponent.status || 'PENDING'}
                                 onAddPin={(x, y) => {
-                                    if (activeComponent.status === 'APPROVED' || !activeVersion) return;
                                     const newPin: DesignPin = {
                                         id: `pin-${Date.now()}`,
                                         x,
@@ -317,22 +321,23 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
                         pins={activeComponent.pins || []}
                         versions={activeComponent.versions || []}
                         highlightedPinId={highlightedPinId}
-                        status={activeComponent.status || 'DRAFT'}
+                        status={activeComponent.status || 'PENDING'}
                         isDesigner={isDesigner}
                         currentVersion={currentVersionNum}
                         onUpdatePins={handleUpdatePins}
                         onPinSelect={setHighlightedPinId}
                         onStatusChange={handleStatusChange}
+                        onUpdateVersions={handleUpdateVersions}
+                        onUpload={handleUpload}
                     />
                 </div>
             </CardContent>
 
-            {/* Modals for Component Management */}
             <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>Add Design Component</DialogTitle>
-                        <DialogDescription>Create a new design area for this product (e.g. Back Side, Custom Envelope).</DialogDescription>
+                        <DialogDescription>Create a new design area for this product.</DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 py-4">
                         <div className="space-y-2">
