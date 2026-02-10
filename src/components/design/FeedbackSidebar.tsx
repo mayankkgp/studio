@@ -76,7 +76,6 @@ export function FeedbackSidebar({
             if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
             
             const pin = pins.find(p => p.id === highlightedPinId);
-            // Only auto-open edit mode if the pin is visible in the current version view
             if (pin && !pin.text && pin.version <= viewedVersion) {
                 setEditingPinId(highlightedPinId);
                 setDraftText('');
@@ -86,9 +85,7 @@ export function FeedbackSidebar({
 
     const filteredPins = useMemo(() => {
         return pins.filter(pin => {
-            // Version cutoff logic: only show pins created on or before the viewed version
             if (pin.version > viewedVersion) return false;
-
             if (filter === 'open') return pin.status === 'open' || pin.status === 'mistake' || pin.status === 'fixed';
             if (filter === 'mistakes') return pin.status === 'mistake';
             return true;
@@ -210,7 +207,7 @@ export function FeedbackSidebar({
     const canAddFeedback = (isDesigner && status === 'DRAFT') || (!isDesigner && (status === 'INTERNAL_REVIEW' || status === 'CUSTOMER_REVIEW'));
 
     return (
-        <div className="flex flex-col h-full bg-card/10 backdrop-blur-md">
+        <div className="flex flex-col h-full bg-card/10 backdrop-blur-md overflow-hidden">
             <input 
                 type="file" 
                 ref={fileInputRef} 
@@ -219,7 +216,7 @@ export function FeedbackSidebar({
                 accept="image/*" 
             />
 
-            <div className="p-4 border-b bg-background/50 space-y-4">
+            <div className="p-4 border-b bg-background/50 space-y-4 shrink-0">
                 <div className="flex items-center justify-between">
                     <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Workflow State</span>
                     <Badge className={cn(
@@ -234,7 +231,7 @@ export function FeedbackSidebar({
                 {renderActions()}
             </div>
 
-            <div className="p-4 border-b bg-muted/30">
+            <div className="p-4 border-b bg-muted/30 shrink-0 max-h-[180px] overflow-y-auto">
                 <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2 mb-3"><History className="h-3.5 w-3.5" /> Version History</h4>
                 <div className="space-y-2">
                     {versions.map((v) => (
@@ -259,27 +256,35 @@ export function FeedbackSidebar({
                 </div>
             </div>
 
-            <div className="p-4 border-b flex gap-1 bg-muted/10">
+            <div className="p-4 border-b flex gap-1 bg-muted/10 shrink-0">
                 {(['all', 'open', 'mistakes'] as const).map((f) => (
                     <button key={f} onClick={() => setFilter(f)} className={cn("flex-1 text-[9px] font-black uppercase tracking-widest h-7 rounded-md transition-all", filter === f ? "bg-background text-primary shadow-sm" : "text-muted-foreground hover:text-foreground")}>{f}</button>
                 ))}
             </div>
 
-            <ScrollArea className="flex-1">
+            <ScrollArea className="flex-1 w-full overflow-hidden">
                 <div className="p-4 space-y-4 pb-32">
                     {filteredPins.length === 0 ? (
-                        <div className="py-12 text-center opacity-30"><MessageSquare className="h-8 w-8 mx-auto mb-2" /><p className="text-[10px] font-black uppercase tracking-widest">No Feedback</p></div>
+                        <div className="py-12 text-center opacity-30">
+                            <MessageSquare className="h-8 w-8 mx-auto mb-2" />
+                            <p className="text-[10px] font-black uppercase tracking-widest">No Feedback</p>
+                        </div>
                     ) : (
                         filteredPins.map((pin) => {
                             const isHighlighted = highlightedPinId === pin.id;
-                            // Stable numbering based on global pin list index
                             const pinNumber = pins.findIndex(p => p.id === pin.id) + 1;
                             const isMistake = pin.status === 'mistake';
 
                             return (
                                 <div 
                                     key={pin.id} id={`comment-${pin.id}`} onClick={() => onPinSelect(pin.id)}
-                                    className={cn("p-3 rounded-xl border-2 transition-all duration-300 relative", isHighlighted ? "border-primary bg-background shadow-xl scale-[1.02] z-10" : "border-primary/5 bg-background/50 hover:border-primary/20", pin.status === 'mistake' && !isHighlighted && "border-destructive/20 bg-destructive/5", pin.status === 'resolved' && "opacity-60", shakeId === pin.id && "animate-shake")}
+                                    className={cn(
+                                        "p-3 rounded-xl border-2 transition-all duration-300 relative", 
+                                        isHighlighted ? "border-primary bg-background shadow-xl scale-[1.02] z-10" : "border-primary/5 bg-background/50 hover:border-primary/20", 
+                                        pin.status === 'mistake' && !isHighlighted && "border-destructive/20 bg-destructive/5", 
+                                        pin.status === 'resolved' && "opacity-60", 
+                                        shakeId === pin.id && "animate-shake"
+                                    )}
                                 >
                                     <div className="flex items-center justify-between mb-2">
                                         <div className="flex items-center gap-2">

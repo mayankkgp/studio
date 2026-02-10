@@ -221,7 +221,6 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
         handleUpdatePins([...(activeComponent.pins || []), newPin]);
         setHighlightedPinId(newPin.id);
         
-        // Auto-open sidebar in fullscreen mode when a pin is added
         if (isFullscreen) {
             setIsSidebarOpenInFull(true);
         }
@@ -306,9 +305,9 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
             </CardHeader>
 
             <CardContent className="p-0">
-                <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] h-[600px]">
+                <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] h-[600px] overflow-hidden">
                     <div className="flex flex-col border-r border-primary/10 overflow-hidden bg-stone-50/50">
-                        <div className="p-2 border-b bg-background/50 flex items-center justify-between">
+                        <div className="p-2 border-b bg-background/50 flex items-center justify-between shrink-0">
                             <div className="flex items-center gap-2">
                                 <Tabs value={activeCompId} onValueChange={setActiveCompId} className="w-auto">
                                     <TabsList className="h-8 bg-muted/40 p-1">
@@ -363,7 +362,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
                             </div>
                         </div>
                         
-                        <div className="flex-1 relative">
+                        <div className="flex-1 relative overflow-hidden">
                             <DesignCanvas 
                                 imageUrl={activeVersion?.imageUrl || null}
                                 pins={activeComponent.pins || []}
@@ -379,22 +378,21 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
                         </div>
                     </div>
 
-                    <FeedbackSidebar {...feedbackSidebarProps} />
+                    <div className="flex flex-col overflow-hidden h-full">
+                        <FeedbackSidebar {...feedbackSidebarProps} />
+                    </div>
                 </div>
             </CardContent>
 
             <Dialog open={isFullscreen} onOpenChange={setIsFullscreen}>
                 <DialogContent className="max-w-[100vw] w-screen h-screen p-0 gap-0 border-none rounded-none flex flex-col bg-stone-100 overflow-hidden">
                     <div className="flex-1 flex overflow-hidden relative">
-                        {/* Design Focus Area */}
                         <div className="flex-1 relative overflow-hidden flex flex-col">
-                            {/* Floating Labels Overlay */}
                             <div className="absolute top-4 left-6 z-[50] pointer-events-none">
                                 <h2 className="font-headline font-black text-lg leading-tight text-foreground drop-shadow-sm">{product.productName}</h2>
                                 <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest bg-background/50 backdrop-blur-sm px-1 rounded w-fit">{activeComponent.name} — Workspace</p>
                             </div>
 
-                            {/* Floating Toolbar Overlay */}
                             <div className="absolute top-4 right-6 z-[50] flex items-center gap-3">
                                 <Button 
                                     variant={isSidebarOpenInFull ? "default" : "secondary"} 
@@ -424,8 +422,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
                                 </Button>
                             </div>
 
-                            {/* Main Canvas */}
-                            <div className="flex-1 relative">
+                            <div className="flex-1 relative overflow-hidden">
                                 <DesignCanvas 
                                     imageUrl={activeVersion?.imageUrl || null}
                                     pins={activeComponent.pins || []}
@@ -440,10 +437,9 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
                             </div>
                         </div>
 
-                        {/* Collapsible Feedback Workspace */}
                         {isSidebarOpenInFull && (
-                            <div className="w-[360px] md:w-[400px] border-l border-primary/10 bg-background flex flex-col animate-in slide-in-from-right duration-300 shadow-2xl z-[100]">
-                                <div className="p-4 border-b bg-muted/20 flex items-center justify-between">
+                            <div className="w-[360px] md:w-[400px] border-l border-primary/10 bg-background flex flex-col animate-in slide-in-from-right duration-300 shadow-2xl z-[100] overflow-hidden">
+                                <div className="p-4 border-b bg-muted/20 flex items-center justify-between shrink-0">
                                     <h3 className="font-headline font-black text-[10px] uppercase tracking-[0.2em] text-primary">Feedback & History</h3>
                                     <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground" onClick={() => setIsSidebarOpenInFull(false)}>
                                         <X className="h-4 w-4" />
