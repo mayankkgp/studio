@@ -117,7 +117,18 @@ export function DesignCanvas({
     const handleMouseUp = () => setIsDragging(false);
 
     const handleCanvasClick = (e: React.MouseEvent) => {
-        if (!imageUrl || isDragging || (e.target as HTMLElement).closest('.pin-bubble')) return;
+        if (!imageUrl || isDragging) return;
+        
+        // Don't trigger if clicking a pin bubble or inside a popover (via event target check)
+        const target = e.target as HTMLElement;
+        if (target.closest('.pin-bubble') || target.closest('[role="dialog"]')) return;
+
+        // If a pin is already selected, clicking the canvas should just deselect it.
+        // This prevents creating a NEW pin while trying to dismiss an open one.
+        if (highlightedPinId) {
+            onPinClick(null);
+            return;
+        }
         
         const canAddPin = (isDesigner && status === 'DRAFT') || (!isDesigner && (status === 'INTERNAL_REVIEW' || status === 'CUSTOMER_REVIEW'));
         if (!canAddPin) return;
@@ -178,7 +189,7 @@ export function DesignCanvas({
 
     const handleClosePopover = (pinId: string) => {
         const pin = pins.find(p => p.id === pinId);
-        // If the pin is unsaved (no text) and we close it, remove it
+        // If the pin is unsaved (no text) AND has no draft text AND we're not in the middle of saving, remove it
         if (pin && !pin.text && !draftText.trim() && !isSavingRef.current) {
             onUpdatePins(pins.filter(p => p.id !== pinId));
         }
@@ -383,7 +394,10 @@ export function DesignCanvas({
                                                     variant="ghost" 
                                                     size="icon" 
                                                     className="h-6 w-6 text-muted-foreground hover:text-foreground" 
-                                                    onClick={() => handleClosePopover(pin.id)}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation(); // Prevent canvas click trigger
+                                                        handleClosePopover(pin.id);
+                                                    }}
                                                 >
                                                     <X className="h-3.5 w-3.5" />
                                                 </Button>
@@ -412,10 +426,10 @@ export function DesignCanvas({
                                                             </div>
                                                         )}
                                                         <div className="flex gap-2 ml-auto">
-                                                            <Button variant="ghost" size="sm" className="h-7 text-[10px] font-black uppercase px-3" onClick={() => handleClosePopover(pin.id)}>
+                                                            <Button variant="ghost" size="sm" className="h-7 text-[10px] font-black uppercase px-3" onClick={(e) => { e.stopPropagation(); handleClosePopover(pin.id); }}>
                                                                 Cancel
                                                             </Button>
-                                                            <Button size="sm" className="h-7 text-[10px] font-black uppercase px-3" onClick={() => handleSaveComment(pin.id)}>
+                                                            <Button size="sm" className="h-7 text-[10px] font-black uppercase px-3" onClick={(e) => { e.stopPropagation(); handleSaveComment(pin.id); }}>
                                                                 Save Feedback
                                                             </Button>
                                                         </div>
@@ -459,8 +473,8 @@ export function DesignCanvas({
                                                                 }}
                                                             />
                                                             <div className="flex justify-end gap-1">
-                                                                <Button variant="ghost" size="sm" className="h-6 text-[8px] font-black" onClick={() => setReplyingPinId(null)}>Cancel</Button>
-                                                                <Button size="sm" className="h-6 text-[8px] font-black" onClick={() => handleAddReply(pin.id)}>Send</Button>
+                                                                <Button variant="ghost" size="sm" className="h-6 text-[8px] font-black" onClick={(e) => { e.stopPropagation(); setReplyingPinId(null); }}>Cancel</Button>
+                                                                <Button size="sm" className="h-6 text-[8px] font-black" onClick={(e) => { e.stopPropagation(); handleAddReply(pin.id); }}>Send</Button>
                                                             </div>
                                                         </div>
                                                     )}
@@ -478,7 +492,7 @@ export function DesignCanvas({
                                                             )}
                                                             
                                                             {isDesigner && status === 'DRAFT' && (pin.status === 'open' || pin.status === 'mistake') && (
-                                                                <Button variant="secondary" size="sm" className="h-7 text-[9px] font-black uppercase px-2 bg-amber-100 text-amber-800 hover:bg-amber-200" onClick={() => handleStatusChange(pin.id, 'fixed')}>
+                                                                <Button variant="secondary" size="sm" className="h-7 text-[9px] font-black uppercase px-2 bg-amber-100 text-amber-800 hover:bg-amber-200" onClick={(e) => { e.stopPropagation(); handleStatusChange(pin.id, 'fixed'); }}>
                                                                     Mark Fixed
                                                                 </Button>
                                                             )}
@@ -486,12 +500,12 @@ export function DesignCanvas({
                                                             {!isDesigner && (status === 'INTERNAL_REVIEW' || status === 'CUSTOMER_REVIEW') && (
                                                                 <>
                                                                     {(pin.status !== 'resolved') && (
-                                                                        <Button size="sm" className="h-7 text-[9px] font-black uppercase px-2 bg-green-600 text-white hover:bg-green-700" onClick={() => handleStatusChange(pin.id, 'resolved')}>
+                                                                        <Button size="sm" className="h-7 text-[9px] font-black uppercase px-2 bg-green-600 text-white hover:bg-green-700" onClick={(e) => { e.stopPropagation(); handleStatusChange(pin.id, 'resolved'); }}>
                                                                             Resolve
                                                                         </Button>
                                                                     )}
                                                                     {pin.status === 'fixed' && (
-                                                                        <Button variant="ghost" size="sm" className="h-7 text-[9px] font-black uppercase px-2 text-destructive hover:bg-destructive/5" onClick={() => handleStatusChange(pin.id, 'open')}>
+                                                                        <Button variant="ghost" size="sm" className="h-7 text-[9px] font-black uppercase px-2 text-destructive hover:bg-destructive/5" onClick={(e) => { e.stopPropagation(); handleStatusChange(pin.id, 'open'); }}>
                                                                             Reject Fix
                                                                         </Button>
                                                                     )}
@@ -504,7 +518,15 @@ export function DesignCanvas({
                                                                     <CheckCircle2 className="h-3.5 w-3.5" /> RESOLVED
                                                                 </div>
                                                             ) : canInteractWithFeedback && (
-                                                                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:bg-destructive/10" onClick={() => handleDeletePin(pin.id)}>
+                                                                <Button 
+                                                                    variant="ghost" 
+                                                                    size="icon" 
+                                                                    className="h-7 w-7 text-destructive hover:bg-destructive/10" 
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation(); // Critical: stop bubbling to canvas
+                                                                        handleDeletePin(pin.id);
+                                                                    }}
+                                                                >
                                                                     <Trash2 className="h-3.5 w-3.5" />
                                                                 </Button>
                                                             )}

@@ -285,7 +285,7 @@ export function FeedbackSidebar({
                                 <div 
                                     key={pin.id} id={`comment-${pin.id}`} onClick={() => onPinSelect(pin.id)}
                                     className={cn(
-                                        "p-3 rounded-xl border-2 transition-all duration-300 relative cursor-pointer", 
+                                        "p-3 rounded-xl border-2 transition-all duration-300 relative cursor-pointer group", 
                                         isHighlighted ? "border-primary bg-background shadow-xl scale-[1.02] z-10" : "border-primary/5 bg-background/50 hover:border-primary/20", 
                                         pin.status === 'mistake' && !isHighlighted && "border-destructive/20 bg-destructive/5", 
                                         pin.status === 'resolved' && "opacity-60", 
@@ -321,7 +321,7 @@ export function FeedbackSidebar({
                                             />
                                             <div className="flex items-center justify-between">
                                                 {!isDesigner && <div className="flex items-center space-x-2"><Checkbox id={`mistake-${pin.id}`} checked={isMistakeDraft} onCheckedChange={(val) => setIsMistakeDraft(!!val)} /><label htmlFor={`mistake-${pin.id}`} className="text-[9px] font-black uppercase tracking-wider text-destructive cursor-pointer">Mistake</label></div>}
-                                                <div className="flex gap-1 ml-auto"><Button variant="ghost" size="sm" className="h-6 text-[8px] font-black" onClick={() => setEditingPinId(null)}>Cancel</Button><Button size="sm" className="h-6 text-[8px] font-black" onClick={() => handleSaveComment(pin.id)}>Save</Button></div>
+                                                <div className="flex gap-1 ml-auto"><Button variant="ghost" size="sm" className="h-6 text-[8px] font-black" onClick={(e) => { e.stopPropagation(); setEditingPinId(null); }}>Cancel</Button><Button size="sm" className="h-6 text-[8px] font-black" onClick={(e) => { e.stopPropagation(); handleSaveComment(pin.id); }}>Save</Button></div>
                                             </div>
                                         </div>
                                     ) : (
@@ -353,7 +353,7 @@ export function FeedbackSidebar({
                                                         <Button 
                                                             variant="ghost" 
                                                             size="icon" 
-                                                            className="h-6 w-6 text-destructive" 
+                                                            className="h-6 w-6 text-destructive opacity-0 group-hover:opacity-100 transition-opacity" 
                                                             onClick={(e) => { e.stopPropagation(); handleDeletePin(pin.id); }}
                                                         >
                                                             <Trash2 className="h-3 w-3" />
@@ -374,7 +374,7 @@ export function FeedbackSidebar({
                                                     setTimeout(() => { if (!isSavingRef.current && !draftText.trim()) setReplyingPinId(null); }, 150);
                                                 }}
                                             />
-                                            <div className="flex justify-end gap-1"><Button variant="ghost" size="sm" className="h-5 text-[8px] font-black" onClick={() => setReplyingPinId(null)}>X</Button><Button size="sm" className="h-5 text-[8px] font-black" onClick={() => handleAddReply(pin.id)}>Send</Button></div>
+                                            <div className="flex justify-end gap-1"><Button variant="ghost" size="sm" className="h-5 text-[8px] font-black" onClick={(e) => { e.stopPropagation(); setReplyingPinId(null); }}>X</Button><Button size="sm" className="h-5 text-[8px] font-black" onClick={(e) => { e.stopPropagation(); handleAddReply(pin.id); }}>Send</Button></div>
                                         </div>
                                     )}
                                 </div>
