@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import type { DesignPin, DesignPinStatus, DesignReply, DesignWorkflowStatus, DesignVersion } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -41,6 +41,7 @@ interface FeedbackSidebarProps {
     onUpload: (file: File) => void;
     isDesigner: boolean;
     currentVersion: number;
+    viewedVersion: number;
 }
 
 export function FeedbackSidebar({ 
@@ -58,7 +59,8 @@ export function FeedbackSidebar({
     hasNewDraft = false,
     onUpload,
     isDesigner,
-    currentVersion 
+    currentVersion,
+    viewedVersion
 }: FeedbackSidebarProps) {
     const [filter, setFilter] = useState<'all' | 'open' | 'mistakes'>('open');
     const [editingPinId, setEditingPinId] = useState<string | null>(null);
@@ -74,18 +76,24 @@ export function FeedbackSidebar({
             if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
             
             const pin = pins.find(p => p.id === highlightedPinId);
-            if (pin && !pin.text) {
+            // Only auto-open edit mode if the pin is visible in the current version view
+            if (pin && !pin.text && pin.version <= viewedVersion) {
                 setEditingPinId(highlightedPinId);
                 setDraftText('');
             }
         }
-    }, [highlightedPinId, pins]);
+    }, [highlightedPinId, pins, viewedVersion]);
 
-    const filteredPins = pins.filter(pin => {
-        if (filter === 'open') return pin.status === 'open' || pin.status === 'mistake' || pin.status === 'fixed';
-        if (filter === 'mistakes') return pin.status === 'mistake';
-        return true;
-    }).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    const filteredPins = useMemo(() => {
+        return pins.filter(pin => {
+            // Version cutoff logic: only show pins created on or before the viewed version
+            if (pin.version > viewedVersion) return false;
+
+            if (filter === 'open') return pin.status === 'open' || pin.status === 'mistake' || pin.status === 'fixed';
+            if (filter === 'mistakes') return pin.status === 'mistake';
+            return true;
+        }).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    }, [pins, filter, viewedVersion]);
 
     const hasOpenItems = pins.some(p => p.status === 'open' || p.status === 'mistake' || p.status === 'fixed');
 
@@ -264,6 +272,7 @@ export function FeedbackSidebar({
                     ) : (
                         filteredPins.map((pin) => {
                             const isHighlighted = highlightedPinId === pin.id;
+                            // Stable numbering based on global pin list index
                             const pinNumber = pins.findIndex(p => p.id === pin.id) + 1;
                             const isMistake = pin.status === 'mistake';
 

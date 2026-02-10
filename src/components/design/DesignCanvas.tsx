@@ -154,7 +154,6 @@ export function DesignCanvas({
                 className="hidden" 
             />
             
-            {/* Zoom Toolbar - Positioned top-24 to clear fullscreen modal controls */}
             <div className="absolute top-24 right-4 z-50 flex flex-col gap-2 opacity-0 group-hover/canvas:opacity-100 transition-opacity">
                 <div className="bg-background/90 backdrop-blur-md border border-primary/20 rounded-lg p-1 shadow-2xl flex flex-col gap-1">
                     <TooltipProvider>
@@ -230,28 +229,33 @@ export function DesignCanvas({
                         draggable={false}
                     />
                     
-                    {pins.map((pin, index) => (
-                        <button
-                            key={pin.id}
-                            className={cn(
-                                "pin-bubble absolute h-8 w-8 rounded-full flex items-center justify-center text-[11px] font-black text-white shadow-xl border-2 border-white transition-all transform -translate-x-1/2 -translate-y-1/2",
-                                PIN_COLORS[pin.status],
-                                highlightedPinId === pin.id ? "scale-125 ring-4 ring-primary ring-offset-2 z-50" : "scale-100 z-10 hover:scale-110",
-                                pin.status === 'resolved' && "opacity-60 grayscale-[0.5]"
-                            )}
-                            style={{ 
-                                left: `${pin.x}%`, 
-                                top: `${pin.y}%`,
-                                transform: `translate(-50%, -50%) scale(${1/zoom})` 
-                            }}
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                onPinClick(pin.id);
-                            }}
-                        >
-                            {index + 1}
-                        </button>
-                    ))}
+                    {pins.map((pin, index) => {
+                        // Only show pins that were added to this version or versions before it
+                        if (pin.version > version) return null;
+
+                        return (
+                            <button
+                                key={pin.id}
+                                className={cn(
+                                    "pin-bubble absolute h-8 w-8 rounded-full flex items-center justify-center text-[11px] font-black text-white shadow-xl border-2 border-white transition-all transform -translate-x-1/2 -translate-y-1/2",
+                                    PIN_COLORS[pin.status],
+                                    highlightedPinId === pin.id ? "scale-125 ring-4 ring-primary ring-offset-2 z-50" : "scale-100 z-10 hover:scale-110",
+                                    pin.status === 'resolved' && "opacity-60 grayscale-[0.5]"
+                                )}
+                                style={{ 
+                                    left: `${pin.x}%`, 
+                                    top: `${pin.y}%`,
+                                    transform: `translate(-50%, -50%) scale(${1/zoom})` 
+                                }}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onPinClick(pin.id);
+                                }}
+                            >
+                                {index + 1}
+                            </button>
+                        );
+                    })}
                 </div>
             </div>
         </div>

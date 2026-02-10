@@ -101,6 +101,8 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
         return activeComponent.versions[activeComponent.versions.length - 1];
     }, [activeComponent.versions, selectedVersionId]);
 
+    const viewedVersionNum = activeVersion?.versionNumber || currentVersionNum;
+
     const handleUpdateDesignInternal = (updatedData: DesignData) => {
         onUpdateDesign(updatedData);
     };
@@ -212,7 +214,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
             status: 'open',
             author: isDesigner ? 'Designer' : 'Manager',
             timestamp: new Date().toISOString(),
-            version: activeVersion?.versionNumber || currentVersionNum,
+            version: viewedVersionNum,
             text: '',
             replies: []
         };
@@ -274,6 +276,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
         status: activeComponent.status || 'PENDING',
         isDesigner: isDesigner,
         currentVersion: currentVersionNum,
+        viewedVersion: viewedVersionNum,
         onUpdatePins: handleUpdatePins,
         onPinSelect: setHighlightedPinId,
         onVersionSelect: setSelectedVersionId,
@@ -366,7 +369,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
                                 pins={activeComponent.pins || []}
                                 highlightedPinId={highlightedPinId}
                                 isDesigner={isDesigner}
-                                version={activeVersion?.versionNumber || currentVersionNum}
+                                version={viewedVersionNum}
                                 status={activeComponent.status || 'PENDING'}
                                 onAddPin={handleAddPin}
                                 onPinClick={setHighlightedPinId}
@@ -404,9 +407,9 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
                                 >
                                     <MessageSquare className="h-4 w-4" />
                                     <span className="hidden sm:inline">{isSidebarOpenInFull ? "Hide Feedback" : "Show Feedback"}</span>
-                                    {!isSidebarOpenInFull && activeComponent.pins.filter(p => p.status !== 'resolved').length > 0 && (
+                                    {!isSidebarOpenInFull && activeComponent.pins.filter(p => p.status !== 'resolved' && p.version <= viewedVersionNum).length > 0 && (
                                         <Badge className="h-5 min-w-5 px-1 flex items-center justify-center bg-primary text-white ml-1">
-                                            {activeComponent.pins.filter(p => p.status !== 'resolved').length}
+                                            {activeComponent.pins.filter(p => p.status !== 'resolved' && p.version <= viewedVersionNum).length}
                                         </Badge>
                                     )}
                                 </Button>
@@ -428,7 +431,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
                                     pins={activeComponent.pins || []}
                                     highlightedPinId={highlightedPinId}
                                     isDesigner={isDesigner}
-                                    version={activeVersion?.versionNumber || currentVersionNum}
+                                    version={viewedVersionNum}
                                     status={activeComponent.status || 'PENDING'}
                                     onAddPin={handleAddPin}
                                     onPinClick={setHighlightedPinId}
