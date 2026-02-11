@@ -11,7 +11,6 @@ import { FeedbackSidebar } from './FeedbackSidebar';
 import { cn } from '@/lib/utils';
 import { 
     Package, 
-    Plus, 
     X, 
     PackageCheck,
     LayoutPanelTop
@@ -33,7 +32,6 @@ interface DesignProductCardProps {
 }
 
 export function DesignProductCard({ product, isDesigner, onUpdateDesign, customerData }: DesignProductCardProps) {
-    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [newDrafts, setNewDrafts] = useState<Record<string, boolean>>({});
 
@@ -56,7 +54,6 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
 
     const [localDesignData, setLocalDesignData] = useState<DesignData>(initialDesignData);
     
-    // Sync local state when props change, but avoid re-rendering loops
     useEffect(() => { 
         setLocalDesignData(initialDesignData); 
     }, [initialDesignData]);
@@ -82,7 +79,6 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
     
     const visibleVersions = useMemo(() => {
         if (isDesigner) return activeComponent.versions;
-        // Blind period: Manager doesn't see drafts until they are submitted (status changes from DRAFT to REVIEW)
         if (activeComponent.status === 'DRAFT' && activeComponent.versions.length > 0) return activeComponent.versions.slice(0, -1);
         return activeComponent.versions;
     }, [activeComponent.versions, activeComponent.status, isDesigner]);
@@ -97,8 +93,6 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
 
     const handleUpdateDesignInternal = (updatedData: DesignData) => {
         setLocalDesignData(updatedData);
-        // Important: Side effects like notifying parent must happen outside of setLocalDesignData
-        // to avoid "Cannot update a component while rendering" errors.
         setTimeout(() => onUpdateDesign(updatedData), 0);
     };
 

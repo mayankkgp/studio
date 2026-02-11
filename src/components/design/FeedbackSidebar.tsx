@@ -222,7 +222,7 @@ export function FeedbackSidebar({
                                                 <span className="text-[9px] font-bold text-muted-foreground uppercase opacity-60">V{pin.version}</span>
                                             </div>
                                             <p className="text-[11px] font-semibold leading-relaxed text-foreground/90">{pin.text}</p>
-                                            {pin.replies.map((reply, i) => (
+                                            {pin.replies && pin.replies.map((reply, i) => (
                                                 <div key={i} className="pl-3 border-l-2 border-primary/10 mt-3 space-y-0.5">
                                                     <div className="flex items-center gap-1.5 text-[8px] font-black uppercase text-muted-foreground"><CornerDownRight className="h-3 w-3" /> {reply.author}</div>
                                                     <p className="text-[10px] font-medium leading-relaxed">{reply.text}</p>

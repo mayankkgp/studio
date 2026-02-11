@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useState, useRef, useEffect } from 'react';
-import type { DesignPin, DesignPinStatus, DesignWorkflowStatus, DesignReply } from '@/lib/types';
+import type { DesignPin, DesignPinStatus, DesignWorkflowStatus } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { 
     ZoomIn, 
@@ -71,7 +71,12 @@ export function DesignCanvas({
     const [isDragging, setIsDragging] = useState(false);
     const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
     const [showPins, setShowPins] = useState(true);
-    const [interactionMode, setInteractionMode] = useState<'NAVIGATE' | 'COMMENT'>('NAVIGATE');
+    
+    const isLatest = version === currentVersion;
+    const canInteract = isLatest && ((isDesigner && status === 'DRAFT') || (!isDesigner && (status === 'INTERNAL_REVIEW' || status === 'CUSTOMER_REVIEW')));
+    
+    // Default to COMMENT mode if interaction is possible, otherwise NAVIGATE
+    const [interactionMode, setInteractionMode] = useState<'NAVIGATE' | 'COMMENT'>(canInteract ? 'COMMENT' : 'NAVIGATE');
     
     const [draftText, setDraftText] = useState('');
     const [isMistakeDraft, setIsMistakeDraft] = useState(false);
@@ -81,13 +86,10 @@ export function DesignCanvas({
     const imageRef = useRef<HTMLImageElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const isLatest = version === currentVersion;
-    const canInteractWithFeedback = isLatest && ((isDesigner && status === 'DRAFT') || (!isDesigner && (status === 'INTERNAL_REVIEW' || status === 'CUSTOMER_REVIEW')));
-    const canAddPin = isLatest && interactionMode === 'COMMENT' && ((isDesigner && status === 'DRAFT') || (!isDesigner && (status === 'INTERNAL_REVIEW' || status === 'CUSTOMER_REVIEW')));
+    const canAddPin = canInteract && interactionMode === 'COMMENT';
 
     useEffect(() => {
         if (highlightedPinId) {
-            setInteractionMode('COMMENT');
             setDraftText('');
             const activePin = pins.find(p => p.id === highlightedPinId);
             if (activePin) {
@@ -124,20 +126,15 @@ export function DesignCanvas({
     const handleCanvasClick = (e: React.MouseEvent) => {
         if (!imageUrl || isDragging) return;
         
-        // If a pin is highlighted, clicking the canvas just deselects it
-        if (highlightedPinId) {
-            onPinClick(null);
-            return;
-        }
-
         const target = e.target as HTMLElement;
         if (target.closest('.pin-bubble') || target.closest('[role="dialog"]') || target.closest('button')) return;
         
-        if (!canAddPin) return;
+        if (!canAddPin) {
+            if (highlightedPinId) onPinClick(null);
+            return;
+        }
 
         const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-        // Calculate coordinates relative to the actual image space if possible, 
-        // or the container which is fit to screen
         const x = ((e.clientX - rect.left) / rect.width) * 100;
         const y = ((e.clientY - rect.top) / rect.height) * 100;
         
@@ -160,7 +157,6 @@ export function DesignCanvas({
         });
         onUpdatePins(updatedPins);
         onPinClick(null);
-        // Reset local draft
         setTimeout(() => { isSavingRef.current = false; }, 100);
     };
 
@@ -173,7 +169,6 @@ export function DesignCanvas({
     const handleClosePopover = (e: React.MouseEvent, pinId: string) => {
         e.stopPropagation();
         const pin = pins.find(p => p.id === pinId);
-        // If it was a new empty pin being cancelled, remove it
         if (pin && !pin.text && !draftText.trim() && !isSavingRef.current) {
             onUpdatePins(pins.filter(p => p.id !== pinId));
         }
@@ -185,7 +180,7 @@ export function DesignCanvas({
         if (file && onUpload) {
             onUpload(file);
         }
-        e.target.value = ''; // Reset for same-file re-uploads
+        e.target.value = '';
     };
 
     return (
@@ -320,7 +315,6 @@ export function DesignCanvas({
                             <img ref={imageRef} src={imageUrl} alt="Design View" className="w-full h-full object-contain pointer-events-none" draggable={false} />
                             
                             {showPins && pins.map((pin, index) => {
-                                // Don't show pins from later versions
                                 if (pin.version > version) return null;
                                 return (
                                     <Popover key={pin.id} open={highlightedPinId === pin.id} onOpenChange={(open) => { if (!open && highlightedPinId === pin.id) onPinClick(null); else if (open) onPinClick(pin.id); }}>
@@ -373,7 +367,7 @@ export function DesignCanvas({
                                                     ) : (
                                                         <div className="space-y-4">
                                                             <p className="text-xs font-semibold leading-relaxed text-foreground/90">{pin.text}</p>
-                                                            {pin.replies.length > 0 && (
+                                                            {pin.replies && pin.replies.length > 0 && (
                                                                 <div className="space-y-2 pt-2 border-t border-primary/5 max-h-[120px] overflow-y-auto custom-scrollbar">
                                                                     {pin.replies.map((reply, i) => (
                                                                         <div key={i} className="pl-3 border-l-2 border-primary/10 space-y-0.5">
