@@ -55,7 +55,11 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
     }, [product.id, product.designData]);
 
     const [localDesignData, setLocalDesignData] = useState<DesignData>(initialDesignData);
-    useEffect(() => { setLocalDesignData(initialDesignData); }, [initialDesignData]);
+    
+    // Sync local state when props change, but avoid re-rendering loops
+    useEffect(() => { 
+        setLocalDesignData(initialDesignData); 
+    }, [initialDesignData]);
 
     const [activeCompId, setActiveCompId] = useState(localDesignData.components[0]?.id);
     const [highlightedPinId, setHighlightedPinId] = useState<string | null>(null);
@@ -78,9 +82,10 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
     
     const visibleVersions = useMemo(() => {
         if (isDesigner) return activeComponent.versions;
-        if (activeComponent.status === 'DRAFT' && newDrafts[activeCompId] && activeComponent.versions.length > 0) return activeComponent.versions.slice(0, -1);
+        // Blind period: Manager doesn't see drafts until they are submitted (status changes from DRAFT to REVIEW)
+        if (activeComponent.status === 'DRAFT' && activeComponent.versions.length > 0) return activeComponent.versions.slice(0, -1);
         return activeComponent.versions;
-    }, [activeComponent.versions, activeComponent.status, isDesigner, newDrafts, activeCompId]);
+    }, [activeComponent.versions, activeComponent.status, isDesigner]);
 
     const activeVersion = useMemo(() => {
         if (!visibleVersions || visibleVersions.length === 0) return null;
@@ -92,12 +97,15 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
 
     const handleUpdateDesignInternal = (updatedData: DesignData) => {
         setLocalDesignData(updatedData);
-        // Defer parent update to next tick to avoid "update during render" errors
+        // Important: Side effects like notifying parent must happen outside of setLocalDesignData
+        // to avoid "Cannot update a component while rendering" errors.
         setTimeout(() => onUpdateDesign(updatedData), 0);
     };
 
     const handleStatusChange = (status: DesignWorkflowStatus) => {
-        if (status === 'INTERNAL_REVIEW' || status === 'PENDING') setNewDrafts(prev => ({ ...prev, [activeCompId]: false }));
+        if (status === 'INTERNAL_REVIEW' || status === 'PENDING') {
+            setNewDrafts(prev => ({ ...prev, [activeCompId]: false }));
+        }
         const updatedComponents = localDesignData.components.map(c => c.id === activeCompId ? { ...c, status } : c);
         handleUpdateDesignInternal({ ...localDesignData, components: updatedComponents });
     };
@@ -107,34 +115,28 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
         reader.onload = (e) => {
             const result = e.target?.result as string;
             
-            setLocalDesignData(prev => {
-                const activeComp = prev.components.find(c => c.id === activeCompId);
-                const currentVNum = (activeComp?.versions && activeComp.versions.length > 0) 
-                    ? activeComp.versions[activeComp.versions.length - 1].versionNumber 
-                    : 0;
-                
-                const newVersion: DesignVersion = { 
-                    id: `v-${Date.now()}`, 
-                    versionNumber: currentVNum + 1, 
-                    imageUrl: result, 
-                    timestamp: new Date().toISOString(), 
-                    author: isDesigner ? 'Designer' : 'Manager' 
-                };
-                
-                const updatedComponents = prev.components.map(c => 
-                    c.id === activeCompId ? { ...c, versions: [...(c.versions || []), newVersion], status: 'DRAFT' as DesignWorkflowStatus } : c
-                );
-                
-                const nextData = { ...prev, components: updatedComponents };
-                
-                setNewDrafts(prevDrafts => ({ ...prevDrafts, [activeCompId]: true }));
-                setSelectedVersionId(newVersion.id);
-                
-                // Trigger persistent update after local state is updated
-                setTimeout(() => onUpdateDesign(nextData), 0);
-                
-                return nextData;
-            });
+            const activeComp = localDesignData.components.find(c => c.id === activeCompId);
+            const currentVNum = (activeComp?.versions && activeComp.versions.length > 0) 
+                ? activeComp.versions[activeComp.versions.length - 1].versionNumber 
+                : 0;
+            
+            const newVersion: DesignVersion = { 
+                id: `v-${Date.now()}`, 
+                versionNumber: currentVNum + 1, 
+                imageUrl: result, 
+                timestamp: new Date().toISOString(), 
+                author: isDesigner ? 'Designer' : 'Manager' 
+            };
+            
+            const updatedComponents = localDesignData.components.map(c => 
+                c.id === activeCompId ? { ...c, versions: [...(c.versions || []), newVersion], status: 'DRAFT' as DesignWorkflowStatus } : c
+            );
+            
+            const nextData = { ...localDesignData, components: updatedComponents };
+            
+            setNewDrafts(prevDrafts => ({ ...prevDrafts, [activeCompId]: true }));
+            setSelectedVersionId(newVersion.id);
+            handleUpdateDesignInternal(nextData);
         };
         reader.readAsDataURL(file);
     };
@@ -143,26 +145,40 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
         if (activeComponent.versions.length > 0) {
             const newVersions = [...activeComponent.versions];
             newVersions.pop();
-            const updatedComponents = localDesignData.components.map(c => c.id === activeCompId ? { ...c, versions: newVersions, status: newVersions.length === 0 ? 'PENDING' : c.status } : c);
+            const updatedComponents = localDesignData.components.map(c => 
+                c.id === activeCompId ? { ...c, versions: newVersions, status: newVersions.length === 0 ? 'PENDING' : c.status } : c
+            );
             const nextData = { ...localDesignData, components: updatedComponents };
             
-            setLocalDesignData(nextData);
             setNewDrafts(prev => ({ ...prev, [activeCompId]: false }));
             setSelectedVersionId(null);
-            
-            onUpdateDesign(nextData);
+            handleUpdateDesignInternal(nextData);
         }
     };
 
     const handleAddPin = (x: number, y: number) => {
-        const newPin: DesignPin = { id: `pin-${Date.now()}`, x, y, status: 'open', author: isDesigner ? 'Designer' : 'Manager', timestamp: new Date().toISOString(), version: viewedVersionNum, text: '', replies: [] };
-        const updatedComponents = localDesignData.components.map(c => c.id === activeCompId ? { ...c, pins: [...(c.pins || []), newPin] } : c);
+        const newPin: DesignPin = { 
+            id: `pin-${Date.now()}`, 
+            x, 
+            y, 
+            status: 'open', 
+            author: isDesigner ? 'Designer' : 'Manager', 
+            timestamp: new Date().toISOString(), 
+            version: viewedVersionNum, 
+            text: '', 
+            replies: [] 
+        };
+        const updatedComponents = localDesignData.components.map(c => 
+            c.id === activeCompId ? { ...c, pins: [...(c.pins || []), newPin] } : c
+        );
         handleUpdateDesignInternal({ ...localDesignData, components: updatedComponents });
         setHighlightedPinId(newPin.id);
     };
 
     const handleUpdatePins = (newPins: DesignPin[]) => {
-        const updatedComponents = localDesignData.components.map(c => c.id === activeCompId ? { ...c, pins: newPins } : c);
+        const updatedComponents = localDesignData.components.map(c => 
+            c.id === activeCompId ? { ...c, pins: newPins } : c
+        );
         handleUpdateDesignInternal({ ...localDesignData, components: updatedComponents });
     };
 
@@ -245,7 +261,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
                 <DialogContent className="max-w-[100vw] w-screen h-screen p-0 gap-0 border-none rounded-none flex flex-col bg-background overflow-hidden animate-in zoom-in-95 duration-300">
                     <DialogHeader className="sr-only">
                         <DialogTitle>Design Workbench - {product.productName}</DialogTitle>
-                        <DialogDescription>Review and manage design proofs, feedback, and customer brief for {product.productName}.</DialogDescription>
+                        <DialogDescription>Review design proofs and feedback for {product.productName}.</DialogDescription>
                     </DialogHeader>
                     <div className={cn("flex-1 flex overflow-hidden border-[6px] transition-colors duration-500", 
                         activeComponent.status === 'APPROVED' ? "border-green-500/30" : 

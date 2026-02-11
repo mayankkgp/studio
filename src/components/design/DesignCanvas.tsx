@@ -123,6 +123,8 @@ export function DesignCanvas({
 
     const handleCanvasClick = (e: React.MouseEvent) => {
         if (!imageUrl || isDragging) return;
+        
+        // If a pin is highlighted, clicking the canvas just deselects it
         if (highlightedPinId) {
             onPinClick(null);
             return;
@@ -134,6 +136,8 @@ export function DesignCanvas({
         if (!canAddPin) return;
 
         const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        // Calculate coordinates relative to the actual image space if possible, 
+        // or the container which is fit to screen
         const x = ((e.clientX - rect.left) / rect.width) * 100;
         const y = ((e.clientY - rect.top) / rect.height) * 100;
         
@@ -156,6 +160,7 @@ export function DesignCanvas({
         });
         onUpdatePins(updatedPins);
         onPinClick(null);
+        // Reset local draft
         setTimeout(() => { isSavingRef.current = false; }, 100);
     };
 
@@ -168,6 +173,7 @@ export function DesignCanvas({
     const handleClosePopover = (e: React.MouseEvent, pinId: string) => {
         e.stopPropagation();
         const pin = pins.find(p => p.id === pinId);
+        // If it was a new empty pin being cancelled, remove it
         if (pin && !pin.text && !draftText.trim() && !isSavingRef.current) {
             onUpdatePins(pins.filter(p => p.id !== pinId));
         }
@@ -179,12 +185,18 @@ export function DesignCanvas({
         if (file && onUpload) {
             onUpload(file);
         }
-        e.target.value = '';
+        e.target.value = ''; // Reset for same-file re-uploads
     };
 
     return (
         <div className="h-full flex flex-col relative group/canvas bg-stone-100 overflow-hidden">
-            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
+            <input 
+                type="file" 
+                ref={fileInputRef} 
+                onChange={handleFileChange} 
+                accept="image/*" 
+                className="hidden" 
+            />
 
             {!imageUrl && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-muted/20 border-dashed border-2 rounded-xl m-4">
@@ -308,6 +320,7 @@ export function DesignCanvas({
                             <img ref={imageRef} src={imageUrl} alt="Design View" className="w-full h-full object-contain pointer-events-none" draggable={false} />
                             
                             {showPins && pins.map((pin, index) => {
+                                // Don't show pins from later versions
                                 if (pin.version > version) return null;
                                 return (
                                     <Popover key={pin.id} open={highlightedPinId === pin.id} onOpenChange={(open) => { if (!open && highlightedPinId === pin.id) onPinClick(null); else if (open) onPinClick(pin.id); }}>
@@ -340,7 +353,13 @@ export function DesignCanvas({
                                                 <div className="p-4 space-y-4">
                                                     {!pin.text ? (
                                                         <div className="space-y-3">
-                                                            <Textarea autoFocus placeholder="Enter feedback details..." className="min-h-[80px] text-xs font-semibold" value={draftText} onChange={(e) => setDraftText(e.target.value)} />
+                                                            <Textarea 
+                                                                autoFocus 
+                                                                placeholder="Enter feedback details..." 
+                                                                className="min-h-[80px] text-xs font-semibold" 
+                                                                value={draftText} 
+                                                                onChange={(e) => setDraftText(e.target.value)} 
+                                                            />
                                                             <div className="flex items-center justify-between">
                                                                 {!isDesigner && (
                                                                     <div className="flex items-center space-x-2">
