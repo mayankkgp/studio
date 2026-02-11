@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useState, useEffect, useRef, useMemo } from 'react';
-import type { DesignPin, DesignPinStatus, DesignReply, DesignWorkflowStatus, DesignVersion, CustomerData } from '@/lib/types';
+import type { DesignPin, DesignPinStatus, DesignWorkflowStatus, DesignVersion, CustomerData } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -11,18 +11,16 @@ import { cn } from '@/lib/utils';
 import { 
     MessageSquare, 
     AlertCircle, 
-    History, 
-    CornerDownRight, 
+    RotateCcw, 
+    BookOpen, 
+    Palette, 
+    Globe, 
+    Sparkles,
+    Play,
+    Upload,
     Send,
     Trash2,
-    Play,
-    Lock,
-    Upload,
-    RotateCcw,
-    BookOpen,
-    Palette,
-    Globe,
-    Sparkles
+    Lock
 } from 'lucide-react';
 
 interface FeedbackSidebarProps {
@@ -74,7 +72,6 @@ export function FeedbackSidebar({
     activeProductId
 }: FeedbackSidebarProps) {
     const [filter, setFilter] = useState<'all' | 'open' | 'mistakes'>('open');
-    const [replyingPinId, setReplyingPinId] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState('feedback');
     const fileInputRef = useRef<HTMLInputElement>(null);
 

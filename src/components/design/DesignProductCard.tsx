@@ -2,8 +2,8 @@
 
 import * as React from 'react';
 import { useState, useMemo, useEffect } from 'react';
-import type { ConfiguredProduct, DesignData, DesignComponent, DesignPin, DesignWorkflowStatus, DesignVersion, CustomerData } from '@/lib/types';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import type { ConfiguredProduct, DesignData, DesignPin, DesignWorkflowStatus, DesignVersion, CustomerData } from '@/lib/types';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { DesignCanvas } from './DesignCanvas';
@@ -11,39 +11,19 @@ import { FeedbackSidebar } from './FeedbackSidebar';
 import { cn } from '@/lib/utils';
 import { 
     Package, 
-    Circle, 
     Plus, 
-    Pencil, 
-    Trash2, 
-    MoreVertical, 
-    Maximize2, 
     X, 
-    MessageSquare,
     PackageCheck,
-    RotateCcw,
-    LayoutPanelTop,
-    MousePointer2,
-    Palette
+    LayoutPanelTop
 } from 'lucide-react';
-import { productCatalog } from '@/lib/product-data';
 import { Button } from '@/components/ui/button';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
     Dialog,
     DialogContent,
     DialogHeader,
     DialogTitle,
-    DialogFooter,
     DialogDescription,
 } from "@/components/ui/dialog";
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface DesignProductCardProps {
     product: ConfiguredProduct;
@@ -54,10 +34,7 @@ interface DesignProductCardProps {
 
 export function DesignProductCard({ product, isDesigner, onUpdateDesign, customerData }: DesignProductCardProps) {
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-    const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
     const [isFullscreen, setIsFullscreen] = useState(false);
-    const [compNameInput, setCompNameInput] = useState('');
-    const [editingCompId, setEditingCompId] = useState<string | null>(null);
     const [newDrafts, setNewDrafts] = useState<Record<string, boolean>>({});
 
     const initialDesignData = useMemo(() => {
@@ -115,7 +92,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
 
     const handleUpdateDesignInternal = (updatedData: DesignData) => {
         setLocalDesignData(updatedData);
-        // Defer parent update to next tick to avoid "update during render" console errors
+        // Defer parent update to next tick to avoid "update during render" errors
         setTimeout(() => onUpdateDesign(updatedData), 0);
     };
 
@@ -130,30 +107,34 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
         reader.onload = (e) => {
             const result = e.target?.result as string;
             
-            const activeComp = localDesignData.components.find(c => c.id === activeCompId);
-            const currentVNum = (activeComp?.versions && activeComp.versions.length > 0) 
-                ? activeComp.versions[activeComp.versions.length - 1].versionNumber 
-                : 0;
-            
-            const newVersion: DesignVersion = { 
-                id: `v-${Date.now()}`, 
-                versionNumber: currentVNum + 1, 
-                imageUrl: result, 
-                timestamp: new Date().toISOString(), 
-                author: isDesigner ? 'Designer' : 'Manager' 
-            };
-            
-            const updatedComponents = localDesignData.components.map(c => 
-                c.id === activeCompId ? { ...c, versions: [...(c.versions || []), newVersion], status: 'DRAFT' as DesignWorkflowStatus } : c
-            );
-            
-            const nextData = { ...localDesignData, components: updatedComponents };
-            
-            setLocalDesignData(nextData);
-            setNewDrafts(prev => ({ ...prev, [activeCompId]: true }));
-            setSelectedVersionId(newVersion.id);
-            
-            onUpdateDesign(nextData);
+            setLocalDesignData(prev => {
+                const activeComp = prev.components.find(c => c.id === activeCompId);
+                const currentVNum = (activeComp?.versions && activeComp.versions.length > 0) 
+                    ? activeComp.versions[activeComp.versions.length - 1].versionNumber 
+                    : 0;
+                
+                const newVersion: DesignVersion = { 
+                    id: `v-${Date.now()}`, 
+                    versionNumber: currentVNum + 1, 
+                    imageUrl: result, 
+                    timestamp: new Date().toISOString(), 
+                    author: isDesigner ? 'Designer' : 'Manager' 
+                };
+                
+                const updatedComponents = prev.components.map(c => 
+                    c.id === activeCompId ? { ...c, versions: [...(c.versions || []), newVersion], status: 'DRAFT' as DesignWorkflowStatus } : c
+                );
+                
+                const nextData = { ...prev, components: updatedComponents };
+                
+                setNewDrafts(prevDrafts => ({ ...prevDrafts, [activeCompId]: true }));
+                setSelectedVersionId(newVersion.id);
+                
+                // Trigger persistent update after local state is updated
+                setTimeout(() => onUpdateDesign(nextData), 0);
+                
+                return nextData;
+            });
         };
         reader.readAsDataURL(file);
     };
@@ -348,7 +329,6 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
                 </DialogContent>
             </Dialog>
 
-            <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}><DialogContent><DialogHeader><DialogTitle>Add Component</DialogTitle></DialogHeader></DialogContent></Dialog>
             <style jsx global>{`
                 .vertical-text { writing-mode: vertical-lr; transform: rotate(180deg); }
                 .no-scrollbar::-webkit-scrollbar { display: none; }

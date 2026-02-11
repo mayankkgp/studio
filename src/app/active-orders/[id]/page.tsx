@@ -25,14 +25,11 @@ import {
     WalletCards,
     ChevronUp,
     Info,
-    AlertTriangle,
     Copy,
     Search,
     X,
     ClipboardCheck,
     Save,
-    Eye,
-    EyeOff,
     Palette,
     UserCircle
 } from 'lucide-react';
@@ -48,16 +45,6 @@ import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Input } from '@/components/ui/input';
-import { 
-    AlertDialog, 
-    AlertDialogAction, 
-    AlertDialogCancel, 
-    AlertDialogContent, 
-    AlertDialogDescription, 
-    AlertDialogFooter, 
-    AlertDialogHeader, 
-    AlertDialogTitle 
-} from '@/components/ui/alert-dialog';
 import { calculateBillableItems, calculateItemBreakdown } from '@/lib/pricing';
 import { cn } from '@/lib/utils';
 import type { Order, ConfiguredProduct, EventDetails, CustomerData } from '@/lib/types';
@@ -82,7 +69,6 @@ export default function ActiveOrderCommandCenter() {
     const [activeTab, setActiveTab] = useState('overview');
     const [isSavingBrief, setIsSavingBrief] = useState(false);
     const [isCustomerEditMode, setIsCustomerEditMode] = useState(false);
-    const [isCustomerCancelConfirmOpen, setIsCustomerCancelConfirmOpen] = useState(false);
     const [simulationRole, setSimulationRole] = useState<'MANAGER' | 'DESIGNER'>('MANAGER');
     
     const [projectedTotals, setProjectedTotals] = useState<Record<string, number>>({});
@@ -93,12 +79,10 @@ export default function ActiveOrderCommandCenter() {
 
     const hasUnsavedChanges = isEditMode || isCustomerEditMode;
 
-    // Sync global navigation lock state
     useEffect(() => {
         setNavigationLocked(hasUnsavedChanges);
     }, [hasUnsavedChanges, setNavigationLocked]);
 
-    // Handle shake trigger from global navigation attempts
     useEffect(() => {
         if (navigationAttemptCount > 0 && hasUnsavedChanges) {
             setShakeHeaderButton(true);
@@ -149,8 +133,8 @@ export default function ActiveOrderCommandCenter() {
                 variant: "destructive", 
                 title: "Sync Failed", 
                 description: e instanceof Error && e.name === 'QuotaExceededError' 
-                    ? "Storage quota exceeded. Please clear some older orders or drafts to save changes." 
-                    : "Could not save changes to local storage." 
+                    ? "Storage full. Please clear some older drafts to save new designs." 
+                    : "Could not save changes." 
             });
         }
     }, [id, toast]);
@@ -187,13 +171,7 @@ export default function ActiveOrderCommandCenter() {
                 }
             }
         } catch (e) {
-            toast({ 
-                variant: "destructive", 
-                title: "Save Failed", 
-                description: e instanceof Error && e.name === 'QuotaExceededError' 
-                    ? "Storage full. Could not persist changes." 
-                    : "Could not persist row changes." 
-            });
+            toast({ variant: "destructive", title: "Save Failed", description: "Storage full. Could not persist row." });
         }
     }, [id, toast]);
 
@@ -256,14 +234,6 @@ export default function ActiveOrderCommandCenter() {
         }
     };
 
-    const confirmExitEditMode = () => {
-        setIsEditMode(false);
-        setExpandedItems([]);
-        setProjectedTotals({});
-        setIsExitConfirmOpen(false);
-        loadOrder();
-    };
-
     const updateDetails = (details: EventDetails) => {
         if (!activeOrder) return;
         syncToStorage({ ...activeOrder, eventDetails: details });
@@ -284,14 +254,8 @@ export default function ActiveOrderCommandCenter() {
             syncToStorage({ ...activeOrder, customerData: data });
             setIsSavingBrief(false);
             setIsCustomerEditMode(false);
-            toast({ title: "Brief Saved", description: "Creative data updated successfully." });
+            toast({ title: "Brief Saved", description: "Creative data updated." });
         }, 600);
-    };
-
-    const handleCancelCustomerData = () => {
-        setIsCustomerEditMode(false);
-        setIsCustomerCancelConfirmOpen(false);
-        loadOrder(); 
     };
 
     const handleProjectedTotalChange = useCallback((id: string, total: number) => {
@@ -326,28 +290,10 @@ export default function ActiveOrderCommandCenter() {
 
     const handleCopySummary = () => {
         if (!activeOrder) return;
-        
         const clientName = getClientDisplay();
-        const deliverables = activeOrder.deliverables.map(item => {
-            const components = calculateItemBreakdown(item);
-            const itemTotal = components.reduce((sum, c) => sum + c.total, 0);
-            const qty = item.quantity ? ` (x${item.quantity})` : '';
-            return `• ${item.productName}${qty}: ₹${itemTotal.toLocaleString('en-IN')}`;
-        }).join('\n');
-
-        const summary = `Order #${activeOrder.orderId} Summary for ${clientName}:
-${deliverables}
-
-Total Order Value: ₹${workingTotal.toLocaleString('en-IN')}
-Total Paid: ₹${(activeOrder.paymentReceived || 0).toLocaleString('en-IN')}
-Current Balance Due: ₹${balance.toLocaleString('en-IN')}
-        `.trim();
-
+        const summary = `Order #${activeOrder.orderId} Summary for ${clientName}: \nTotal Value: ₹${workingTotal.toLocaleString('en-IN')}\nBalance: ₹${balance.toLocaleString('en-IN')}`;
         navigator.clipboard.writeText(summary).then(() => {
-            toast({
-                title: "Summary Copied",
-                description: "Order details have been copied to your clipboard.",
-            });
+            toast({ title: "Summary Copied" });
         });
     };
 
@@ -355,11 +301,7 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
         if (hasUnsavedChanges) {
             setShakeHeaderButton(true);
             setTimeout(() => setShakeHeaderButton(false), 500);
-            toast({
-                variant: "destructive",
-                title: "Unsaved Changes",
-                description: "Please save or cancel your current edits before switching tabs."
-            });
+            toast({ variant: "destructive", title: "Unsaved Changes", description: "Save or cancel edits first." });
             return;
         }
         setActiveTab(val);
@@ -378,39 +320,17 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                 isFixed: c.isFixed
             }));
         });
-    }, [activeOrder?.deliverables, projectedTotals]);
+    }, [activeOrder?.deliverables]);
 
     const filteredDeliverables = useMemo(() => {
         if (!activeOrder) return [];
         if (!itemSearchQuery.trim()) return activeOrder.deliverables;
         const query = itemSearchQuery.toLowerCase();
-        return activeOrder.deliverables.filter(d => 
-            d.productName.toLowerCase().includes(query)
-        );
+        return activeOrder.deliverables.filter(d => d.productName.toLowerCase().includes(query));
     }, [activeOrder?.deliverables, itemSearchQuery]);
 
-    if (loading) {
-        return (
-            <AppLayout>
-                <div className="flex h-screen items-center justify-center">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                </div>
-            </AppLayout>
-        );
-    }
-
-    if (!activeOrder) {
-        return (
-            <AppLayout>
-                <div className="flex h-screen flex-col items-center justify-center gap-4">
-                    <p className="text-muted-foreground font-medium">Order not found.</p>
-                    <Button variant="outline" onClick={() => router.push('/active-orders')}>
-                        <ChevronLeft className="h-4 w-4 mr-2" /> Back to List
-                    </Button>
-                </div>
-            </AppLayout>
-        );
-    }
+    if (loading) return <AppLayout><div className="flex h-screen items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div></AppLayout>;
+    if (!activeOrder) return <AppLayout><div className="flex h-screen flex-col items-center justify-center gap-4"><p>Order not found.</p><Button onClick={() => router.push('/active-orders')}>Back</Button></div></AppLayout>;
 
     const FinancialSnapshot = (
         <div className="space-y-6">
@@ -418,156 +338,46 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
                 <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
                     <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Event Snapshot</CardTitle>
                     <Sheet open={isDetailsSheetOpen} onOpenChange={setIsDetailsSheetOpen}>
-                        <SheetTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-7 px-2 text-primary hover:text-primary hover:bg-primary/10">
-                                <Pencil className="h-3 w-3 mr-1.5" /> Edit
-                            </Button>
-                        </SheetTrigger>
+                        <SheetTrigger asChild><Button variant="ghost" size="sm" className="h-7 px-2 text-primary"><Pencil className="h-3 w-3 mr-1.5" /> Edit</Button></SheetTrigger>
                         <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto">
-                            <SheetHeader className="mb-6">
-                                <SheetTitle className="font-headline text-2xl">Modify Event Details</SheetTitle>
-                            </SheetHeader>
-                            <EventDetailsForm 
-                                activeOrder={activeOrder} 
-                                onUpdate={(details) => {
-                                    updateDetails(details);
-                                }} 
-                                hideFooters 
-                            />
-                            <div className="mt-8 pt-6 border-t">
-                                <Button className="w-full" onClick={() => setIsDetailsSheetOpen(false)}>
-                                    Close &amp; Return
-                                </Button>
-                            </div>
+                            <SheetHeader className="mb-6"><SheetTitle className="font-headline text-2xl">Modify Event</SheetTitle></SheetHeader>
+                            <EventDetailsForm activeOrder={activeOrder} onUpdate={updateDetails} hideFooters />
+                            <div className="mt-8 pt-6 border-t"><Button className="w-full" onClick={() => setIsDetailsSheetOpen(false)}>Close</Button></div>
                         </SheetContent>
                     </Sheet>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <div className="space-y-1">
-                        <p className="text-lg font-bold font-headline leading-tight text-foreground">{getClientDisplay()}</p>
-                        <p className="text-xs text-primary font-bold uppercase">{activeOrder.eventDetails.eventType}</p>
-                    </div>
+                    <p className="text-lg font-bold font-headline">{getClientDisplay()}</p>
                     <Separator />
                     <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1">
-                            <div className="flex items-center gap-1.5 text-muted-foreground uppercase text-[9px] font-bold">
-                                <CalendarDays className="h-3 w-3" /> Event Date
-                            </div>
-                            <p className="text-xs font-bold text-foreground/90">
-                                {activeOrder.eventDetails.eventDate ? new Date(activeOrder.eventDetails.eventDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
-                            </p>
-                        </div>
-                        <div className="space-y-1">
-                            <div className="flex items-center gap-1.5 text-muted-foreground uppercase text-[9px] font-bold">
-                                <MapPin className="h-3 w-3" /> Venue
-                            </div>
-                            <p className="text-xs font-bold truncate text-foreground/90" title={activeOrder.eventDetails.venueName || '-'}>
-                                {activeOrder.eventDetails.venueName || '-'}
-                            </p>
-                        </div>
+                        <div><div className="text-muted-foreground uppercase text-[9px] font-bold">Date</div><p className="text-xs font-bold">{activeOrder.eventDetails.eventDate ? new Date(activeOrder.eventDetails.eventDate).toLocaleDateString('en-IN') : '-'}</p></div>
+                        <div><div className="text-muted-foreground uppercase text-[9px] font-bold">Venue</div><p className="text-xs font-bold truncate">{activeOrder.eventDetails.venueName || '-'}</p></div>
                     </div>
                 </CardContent>
             </Card>
-
             <Card className="shadow-sm border-2 border-primary/20 bg-background overflow-hidden">
-                <CardHeader className="pb-2 bg-muted/30">
-                    <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center justify-between">
-                        Live Financials
-                        <div className="flex items-center gap-2">
-                            <Button variant="ghost" size="icon" className="h-6 w-6 text-primary hover:bg-primary/10" onClick={handleCopySummary} title="Copy Summary">
-                                <Copy className="h-3 w-3" />
-                            </Button>
-                            <TrendingUp className="h-3 w-3 text-primary" />
-                        </div>
-                    </CardTitle>
-                </CardHeader>
+                <CardHeader className="pb-2 bg-muted/30"><CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center justify-between">Financials <TrendingUp className="h-3 w-3 text-primary" /></CardTitle></CardHeader>
                 <CardContent className="space-y-6 pt-6">
-                    <div className="space-y-1">
-                        <p className="text-[10px] font-bold uppercase text-muted-foreground">Order Value</p>
-                        {hasDiff ? (
-                            <div className="space-y-2">
-                                <div className="flex items-center gap-2 text-muted-foreground line-through text-sm">
-                                    ₹{initialTotal.toLocaleString('en-IN')}
-                                </div>
-                                <div className="flex items-center justify-between group">
-                                    <p className={cn(
-                                        "text-4xl font-bold tracking-tight",
-                                        delta > 0 ? "text-blue-700" : "text-orange-800"
-                                    )}>
-                                        ₹{workingTotal.toLocaleString('en-IN')}
-                                    </p>
-                                    <Badge variant="secondary" className={cn(
-                                        "h-6 px-2 gap-1 text-[10px] font-black",
-                                        delta > 0 ? "bg-blue-100 text-blue-800" : "bg-orange-100 text-orange-900"
-                                    )}>
-                                        {delta > 0 ? '+' : '-'} ₹{Math.abs(delta).toLocaleString('en-IN')}
-                                    </Badge>
-                                </div>
-                            </div>
-                        ) : (
-                            <p className="text-4xl font-bold tracking-tight text-foreground">₹{workingTotal.toLocaleString('en-IN')}</p>
-                        )}
-                    </div>
-                    
+                    <div><p className="text-[10px] font-bold uppercase text-muted-foreground">Order Value</p><p className="text-4xl font-bold">₹{workingTotal.toLocaleString('en-IN')}</p></div>
                     <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                            <p className="text-[10px] font-bold uppercase text-muted-foreground">Payment Received</p>
+                            <p className="text-[10px] font-bold uppercase text-muted-foreground">Paid</p>
                             <Popover open={isPaymentPopoverOpen} onOpenChange={setIsPaymentPopoverOpen}>
-                                <PopoverTrigger asChild>
-                                    <Button variant="outline" size="sm" className="h-6 text-[9px] font-bold uppercase gap-1 text-primary hover:text-primary hover:bg-primary/5 border-primary/50">
-                                        <WalletCards className="h-2.5 w-2.5" /> Record
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-64 p-4 space-y-4" align="end">
-                                    <div className="space-y-1.5">
-                                        <h4 className="font-bold text-xs uppercase tracking-wider text-foreground">Record Payment</h4>
-                                        <p className="text-[10px] text-muted-foreground leading-relaxed">Add new payment received to the current balance.</p>
-                                    </div>
+                                <PopoverTrigger asChild><Button variant="outline" size="sm" className="h-6 text-[9px] font-bold uppercase gap-1 text-primary">Record</Button></PopoverTrigger>
+                                <PopoverContent className="w-64 p-4 space-y-4">
+                                    <h4 className="font-bold text-xs uppercase">Record Payment</h4>
                                     <div className="relative">
                                         <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-bold">₹</span>
-                                        <input 
-                                            type="number"
-                                            min="0"
-                                            placeholder="Enter amount"
-                                            onKeyDown={(e) => {
-                                                if (e.key === 'Enter') {
-                                                    handleRecordPayment(Number(e.currentTarget.value));
-                                                    (e.target as any).blur();
-                                                }
-                                            }}
-                                            className="w-full h-10 pl-6 pr-3 text-sm font-bold border-2 border-primary/20 rounded-md focus:border-primary focus:outline-none"
-                                        />
+                                        <input type="number" min="0" className="w-full h-10 pl-6 pr-3 text-sm font-bold border-2 border-primary/20 rounded-md focus:border-primary" onKeyDown={(e) => e.key === 'Enter' && handleRecordPayment(Number(e.currentTarget.value))} />
                                     </div>
-                                    <Button 
-                                        className="w-full h-8 text-[10px] font-bold uppercase" 
-                                        onClick={(e) => {
-                                            const val = (e.currentTarget.parentElement?.querySelector('input') as HTMLInputElement).value;
-                                            handleRecordPayment(Number(val));
-                                        }}
-                                    >
-                                        Record Payment
-                                    </Button>
+                                    <Button className="w-full h-8 text-[10px] font-bold" onClick={(e) => handleRecordPayment(Number((e.currentTarget.parentElement?.querySelector('input') as HTMLInputElement).value))}>Save</Button>
                                 </PopoverContent>
                             </Popover>
                         </div>
-                        <div className="h-12 flex items-center px-4 bg-muted/40 rounded-lg border-2 border-transparent font-bold text-xl text-foreground cursor-default">
-                            ₹{(activeOrder.paymentReceived || 0).toLocaleString('en-IN')}
-                        </div>
+                        <div className="h-12 flex items-center px-4 bg-muted/40 rounded-lg font-bold text-xl">₹{(activeOrder.paymentReceived || 0).toLocaleString('en-IN')}</div>
                     </div>
-
                     <Separator />
-
-                    <div className="space-y-1">
-                        <p className="text-[10px] font-bold uppercase text-muted-foreground">Current Balance Due</p>
-                        <p className={cn(
-                            "text-2xl font-bold flex items-baseline gap-1.5", 
-                            balance > 0 ? "text-destructive" : "text-green-700"
-                        )}>
-                            ₹{Math.abs(balance).toLocaleString('en-IN')}
-                            {balance < 0 && <span className="text-xs uppercase ml-1 font-bold">(Excess)</span>}
-                            {balance === 0 && <span className="text-xs uppercase ml-1 font-bold">(Paid)</span>}
-                        </p>
-                    </div>
+                    <div><p className="text-[10px] font-bold uppercase text-muted-foreground">Balance</p><p className={cn("text-2xl font-bold", balance > 0 ? "text-destructive" : "text-green-700")}>₹{Math.abs(balance).toLocaleString('en-IN')}</p></div>
                 </CardContent>
             </Card>
         </div>
@@ -578,401 +388,96 @@ Current Balance Due: ₹${balance.toLocaleString('en-IN')}
             <div className="flex flex-col h-screen overflow-hidden bg-background">
                 <header className="flex h-16 shrink-0 items-center gap-4 border-b px-4 md:px-6 bg-background z-50">
                     <MobileNav />
-                    <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="lg:hidden" 
-                        onClick={() => {
-                            if (hasUnsavedChanges) {
-                                setShakeHeaderButton(true);
-                                setTimeout(() => setShakeHeaderButton(false), 500);
-                                toast({ variant: "destructive", title: "Unsaved Changes", description: "Save or cancel edits first." });
-                                return;
-                            }
-                            router.push('/active-orders');
-                        }}
-                    >
-                        <ChevronLeft className="h-5 w-5" />
-                    </Button>
+                    <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => router.push('/active-orders')}><ChevronLeft className="h-5 w-5" /></Button>
                     <div className="flex-1 overflow-hidden">
                         <div className="flex items-center gap-3">
-                            <h1 className="font-bold text-base md:text-lg font-headline truncate text-foreground">
-                                {headerSummary}
-                            </h1>
+                            <h1 className="font-bold text-base md:text-lg font-headline truncate">{headerSummary}</h1>
                             {activeTab === 'overview' && (
-                                <Button 
-                                    ref={headerButtonRef}
-                                    variant={isEditMode ? "default" : "outline"} 
-                                    size="sm" 
-                                    onClick={handleToggleEditMode}
-                                    className={cn(
-                                        "h-8 font-bold gap-2 transition-all shrink-0",
-                                        isEditMode ? "bg-primary shadow-lg shadow-primary/20" : "border-primary text-primary hover:bg-primary/5",
-                                        shakeHeaderButton && isEditMode && "animate-shake"
-                                    )}
-                                >
-                                    {isEditMode ? (
-                                        <><CheckCircle2 className="h-4 w-4" /> Done Editing</>
-                                    ) : (
-                                        <><Unlock className="h-4 w-4" /> Modify Order</>
-                                    )}
+                                <Button ref={headerButtonRef} variant={isEditMode ? "default" : "outline"} size="sm" onClick={handleToggleEditMode} className={cn("h-8 font-bold gap-2", isEditMode && shakeHeaderButton && "animate-shake")}>
+                                    {isEditMode ? <><CheckCircle2 className="h-4 w-4" /> Done Editing</> : <><Unlock className="h-4 w-4" /> Modify Order</>}
                                 </Button>
                             )}
                             {activeTab === 'customer' && (
                                 <div className="flex items-center gap-2">
                                     {!isCustomerEditMode ? (
-                                        <Button 
-                                            variant="outline" 
-                                            size="sm" 
-                                            onClick={() => setIsCustomerEditMode(true)}
-                                            className="h-8 font-bold gap-2 text-[11px] uppercase tracking-widest border-primary text-primary hover:bg-primary/5 transition-all shrink-0"
-                                        >
-                                            <Pencil className="h-3.5 w-3.5" /> Edit Creative Brief
-                                        </Button>
+                                        <Button variant="outline" size="sm" onClick={() => setIsCustomerEditMode(true)} className="h-8 font-bold gap-2 text-[11px] uppercase tracking-widest"><Pencil className="h-3.5 w-3.5" /> Edit Brief</Button>
                                     ) : (
-                                        <>
-                                            <Button 
-                                                variant="ghost" 
-                                                size="sm" 
-                                                onClick={() => setIsCustomerCancelConfirmOpen(true)}
-                                                className="h-8 font-bold text-muted-foreground hover:bg-muted transition-all shrink-0"
-                                            >
-                                                Cancel
-                                            </Button>
-                                            <Button 
-                                                ref={headerButtonRef}
-                                                size="sm" 
-                                                type="submit"
-                                                form="creative-brief-form"
-                                                disabled={isSavingBrief}
-                                                className={cn(
-                                                    "h-8 font-bold gap-2 bg-primary shadow-lg shadow-primary/20 shrink-0 hover:bg-primary/90",
-                                                    shakeHeaderButton && isCustomerEditMode && "animate-shake"
-                                                )}
-                                            >
-                                                {isSavingBrief ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                                                Save Creative Brief
-                                            </Button>
-                                        </>
+                                        <Button ref={headerButtonRef} size="sm" type="submit" form="creative-brief-form" disabled={isSavingBrief} className={cn("h-8 font-bold gap-2", shakeHeaderButton && "animate-shake")}>
+                                            {isSavingBrief ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Save Brief
+                                        </Button>
                                     )}
                                 </div>
                             )}
                             {activeTab === 'design' && (
                                 <div className="flex items-center gap-4 ml-auto">
-                                    <span className="text-[9px] font-black uppercase text-muted-foreground tracking-widest hidden sm:inline">Role Simulation:</span>
                                     <Tabs value={simulationRole} onValueChange={(v: any) => setSimulationRole(v)}>
-                                        <TabsList className="h-8 bg-muted/40 border border-primary/20 p-1">
-                                            <TabsTrigger 
-                                                value="MANAGER" 
-                                                className="text-[10px] font-black uppercase px-3 h-6 gap-1.5 transition-all data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-lg"
-                                            >
-                                                <Users className="h-3 w-3" /> Manager
-                                            </TabsTrigger>
-                                            <TabsTrigger 
-                                                value="DESIGNER" 
-                                                className="text-[10px] font-black uppercase px-3 h-6 gap-1.5 transition-all data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-lg"
-                                            >
-                                                <UserCircle className="h-3 w-3" /> Designer
-                                            </TabsTrigger>
+                                        <TabsList className="h-8 bg-muted/40 border p-1">
+                                            <TabsTrigger value="MANAGER" className="text-[10px] font-black uppercase h-6 gap-1.5"><Users className="h-3 w-3" /> Manager</TabsTrigger>
+                                            <TabsTrigger value="DESIGNER" className="text-[10px] font-black uppercase h-6 gap-1.5"><UserCircle className="h-3 w-3" /> Designer</TabsTrigger>
                                         </TabsList>
                                     </Tabs>
                                 </div>
                             )}
                         </div>
                     </div>
-                    <div className="hidden sm:block font-mono text-xs font-bold text-muted-foreground uppercase tracking-widest opacity-60">
-                        {activeOrder.orderId}
-                    </div>
                 </header>
 
                 <Tabs value={activeTab} onValueChange={handleTabChange} className="flex-1 flex flex-col overflow-hidden">
                     <div className="px-4 md:px-8 border-b bg-muted/20">
                         <TabsList className="h-12 bg-transparent p-0 gap-8">
-                            <TabsTrigger 
-                                value="overview" 
-                                className="h-12 rounded-none border-b-2 border-transparent transition-all hover:bg-primary/5 hover:text-primary data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none font-bold text-xs uppercase tracking-widest"
-                            >
-                                <Package className="h-4 w-4 mr-2" />
-                                Overview
-                            </TabsTrigger>
-                            <TabsTrigger 
-                                value="customer" 
-                                className="h-12 rounded-none border-b-2 border-transparent transition-all hover:bg-primary/5 hover:text-primary data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none font-bold text-xs uppercase tracking-widest"
-                            >
-                                <ClipboardCheck className="h-4 w-4 mr-2" />
-                                Customer Data
-                            </TabsTrigger>
-                            <TabsTrigger 
-                                value="design" 
-                                className="h-12 rounded-none border-b-2 border-transparent transition-all hover:bg-primary/5 hover:text-primary data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none font-bold text-xs uppercase tracking-widest"
-                            >
-                                <Palette className="h-4 w-4 mr-2" />
-                                Design
-                            </TabsTrigger>
+                            <TabsTrigger value="overview" className="h-12 rounded-none border-b-2 border-transparent font-bold text-xs uppercase tracking-widest"><Package className="h-4 w-4 mr-2" /> Overview</TabsTrigger>
+                            <TabsTrigger value="customer" className="h-12 rounded-none border-b-2 border-transparent font-bold text-xs uppercase tracking-widest"><ClipboardCheck className="h-4 w-4 mr-2" /> Customer Data</TabsTrigger>
+                            <TabsTrigger value="design" className="h-12 rounded-none border-b-2 border-transparent font-bold text-xs uppercase tracking-widest"><Palette className="h-4 w-4 mr-2" /> Design</TabsTrigger>
                         </TabsList>
                     </div>
 
                     <div className="flex-1 relative">
                         <TabsContent value="overview" className="absolute inset-0 m-0 outline-none overflow-hidden">
                             <div className="flex h-full w-full overflow-hidden">
-                                <main className="flex-1 overflow-y-auto bg-background/50 custom-scrollbar relative">
-                                    <div className="max-w-4xl mx-auto p-4 md:p-8 space-y-8 pb-32">
+                                <main className="flex-1 overflow-y-auto bg-background/50 relative p-4 md:p-8 space-y-8 pb-32">
+                                    <div className="max-w-4xl mx-auto space-y-8">
                                         <div className="flex items-center justify-between gap-4">
-                                            <h2 className="text-xl font-headline font-bold flex items-center gap-2 shrink-0 text-foreground">
-                                                <Package className="h-5 w-5 text-primary" />
-                                                Scope of Work
-                                            </h2>
-                                            
-                                            <div className="flex items-center gap-4 flex-1 justify-end">
-                                                {viewMode === 'scope' && !isEditMode && (
-                                                    <div className="relative max-w-[200px] hidden sm:block">
-                                                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                                                        <Input 
-                                                            placeholder="Filter list..." 
-                                                            className="h-8 pl-8 text-xs bg-background border-primary/20"
-                                                            value={itemSearchQuery}
-                                                            onChange={(e) => setItemSearchQuery(e.target.value)}
-                                                        />
-                                                        {itemSearchQuery && (
-                                                            <Button 
-                                                                variant="ghost" 
-                                                                size="icon" 
-                                                                className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 text-muted-foreground"
-                                                                onClick={() => setItemSearchQuery('')}
-                                                            >
-                                                                <X className="h-3 w-3" />
-                                                            </Button>
-                                                        )}
-                                                    </div>
-                                                )}
-                                                {viewMode === 'scope' && isEditMode && (
-                                                    <div className="relative max-w-[200px] hidden sm:block">
-                                                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                                                        <Input 
-                                                            placeholder="Filter list..." 
-                                                            className="h-8 pl-8 text-xs bg-background border-primary/20"
-                                                            value={itemSearchQuery}
-                                                            onChange={(e) => setItemSearchQuery(e.target.value)}
-                                                        />
-                                                    </div>
-                                                )}
-                                                <Tabs value={viewMode} onValueChange={(v: any) => setViewMode(v)} className="w-auto">
-                                                    <TabsList className="h-8 p-1 bg-muted/40 border border-primary/20">
-                                                        <TabsTrigger value="scope" className="text-[10px] font-bold uppercase h-6 px-3 transition-all hover:text-primary">
-                                                            <Info className="h-3 w-3 mr-1.5" /> Scope
-                                                        </TabsTrigger>
-                                                        <TabsTrigger value="bill" className="text-[10px] font-bold uppercase h-6 px-3 transition-all hover:text-primary">
-                                                            <Receipt className="h-3 w-3 mr-1.5" /> Bill View
-                                                        </TabsTrigger>
-                                                    </TabsList>
-                                                </Tabs>
-                                                {!isEditMode && (
-                                                    <Badge variant="secondary" className="gap-1.5 text-[10px] font-bold uppercase tracking-wider hidden md:flex text-muted-foreground border-primary/20">
-                                                        <Lock className="h-3 w-3" /> Locked
-                                                    </Badge>
-                                                )}
-                                            </div>
+                                            <h2 className="text-xl font-headline font-bold flex items-center gap-2"><Package className="h-5 w-5 text-primary" /> Scope of Work</h2>
+                                            <Tabs value={viewMode} onValueChange={(v: any) => setViewMode(v)}>
+                                                <TabsList className="h-8 p-1 bg-muted/40 border border-primary/20">
+                                                    <TabsTrigger value="scope" className="text-[10px] font-bold uppercase h-6 px-3">Scope</TabsTrigger>
+                                                    <TabsTrigger value="bill" className="text-[10px] font-bold uppercase h-6 px-3">Bill View</TabsTrigger>
+                                                </TabsList>
+                                            </Tabs>
                                         </div>
-
-                                        {isEditMode && viewMode !== 'bill' && (
-                                            <div className="bg-card p-4 md:p-6 rounded-xl border-2 border-primary/20 shadow-sm sticky top-0 z-40 backdrop-blur-sm bg-card/95">
-                                                <CommandBar onAdd={addDeliverable} />
-                                            </div>
-                                        )}
-
+                                        {isEditMode && viewMode !== 'bill' && <div className="bg-card p-4 rounded-xl border-2 border-primary/20 shadow-sm sticky top-0 z-40"><CommandBar onAdd={addDeliverable} /></div>}
                                         <div className="space-y-4">
-                                            {activeOrder.deliverables.length === 0 ? (
-                                                <div className="text-center py-20 border-2 border-dashed rounded-xl bg-muted/20 border-primary/20">
-                                                    <Package className="h-10 w-10 text-muted-foreground/30 mx-auto mb-4" />
-                                                    <p className="text-sm text-muted-foreground font-bold">No deliverables in scope.</p>
-                                                </div>
-                                            ) : viewMode === 'bill' ? (
-                                                <div className="rounded-xl border border-primary/20 bg-card overflow-hidden shadow-sm animate-in fade-in slide-in-from-bottom-2">
+                                            {activeOrder.deliverables.length === 0 ? <div className="text-center py-20 border-2 border-dashed rounded-xl bg-muted/20 border-primary/20"><p className="text-sm text-muted-foreground font-bold">No deliverables.</p></div> : 
+                                            viewMode === 'bill' ? (
+                                                <div className="rounded-xl border border-primary/20 bg-card overflow-hidden shadow-sm">
                                                     <table className="w-full text-left text-xs border-collapse">
-                                                        <thead>
-                                                            <tr className="bg-muted/40 border-b border-primary/10">
-                                                                <th className="px-4 py-3 font-bold uppercase tracking-wider text-foreground">Product / Item</th>
-                                                                <th className="px-4 py-3 font-bold uppercase tracking-wider text-foreground text-center">Multiplier</th>
-                                                                <th className="px-4 py-3 font-bold uppercase tracking-wider text-foreground text-right">Rate (₹)</th>
-                                                                <th className="px-4 py-3 font-bold uppercase tracking-wider text-foreground text-right">Total (₹)</th>
-                                                            </tr>
-                                                        </thead>
+                                                        <thead><tr className="bg-muted/40 border-b border-primary/10"><th className="px-4 py-3 font-bold uppercase">Product / Item</th><th className="px-4 py-3 font-bold uppercase text-center">Multiplier</th><th className="px-4 py-3 font-bold uppercase text-right">Rate</th><th className="px-4 py-3 font-bold uppercase text-right">Total</th></tr></thead>
                                                         <tbody>
                                                             {billViewData.map((row, i) => (
-                                                                <tr key={i} className="border-b border-primary/5 last:border-0 hover:bg-primary/5 transition-colors">
-                                                                    <td className="px-4 py-3">
-                                                                        <div className="font-bold text-foreground">{row.productName}</div>
-                                                                        <div className="text-[10px] text-muted-foreground font-bold uppercase">{row.label}</div>
-                                                                    </td>
-                                                                    <td className="px-4 py-3 text-center font-mono font-bold text-foreground/80">{row.isFixed ? '-' : row.multiplier}</td>
-                                                                    <td className="px-4 py-3 text-right tabular-nums font-bold text-foreground/80">{row.rate.toLocaleString('en-IN')}</td>
-                                                                    <td className="px-4 py-3 text-right font-bold tabular-nums text-foreground">{row.total.toLocaleString('en-IN')}</td>
-                                                                </tr>
+                                                                <tr key={i} className="border-b border-primary/5 last:border-0 hover:bg-primary/5 transition-colors"><td className="px-4 py-3"><div className="font-bold">{row.productName}</div><div className="text-[10px] text-muted-foreground font-bold uppercase">{row.label}</div></td><td className="px-4 py-3 text-center font-mono font-bold">{row.isFixed ? '-' : row.multiplier}</td><td className="px-4 py-3 text-right">{row.rate.toLocaleString('en-IN')}</td><td className="px-4 py-3 text-right font-bold tabular-nums text-foreground">{row.total.toLocaleString('en-IN')}</td></tr>
                                                             ))}
-                                                            <tr className="bg-primary/5 font-bold">
-                                                                <td colSpan={3} className="px-4 py-4 text-right uppercase tracking-widest text-[10px] text-muted-foreground">Total Order Value</td>
-                                                                <td className="px-4 py-4 text-right text-base text-primary tabular-nums font-black">₹{workingTotal.toLocaleString('en-IN')}</td>
-                                                            </tr>
+                                                            <tr className="bg-primary/5 font-bold"><td colSpan={3} className="px-4 py-4 text-right uppercase tracking-widest text-[10px] text-muted-foreground">Total</td><td className="px-4 py-4 text-right text-base text-primary tabular-nums font-black">₹{workingTotal.toLocaleString('en-IN')}</td></tr>
                                                         </tbody>
                                                     </table>
                                                 </div>
                                             ) : (
-                                                <>
-                                                    <div className="sm:hidden mb-4">
-                                                        <div className="relative">
-                                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                                            <Input 
-                                                                placeholder="Search products..." 
-                                                                className="h-10 pl-10 border-primary/20"
-                                                                value={itemSearchQuery}
-                                                                onChange={(e) => setItemSearchQuery(e.target.value)}
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                    {filteredDeliverables.length === 0 ? (
-                                                        <div className="text-center py-20 bg-muted/20 rounded-xl border-2 border-dashed border-primary/20">
-                                                            <p className="text-muted-foreground text-sm font-bold">No items match "{itemSearchQuery}"</p>
-                                                            <Button variant="link" size="sm" onClick={() => setItemSearchQuery('')} className="font-bold">Clear filter</Button>
-                                                        </div>
-                                                    ) : (
-                                                        <Accordion 
-                                                            type="multiple" 
-                                                            value={expandedItems} 
-                                                            onValueChange={setExpandedItems}
-                                                            className="space-y-3"
-                                                        >
-                                                            {filteredDeliverables.map((item) => (
-                                                                <DeliverableRow 
-                                                                    key={item.id} 
-                                                                    item={item} 
-                                                                    isReadOnly={!isEditMode}
-                                                                    isExpanded={expandedItems.includes(item.id)} 
-                                                                    isNonCollapsible={false}
-                                                                    onEdit={() => handleEditRow(item.id)}
-                                                                    onDone={handleDoneRow}
-                                                                    onValidityChange={() => {}}
-                                                                    onUpdate={updateDeliverable}
-                                                                    onRemove={removeDeliverable}
-                                                                    onProjectedTotalChange={handleProjectedTotalChange}
-                                                                    isPersistent={true}
-                                                                    manualSyncOnly={true}
-                                                                    showCommercials={true}
-                                                                />
-                                                            ))}
-                                                        </Accordion>
-                                                    )}
-                                                </>
+                                                <Accordion type="multiple" value={expandedItems} onValueChange={setExpandedItems} className="space-y-3">
+                                                    {filteredDeliverables.map((item) => (
+                                                        <DeliverableRow key={item.id} item={item} isReadOnly={!isEditMode} isExpanded={expandedItems.includes(item.id)} onEdit={() => handleEditRow(item.id)} onDone={handleDoneRow} onValidityChange={() => {}} onUpdate={updateDeliverable} onRemove={removeDeliverable} onProjectedTotalChange={handleProjectedTotalChange} isPersistent={true} manualSyncOnly={true} showCommercials={true} />
+                                                    ))}
+                                                </Accordion>
                                             )}
                                         </div>
                                     </div>
                                 </main>
-
-                                <aside className="w-[24rem] shrink-0 border-l border-primary/20 bg-card/30 hidden xl:flex flex-col p-6 gap-6 overflow-y-auto custom-scrollbar">
-                                    {FinancialSnapshot}
-                                    <div className="mt-auto pt-6 border-t border-primary/20 flex items-center justify-between px-2">
-                                        <div className="flex items-center gap-2">
-                                            <Users className="h-4 w-4 text-muted-foreground" />
-                                            <span className="text-[10px] font-bold text-muted-foreground uppercase">Role: Manager</span>
-                                        </div>
-                                        <Button 
-                                            variant="outline" 
-                                            size="sm" 
-                                            onClick={() => {
-                                                if (hasUnsavedChanges) {
-                                                    setShakeHeaderButton(true);
-                                                    setTimeout(() => setShakeHeaderButton(false), 500);
-                                                    toast({ variant: "destructive", title: "Unsaved Changes", description: "Save or cancel edits first." });
-                                                    return;
-                                                }
-                                                router.push('/active-orders');
-                                            }} 
-                                            className="h-8 text-[10px] font-bold uppercase border-primary text-primary hover:bg-primary/5"
-                                        >
-                                            Exit to List
-                                        </Button>
-                                    </div>
-                                </aside>
+                                <aside className="w-[24rem] shrink-0 border-l border-primary/20 bg-card/30 hidden xl:flex flex-col p-6 gap-6 overflow-y-auto">{FinancialSnapshot}</aside>
                             </div>
                         </TabsContent>
-                        
-                        <TabsContent value="customer" className="absolute inset-0 m-0 outline-none overflow-y-auto custom-scrollbar bg-background/50">
-                            <div className="max-w-5xl mx-auto p-4 md:p-12">
-                                <CustomerDataForm 
-                                    order={activeOrder} 
-                                    onSave={handleSaveCustomerData}
-                                    isSaving={isSavingBrief}
-                                    isEditMode={isCustomerEditMode}
-                                    onEnterEditMode={() => setIsCustomerEditMode(true)}
-                                />
-                            </div>
-                        </TabsContent>
-
-                        <TabsContent value="design" className="absolute inset-0 m-0 outline-none overflow-hidden">
-                            <DesignReviewTab 
-                                order={activeOrder} 
-                                onUpdateOrder={syncToStorage} 
-                                role={simulationRole}
-                            />
-                        </TabsContent>
+                        <TabsContent value="customer" className="absolute inset-0 m-0 outline-none overflow-y-auto custom-scrollbar bg-background/50"><div className="max-w-5xl mx-auto p-4 md:p-12"><CustomerDataForm order={activeOrder} onSave={handleSaveCustomerData} isSaving={isSavingBrief} isEditMode={isCustomerEditMode} onEnterEditMode={() => setIsCustomerEditMode(true)} /></div></TabsContent>
+                        <TabsContent value="design" className="absolute inset-0 m-0 outline-none overflow-hidden"><DesignReviewTab order={activeOrder} onUpdateOrder={syncToStorage} role={simulationRole} /></TabsContent>
                     </div>
                 </Tabs>
-
-                <div className="xl:hidden fixed bottom-0 left-0 right-0 bg-background border-t border-primary/20 z-40 shadow-2xl animate-in slide-in-from-bottom duration-300">
-                    <div className="flex items-center justify-between px-4 h-20">
-                        <div className="space-y-0.5">
-                            <p className="text-[9px] font-bold uppercase text-muted-foreground">Order Value</p>
-                            <p className={cn("text-xl font-black tabular-nums", hasDiff ? "text-primary" : "text-foreground")}>
-                                ₹{workingTotal.toLocaleString('en-IN')}
-                            </p>
-                        </div>
-                        <div className="flex items-center gap-3">
-                            <div className="text-right">
-                                <p className="text-[9px] font-bold uppercase text-muted-foreground">Balance</p>
-                                <p className={cn("text-sm font-bold tabular-nums", balance > 0 ? "text-destructive" : "text-green-700")}>
-                                    ₹{Math.abs(balance).toLocaleString('en-IN')}
-                                </p>
-                            </div>
-                            <Sheet>
-                                <SheetTrigger asChild>
-                                    <Button variant="secondary" size="icon" className="h-10 w-10 rounded-full shadow-lg bg-primary text-white hover:bg-primary/90">
-                                        <ChevronUp className="h-5 w-5" />
-                                    </Button>
-                                </SheetTrigger>
-                                <SheetContent side="bottom" className="h-[80vh] px-4 pt-10 rounded-t-3xl overflow-y-auto custom-scrollbar border-t-2 border-primary/20">
-                                    <SheetHeader className="sr-only">
-                                        <SheetTitle>Financial Details</SheetTitle>
-                                    </SheetHeader>
-                                    {FinancialSnapshot}
-                                    <div className="pt-8 pb-10">
-                                        <Button 
-                                            variant="outline" 
-                                            className="w-full h-12 font-bold uppercase border-primary text-primary" 
-                                            onClick={() => {
-                                                if (hasUnsavedChanges) {
-                                                    setShakeHeaderButton(true);
-                                                    setTimeout(() => setShakeHeaderButton(false), 500);
-                                                    toast({ variant: "destructive", title: "Unsaved Changes", description: "Save or cancel edits first." });
-                                                    return;
-                                                }
-                                                router.push('/active-orders');
-                                            }}
-                                        >
-                                            Exit to List
-                                        </Button>
-                                    </div>
-                                </SheetContent>
-                            </Sheet>
-                        </div>
-                    </div>
-                </div>
             </div>
-
-            <style jsx global>{`
-                .custom-scrollbar::-webkit-scrollbar { width: 5px; }
-                .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-                .custom-scrollbar::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 10px; }
-                .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground) / 0.3); }
-            `}</style>
         </AppLayout>
     );
 }
