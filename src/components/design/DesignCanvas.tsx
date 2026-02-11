@@ -15,7 +15,6 @@ import {
     MessageSquare, 
     AlertCircle, 
     CornerDownRight, 
-    Send,
     Trash2,
     Lock,
     CheckCircle2
@@ -194,6 +193,7 @@ export function DesignCanvas({
 
     const handleClosePopover = (pinId: string) => {
         const pin = pins.find(p => p.id === pinId);
+        // If pin has no text and we're not currently saving, it means it's a new empty pin being dismissed
         if (pin && !pin.text && !draftText.trim() && !isSavingRef.current) {
             onUpdatePins(pins.filter(p => p.id !== pinId));
         }
@@ -393,11 +393,15 @@ export function DesignCanvas({
                                             align="center"
                                             onOpenAutoFocus={(e) => {
                                                 e.preventDefault();
+                                                const target = e.currentTarget;
+                                                // Focus textarea for new pins, otherwise focus container to enable hotkeys
                                                 if (!pin.text) {
-                                                    const textarea = e.currentTarget.querySelector('textarea');
-                                                    textarea?.focus({ preventScroll: true });
+                                                    setTimeout(() => {
+                                                        const textarea = target.querySelector('textarea');
+                                                        textarea?.focus({ preventScroll: true });
+                                                    }, 50);
                                                 } else {
-                                                    (e.currentTarget as HTMLElement).focus({ preventScroll: true });
+                                                    target.focus({ preventScroll: true });
                                                 }
                                             }}
                                         >
@@ -447,10 +451,25 @@ export function DesignCanvas({
                                                                     </div>
                                                                 )}
                                                                 <div className="flex gap-2 ml-auto">
-                                                                    <Button variant="ghost" size="sm" className="h-7 text-[10px] font-black uppercase px-3" onClick={(e) => { e.stopPropagation(); handleClosePopover(pin.id); }}>
+                                                                    <Button 
+                                                                        variant="ghost" 
+                                                                        size="sm" 
+                                                                        className="h-7 text-[10px] font-black uppercase px-3" 
+                                                                        onClick={(e) => { 
+                                                                            e.stopPropagation(); 
+                                                                            handleClosePopover(pin.id); 
+                                                                        }}
+                                                                    >
                                                                         Cancel
                                                                     </Button>
-                                                                    <Button size="sm" className="h-7 text-[10px] font-black uppercase px-3" onClick={(e) => { e.stopPropagation(); handleSaveComment(pin.id); }}>
+                                                                    <Button 
+                                                                        size="sm" 
+                                                                        className="h-7 text-[10px] font-black uppercase px-3" 
+                                                                        onClick={(e) => { 
+                                                                            e.stopPropagation(); 
+                                                                            handleSaveComment(pin.id); 
+                                                                        }}
+                                                                    >
                                                                         Save Feedback
                                                                     </Button>
                                                                 </div>

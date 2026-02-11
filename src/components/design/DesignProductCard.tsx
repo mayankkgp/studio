@@ -43,10 +43,10 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
     const [compNameInput, setCompNameInput] = useState('');
     const [editingCompId, setEditingCompId] = useState<string | null>(null);
     
-    // Track if there is a newly uploaded draft that hasn't been submitted yet
+    // Optimistic local state to handle race conditions during upload
     const [newDrafts, setNewDrafts] = useState<Record<string, boolean>>({});
 
-    const designData = useMemo(() => {
+    const initialDesignData = useMemo(() => {
         const baseData = product.designData || {
             productId: product.id,
             components: [
@@ -71,22 +71,29 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
         } as DesignData;
     }, [product.id, product.designData]);
 
-    const [activeCompId, setActiveCompId] = useState(designData.components[0]?.id);
+    // Local design data ensures immediate UI feedback while parent updates sync in background
+    const [localDesignData, setLocalDesignData] = useState<DesignData>(initialDesignData);
+
+    useEffect(() => {
+        setLocalDesignData(initialDesignData);
+    }, [initialDesignData]);
+
+    const [activeCompId, setActiveCompId] = useState(localDesignData.components[0]?.id);
     const [highlightedPinId, setHighlightedPinId] = useState<string | null>(null);
     const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
 
     useEffect(() => {
-        const currentStillExists = designData.components.some(c => c.id === activeCompId);
-        if (!currentStillExists && designData.components.length > 0) {
-            setActiveCompId(designData.components[0].id);
+        const currentStillExists = localDesignData.components.some(c => c.id === activeCompId);
+        if (!currentStillExists && localDesignData.components.length > 0) {
+            setActiveCompId(localDesignData.components[0].id);
         }
-    }, [designData.components, activeCompId]);
+    }, [localDesignData.components, activeCompId]);
 
     useEffect(() => {
         setSelectedVersionId(null);
     }, [activeCompId]);
 
-    const activeComponent = designData.components.find(c => c.id === activeCompId) || designData.components[0];
+    const activeComponent = localDesignData.components.find(c => c.id === activeCompId) || localDesignData.components[0];
     
     if (!activeComponent) return null;
 
@@ -96,6 +103,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
     
     const visibleVersions = useMemo(() => {
         if (isDesigner) return activeComponent.versions;
+        // Manager restriction: Do not show newly uploaded unsubmitted drafts
         if (activeComponent.status === 'DRAFT' && newDrafts[activeCompId] && activeComponent.versions.length > 0) {
             return activeComponent.versions.slice(0, -1);
         }
@@ -113,6 +121,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
     const viewedVersionNum = activeVersion?.versionNumber || 0;
 
     const handleUpdateDesignInternal = (updatedData: DesignData) => {
+        setLocalDesignData(updatedData);
         onUpdateDesign(updatedData);
     };
 
@@ -125,7 +134,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
             versions: [],
             pins: []
         };
-        const updated = { ...designData, components: [...designData.components, newComp] };
+        const updated = { ...localDesignData, components: [...localDesignData.components, newComp] };
         handleUpdateDesignInternal(updated);
         setActiveCompId(newComp.id);
         setIsAddModalOpen(false);
@@ -134,26 +143,26 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
 
     const handleRenameComponent = () => {
         if (!compNameInput.trim() || !editingCompId) return;
-        const updatedComponents = designData.components.map(c => 
+        const updatedComponents = localDesignData.components.map(c => 
             c.id === editingCompId ? { ...c, name: compNameInput.trim() } : c
         );
-        handleUpdateDesignInternal({ ...designData, components: updatedComponents });
+        handleUpdateDesignInternal({ ...localDesignData, components: updatedComponents });
         setIsRenameModalOpen(false);
         setCompNameInput('');
         setEditingCompId(null);
     };
 
     const handleDeleteComponent = (compId: string) => {
-        if (designData.components.length <= 1) return;
-        const updatedComponents = designData.components.filter(c => c.id !== compId);
-        handleUpdateDesignInternal({ ...designData, components: updatedComponents });
+        if (localDesignData.components.length <= 1) return;
+        const updatedComponents = localDesignData.components.filter(c => c.id !== compId);
+        handleUpdateDesignInternal({ ...localDesignData, components: updatedComponents });
     };
 
     const handleUpdatePins = (newPins: DesignPin[]) => {
-        const updatedComponents = designData.components.map(c => 
+        const updatedComponents = localDesignData.components.map(c => 
             c.id === activeCompId ? { ...c, pins: newPins } : c
         );
-        handleUpdateDesignInternal({ ...designData, components: updatedComponents });
+        handleUpdateDesignInternal({ ...localDesignData, components: updatedComponents });
     };
 
     const handleStatusChange = (status: DesignWorkflowStatus) => {
@@ -161,10 +170,10 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
             setNewDrafts(prev => ({ ...prev, [activeCompId]: false }));
         }
         
-        const updatedComponents = designData.components.map(c => 
+        const updatedComponents = localDesignData.components.map(c => 
             c.id === activeCompId ? { ...c, status } : c
         );
-        handleUpdateDesignInternal({ ...designData, components: updatedComponents });
+        handleUpdateDesignInternal({ ...localDesignData, components: updatedComponents });
     };
 
     const handleUpload = (file: File) => {
@@ -180,29 +189,35 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
                 author: isDesigner ? 'Designer' : 'Manager'
             };
 
-            const updatedComponents = designData.components.map(c => 
+            const updatedComponents = localDesignData.components.map(c => 
                 c.id === activeCompId ? { 
                     ...c, 
                     versions: [...(c.versions || []), newVersion],
                     status: 'DRAFT' as DesignWorkflowStatus
                 } : c
             );
-            handleUpdateDesignInternal({ ...designData, components: updatedComponents });
+            
+            // Critical Fix: Update local state immediately before parent sync to ensure designer sees image
+            const nextData = { ...localDesignData, components: updatedComponents };
+            setLocalDesignData(nextData);
             setNewDrafts(prev => ({ ...prev, [activeCompId]: true }));
             setSelectedVersionId(newVersion.id);
+            
+            // Background sync with storage
+            onUpdateDesign(nextData);
         };
         reader.readAsDataURL(file);
     };
 
     const handleUpdateVersions = (newVersions: DesignVersion[]) => {
-        const updatedComponents = designData.components.map(c => {
+        const updatedComponents = localDesignData.components.map(c => {
             if (c.id === activeCompId) {
                 const nextStatus: DesignWorkflowStatus = newVersions.length === 0 ? 'PENDING' : c.status;
                 return { ...c, versions: newVersions, status: nextStatus };
             }
             return c;
         });
-        handleUpdateDesignInternal({ ...designData, components: updatedComponents });
+        handleUpdateDesignInternal({ ...localDesignData, components: updatedComponents });
     };
 
     const handleDeleteDraft = () => {
@@ -320,7 +335,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
                             <div className="flex items-center gap-2 overflow-hidden flex-1">
                                 <Tabs value={activeCompId} onValueChange={setActiveCompId} className="w-full">
                                     <TabsList className="h-11 bg-muted/20 p-1 gap-1 justify-start overflow-x-auto no-scrollbar">
-                                        {(designData.components || []).map(comp => {
+                                        {(localDesignData.components || []).map(comp => {
                                             const dotColor = comp.status === 'APPROVED' ? 'text-green-500' :
                                                             comp.status === 'CUSTOMER_REVIEW' ? 'text-blue-500' :
                                                             comp.status === 'INTERNAL_REVIEW' ? 'text-amber-500' : 
@@ -377,7 +392,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
                                         </DropdownMenuItem>
                                         <DropdownMenuItem 
                                             className="text-destructive focus:text-destructive"
-                                            disabled={designData.components.length <= 1}
+                                            disabled={localDesignData.components.length <= 1}
                                             onClick={() => handleDeleteComponent(activeComponent.id)}
                                         >
                                             <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete Component
