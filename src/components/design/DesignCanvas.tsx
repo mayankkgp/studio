@@ -17,7 +17,8 @@ import {
     CornerDownRight, 
     Send,
     Trash2,
-    Lock
+    Lock,
+    CheckCircle2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -70,7 +71,7 @@ export function DesignCanvas({
     const [zoom, setZoom] = useState(1);
     const [position, setPosition] = useState({ x: 0, y: 0 });
     const [isDragging, setIsDragging] = useState(false);
-    const [dragStart, setDragStart] = useState({ x: e.clientX - position.x, y: e.clientY - position.y } as any);
+    const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
     
     // Feedback Drafting State
     const [draftText, setDraftText] = useState('');
