@@ -139,14 +139,19 @@ export default function ActiveOrderCommandCenter() {
     const syncToStorage = useCallback((updatedOrder: Order) => {
         try {
             const raw = localStorage.getItem('srishbish_active_v1');
-            if (raw) {
-                const parsed = JSON.parse(raw);
-                parsed[id] = { ...updatedOrder, lastModifiedAt: new Date().toISOString() };
-                localStorage.setItem('srishbish_active_v1', JSON.stringify(parsed));
-                setActiveOrder(updatedOrder);
-            }
+            const parsed = raw ? JSON.parse(raw) : {};
+            parsed[id] = { ...updatedOrder, lastModifiedAt: new Date().toISOString() };
+            localStorage.setItem('srishbish_active_v1', JSON.stringify(parsed));
+            setActiveOrder(updatedOrder);
         } catch (e) {
-            toast({ variant: "destructive", title: "Sync Failed", description: "Could not save changes." });
+            console.error('Storage Sync Error:', e);
+            toast({ 
+                variant: "destructive", 
+                title: "Sync Failed", 
+                description: e instanceof Error && e.name === 'QuotaExceededError' 
+                    ? "Storage full. Please clear some designs." 
+                    : "Could not save changes." 
+            });
         }
     }, [id, toast]);
 

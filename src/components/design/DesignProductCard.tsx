@@ -32,7 +32,7 @@ import {
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuTrigger,
-} from "@/dropdown-menu";
+} from "@/components/ui/dropdown-menu";
 import {
     Dialog,
     DialogContent,
@@ -129,7 +129,6 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
         reader.onload = (e) => {
             const result = e.target?.result as string;
             
-            // Fix: Functional update to derivation logic to prevent side-effects in render
             const activeComp = localDesignData.components.find(c => c.id === activeCompId);
             const currentVNum = (activeComp?.versions && activeComp.versions.length > 0) 
                 ? activeComp.versions[activeComp.versions.length - 1].versionNumber 
@@ -149,12 +148,10 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
             
             const nextData = { ...localDesignData, components: updatedComponents };
             
-            // Perform local state updates synchronously
             setLocalDesignData(nextData);
             setNewDrafts(prev => ({ ...prev, [activeCompId]: true }));
             setSelectedVersionId(newVersion.id);
             
-            // Notify parent OUTSIDE of any state derivation logic to avoid 'Cannot update during render' error
             onUpdateDesign(nextData);
         };
         reader.readAsDataURL(file);
@@ -269,7 +266,6 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
                         activeComponent.status === 'DRAFT' ? "border-orange-500/30" : "border-blue-500/30"
                     )}>
                         <div className="flex-1 relative flex flex-col min-w-0 bg-stone-100">
-                            {/* Workbench Header */}
                             <div className="h-14 shrink-0 flex items-center justify-between px-6 bg-background/80 backdrop-blur-xl border-b z-50">
                                 <div className="flex items-center gap-4 overflow-hidden">
                                     <h2 className="font-headline font-black text-sm truncate">{product.productName}</h2>
@@ -313,7 +309,6 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
                                 />
                             </div>
 
-                            {/* Filmstrip Timeline */}
                             {visibleVersions.length > 0 && (
                                 <div className="h-24 shrink-0 bg-background/80 backdrop-blur-xl border-t z-50 flex items-center px-6 overflow-x-auto no-scrollbar gap-4">
                                     <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground vertical-text shrink-0 mr-4">Timeline</div>
