@@ -91,6 +91,7 @@ export type DesignComponent = {
 export type DesignData = {
   productId: string;
   components: DesignComponent[];
+  isStock?: boolean;
 };
 
 export type ConfiguredProduct = {

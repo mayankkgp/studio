@@ -9,7 +9,19 @@ import { Badge } from '@/components/ui/badge';
 import { DesignCanvas } from './DesignCanvas';
 import { FeedbackSidebar } from './FeedbackSidebar';
 import { cn } from '@/lib/utils';
-import { Package, Circle, Plus, Pencil, Trash2, MoreVertical, Maximize2, X, MessageSquare } from 'lucide-react';
+import { 
+    Package, 
+    Circle, 
+    Plus, 
+    Pencil, 
+    Trash2, 
+    MoreVertical, 
+    Maximize2, 
+    X, 
+    MessageSquare,
+    PackageCheck,
+    RotateCcw
+} from 'lucide-react';
 import { productCatalog } from '@/lib/product-data';
 import { Button } from '@/components/ui/button';
 import {
@@ -49,6 +61,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
     const initialDesignData = useMemo(() => {
         const baseData = product.designData || {
             productId: product.id,
+            isStock: false,
             components: [
                 {
                     id: 'comp-1',
@@ -62,6 +75,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
 
         return {
             ...baseData,
+            isStock: baseData.isStock || false,
             components: (baseData.components || []).map(c => ({
                 ...c,
                 status: c.status || 'PENDING' as DesignWorkflowStatus,
@@ -95,6 +109,28 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
 
     const activeComponent = localDesignData.components.find(c => c.id === activeCompId) || localDesignData.components[0];
     
+    // Eligibility logic for "Mark as Stock"
+    const isEligibleForStock = useMemo(() => {
+        if (localDesignData.isStock) return false;
+        return localDesignData.components.every(c => 
+            c.status === 'PENDING' && (!c.versions || c.versions.length === 0)
+        );
+    }, [localDesignData]);
+
+    const handleMarkAsStock = () => {
+        if (window.confirm("Are you sure? Marking as stock will hide design tools for this item as it requires no custom creative work.")) {
+            const updated = { ...localDesignData, isStock: true };
+            handleUpdateDesignInternal(updated);
+        }
+    };
+
+    const handleRestoreToDesign = () => {
+        if (window.confirm("Restore standard design workflow for this product?")) {
+            const updated = { ...localDesignData, isStock: false };
+            handleUpdateDesignInternal(updated);
+        }
+    };
+
     if (!activeComponent) return null;
 
     const currentVersionNum = (activeComponent.versions && activeComponent.versions.length > 0)
@@ -197,13 +233,10 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
                 } : c
             );
             
-            // Critical Fix: Update local state immediately before parent sync to ensure designer sees image
             const nextData = { ...localDesignData, components: updatedComponents };
             setLocalDesignData(nextData);
             setNewDrafts(prev => ({ ...prev, [activeCompId]: true }));
             setSelectedVersionId(newVersion.id);
-            
-            // Background sync with storage
             onUpdateDesign(nextData);
         };
         reader.readAsDataURL(file);
@@ -325,106 +358,140 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
                             </div>
                         </div>
                     </div>
+                    
+                    <div className="flex items-center gap-2">
+                        {isEligibleForStock && (
+                            <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={handleMarkAsStock}
+                                className="h-8 border-primary text-primary hover:bg-primary/5 font-black uppercase text-[10px] tracking-widest"
+                            >
+                                <PackageCheck className="h-3.5 w-3.5 mr-1.5" /> Mark as Stock
+                            </Button>
+                        )}
+                        {localDesignData.isStock && (
+                            <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={handleRestoreToDesign}
+                                className="h-8 border-primary text-primary hover:bg-primary/5 font-black uppercase text-[10px] tracking-widest"
+                            >
+                                <RotateCcw className="h-3.5 w-3.5 mr-1.5" /> Restore to Design
+                            </Button>
+                        )}
+                        {!localDesignData.isStock && (
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground">
+                                        <MoreVertical className="h-4 w-4" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={() => {
+                                        setEditingCompId(activeComponent.id);
+                                        setCompNameInput(activeComponent.name);
+                                        setIsRenameModalOpen(true);
+                                    }}>
+                                        <Pencil className="h-3.5 w-3.5 mr-2" /> Rename Component
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem 
+                                        className="text-destructive focus:text-destructive"
+                                        disabled={localDesignData.components.length <= 1}
+                                        onClick={() => handleDeleteComponent(activeComponent.id)}
+                                    >
+                                        <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete Component
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        )}
+                    </div>
                 </div>
             </CardHeader>
 
             <CardContent className="p-0">
-                <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] h-[600px] overflow-hidden">
-                    <div className="flex flex-col border-r border-primary/10 overflow-hidden bg-stone-50/50">
-                        <div className="p-2 border-b bg-background/50 flex items-center justify-between shrink-0">
-                            <div className="flex items-center gap-2 overflow-hidden flex-1">
-                                <Tabs value={activeCompId} onValueChange={setActiveCompId} className="w-full">
-                                    <TabsList className="h-11 bg-muted/20 p-1 gap-1 justify-start overflow-x-auto no-scrollbar">
-                                        {(localDesignData.components || []).map(comp => {
-                                            const dotColor = comp.status === 'APPROVED' ? 'text-green-500' :
-                                                            comp.status === 'CUSTOMER_REVIEW' ? 'text-blue-500' :
-                                                            comp.status === 'INTERNAL_REVIEW' ? 'text-amber-500' : 
-                                                            comp.status === 'PENDING' ? 'text-muted-foreground/30' : 'text-primary/50';
-                                            
-                                            const vNum = (comp.versions && comp.versions.length > 0)
-                                                ? comp.versions[comp.versions.length - 1].versionNumber 
-                                                : 0;
+                {localDesignData.isStock ? (
+                    <div className="flex flex-col items-center justify-center h-[400px] bg-muted/5 border-t border-primary/10 animate-in fade-in zoom-in-95 duration-500">
+                        <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-6 border-2 border-primary/20 shadow-inner">
+                            <PackageCheck className="h-10 w-10" />
+                        </div>
+                        <h3 className="font-headline font-black uppercase tracking-[0.2em] text-lg text-foreground">Stock Item</h3>
+                        <p className="text-muted-foreground text-[11px] font-black uppercase max-w-sm text-center mt-3 tracking-widest opacity-60 leading-relaxed px-12">
+                            This product has been marked as a standard catalogue item requiring no custom design review.
+                        </p>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] h-[600px] overflow-hidden">
+                        <div className="flex flex-col border-r border-primary/10 overflow-hidden bg-stone-50/50">
+                            <div className="p-2 border-b bg-background/50 flex items-center justify-between shrink-0">
+                                <div className="flex items-center gap-2 overflow-hidden flex-1">
+                                    <Tabs value={activeCompId} onValueChange={setActiveCompId} className="w-full">
+                                        <TabsList className="h-11 bg-muted/20 p-1 gap-1 justify-start overflow-x-auto no-scrollbar">
+                                            {(localDesignData.components || []).map(comp => {
+                                                const dotColor = comp.status === 'APPROVED' ? 'text-green-500' :
+                                                                comp.status === 'CUSTOMER_REVIEW' ? 'text-blue-500' :
+                                                                comp.status === 'INTERNAL_REVIEW' ? 'text-amber-500' : 
+                                                                comp.status === 'PENDING' ? 'text-muted-foreground/30' : 'text-primary/50';
+                                                
+                                                const vNum = (comp.versions && comp.versions.length > 0)
+                                                    ? comp.versions[comp.versions.length - 1].versionNumber 
+                                                    : 0;
 
-                                            return (
-                                                <TabsTrigger 
-                                                    key={comp.id} 
-                                                    value={comp.id} 
-                                                    className="text-[9px] font-black uppercase px-3 h-9 gap-2.5 flex items-center shrink-0 transition-all"
-                                                >
-                                                    <Circle className={cn("h-1.5 w-1.5 fill-current", dotColor)} />
-                                                    <div className="flex flex-col items-start gap-0.5">
-                                                        <span className="truncate max-w-[90px] leading-tight text-foreground">{comp.name}</span>
-                                                        <div className="flex items-center gap-1.5 text-[7px] font-bold opacity-50 lowercase tracking-widest">
-                                                            <span className="font-mono">v{vNum}</span>
-                                                            <span>•</span>
-                                                            <span className="whitespace-nowrap">{comp.status.replace('_', ' ')}</span>
+                                                return (
+                                                    <TabsTrigger 
+                                                        key={comp.id} 
+                                                        value={comp.id} 
+                                                        className="text-[9px] font-black uppercase px-3 h-9 gap-2.5 flex items-center shrink-0 transition-all"
+                                                    >
+                                                        <Circle className={cn("h-1.5 w-1.5 fill-current", dotColor)} />
+                                                        <div className="flex flex-col items-start gap-0.5">
+                                                            <span className="truncate max-w-[90px] leading-tight text-foreground">{comp.name}</span>
+                                                            <div className="flex items-center gap-1.5 text-[7px] font-bold opacity-50 lowercase tracking-widest">
+                                                                <span className="font-mono">v{vNum}</span>
+                                                                <span>•</span>
+                                                                <span className="whitespace-nowrap">{comp.status.replace('_', ' ')}</span>
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                </TabsTrigger>
-                                            );
-                                        })}
-                                    </TabsList>
-                                </Tabs>
-                                <Button 
-                                    variant="ghost" 
-                                    size="icon" 
-                                    className="h-7 w-7 text-primary hover:bg-primary/10 shrink-0"
-                                    onClick={() => { setCompNameInput(''); setIsAddModalOpen(true); }}
-                                >
-                                    <Plus className="h-4 w-4" />
-                                </Button>
+                                                    </TabsTrigger>
+                                                );
+                                            })}
+                                        </TabsList>
+                                    </Tabs>
+                                    <Button 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        className="h-7 w-7 text-primary hover:bg-primary/10 shrink-0"
+                                        onClick={() => { setCompNameInput(''); setIsAddModalOpen(true); }}
+                                    >
+                                        <Plus className="h-4 w-4" />
+                                    </Button>
+                                </div>
                             </div>
-
-                            <div className="flex items-center gap-1 shrink-0 ml-2">
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground">
-                                            <MoreVertical className="h-4 w-4" />
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                        <DropdownMenuItem onClick={() => {
-                                            setEditingCompId(activeComponent.id);
-                                            setCompNameInput(activeComponent.name);
-                                            setIsRenameModalOpen(true);
-                                        }}>
-                                            <Pencil className="h-3.5 w-3.5 mr-2" /> Rename Component
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem 
-                                            className="text-destructive focus:text-destructive"
-                                            disabled={localDesignData.components.length <= 1}
-                                            onClick={() => handleDeleteComponent(activeComponent.id)}
-                                        >
-                                            <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete Component
-                                        </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
+                            
+                            <div className="flex-1 relative overflow-hidden">
+                                <DesignCanvas 
+                                    imageUrl={activeVersion?.imageUrl || null}
+                                    pins={activeComponent.pins || []}
+                                    highlightedPinId={highlightedPinId}
+                                    isDesigner={isDesigner}
+                                    version={viewedVersionNum}
+                                    currentVersion={currentVersionNum}
+                                    status={activeComponent.status || 'PENDING'}
+                                    hasNewDraft={!!newDrafts[activeCompId]}
+                                    onAddPin={handleAddPin}
+                                    onPinClick={setHighlightedPinId}
+                                    onUpdatePins={handleUpdatePins}
+                                    onUpload={handleUpload}
+                                    onToggleFullscreen={() => setIsFullscreen(true)}
+                                />
                             </div>
                         </div>
-                        
-                        <div className="flex-1 relative overflow-hidden">
-                            <DesignCanvas 
-                                imageUrl={activeVersion?.imageUrl || null}
-                                pins={activeComponent.pins || []}
-                                highlightedPinId={highlightedPinId}
-                                isDesigner={isDesigner}
-                                version={viewedVersionNum}
-                                currentVersion={currentVersionNum}
-                                status={activeComponent.status || 'PENDING'}
-                                hasNewDraft={!!newDrafts[activeCompId]}
-                                onAddPin={handleAddPin}
-                                onPinClick={setHighlightedPinId}
-                                onUpdatePins={handleUpdatePins}
-                                onUpload={handleUpload}
-                                onToggleFullscreen={() => setIsFullscreen(true)}
-                            />
+
+                        <div className="flex flex-col overflow-hidden h-full">
+                            <FeedbackSidebar {...feedbackSidebarProps} />
                         </div>
                     </div>
-
-                    <div className="flex flex-col overflow-hidden h-full">
-                        <FeedbackSidebar {...feedbackSidebarProps} />
-                    </div>
-                </div>
+                )}
             </CardContent>
 
             <Dialog open={isFullscreen} onOpenChange={setIsFullscreen}>
