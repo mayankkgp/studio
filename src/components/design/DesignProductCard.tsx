@@ -317,18 +317,34 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
                 <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] h-[600px] overflow-hidden">
                     <div className="flex flex-col border-r border-primary/10 overflow-hidden bg-stone-50/50">
                         <div className="p-2 border-b bg-background/50 flex items-center justify-between shrink-0">
-                            <div className="flex items-center gap-2">
-                                <Tabs value={activeCompId} onValueChange={setActiveCompId} className="w-auto">
-                                    <TabsList className="h-8 bg-muted/40 p-1">
+                            <div className="flex items-center gap-2 overflow-hidden flex-1">
+                                <Tabs value={activeCompId} onValueChange={setActiveCompId} className="w-full">
+                                    <TabsList className="h-11 bg-muted/20 p-1 gap-1 justify-start overflow-x-auto no-scrollbar">
                                         {(designData.components || []).map(comp => {
                                             const dotColor = comp.status === 'APPROVED' ? 'text-green-500' :
                                                             comp.status === 'CUSTOMER_REVIEW' ? 'text-blue-500' :
                                                             comp.status === 'INTERNAL_REVIEW' ? 'text-amber-500' : 
                                                             comp.status === 'PENDING' ? 'text-muted-foreground/30' : 'text-primary/50';
+                                            
+                                            const vNum = (comp.versions && comp.versions.length > 0)
+                                                ? comp.versions[comp.versions.length - 1].versionNumber 
+                                                : 0;
+
                                             return (
-                                                <TabsTrigger key={comp.id} value={comp.id} className="text-[9px] font-black uppercase px-2 h-6 gap-1.5">
+                                                <TabsTrigger 
+                                                    key={comp.id} 
+                                                    value={comp.id} 
+                                                    className="text-[9px] font-black uppercase px-3 h-9 gap-2.5 flex items-center shrink-0 transition-all"
+                                                >
                                                     <Circle className={cn("h-1.5 w-1.5 fill-current", dotColor)} />
-                                                    {comp.name}
+                                                    <div className="flex flex-col items-start gap-0.5">
+                                                        <span className="truncate max-w-[90px] leading-tight text-foreground">{comp.name}</span>
+                                                        <div className="flex items-center gap-1.5 text-[7px] font-bold opacity-50 lowercase tracking-widest">
+                                                            <span className="font-mono">v{vNum}</span>
+                                                            <span>•</span>
+                                                            <span className="whitespace-nowrap">{comp.status.replace('_', ' ')}</span>
+                                                        </div>
+                                                    </div>
                                                 </TabsTrigger>
                                             );
                                         })}
@@ -337,14 +353,14 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
                                 <Button 
                                     variant="ghost" 
                                     size="icon" 
-                                    className="h-7 w-7 text-primary hover:bg-primary/10"
+                                    className="h-7 w-7 text-primary hover:bg-primary/10 shrink-0"
                                     onClick={() => { setCompNameInput(''); setIsAddModalOpen(true); }}
                                 >
                                     <Plus className="h-4 w-4" />
                                 </Button>
                             </div>
 
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-1 shrink-0 ml-2">
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
                                         <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground">
@@ -402,7 +418,9 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
                         <div className="flex-1 relative overflow-hidden flex flex-col">
                             <div className="absolute top-4 left-6 z-[50] pointer-events-none">
                                 <h2 className="font-headline font-black text-lg leading-tight text-foreground drop-shadow-sm">{product.productName}</h2>
-                                <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest bg-background/50 backdrop-blur-sm px-1 rounded w-fit">{activeComponent.name} — Workspace</p>
+                                <p className="text-[10px] font-black uppercase text-muted-foreground tracking-[0.2em] bg-background/50 backdrop-blur-sm px-2 py-0.5 rounded w-fit mt-1">
+                                    {activeComponent.name} — V{currentVersionNum} — {activeComponent.status.replace('_', ' ')}
+                                </p>
                             </div>
 
                             <div className="absolute top-4 right-6 z-[50] flex items-center gap-3">
