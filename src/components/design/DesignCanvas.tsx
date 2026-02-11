@@ -17,7 +17,9 @@ import {
     CornerDownRight, 
     Trash2,
     Lock,
-    CheckCircle2
+    CheckCircle2,
+    Eye,
+    EyeOff
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -71,6 +73,7 @@ export function DesignCanvas({
     const [position, setPosition] = useState({ x: 0, y: 0 });
     const [isDragging, setIsDragging] = useState(false);
     const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+    const [showPins, setShowPins] = useState(true);
     
     // Feedback Drafting State
     const [draftText, setDraftText] = useState('');
@@ -266,6 +269,19 @@ export function DesignCanvas({
                             <TooltipProvider>
                                 <Tooltip>
                                     <TooltipTrigger asChild>
+                                        <Button 
+                                            variant="ghost" 
+                                            size="icon" 
+                                            className={cn("h-8 w-8 hover:bg-primary/10", !showPins && "text-primary bg-primary/5")} 
+                                            onClick={() => setShowPins(!showPins)}
+                                        >
+                                            {showPins ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="left">{showPins ? "Hide Pins" : "Show Pins"}</TooltipContent>
+                                </Tooltip>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
                                         <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-primary/10" onClick={handleZoomIn}>
                                             <ZoomIn className="h-4 w-4" />
                                         </Button>
@@ -353,7 +369,7 @@ export function DesignCanvas({
                                 draggable={false}
                             />
                             
-                            {pins.map((pin, index) => {
+                            {showPins && pins.map((pin, index) => {
                                 if (pin.version > version) return null;
 
                                 return (
