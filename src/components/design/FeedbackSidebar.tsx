@@ -51,6 +51,13 @@ interface FeedbackSidebarProps {
     activeProductId?: string;
 }
 
+const PIN_COLORS: Record<DesignPinStatus, string> = {
+    open: 'bg-blue-600',
+    mistake: 'bg-destructive',
+    fixed: 'bg-amber-500',
+    resolved: 'bg-green-600'
+};
+
 export function FeedbackSidebar({ 
     pins, 
     versions,
