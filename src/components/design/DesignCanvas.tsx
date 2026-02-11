@@ -188,25 +188,6 @@ export function DesignCanvas({
         onPinClick(null);
     };
 
-    const handleAddReply = (pinId: string) => {
-        if (!draftText.trim()) return;
-
-        isSavingRef.current = true;
-        const newReply: DesignReply = {
-            author: isDesigner ? 'Designer' : 'Manager',
-            text: draftText.trim(),
-            timestamp: new Date().toISOString()
-        };
-
-        const updatedPins = pins.map(p => 
-            p.id === pinId ? { ...p, replies: [...p.replies, newReply] } : p
-        );
-        onUpdatePins(updatedPins);
-        setReplyingPinId(null);
-        setDraftText('');
-        setTimeout(() => { isSavingRef.current = false; }, 100);
-    };
-
     const handleStatusChange = (pinId: string, newStatus: DesignPinStatus) => {
         onUpdatePins(pins.map(p => p.id === pinId ? { ...p, status: newStatus } : p));
     };

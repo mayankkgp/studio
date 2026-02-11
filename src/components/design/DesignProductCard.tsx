@@ -239,6 +239,10 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
 
             <Dialog open={isFullscreen} onOpenChange={setIsFullscreen}>
                 <DialogContent className="max-w-[100vw] w-screen h-screen p-0 gap-0 border-none rounded-none flex flex-col bg-background overflow-hidden animate-in zoom-in-95 duration-300">
+                    <DialogHeader className="sr-only">
+                        <DialogTitle>Design Workbench - {product.productName}</DialogTitle>
+                        <DialogDescription>Review and manage design proofs, feedback, and customer brief.</DialogDescription>
+                    </DialogHeader>
                     <div className={cn("flex-1 flex overflow-hidden border-[6px] transition-colors duration-500", 
                         activeComponent.status === 'APPROVED' ? "border-green-500/30" : 
                         activeComponent.status === 'DRAFT' ? "border-orange-500/30" : "border-blue-500/30"
