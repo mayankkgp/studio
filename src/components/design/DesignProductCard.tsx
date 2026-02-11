@@ -216,28 +216,41 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
         const reader = new FileReader();
         reader.onload = (e) => {
             const result = e.target?.result as string;
-            const newVersionNum = currentVersionNum + 1;
-            const newVersion: DesignVersion = {
-                id: `v-${Date.now()}`,
-                versionNumber: newVersionNum,
-                imageUrl: result,
-                timestamp: new Date().toISOString(),
-                author: isDesigner ? 'Designer' : 'Manager'
-            };
-
-            const updatedComponents = localDesignData.components.map(c => 
-                c.id === activeCompId ? { 
-                    ...c, 
-                    versions: [...(c.versions || []), newVersion],
-                    status: 'DRAFT' as DesignWorkflowStatus
-                } : c
-            );
             
-            const nextData = { ...localDesignData, components: updatedComponents };
-            setLocalDesignData(nextData);
-            setNewDrafts(prev => ({ ...prev, [activeCompId]: true }));
-            setSelectedVersionId(newVersion.id);
-            onUpdateDesign(nextData);
+            setLocalDesignData(prev => {
+                const activeComp = prev.components.find(c => c.id === activeCompId);
+                const currentVNum = (activeComp?.versions && activeComp.versions.length > 0)
+                    ? activeComp.versions[activeComp.versions.length - 1].versionNumber 
+                    : 0;
+                
+                const newVersionNum = currentVNum + 1;
+                const newVersion: DesignVersion = {
+                    id: `v-${Date.now()}`,
+                    versionNumber: newVersionNum,
+                    imageUrl: result,
+                    timestamp: new Date().toISOString(),
+                    author: isDesigner ? 'Designer' : 'Manager'
+                };
+
+                const updatedComponents = prev.components.map(c => 
+                    c.id === activeCompId ? { 
+                        ...c, 
+                        versions: [...(c.versions || []), newVersion],
+                        status: 'DRAFT' as DesignWorkflowStatus
+                    } : c
+                );
+                
+                const nextData = { ...prev, components: updatedComponents };
+                
+                // Sidebar sub-state update
+                setNewDrafts(d => ({ ...d, [activeCompId]: true }));
+                setSelectedVersionId(newVersion.id);
+                
+                // Notify parent
+                onUpdateDesign(nextData);
+                
+                return nextData;
+            });
         };
         reader.readAsDataURL(file);
     };

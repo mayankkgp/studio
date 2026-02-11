@@ -130,13 +130,14 @@ export function DesignCanvas({
     const handleCanvasClick = (e: React.MouseEvent) => {
         if (!imageUrl || isDragging) return;
         
-        const target = e.target as HTMLElement;
-        if (target.closest('.pin-bubble') || target.closest('[role="dialog"]') || target.closest('button')) return;
-
+        // If a pin is already highlighted, first click elsewhere should just deselect it
         if (highlightedPinId) {
             onPinClick(null);
             return;
         }
+
+        const target = e.target as HTMLElement;
+        if (target.closest('.pin-bubble') || target.closest('[role="dialog"]') || target.closest('button')) return;
         
         if (!canAddPin) return;
 
@@ -166,7 +167,8 @@ export function DesignCanvas({
         setTimeout(() => { isSavingRef.current = false; }, 100);
     };
 
-    const handleDeletePin = (pinId: string) => {
+    const handleDeletePin = (e: React.MouseEvent, pinId: string) => {
+        e.stopPropagation();
         onUpdatePins(pins.filter(p => p.id !== pinId));
         onPinClick(null);
     };
@@ -194,7 +196,8 @@ export function DesignCanvas({
         onUpdatePins(pins.map(p => p.id === pinId ? { ...p, status: newStatus } : p));
     };
 
-    const handleClosePopover = (pinId: string) => {
+    const handleClosePopover = (e: React.MouseEvent, pinId: string) => {
+        e.stopPropagation();
         const pin = pins.find(p => p.id === pinId);
         // If pin has no text and we're not currently saving, it means it's a new empty pin being dismissed
         if (pin && !pin.text && !draftText.trim() && !isSavingRef.current) {
@@ -377,7 +380,10 @@ export function DesignCanvas({
                                         key={pin.id} 
                                         open={highlightedPinId === pin.id} 
                                         onOpenChange={(open) => {
-                                            if (!open) handleClosePopover(pin.id);
+                                            if (!open) {
+                                                // Only handle deselection here if not via internal popover CTAs
+                                                if (highlightedPinId === pin.id) onPinClick(null);
+                                            }
                                             else onPinClick(pin.id);
                                         }}
                                     >
@@ -435,10 +441,7 @@ export function DesignCanvas({
                                                             variant="ghost" 
                                                             size="icon" 
                                                             className="h-6 w-6 text-muted-foreground hover:text-foreground" 
-                                                            onClick={(e) => {
-                                                                e.stopPropagation(); 
-                                                                handleClosePopover(pin.id);
-                                                            }}
+                                                            onClick={(e) => handleClosePopover(e, pin.id)}
                                                         >
                                                             <X className="h-3.5 w-3.5" />
                                                         </Button>
@@ -471,10 +474,7 @@ export function DesignCanvas({
                                                                         variant="ghost" 
                                                                         size="sm" 
                                                                         className="h-7 text-[10px] font-black uppercase px-3" 
-                                                                        onClick={(e) => { 
-                                                                            e.stopPropagation(); 
-                                                                            handleClosePopover(pin.id); 
-                                                                        }}
+                                                                        onClick={(e) => handleClosePopover(e, pin.id)}
                                                                     >
                                                                         Cancel
                                                                     </Button>
@@ -578,10 +578,7 @@ export function DesignCanvas({
                                                                             variant="ghost" 
                                                                             size="icon" 
                                                                             className="h-7 w-7 text-destructive hover:bg-destructive/10" 
-                                                                            onClick={(e) => {
-                                                                                e.stopPropagation(); 
-                                                                                handleDeletePin(pin.id);
-                                                                            }}
+                                                                            onClick={(e) => handleDeletePin(e, pin.id)}
                                                                         >
                                                                             <Trash2 className="h-3.5 w-3.5" />
                                                                         </Button>
