@@ -213,19 +213,16 @@ export function DesignCanvas({
         }
     }, [highlightedPinId, pins, zoom]);
 
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file && onUpload) {
+            onUpload(file);
+        }
+        e.target.value = '';
+    };
+
     const renderEmptyState = () => (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-muted/20 border-dashed border-2 rounded-xl m-4">
-            <input 
-                type="file" 
-                ref={fileInputRef} 
-                onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file && onUpload) onUpload(file);
-                    e.target.value = '';
-                }} 
-                accept="image/*" 
-                className="hidden" 
-            />
             {(isDesigner && (status === 'DRAFT' || status === 'PENDING')) ? (
                 <div className="text-center space-y-4">
                     <div className="h-16 w-16 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto">
@@ -250,324 +247,324 @@ export function DesignCanvas({
         </div>
     );
 
-    if (!imageUrl) return renderEmptyState();
-
     return (
         <div className="h-full flex flex-col relative group/canvas">
             <input 
                 type="file" 
                 ref={fileInputRef} 
-                onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file && onUpload) onUpload(file);
-                    e.target.value = '';
-                }} 
+                onChange={handleFileChange} 
                 accept="image/*" 
                 className="hidden" 
             />
 
-            <div className="absolute top-24 right-4 z-50 flex flex-col gap-2 opacity-0 group-hover/canvas:opacity-100 transition-opacity">
-                <div className="bg-background/90 backdrop-blur-md border border-primary/20 rounded-lg p-1 shadow-2xl flex flex-col gap-1">
-                    <TooltipProvider>
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-primary/10" onClick={handleZoomIn}>
-                                    <ZoomIn className="h-4 w-4" />
-                                </Button>
-                            </TooltipTrigger>
-                            <TooltipContent side="left">Zoom In</TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-primary/10" onClick={handleZoomOut}>
-                                    <ZoomOut className="h-4 w-4" />
-                                </Button>
-                            </TooltipTrigger>
-                            <TooltipContent side="left">Zoom Out</TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-primary/10" onClick={handleReset}>
-                                    <RotateCcw className="h-4 w-4" />
-                                </Button>
-                            </TooltipTrigger>
-                            <TooltipContent side="left">Reset View</TooltipContent>
-                        </Tooltip>
-                        {onToggleFullscreen && (
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-primary/10" onClick={onToggleFullscreen}>
-                                        <Maximize2 className="h-4 w-4" />
-                                    </Button>
-                                </TooltipTrigger>
-                                <TooltipContent side="left">Full Screen</TooltipContent>
-                            </Tooltip>
-                        )}
-                    </TooltipProvider>
-                </div>
-            </div>
+            {!imageUrl && renderEmptyState()}
 
-            {isDesigner && status === 'DRAFT' && !hasNewDraft && (
-                <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-4">
-                    <Button 
-                        size="sm" 
-                        className="h-10 px-6 font-black uppercase tracking-widest gap-2 bg-primary shadow-2xl border-2 border-white"
-                        onClick={() => fileInputRef.current?.click()}
-                    >
-                        <Upload className="h-4 w-4" />
-                        Upload New Version
-                    </Button>
-                </div>
-            )}
+            {imageUrl && (
+                <>
+                    <div className="absolute top-24 right-4 z-50 flex flex-col gap-2 opacity-0 group-hover/canvas:opacity-100 transition-opacity">
+                        <div className="bg-background/90 backdrop-blur-md border border-primary/20 rounded-lg p-1 shadow-2xl flex flex-col gap-1">
+                            <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-primary/10" onClick={handleZoomIn}>
+                                            <ZoomIn className="h-4 w-4" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="left">Zoom In</TooltipContent>
+                                </Tooltip>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-primary/10" onClick={handleZoomOut}>
+                                            <ZoomOut className="h-4 w-4" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="left">Zoom Out</TooltipContent>
+                                </Tooltip>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-primary/10" onClick={handleReset}>
+                                            <RotateCcw className="h-4 w-4" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="left">Reset View</TooltipContent>
+                                </Tooltip>
+                                {onToggleFullscreen && (
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-primary/10" onClick={onToggleFullscreen}>
+                                                <Maximize2 className="h-4 w-4" />
+                                            </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent side="left">Full Screen</TooltipContent>
+                                    </Tooltip>
+                                )}
+                            </TooltipProvider>
+                        </div>
+                    </div>
 
-            {canAddPin ? (
-                <div className="absolute bottom-4 left-4 z-50 bg-background/80 backdrop-blur-md border px-2 py-1 rounded text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground shadow-sm pointer-events-none">
-                    Click design to drop a feedback pin
-                </div>
-            ) : !isLatest && (
-                <div className="absolute bottom-4 left-4 z-50 bg-background/80 backdrop-blur-md border px-2 py-1 rounded text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground shadow-sm pointer-events-none flex items-center gap-2">
-                    <Lock className="h-3 w-3" /> Viewing History — Read Only
-                </div>
-            )}
-
-            <div 
-                ref={containerRef}
-                className={cn(
-                    "flex-1 overflow-hidden relative select-none bg-stone-100",
-                    canAddPin ? "cursor-crosshair" : "cursor-default",
-                    zoom > 1 && isDragging && "cursor-grabbing",
-                    zoom > 1 && !isDragging && "cursor-grab"
-                )}
-                onMouseDown={handleMouseDown}
-                onMouseMove={handleMouseMove}
-                onMouseUp={handleMouseUp}
-                onMouseLeave={handleMouseUp}
-                onClick={handleCanvasClick}
-            >
-                <div 
-                    className="absolute inset-0 transition-transform duration-75 ease-out origin-center"
-                    style={{
-                        transform: `translate(${position.x}px, ${position.y}px) scale(${zoom})`
-                    }}
-                >
-                    <img 
-                        ref={imageRef}
-                        src={imageUrl} 
-                        alt="Design View" 
-                        className="w-full h-full object-contain pointer-events-none"
-                        draggable={false}
-                    />
-                    
-                    {pins.map((pin, index) => {
-                        if (pin.version > version) return null;
-
-                        return (
-                            <Popover 
-                                key={pin.id} 
-                                open={highlightedPinId === pin.id} 
-                                onOpenChange={(open) => {
-                                    if (!open) handleClosePopover(pin.id);
-                                    else onPinClick(pin.id);
-                                }}
+                    {isDesigner && status === 'DRAFT' && !hasNewDraft && (
+                        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-4">
+                            <Button 
+                                size="sm" 
+                                className="h-10 px-6 font-black uppercase tracking-widest gap-2 bg-primary shadow-2xl border-2 border-white"
+                                onClick={() => fileInputRef.current?.click()}
                             >
-                                <PopoverTrigger asChild>
-                                    <button
-                                        className={cn(
-                                            "pin-bubble absolute h-8 w-8 rounded-full flex items-center justify-center text-[11px] font-black text-white shadow-xl border-2 border-white transition-all transform -translate-x-1/2 -translate-y-1/2",
-                                            PIN_COLORS[pin.status],
-                                            highlightedPinId === pin.id ? "scale-125 ring-4 ring-primary ring-offset-2 z-50" : "scale-100 z-10 hover:scale-110",
-                                            pin.status === 'resolved' && "opacity-60 grayscale-[0.5]"
-                                        )}
-                                        style={{ 
-                                            left: `${pin.x}%`, 
-                                            top: `${pin.y}%`,
-                                            transform: `translate(-50%, -50%) scale(${1/zoom})` 
-                                        }}
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            onPinClick(pin.id);
+                                <Upload className="h-4 w-4" />
+                                Upload New Version
+                            </Button>
+                        </div>
+                    )}
+
+                    {canAddPin ? (
+                        <div className="absolute bottom-4 left-4 z-50 bg-background/80 backdrop-blur-md border px-2 py-1 rounded text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground shadow-sm pointer-events-none">
+                            Click design to drop a feedback pin
+                        </div>
+                    ) : !isLatest && (
+                        <div className="absolute bottom-4 left-4 z-50 bg-background/80 backdrop-blur-md border px-2 py-1 rounded text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground shadow-sm pointer-events-none flex items-center gap-2">
+                            <Lock className="h-3 w-3" /> Viewing History — Read Only
+                        </div>
+                    )}
+
+                    <div 
+                        ref={containerRef}
+                        className={cn(
+                            "flex-1 overflow-hidden relative select-none bg-stone-100",
+                            canAddPin ? "cursor-crosshair" : "cursor-default",
+                            zoom > 1 && isDragging && "cursor-grabbing",
+                            zoom > 1 && !isDragging && "cursor-grab"
+                        )}
+                        onMouseDown={handleMouseDown}
+                        onMouseMove={handleMouseMove}
+                        onMouseUp={handleMouseUp}
+                        onMouseLeave={handleMouseUp}
+                        onClick={handleCanvasClick}
+                    >
+                        <div 
+                            className="absolute inset-0 transition-transform duration-75 ease-out origin-center"
+                            style={{
+                                transform: `translate(${position.x}px, ${position.y}px) scale(${zoom})`
+                            }}
+                        >
+                            <img 
+                                ref={imageRef}
+                                src={imageUrl} 
+                                alt="Design View" 
+                                className="w-full h-full object-contain pointer-events-none"
+                                draggable={false}
+                            />
+                            
+                            {pins.map((pin, index) => {
+                                if (pin.version > version) return null;
+
+                                return (
+                                    <Popover 
+                                        key={pin.id} 
+                                        open={highlightedPinId === pin.id} 
+                                        onOpenChange={(open) => {
+                                            if (!open) handleClosePopover(pin.id);
+                                            else onPinClick(pin.id);
                                         }}
                                     >
-                                        {index + 1}
-                                    </button>
-                                </PopoverTrigger>
-                                <PopoverContent 
-                                    className="w-80 p-0 overflow-hidden shadow-2xl border-primary/20" 
-                                    side="top" 
-                                    sideOffset={10} 
-                                    align="center"
-                                    onOpenAutoFocus={(e) => {
-                                        e.preventDefault();
-                                        if (!pin.text) {
-                                            const textarea = e.currentTarget.querySelector('textarea');
-                                            textarea?.focus({ preventScroll: true });
-                                        } else {
-                                            (e.currentTarget as HTMLElement).focus({ preventScroll: true });
-                                        }
-                                    }}
-                                >
-                                    <div className="bg-background">
-                                        <div className="p-3 border-b bg-muted/20 flex items-center justify-between">
-                                            <div className="flex items-center gap-2">
-                                                <div className={cn("h-5 w-5 rounded flex items-center justify-center text-[10px] font-black text-white", PIN_COLORS[pin.status])}>
-                                                    {index + 1}
-                                                </div>
-                                                <span className="text-[10px] font-black uppercase tracking-widest">{pin.author}</span>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-[9px] font-bold text-muted-foreground uppercase opacity-60">{format(new Date(pin.timestamp), 'h:mm a')} • V{pin.version}</span>
-                                                <Button 
-                                                    variant="ghost" 
-                                                    size="icon" 
-                                                    className="h-6 w-6 text-muted-foreground hover:text-foreground" 
-                                                    onClick={(e) => {
-                                                        e.stopPropagation(); 
-                                                        handleClosePopover(pin.id);
-                                                    }}
-                                                >
-                                                    <X className="h-3.5 w-3.5" />
-                                                </Button>
-                                            </div>
-                                        </div>
-
-                                        <div className="p-4 space-y-4">
-                                            {!pin.text ? (
-                                                <div className="space-y-3">
-                                                    <Textarea 
-                                                        placeholder="Enter feedback details..." 
-                                                        className="min-h-[80px] text-xs font-semibold" 
-                                                        value={draftText} 
-                                                        onChange={(e) => setDraftText(e.target.value)}
-                                                        onKeyDown={(e) => {
-                                                            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-                                                                handleSaveComment(pin.id);
-                                                            }
-                                                        }}
-                                                    />
-                                                    <div className="flex items-center justify-between">
-                                                        {!isDesigner && (
-                                                            <div className="flex items-center space-x-2">
-                                                                <Checkbox id={`pop-mistake-${pin.id}`} checked={isMistakeDraft} onCheckedChange={(val) => setIsMistakeDraft(!!val)} />
-                                                                <Label htmlFor={`pop-mistake-${pin.id}`} className="text-[9px] font-black uppercase tracking-wider text-destructive cursor-pointer">Mistake</Label>
-                                                            </div>
-                                                        )}
-                                                        <div className="flex gap-2 ml-auto">
-                                                            <Button variant="ghost" size="sm" className="h-7 text-[10px] font-black uppercase px-3" onClick={(e) => { e.stopPropagation(); handleClosePopover(pin.id); }}>
-                                                                Cancel
-                                                            </Button>
-                                                            <Button size="sm" className="h-7 text-[10px] font-black uppercase px-3" onClick={(e) => { e.stopPropagation(); handleSaveComment(pin.id); }}>
-                                                                Save Feedback
-                                                            </Button>
+                                        <PopoverTrigger asChild>
+                                            <button
+                                                className={cn(
+                                                    "pin-bubble absolute h-8 w-8 rounded-full flex items-center justify-center text-[11px] font-black text-white shadow-xl border-2 border-white transition-all transform -translate-x-1/2 -translate-y-1/2",
+                                                    PIN_COLORS[pin.status],
+                                                    highlightedPinId === pin.id ? "scale-125 ring-4 ring-primary ring-offset-2 z-50" : "scale-100 z-10 hover:scale-110",
+                                                    pin.status === 'resolved' && "opacity-60 grayscale-[0.5]"
+                                                )}
+                                                style={{ 
+                                                    left: `${pin.x}%`, 
+                                                    top: `${pin.y}%`,
+                                                    transform: `translate(-50%, -50%) scale(${1/zoom})` 
+                                                }}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    onPinClick(pin.id);
+                                                }}
+                                            >
+                                                {index + 1}
+                                            </button>
+                                        </PopoverTrigger>
+                                        <PopoverContent 
+                                            className="w-80 p-0 overflow-hidden shadow-2xl border-primary/20" 
+                                            side="top" 
+                                            sideOffset={10} 
+                                            align="center"
+                                            onOpenAutoFocus={(e) => {
+                                                e.preventDefault();
+                                                if (!pin.text) {
+                                                    const textarea = e.currentTarget.querySelector('textarea');
+                                                    textarea?.focus({ preventScroll: true });
+                                                } else {
+                                                    (e.currentTarget as HTMLElement).focus({ preventScroll: true });
+                                                }
+                                            }}
+                                        >
+                                            <div className="bg-background">
+                                                <div className="p-3 border-b bg-muted/20 flex items-center justify-between">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className={cn("h-5 w-5 rounded flex items-center justify-center text-[10px] font-black text-white", PIN_COLORS[pin.status])}>
+                                                            {index + 1}
                                                         </div>
+                                                        <span className="text-[10px] font-black uppercase tracking-widest">{pin.author}</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-[9px] font-bold text-muted-foreground uppercase opacity-60">{format(new Date(pin.timestamp), 'h:mm a')} • V{pin.version}</span>
+                                                        <Button 
+                                                            variant="ghost" 
+                                                            size="icon" 
+                                                            className="h-6 w-6 text-muted-foreground hover:text-foreground" 
+                                                            onClick={(e) => {
+                                                                e.stopPropagation(); 
+                                                                handleClosePopover(pin.id);
+                                                            }}
+                                                        >
+                                                            <X className="h-3.5 w-3.5" />
+                                                        </Button>
                                                     </div>
                                                 </div>
-                                            ) : (
-                                                <div className="space-y-4">
-                                                    <div className="relative">
-                                                        {pin.status === 'mistake' && <AlertCircle className="absolute -left-1 -top-1 h-3 w-3 text-destructive animate-pulse" />}
-                                                        <p className="text-xs font-semibold leading-relaxed text-foreground/90 pl-3">{pin.text}</p>
-                                                    </div>
 
-                                                    {pin.replies.length > 0 && (
-                                                        <div className="space-y-2 pt-2 border-t border-primary/5 max-h-[120px] overflow-y-auto custom-scrollbar">
-                                                            {pin.replies.map((reply, i) => (
-                                                                <div key={i} className="pl-3 border-l-2 border-primary/10 space-y-0.5">
-                                                                    <div className="flex items-center gap-1.5 text-[8px] font-black uppercase text-muted-foreground">
-                                                                        <CornerDownRight className="h-3 w-3" /> {reply.author}
-                                                                    </div>
-                                                                    <p className="text-[10px] font-medium leading-relaxed bg-muted/40 p-1.5 rounded-md">{reply.text}</p>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    )}
-
-                                                    {replyingPinId === pin.id && (
-                                                        <div className="mt-2 space-y-2 p-2 bg-muted/30 rounded-lg animate-in slide-in-from-bottom-2">
-                                                            <Input 
-                                                                autoFocus 
-                                                                placeholder="Type a reply..." 
-                                                                className="h-8 text-[10px] font-semibold" 
+                                                <div className="p-4 space-y-4">
+                                                    {!pin.text ? (
+                                                        <div className="space-y-3">
+                                                            <Textarea 
+                                                                placeholder="Enter feedback details..." 
+                                                                className="min-h-[80px] text-xs font-semibold" 
                                                                 value={draftText} 
-                                                                onChange={(e) => setDraftText(e.target.value)} 
+                                                                onChange={(e) => setDraftText(e.target.value)}
                                                                 onKeyDown={(e) => {
-                                                                    if (e.key === 'Enter') handleAddReply(pin.id);
-                                                                }}
-                                                                onBlur={() => {
-                                                                    setTimeout(() => {
-                                                                        if (!draftText.trim() && !isSavingRef.current) setReplyingPinId(null);
-                                                                    }, 150);
+                                                                    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                                                                        handleSaveComment(pin.id);
+                                                                    }
                                                                 }}
                                                             />
-                                                            <div className="flex justify-end gap-1">
-                                                                <Button variant="ghost" size="sm" className="h-6 text-[8px] font-black" onClick={(e) => { e.stopPropagation(); setReplyingPinId(null); }}>Cancel</Button>
-                                                                <Button size="sm" className="h-6 text-[8px] font-black" onClick={(e) => { e.stopPropagation(); handleAddReply(pin.id); }}>Send</Button>
+                                                            <div className="flex items-center justify-between">
+                                                                {!isDesigner && (
+                                                                    <div className="flex items-center space-x-2">
+                                                                        <Checkbox id={`pop-mistake-${pin.id}`} checked={isMistakeDraft} onCheckedChange={(val) => setIsMistakeDraft(!!val)} />
+                                                                        <Label htmlFor={`pop-mistake-${pin.id}`} className="text-[9px] font-black uppercase tracking-wider text-destructive cursor-pointer">Mistake</Label>
+                                                                    </div>
+                                                                )}
+                                                                <div className="flex gap-2 ml-auto">
+                                                                    <Button variant="ghost" size="sm" className="h-7 text-[10px] font-black uppercase px-3" onClick={(e) => { e.stopPropagation(); handleClosePopover(pin.id); }}>
+                                                                        Cancel
+                                                                    </Button>
+                                                                    <Button size="sm" className="h-7 text-[10px] font-black uppercase px-3" onClick={(e) => { e.stopPropagation(); handleSaveComment(pin.id); }}>
+                                                                        Save Feedback
+                                                                    </Button>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="space-y-4">
+                                                            <div className="relative">
+                                                                {pin.status === 'mistake' && <AlertCircle className="absolute -left-1 -top-1 h-3 w-3 text-destructive animate-pulse" />}
+                                                                <p className="text-xs font-semibold leading-relaxed text-foreground/90 pl-3">{pin.text}</p>
+                                                            </div>
+
+                                                            {pin.replies.length > 0 && (
+                                                                <div className="space-y-2 pt-2 border-t border-primary/5 max-h-[120px] overflow-y-auto custom-scrollbar">
+                                                                    {pin.replies.map((reply, i) => (
+                                                                        <div key={i} className="pl-3 border-l-2 border-primary/10 space-y-0.5">
+                                                                            <div className="flex items-center gap-1.5 text-[8px] font-black uppercase text-muted-foreground">
+                                                                                <CornerDownRight className="h-3 w-3" /> {reply.author}
+                                                                            </div>
+                                                                            <p className="text-[10px] font-medium leading-relaxed bg-muted/40 p-1.5 rounded-md">{reply.text}</p>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+
+                                                            {replyingPinId === pin.id && (
+                                                                <div className="mt-2 space-y-2 p-2 bg-muted/30 rounded-lg animate-in slide-in-from-bottom-2">
+                                                                    <Input 
+                                                                        autoFocus 
+                                                                        placeholder="Type a reply..." 
+                                                                        className="h-8 text-[10px] font-semibold" 
+                                                                        value={draftText} 
+                                                                        onChange={(e) => setDraftText(e.target.value)} 
+                                                                        onKeyDown={(e) => {
+                                                                            if (e.key === 'Enter') handleAddReply(pin.id);
+                                                                        }}
+                                                                        onBlur={() => {
+                                                                            setTimeout(() => {
+                                                                                if (!draftText.trim() && !isSavingRef.current) setReplyingPinId(null);
+                                                                            }, 150);
+                                                                        }}
+                                                                    />
+                                                                    <div className="flex justify-end gap-1">
+                                                                        <Button variant="ghost" size="sm" className="h-6 text-[8px] font-black" onClick={(e) => { e.stopPropagation(); setReplyingPinId(null); }}>Cancel</Button>
+                                                                        <Button size="sm" className="h-6 text-[8px] font-black" onClick={(e) => { e.stopPropagation(); handleAddReply(pin.id); }}>Send</Button>
+                                                                    </div>
+                                                                </div>
+                                                            )}
+
+                                                            <div className="flex items-center justify-between pt-2 border-t border-primary/5">
+                                                                <div className="flex gap-1.5">
+                                                                    {canInteractWithFeedback && !replyingPinId && (pin.status !== 'resolved') && (
+                                                                        <Button variant="ghost" size="sm" className="h-7 text-[9px] font-black uppercase px-2" onClick={(e) => { 
+                                                                            e.stopPropagation();
+                                                                            setReplyingPinId(pin.id); 
+                                                                            setDraftText(''); 
+                                                                        }}>
+                                                                            Reply
+                                                                        </Button>
+                                                                    )}
+                                                                    
+                                                                    {isDesigner && status === 'DRAFT' && isLatest && (pin.status === 'open' || pin.status === 'mistake') && (
+                                                                        <Button variant="secondary" size="sm" className="h-7 text-[9px] font-black uppercase px-2 bg-amber-100 text-amber-800 hover:bg-amber-200" onClick={(e) => { e.stopPropagation(); handleStatusChange(pin.id, 'fixed'); }}>
+                                                                            Mark Fixed
+                                                                        </Button>
+                                                                    )}
+
+                                                                    {!isDesigner && isLatest && (status === 'INTERNAL_REVIEW' || status === 'CUSTOMER_REVIEW') && (
+                                                                        <>
+                                                                            {(pin.status !== 'resolved') && (
+                                                                                <Button size="sm" className="h-7 text-[9px] font-black uppercase px-2 bg-green-600 text-white hover:bg-green-700" onClick={(e) => { e.stopPropagation(); handleStatusChange(pin.id, 'resolved'); }}>
+                                                                                    Resolve
+                                                                                </Button>
+                                                                            )}
+                                                                            {pin.status === 'fixed' && (
+                                                                                <Button variant="ghost" size="sm" className="h-7 text-[9px] font-black uppercase px-2 text-destructive hover:bg-destructive/5" onClick={(e) => { e.stopPropagation(); handleStatusChange(pin.id, 'open'); }}>
+                                                                                    Reject Fix
+                                                                                </Button>
+                                                                            )}
+                                                                        </>
+                                                                    )}
+                                                                </div>
+                                                                <div className="flex items-center gap-2">
+                                                                    {pin.status === 'resolved' ? (
+                                                                        <div className="flex items-center gap-1 text-[9px] font-black text-green-600">
+                                                                            <CheckCircle2 className="h-3.5 w-3.5" /> RESOLVED
+                                                                        </div>
+                                                                    ) : canInteractWithFeedback && (
+                                                                        <Button 
+                                                                            variant="ghost" 
+                                                                            size="icon" 
+                                                                            className="h-7 w-7 text-destructive hover:bg-destructive/10" 
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation(); 
+                                                                                handleDeletePin(pin.id);
+                                                                            }}
+                                                                        >
+                                                                            <Trash2 className="h-3.5 w-3.5" />
+                                                                        </Button>
+                                                                    )}
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     )}
-
-                                                    <div className="flex items-center justify-between pt-2 border-t border-primary/5">
-                                                        <div className="flex gap-1.5">
-                                                            {canInteractWithFeedback && !replyingPinId && (pin.status !== 'resolved') && (
-                                                                <Button variant="ghost" size="sm" className="h-7 text-[9px] font-black uppercase px-2" onClick={(e) => { 
-                                                                    e.stopPropagation();
-                                                                    setReplyingPinId(pin.id); 
-                                                                    setDraftText(''); 
-                                                                }}>
-                                                                    Reply
-                                                                </Button>
-                                                            )}
-                                                            
-                                                            {isDesigner && status === 'DRAFT' && isLatest && (pin.status === 'open' || pin.status === 'mistake') && (
-                                                                <Button variant="secondary" size="sm" className="h-7 text-[9px] font-black uppercase px-2 bg-amber-100 text-amber-800 hover:bg-amber-200" onClick={(e) => { e.stopPropagation(); handleStatusChange(pin.id, 'fixed'); }}>
-                                                                    Mark Fixed
-                                                                </Button>
-                                                            )}
-
-                                                            {!isDesigner && isLatest && (status === 'INTERNAL_REVIEW' || status === 'CUSTOMER_REVIEW') && (
-                                                                <>
-                                                                    {(pin.status !== 'resolved') && (
-                                                                        <Button size="sm" className="h-7 text-[9px] font-black uppercase px-2 bg-green-600 text-white hover:bg-green-700" onClick={(e) => { e.stopPropagation(); handleStatusChange(pin.id, 'resolved'); }}>
-                                                                            Resolve
-                                                                        </Button>
-                                                                    )}
-                                                                    {pin.status === 'fixed' && (
-                                                                        <Button variant="ghost" size="sm" className="h-7 text-[9px] font-black uppercase px-2 text-destructive hover:bg-destructive/5" onClick={(e) => { e.stopPropagation(); handleStatusChange(pin.id, 'open'); }}>
-                                                                            Reject Fix
-                                                                        </Button>
-                                                                    )}
-                                                                </>
-                                                            )}
-                                                        </div>
-                                                        <div className="flex items-center gap-2">
-                                                            {pin.status === 'resolved' ? (
-                                                                <div className="flex items-center gap-1 text-[9px] font-black text-green-600">
-                                                                    <CheckCircle2 className="h-3.5 w-3.5" /> RESOLVED
-                                                                </div>
-                                                            ) : canInteractWithFeedback && (
-                                                                <Button 
-                                                                    variant="ghost" 
-                                                                    size="icon" 
-                                                                    className="h-7 w-7 text-destructive hover:bg-destructive/10" 
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation(); 
-                                                                        handleDeletePin(pin.id);
-                                                                    }}
-                                                                >
-                                                                    <Trash2 className="h-3.5 w-3.5" />
-                                                                </Button>
-                                                            )}
-                                                        </div>
-                                                    </div>
                                                 </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                </PopoverContent>
-                            </Popover>
-                        );
-                    })}
-                </div>
-            </div>
+                                            </div>
+                                        </PopoverContent>
+                                    </Popover>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </>
+            )}
         </div>
     );
 }
