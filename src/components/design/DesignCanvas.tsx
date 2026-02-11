@@ -17,7 +17,8 @@ import {
     CornerDownRight, 
     CheckCircle2, 
     Send,
-    Trash2
+    Trash2,
+    Lock
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -40,6 +41,7 @@ interface DesignCanvasProps {
     onToggleFullscreen?: () => void;
     isDesigner: boolean;
     version: number;
+    currentVersion: number;
     status: DesignWorkflowStatus;
 }
 
@@ -61,6 +63,7 @@ export function DesignCanvas({
     onToggleFullscreen,
     isDesigner,
     version,
+    currentVersion,
     status
 }: DesignCanvasProps) {
     const [zoom, setZoom] = useState(1);
@@ -77,6 +80,10 @@ export function DesignCanvas({
     const containerRef = useRef<HTMLDivElement>(null);
     const imageRef = useRef<HTMLImageElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const isLatest = version === currentVersion;
+    const canInteractWithFeedback = isLatest && ((isDesigner && status === 'DRAFT') || (!isDesigner && (status === 'INTERNAL_REVIEW' || status === 'CUSTOMER_REVIEW')));
+    const canAddPin = isLatest && ((isDesigner && status === 'DRAFT') || (!isDesigner && (status === 'INTERNAL_REVIEW' || status === 'CUSTOMER_REVIEW')));
 
     // Sync draft state when a pin is selected/opened
     useEffect(() => {
@@ -124,13 +131,11 @@ export function DesignCanvas({
         if (target.closest('.pin-bubble') || target.closest('[role="dialog"]')) return;
 
         // If a pin is already selected, clicking the canvas should just deselect it.
-        // This prevents creating a NEW pin while trying to dismiss an open one.
         if (highlightedPinId) {
             onPinClick(null);
             return;
         }
         
-        const canAddPin = (isDesigner && status === 'DRAFT') || (!isDesigner && (status === 'INTERNAL_REVIEW' || status === 'CUSTOMER_REVIEW'));
         if (!canAddPin) return;
 
         const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
@@ -196,8 +201,6 @@ export function DesignCanvas({
         onPinClick(null);
     };
 
-    const canInteractWithFeedback = (isDesigner && status === 'DRAFT') || (!isDesigner && (status === 'INTERNAL_REVIEW' || status === 'CUSTOMER_REVIEW'));
-
     useEffect(() => {
         if (highlightedPinId && zoom > 1) {
             const pin = pins.find(p => p.id === highlightedPinId);
@@ -250,8 +253,6 @@ export function DesignCanvas({
         );
     }
 
-    const canAddPin = (isDesigner && status === 'DRAFT') || (!isDesigner && (status === 'INTERNAL_REVIEW' || status === 'CUSTOMER_REVIEW'));
-
     return (
         <div className="h-full flex flex-col relative group/canvas">
             <div className="absolute top-24 right-4 z-50 flex flex-col gap-2 opacity-0 group-hover/canvas:opacity-100 transition-opacity">
@@ -295,9 +296,13 @@ export function DesignCanvas({
                 </div>
             </div>
 
-            {canAddPin && (
+            {canAddPin ? (
                 <div className="absolute bottom-4 left-4 z-50 bg-background/80 backdrop-blur-md border px-2 py-1 rounded text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground shadow-sm pointer-events-none">
                     Click design to drop a feedback pin
+                </div>
+            ) : !isLatest && (
+                <div className="absolute bottom-4 left-4 z-50 bg-background/80 backdrop-blur-md border px-2 py-1 rounded text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground shadow-sm pointer-events-none flex items-center gap-2">
+                    <Lock className="h-3 w-3" /> Viewing History — Read Only
                 </div>
             )}
 
@@ -395,7 +400,7 @@ export function DesignCanvas({
                                                     size="icon" 
                                                     className="h-6 w-6 text-muted-foreground hover:text-foreground" 
                                                     onClick={(e) => {
-                                                        e.stopPropagation(); // Prevent canvas click trigger
+                                                        e.stopPropagation(); 
                                                         handleClosePopover(pin.id);
                                                     }}
                                                 >
@@ -491,13 +496,13 @@ export function DesignCanvas({
                                                                 </Button>
                                                             )}
                                                             
-                                                            {isDesigner && status === 'DRAFT' && (pin.status === 'open' || pin.status === 'mistake') && (
+                                                            {isDesigner && status === 'DRAFT' && isLatest && (pin.status === 'open' || pin.status === 'mistake') && (
                                                                 <Button variant="secondary" size="sm" className="h-7 text-[9px] font-black uppercase px-2 bg-amber-100 text-amber-800 hover:bg-amber-200" onClick={(e) => { e.stopPropagation(); handleStatusChange(pin.id, 'fixed'); }}>
                                                                     Mark Fixed
                                                                 </Button>
                                                             )}
 
-                                                            {!isDesigner && (status === 'INTERNAL_REVIEW' || status === 'CUSTOMER_REVIEW') && (
+                                                            {!isDesigner && isLatest && (status === 'INTERNAL_REVIEW' || status === 'CUSTOMER_REVIEW') && (
                                                                 <>
                                                                     {(pin.status !== 'resolved') && (
                                                                         <Button size="sm" className="h-7 text-[9px] font-black uppercase px-2 bg-green-600 text-white hover:bg-green-700" onClick={(e) => { e.stopPropagation(); handleStatusChange(pin.id, 'resolved'); }}>
@@ -523,7 +528,7 @@ export function DesignCanvas({
                                                                     size="icon" 
                                                                     className="h-7 w-7 text-destructive hover:bg-destructive/10" 
                                                                     onClick={(e) => {
-                                                                        e.stopPropagation(); // Critical: stop bubbling to canvas
+                                                                        e.stopPropagation(); 
                                                                         handleDeletePin(pin.id);
                                                                     }}
                                                                 >

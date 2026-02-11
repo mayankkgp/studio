@@ -71,6 +71,8 @@ export function FeedbackSidebar({
     const isSavingRef = useRef(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    const isLatest = viewedVersion === currentVersion;
+
     // Sync state when highlighted pin changes
     useEffect(() => {
         if (highlightedPinId) {
@@ -172,6 +174,14 @@ export function FeedbackSidebar({
     };
 
     const renderActions = () => {
+        if (!isLatest) {
+            return (
+                <div className="flex items-center justify-center p-3 bg-muted/20 rounded-lg text-muted-foreground gap-2 font-black uppercase text-[10px] tracking-widest">
+                    <Lock className="h-3 w-3" /> Viewing History — Read Only
+                </div>
+            );
+        }
+
         if (isDesigner) {
             switch (status) {
                 case 'PENDING':
@@ -219,7 +229,7 @@ export function FeedbackSidebar({
         }
     };
 
-    const canAddFeedback = (isDesigner && status === 'DRAFT') || (!isDesigner && (status === 'INTERNAL_REVIEW' || status === 'CUSTOMER_REVIEW'));
+    const canAddFeedback = isLatest && ((isDesigner && status === 'DRAFT') || (!isDesigner && (status === 'INTERNAL_REVIEW' || status === 'CUSTOMER_REVIEW')));
 
     return (
         <div className="flex flex-col h-full bg-card/10 backdrop-blur-md overflow-hidden">
@@ -339,8 +349,8 @@ export function FeedbackSidebar({
                                             <div className="flex items-center justify-between pt-2 border-t border-primary/5">
                                                 <div className="flex gap-1">
                                                     {canAddFeedback && (pin.status !== 'resolved') && <Button variant="ghost" size="sm" className="h-6 text-[8px] font-black uppercase px-2" onClick={(e) => { e.stopPropagation(); setReplyingPinId(pin.id); setDraftText(''); }}>Reply</Button>}
-                                                    {isDesigner && status === 'DRAFT' && (pin.status === 'open' || pin.status === 'mistake') && <Button variant="secondary" size="sm" className="h-6 text-[8px] font-black uppercase px-2 bg-amber-100 text-amber-800" onClick={(e) => { e.stopPropagation(); onUpdatePins(pins.map(p => p.id === pin.id ? { ...p, status: 'fixed' } : p)); }}>Mark Fixed</Button>}
-                                                    {!isDesigner && (status === 'INTERNAL_REVIEW' || status === 'CUSTOMER_REVIEW') && (
+                                                    {isDesigner && status === 'DRAFT' && isLatest && (pin.status === 'open' || pin.status === 'mistake') && <Button variant="secondary" size="sm" className="h-6 text-[8px] font-black uppercase px-2 bg-amber-100 text-amber-800" onClick={(e) => { e.stopPropagation(); onUpdatePins(pins.map(p => p.id === pin.id ? { ...p, status: 'fixed' } : p)); }}>Mark Fixed</Button>}
+                                                    {!isDesigner && isLatest && (status === 'INTERNAL_REVIEW' || status === 'CUSTOMER_REVIEW') && (
                                                         <>
                                                             {(pin.status !== 'resolved') && <Button size="sm" className="h-6 text-[8px] font-black uppercase px-2 bg-green-600 text-white" onClick={(e) => { e.stopPropagation(); onUpdatePins(pins.map(p => p.id === pin.id ? { ...p, status: 'resolved' } : p)); }}>Resolve</Button>}
                                                             {pin.status === 'fixed' && <Button variant="ghost" size="sm" className="h-6 text-[8px] font-black uppercase px-2 text-destructive" onClick={(e) => { e.stopPropagation(); onUpdatePins(pins.map(p => p.id === pin.id ? { ...p, status: 'open' } : p)); }}>Reject Fix</Button>}

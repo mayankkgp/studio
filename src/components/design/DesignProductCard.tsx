@@ -369,6 +369,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
                                 highlightedPinId={highlightedPinId}
                                 isDesigner={isDesigner}
                                 version={viewedVersionNum}
+                                currentVersion={currentVersionNum}
                                 status={activeComponent.status || 'PENDING'}
                                 onAddPin={handleAddPin}
                                 onPinClick={setHighlightedPinId}
@@ -430,6 +431,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
                                     highlightedPinId={highlightedPinId}
                                     isDesigner={isDesigner}
                                     version={viewedVersionNum}
+                                    currentVersion={currentVersionNum}
                                     status={activeComponent.status || 'PENDING'}
                                     onAddPin={handleAddPin}
                                     onPinClick={setHighlightedPinId}
