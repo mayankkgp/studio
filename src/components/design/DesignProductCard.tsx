@@ -43,6 +43,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
     const [compNameInput, setCompNameInput] = useState('');
     const [editingCompId, setEditingCompId] = useState<string | null>(null);
     
+    // Track if there is a newly uploaded draft that hasn't been submitted yet
     const [newDrafts, setNewDrafts] = useState<Record<string, boolean>>({});
 
     const designData = useMemo(() => {
@@ -93,15 +94,24 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
         ? activeComponent.versions[activeComponent.versions.length - 1].versionNumber 
         : 0;
     
-    const activeVersion = useMemo(() => {
-        if (!activeComponent.versions || activeComponent.versions.length === 0) return null;
-        if (selectedVersionId) {
-            return activeComponent.versions.find(v => v.id === selectedVersionId) || activeComponent.versions[activeComponent.versions.length - 1];
+    // Filtering versions: Managers shouldn't see unsubmitted drafts
+    const visibleVersions = useMemo(() => {
+        if (isDesigner) return activeComponent.versions;
+        if (activeComponent.status === 'DRAFT' && newDrafts[activeCompId] && activeComponent.versions.length > 0) {
+            return activeComponent.versions.slice(0, -1);
         }
-        return activeComponent.versions[activeComponent.versions.length - 1];
-    }, [activeComponent.versions, selectedVersionId]);
+        return activeComponent.versions;
+    }, [activeComponent.versions, activeComponent.status, isDesigner, newDrafts, activeCompId]);
 
-    const viewedVersionNum = activeVersion?.versionNumber || currentVersionNum;
+    const activeVersion = useMemo(() => {
+        if (!visibleVersions || visibleVersions.length === 0) return null;
+        if (selectedVersionId) {
+            return visibleVersions.find(v => v.id === selectedVersionId) || visibleVersions[visibleVersions.length - 1];
+        }
+        return visibleVersions[visibleVersions.length - 1];
+    }, [visibleVersions, selectedVersionId]);
+
+    const viewedVersionNum = activeVersion?.versionNumber || 0;
 
     const handleUpdateDesignInternal = (updatedData: DesignData) => {
         onUpdateDesign(updatedData);
@@ -148,6 +158,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
     };
 
     const handleStatusChange = (status: DesignWorkflowStatus) => {
+        // If submitting for review, clear the new draft flag
         if (status === 'INTERNAL_REVIEW' || status === 'PENDING') {
             setNewDrafts(prev => ({ ...prev, [activeCompId]: false }));
         }
@@ -199,7 +210,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
     const handleDeleteDraft = () => {
         if (activeComponent.versions.length > 0) {
             const newVersions = [...activeComponent.versions];
-            newVersions.pop(); 
+            newVersions.pop(); // Remove the unsubmitted one
             handleUpdateVersions(newVersions);
             setNewDrafts(prev => ({ ...prev, [activeCompId]: false }));
             setSelectedVersionId(null);
@@ -221,6 +232,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
         handleUpdatePins([...(activeComponent.pins || []), newPin]);
         setHighlightedPinId(newPin.id);
         
+        // Auto-open sidebar in fullscreen when adding a pin
         if (isFullscreen) {
             setIsSidebarOpenInFull(true);
         }
@@ -269,7 +281,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
 
     const feedbackSidebarProps = {
         pins: activeComponent.pins || [],
-        versions: activeComponent.versions || [],
+        versions: visibleVersions,
         highlightedPinId: highlightedPinId,
         selectedVersionId: activeVersion?.id || null,
         status: activeComponent.status || 'PENDING',
@@ -390,6 +402,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
                 <DialogContent className="max-w-[100vw] w-screen h-screen p-0 gap-0 border-none rounded-none flex flex-col bg-stone-100 overflow-hidden">
                     <div className="flex-1 flex overflow-hidden relative">
                         <div className="flex-1 relative overflow-hidden flex flex-col">
+                            {/* immersive Header */}
                             <div className="absolute top-4 left-6 z-[50] pointer-events-none">
                                 <h2 className="font-headline font-black text-lg leading-tight text-foreground drop-shadow-sm">{product.productName}</h2>
                                 <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest bg-background/50 backdrop-blur-sm px-1 rounded w-fit">{activeComponent.name} — Workspace</p>
