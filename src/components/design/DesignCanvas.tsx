@@ -15,7 +15,6 @@ import {
     MessageSquare, 
     AlertCircle, 
     CornerDownRight, 
-    CheckCircle2, 
     Send,
     Trash2,
     Lock
@@ -43,6 +42,7 @@ interface DesignCanvasProps {
     version: number;
     currentVersion: number;
     status: DesignWorkflowStatus;
+    hasNewDraft?: boolean;
 }
 
 const PIN_COLORS: Record<DesignPinStatus, string> = {
@@ -64,12 +64,13 @@ export function DesignCanvas({
     isDesigner,
     version,
     currentVersion,
-    status
+    status,
+    hasNewDraft = false
 }: DesignCanvasProps) {
     const [zoom, setZoom] = useState(1);
     const [position, setPosition] = useState({ x: 0, y: 0 });
     const [isDragging, setIsDragging] = useState(false);
-    const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+    const [dragStart, setDragStart] = useState({ x: e.clientX - position.x, y: e.clientY - position.y } as any);
     
     // Feedback Drafting State
     const [draftText, setDraftText] = useState('');
@@ -126,11 +127,9 @@ export function DesignCanvas({
     const handleCanvasClick = (e: React.MouseEvent) => {
         if (!imageUrl || isDragging) return;
         
-        // Don't trigger if clicking a pin bubble or inside a popover (via event target check)
         const target = e.target as HTMLElement;
-        if (target.closest('.pin-bubble') || target.closest('[role="dialog"]')) return;
+        if (target.closest('.pin-bubble') || target.closest('[role="dialog"]') || target.closest('button')) return;
 
-        // If a pin is already selected, clicking the canvas should just deselect it.
         if (highlightedPinId) {
             onPinClick(null);
             return;
@@ -194,7 +193,6 @@ export function DesignCanvas({
 
     const handleClosePopover = (pinId: string) => {
         const pin = pins.find(p => p.id === pinId);
-        // If the pin is unsaved (no text) AND has no draft text AND we're not in the middle of saving, remove it
         if (pin && !pin.text && !draftText.trim() && !isSavingRef.current) {
             onUpdatePins(pins.filter(p => p.id !== pinId));
         }
@@ -214,47 +212,59 @@ export function DesignCanvas({
         }
     }, [highlightedPinId, pins, zoom]);
 
-    if (!imageUrl) {
-        return (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-muted/20 border-dashed border-2 rounded-xl m-4">
-                <input 
-                    type="file" 
-                    ref={fileInputRef} 
-                    onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file && onUpload) onUpload(file);
-                        e.target.value = '';
-                    }} 
-                    accept="image/*" 
-                    className="hidden" 
-                />
-                {(isDesigner && (status === 'DRAFT' || status === 'PENDING')) ? (
-                    <div className="text-center space-y-4">
-                        <div className="h-16 w-16 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto">
-                            <Upload className="h-8 w-8" />
-                        </div>
-                        <div className="space-y-1">
-                            <h4 className="font-bold">Ready to Start</h4>
-                            <p className="text-xs text-muted-foreground">Upload the first draft to begin.</p>
-                        </div>
-                        <Button onClick={() => fileInputRef.current?.click()} size="sm">
-                            Select Design File
-                        </Button>
+    const renderEmptyState = () => (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-muted/20 border-dashed border-2 rounded-xl m-4">
+            <input 
+                type="file" 
+                ref={fileInputRef} 
+                onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file && onUpload) onUpload(file);
+                    e.target.value = '';
+                }} 
+                accept="image/*" 
+                className="hidden" 
+            />
+            {(isDesigner && (status === 'DRAFT' || status === 'PENDING')) ? (
+                <div className="text-center space-y-4">
+                    <div className="h-16 w-16 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto">
+                        <Upload className="h-8 w-8" />
                     </div>
-                ) : (
-                    <div className="text-center space-y-2 opacity-50 px-8">
-                        <ImageIcon className="h-12 w-12 mx-auto" />
-                        <p className="text-sm font-medium">
-                            {status === 'PENDING' ? 'Waiting for designer to start work' : 'Design proof not yet submitted'}
-                        </p>
+                    <div className="space-y-1">
+                        <h4 className="font-bold">Ready to Start</h4>
+                        <p className="text-xs text-muted-foreground">Upload the first draft to begin.</p>
                     </div>
-                )}
-            </div>
-        );
-    }
+                    <Button onClick={() => fileInputRef.current?.click()} size="sm">
+                        Select Design File
+                    </Button>
+                </div>
+            ) : (
+                <div className="text-center space-y-2 opacity-50 px-8">
+                    <ImageIcon className="h-12 w-12 mx-auto" />
+                    <p className="text-sm font-medium">
+                        {status === 'PENDING' ? 'Waiting for designer to start work' : 'Design proof not yet submitted'}
+                    </p>
+                </div>
+            )}
+        </div>
+    );
+
+    if (!imageUrl) return renderEmptyState();
 
     return (
         <div className="h-full flex flex-col relative group/canvas">
+            <input 
+                type="file" 
+                ref={fileInputRef} 
+                onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file && onUpload) onUpload(file);
+                    e.target.value = '';
+                }} 
+                accept="image/*" 
+                className="hidden" 
+            />
+
             <div className="absolute top-24 right-4 z-50 flex flex-col gap-2 opacity-0 group-hover/canvas:opacity-100 transition-opacity">
                 <div className="bg-background/90 backdrop-blur-md border border-primary/20 rounded-lg p-1 shadow-2xl flex flex-col gap-1">
                     <TooltipProvider>
@@ -295,6 +305,19 @@ export function DesignCanvas({
                     </TooltipProvider>
                 </div>
             </div>
+
+            {isDesigner && status === 'DRAFT' && !hasNewDraft && (
+                <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-4">
+                    <Button 
+                        size="sm" 
+                        className="h-10 px-6 font-black uppercase tracking-widest gap-2 bg-primary shadow-2xl border-2 border-white"
+                        onClick={() => fileInputRef.current?.click()}
+                    >
+                        <Upload className="h-4 w-4" />
+                        Upload New Version
+                    </Button>
+                </div>
+            )}
 
             {canAddPin ? (
                 <div className="absolute bottom-4 left-4 z-50 bg-background/80 backdrop-blur-md border px-2 py-1 rounded text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground shadow-sm pointer-events-none">
@@ -342,11 +365,8 @@ export function DesignCanvas({
                                 key={pin.id} 
                                 open={highlightedPinId === pin.id} 
                                 onOpenChange={(open) => {
-                                    if (!open) {
-                                        handleClosePopover(pin.id);
-                                    } else {
-                                        onPinClick(pin.id);
-                                    }
+                                    if (!open) handleClosePopover(pin.id);
+                                    else onPinClick(pin.id);
                                 }}
                             >
                                 <PopoverTrigger asChild>

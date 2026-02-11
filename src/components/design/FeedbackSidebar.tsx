@@ -73,7 +73,6 @@ export function FeedbackSidebar({
 
     const isLatest = viewedVersion === currentVersion;
 
-    // Sync state when highlighted pin changes
     useEffect(() => {
         if (highlightedPinId) {
             const el = document.getElementById(`comment-${highlightedPinId}`);
@@ -157,7 +156,6 @@ export function FeedbackSidebar({
     const handleDiscardIfEmpty = (pinId: string) => {
         setTimeout(() => {
             if (isSavingRef.current) return;
-            
             if (!draftText.trim()) {
                 setEditingPinId(null);
                 setReplyingPinId(null);
@@ -174,14 +172,6 @@ export function FeedbackSidebar({
     };
 
     const renderActions = () => {
-        if (!isLatest) {
-            return (
-                <div className="flex items-center justify-center p-3 bg-muted/20 rounded-lg text-muted-foreground gap-2 font-black uppercase text-[10px] tracking-widest">
-                    <Lock className="h-3 w-3" /> Viewing History — Read Only
-                </div>
-            );
-        }
-
         if (isDesigner) {
             switch (status) {
                 case 'PENDING':
@@ -205,6 +195,14 @@ export function FeedbackSidebar({
                     return <div className="flex items-center justify-center p-3 bg-muted/20 rounded-lg text-muted-foreground gap-2 font-black uppercase text-[10px] tracking-widest"><Lock className="h-3 w-3" /> Design Locked</div>;
             }
         } else {
+            if (!isLatest) {
+                return (
+                    <div className="flex items-center justify-center p-3 bg-muted/20 rounded-lg text-muted-foreground gap-2 font-black uppercase text-[10px] tracking-widest">
+                        <Lock className="h-3 w-3" /> Viewing History — Read Only
+                    </div>
+                );
+            }
+
             switch (status) {
                 case 'PENDING':
                 case 'DRAFT':

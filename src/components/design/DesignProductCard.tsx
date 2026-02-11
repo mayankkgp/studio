@@ -94,7 +94,6 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
         ? activeComponent.versions[activeComponent.versions.length - 1].versionNumber 
         : 0;
     
-    // Filtering versions: Managers shouldn't see unsubmitted drafts
     const visibleVersions = useMemo(() => {
         if (isDesigner) return activeComponent.versions;
         if (activeComponent.status === 'DRAFT' && newDrafts[activeCompId] && activeComponent.versions.length > 0) {
@@ -158,7 +157,6 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
     };
 
     const handleStatusChange = (status: DesignWorkflowStatus) => {
-        // If submitting for review or stopping work, clear the new draft flag
         if (status === 'INTERNAL_REVIEW' || status === 'PENDING') {
             setNewDrafts(prev => ({ ...prev, [activeCompId]: false }));
         }
@@ -210,9 +208,8 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
     const handleDeleteDraft = () => {
         if (activeComponent.versions.length > 0) {
             const newVersions = [...activeComponent.versions];
-            newVersions.pop(); // Remove the unsubmitted one
+            newVersions.pop();
             handleUpdateVersions(newVersions);
-            // Reset the flag so "Upload Design" reappears
             setNewDrafts(prev => ({ ...prev, [activeCompId]: false }));
             setSelectedVersionId(null);
         }
@@ -233,7 +230,6 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
         handleUpdatePins([...(activeComponent.pins || []), newPin]);
         setHighlightedPinId(newPin.id);
         
-        // Auto-open sidebar in fullscreen when adding a pin
         if (isFullscreen) {
             setIsSidebarOpenInFull(true);
         }
@@ -384,6 +380,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
                                 version={viewedVersionNum}
                                 currentVersion={currentVersionNum}
                                 status={activeComponent.status || 'PENDING'}
+                                hasNewDraft={!!newDrafts[activeCompId]}
                                 onAddPin={handleAddPin}
                                 onPinClick={setHighlightedPinId}
                                 onUpdatePins={handleUpdatePins}
@@ -403,7 +400,6 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
                 <DialogContent className="max-w-[100vw] w-screen h-screen p-0 gap-0 border-none rounded-none flex flex-col bg-stone-100 overflow-hidden">
                     <div className="flex-1 flex overflow-hidden relative">
                         <div className="flex-1 relative overflow-hidden flex flex-col">
-                            {/* immersive Header */}
                             <div className="absolute top-4 left-6 z-[50] pointer-events-none">
                                 <h2 className="font-headline font-black text-lg leading-tight text-foreground drop-shadow-sm">{product.productName}</h2>
                                 <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest bg-background/50 backdrop-blur-sm px-1 rounded w-fit">{activeComponent.name} — Workspace</p>
@@ -447,6 +443,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
                                     version={viewedVersionNum}
                                     currentVersion={currentVersionNum}
                                     status={activeComponent.status || 'PENDING'}
+                                    hasNewDraft={!!newDrafts[activeCompId]}
                                     onAddPin={handleAddPin}
                                     onPinClick={setHighlightedPinId}
                                     onUpdatePins={handleUpdatePins}
