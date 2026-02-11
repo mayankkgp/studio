@@ -38,13 +38,14 @@ export function DesignReviewTab({ order, onUpdateOrder, role }: DesignReviewTabP
         <div className="flex flex-col h-full overflow-hidden">
             <ScrollArea className="flex-1 bg-background/50">
                 <div className="max-w-6xl mx-auto p-4 md:p-8 space-y-12 pb-32">
-                    <div className="grid grid-cols-1 gap-12">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         {order.deliverables.map((product) => (
                             <DesignProductCard 
                                 key={product.id} 
                                 product={product} 
                                 isDesigner={role === 'DESIGNER'}
                                 onUpdateDesign={(data) => handleUpdateProductDesign(product.id, data)}
+                                customerData={order.customerData}
                             />
                         ))}
                     </div>

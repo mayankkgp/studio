@@ -19,7 +19,10 @@ import {
     Lock,
     CheckCircle2,
     Eye,
-    EyeOff
+    EyeOff,
+    MousePointer2,
+    MessageSquarePlus,
+    Scaling
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -45,6 +48,7 @@ interface DesignCanvasProps {
     currentVersion: number;
     status: DesignWorkflowStatus;
     hasNewDraft?: boolean;
+    isWorkbench?: boolean;
 }
 
 const PIN_COLORS: Record<DesignPinStatus, string> = {
@@ -67,13 +71,15 @@ export function DesignCanvas({
     version,
     currentVersion,
     status,
-    hasNewDraft = false
+    hasNewDraft = false,
+    isWorkbench = false
 }: DesignCanvasProps) {
     const [zoom, setZoom] = useState(1);
     const [position, setPosition] = useState({ x: 0, y: 0 });
     const [isDragging, setIsDragging] = useState(false);
     const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
     const [showPins, setShowPins] = useState(true);
+    const [interactionMode, setInteractionMode] = useState<'NAVIGATE' | 'COMMENT'>('NAVIGATE');
     
     // Feedback Drafting State
     const [draftText, setDraftText] = useState('');
@@ -87,7 +93,12 @@ export function DesignCanvas({
 
     const isLatest = version === currentVersion;
     const canInteractWithFeedback = isLatest && ((isDesigner && status === 'DRAFT') || (!isDesigner && (status === 'INTERNAL_REVIEW' || status === 'CUSTOMER_REVIEW')));
-    const canAddPin = isLatest && ((isDesigner && status === 'DRAFT') || (!isDesigner && (status === 'INTERNAL_REVIEW' || status === 'CUSTOMER_REVIEW')));
+    const canAddPin = isLatest && interactionMode === 'COMMENT' && ((isDesigner && status === 'DRAFT') || (!isDesigner && (status === 'INTERNAL_REVIEW' || status === 'CUSTOMER_REVIEW')));
+
+    // Auto-switch to comment mode if we highlight a pin
+    useEffect(() => {
+        if (highlightedPinId) setInteractionMode('COMMENT');
+    }, [highlightedPinId]);
 
     // Sync draft state when a pin is selected/opened
     useEffect(() => {
@@ -112,9 +123,13 @@ export function DesignCanvas({
     };
 
     const handleMouseDown = (e: React.MouseEvent) => {
-        if (!imageUrl || e.button !== 0 || zoom === 1) return;
-        setIsDragging(true);
-        setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y });
+        if (!imageUrl || e.button !== 0) return;
+        
+        // Always allow dragging if zoomed in or in NAVIGATE mode
+        if (zoom > 1 || interactionMode === 'NAVIGATE') {
+            setIsDragging(true);
+            setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y });
+        }
     };
 
     const handleMouseMove = (e: React.MouseEvent) => {
@@ -199,25 +214,11 @@ export function DesignCanvas({
     const handleClosePopover = (e: React.MouseEvent, pinId: string) => {
         e.stopPropagation();
         const pin = pins.find(p => p.id === pinId);
-        // If pin has no text and we're not currently saving, it means it's a new empty pin being dismissed
         if (pin && !pin.text && !draftText.trim() && !isSavingRef.current) {
             onUpdatePins(pins.filter(p => p.id !== pinId));
         }
         onPinClick(null);
     };
-
-    useEffect(() => {
-        if (highlightedPinId && zoom > 1) {
-            const pin = pins.find(p => p.id === highlightedPinId);
-            if (pin && containerRef.current) {
-                const { width, height } = containerRef.current.getBoundingClientRect();
-                setPosition({
-                    x: -(pin.x / 100 * width * zoom) + (width / 2),
-                    y: -(pin.y / 100 * height * zoom) + (height / 2)
-                });
-            }
-        }
-    }, [highlightedPinId, pins, zoom]);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -254,38 +255,78 @@ export function DesignCanvas({
     );
 
     return (
-        <div className="h-full flex flex-col relative group/canvas">
-            <input 
-                type="file" 
-                ref={fileInputRef} 
-                onChange={handleFileChange} 
-                accept="image/*" 
-                className="hidden" 
-            />
+        <div className="h-full flex flex-col relative group/canvas bg-stone-100 overflow-hidden">
+            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
 
             {!imageUrl && renderEmptyState()}
 
             {imageUrl && (
                 <>
-                    <div className="absolute top-24 right-4 z-50 flex flex-col gap-2 opacity-0 group-hover/canvas:opacity-100 transition-opacity">
-                        <div className="bg-background/90 backdrop-blur-md border border-primary/20 rounded-lg p-1 shadow-2xl flex flex-col gap-1">
+                    {/* Floating Tool Palette */}
+                    <div className="absolute top-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-1.5 p-1.5 bg-background/90 backdrop-blur-xl border border-primary/20 rounded-full shadow-2xl scale-110">
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button 
+                                        variant={interactionMode === 'NAVIGATE' ? "default" : "ghost"} 
+                                        size="icon" 
+                                        className="h-9 w-9 rounded-full"
+                                        onClick={() => setInteractionMode('NAVIGATE')}
+                                    >
+                                        <MousePointer2 className="h-4 w-4" />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Navigate (Pan/Zoom)</TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button 
+                                        variant={interactionMode === 'COMMENT' ? "default" : "ghost"} 
+                                        size="icon" 
+                                        className={cn("h-9 w-9 rounded-full", interactionMode === 'COMMENT' && "bg-blue-600")}
+                                        onClick={() => setInteractionMode('COMMENT')}
+                                    >
+                                        <MessageSquarePlus className="h-4 w-4" />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Feedback (Drop Pin)</TooltipContent>
+                            </Tooltip>
+                            <div className="w-px h-4 bg-muted-foreground/20 mx-1" />
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        className="h-9 w-9 rounded-full" 
+                                        onClick={handleReset}
+                                    >
+                                        <Scaling className="h-4 w-4" />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Fit to Screen</TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        className={cn("h-9 w-9 rounded-full", !showPins && "text-primary")} 
+                                        onClick={() => setShowPins(!showPins)}
+                                    >
+                                        {showPins ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>{showPins ? "Hide Pins" : "Show Pins"}</TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+                    </div>
+
+                    <div className="absolute top-6 right-6 z-50 flex flex-col gap-2">
+                        <div className="bg-background/90 backdrop-blur-md border border-primary/20 rounded-lg p-1 shadow-xl flex flex-col gap-1">
                             <TooltipProvider>
                                 <Tooltip>
                                     <TooltipTrigger asChild>
-                                        <Button 
-                                            variant="ghost" 
-                                            size="icon" 
-                                            className={cn("h-8 w-8 hover:bg-primary/10", !showPins && "text-primary bg-primary/5")} 
-                                            onClick={() => setShowPins(!showPins)}
-                                        >
-                                            {showPins ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-                                        </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent side="left">{showPins ? "Hide Pins" : "Show Pins"}</TooltipContent>
-                                </Tooltip>
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-primary/10" onClick={handleZoomIn}>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleZoomIn}>
                                             <ZoomIn className="h-4 w-4" />
                                         </Button>
                                     </TooltipTrigger>
@@ -293,24 +334,16 @@ export function DesignCanvas({
                                 </Tooltip>
                                 <Tooltip>
                                     <TooltipTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-primary/10" onClick={handleZoomOut}>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleZoomOut}>
                                             <ZoomOut className="h-4 w-4" />
                                         </Button>
                                     </TooltipTrigger>
                                     <TooltipContent side="left">Zoom Out</TooltipContent>
                                 </Tooltip>
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-primary/10" onClick={handleReset}>
-                                            <RotateCcw className="h-4 w-4" />
-                                        </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent side="left">Reset View</TooltipContent>
-                                </Tooltip>
-                                {onToggleFullscreen && (
+                                {!isWorkbench && onToggleFullscreen && (
                                     <Tooltip>
                                         <TooltipTrigger asChild>
-                                            <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-primary/10" onClick={onToggleFullscreen}>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onToggleFullscreen}>
                                                 <Maximize2 className="h-4 w-4" />
                                             </Button>
                                         </TooltipTrigger>
@@ -322,10 +355,10 @@ export function DesignCanvas({
                     </div>
 
                     {isDesigner && status === 'DRAFT' && !hasNewDraft && (
-                        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-4">
+                        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-50">
                             <Button 
                                 size="sm" 
-                                className="h-10 px-6 font-black uppercase tracking-widest gap-2 bg-primary shadow-2xl border-2 border-white"
+                                className="h-10 px-6 font-black uppercase tracking-widest gap-2 bg-primary shadow-2xl border-2 border-white rounded-full"
                                 onClick={() => fileInputRef.current?.click()}
                             >
                                 <Upload className="h-4 w-4" />
@@ -334,23 +367,13 @@ export function DesignCanvas({
                         </div>
                     )}
 
-                    {canAddPin ? (
-                        <div className="absolute bottom-4 left-4 z-50 bg-background/80 backdrop-blur-md border px-2 py-1 rounded text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground shadow-sm pointer-events-none">
-                            Click design to drop a feedback pin
-                        </div>
-                    ) : !isLatest && (
-                        <div className="absolute bottom-4 left-4 z-50 bg-background/80 backdrop-blur-md border px-2 py-1 rounded text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground shadow-sm pointer-events-none flex items-center gap-2">
-                            <Lock className="h-3 w-3" /> Viewing History — Read Only
-                        </div>
-                    )}
-
                     <div 
                         ref={containerRef}
                         className={cn(
-                            "flex-1 overflow-hidden relative select-none bg-stone-100",
+                            "flex-1 overflow-hidden relative select-none",
                             canAddPin ? "cursor-crosshair" : "cursor-default",
-                            zoom > 1 && isDragging && "cursor-grabbing",
-                            zoom > 1 && !isDragging && "cursor-grab"
+                            (zoom > 1 || interactionMode === 'NAVIGATE') && isDragging && "cursor-grabbing",
+                            (zoom > 1 || interactionMode === 'NAVIGATE') && !isDragging && "cursor-grab"
                         )}
                         onMouseDown={handleMouseDown}
                         onMouseMove={handleMouseMove}
@@ -380,11 +403,8 @@ export function DesignCanvas({
                                         key={pin.id} 
                                         open={highlightedPinId === pin.id} 
                                         onOpenChange={(open) => {
-                                            if (!open) {
-                                                // Only handle deselection here if not via internal popover CTAs
-                                                if (highlightedPinId === pin.id) onPinClick(null);
-                                            }
-                                            else onPinClick(pin.id);
+                                            if (!open && highlightedPinId === pin.id) onPinClick(null);
+                                            else if (open) onPinClick(pin.id);
                                         }}
                                     >
                                         <PopoverTrigger asChild>
@@ -413,19 +433,7 @@ export function DesignCanvas({
                                             side="top" 
                                             sideOffset={10} 
                                             align="center"
-                                            onOpenAutoFocus={(e) => {
-                                                e.preventDefault();
-                                                const target = e.currentTarget;
-                                                // Focus textarea for new pins, otherwise focus container to enable hotkeys
-                                                if (!pin.text) {
-                                                    setTimeout(() => {
-                                                        const textarea = target.querySelector('textarea');
-                                                        textarea?.focus({ preventScroll: true });
-                                                    }, 50);
-                                                } else {
-                                                    target.focus({ preventScroll: true });
-                                                }
-                                            }}
+                                            onOpenAutoFocus={(e) => e.preventDefault()}
                                         >
                                             <div className="bg-background">
                                                 <div className="p-3 border-b bg-muted/20 flex items-center justify-between">
@@ -436,11 +444,11 @@ export function DesignCanvas({
                                                         <span className="text-[10px] font-black uppercase tracking-widest">{pin.author}</span>
                                                     </div>
                                                     <div className="flex items-center gap-2">
-                                                        <span className="text-[9px] font-bold text-muted-foreground uppercase opacity-60">{format(new Date(pin.timestamp), 'h:mm a')} • V{pin.version}</span>
+                                                        <span className="text-[9px] font-bold text-muted-foreground uppercase opacity-60">V{pin.version}</span>
                                                         <Button 
                                                             variant="ghost" 
                                                             size="icon" 
-                                                            className="h-6 w-6 text-muted-foreground hover:text-foreground" 
+                                                            className="h-6 w-6 text-muted-foreground" 
                                                             onClick={(e) => handleClosePopover(e, pin.id)}
                                                         >
                                                             <X className="h-3.5 w-3.5" />
@@ -452,15 +460,11 @@ export function DesignCanvas({
                                                     {!pin.text ? (
                                                         <div className="space-y-3">
                                                             <Textarea 
+                                                                autoFocus
                                                                 placeholder="Enter feedback details..." 
                                                                 className="min-h-[80px] text-xs font-semibold" 
                                                                 value={draftText} 
                                                                 onChange={(e) => setDraftText(e.target.value)}
-                                                                onKeyDown={(e) => {
-                                                                    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-                                                                        handleSaveComment(pin.id);
-                                                                    }
-                                                                }}
                                                             />
                                                             <div className="flex items-center justify-between">
                                                                 {!isDesigner && (
@@ -470,120 +474,30 @@ export function DesignCanvas({
                                                                     </div>
                                                                 )}
                                                                 <div className="flex gap-2 ml-auto">
-                                                                    <Button 
-                                                                        variant="ghost" 
-                                                                        size="sm" 
-                                                                        className="h-7 text-[10px] font-black uppercase px-3" 
-                                                                        onClick={(e) => handleClosePopover(e, pin.id)}
-                                                                    >
-                                                                        Cancel
-                                                                    </Button>
-                                                                    <Button 
-                                                                        size="sm" 
-                                                                        className="h-7 text-[10px] font-black uppercase px-3" 
-                                                                        onClick={(e) => { 
-                                                                            e.stopPropagation(); 
-                                                                            handleSaveComment(pin.id); 
-                                                                        }}
-                                                                    >
-                                                                        Save Feedback
-                                                                    </Button>
+                                                                    <Button size="sm" className="h-7 text-[10px] font-black uppercase px-3" onClick={() => handleSaveComment(pin.id)}>Save Feedback</Button>
                                                                 </div>
                                                             </div>
                                                         </div>
                                                     ) : (
                                                         <div className="space-y-4">
-                                                            <div className="relative">
-                                                                {pin.status === 'mistake' && <AlertCircle className="absolute -left-1 -top-1 h-3 w-3 text-destructive animate-pulse" />}
-                                                                <p className="text-xs font-semibold leading-relaxed text-foreground/90 pl-3">{pin.text}</p>
-                                                            </div>
-
+                                                            <p className="text-xs font-semibold leading-relaxed text-foreground/90">{pin.text}</p>
                                                             {pin.replies.length > 0 && (
                                                                 <div className="space-y-2 pt-2 border-t border-primary/5 max-h-[120px] overflow-y-auto custom-scrollbar">
                                                                     {pin.replies.map((reply, i) => (
                                                                         <div key={i} className="pl-3 border-l-2 border-primary/10 space-y-0.5">
-                                                                            <div className="flex items-center gap-1.5 text-[8px] font-black uppercase text-muted-foreground">
-                                                                                <CornerDownRight className="h-3 w-3" /> {reply.author}
-                                                                            </div>
+                                                                            <div className="flex items-center gap-1.5 text-[8px] font-black uppercase text-muted-foreground"><CornerDownRight className="h-3 w-3" /> {reply.author}</div>
                                                                             <p className="text-[10px] font-medium leading-relaxed bg-muted/40 p-1.5 rounded-md">{reply.text}</p>
                                                                         </div>
                                                                     ))}
                                                                 </div>
                                                             )}
-
-                                                            {replyingPinId === pin.id && (
-                                                                <div className="mt-2 space-y-2 p-2 bg-muted/30 rounded-lg animate-in slide-in-from-bottom-2">
-                                                                    <Input 
-                                                                        autoFocus 
-                                                                        placeholder="Type a reply..." 
-                                                                        className="h-8 text-[10px] font-semibold" 
-                                                                        value={draftText} 
-                                                                        onChange={(e) => setDraftText(e.target.value)} 
-                                                                        onKeyDown={(e) => {
-                                                                            if (e.key === 'Enter') handleAddReply(pin.id);
-                                                                        }}
-                                                                        onBlur={() => {
-                                                                            setTimeout(() => {
-                                                                                if (!draftText.trim() && !isSavingRef.current) setReplyingPinId(null);
-                                                                            }, 150);
-                                                                        }}
-                                                                    />
-                                                                    <div className="flex justify-end gap-1">
-                                                                        <Button variant="ghost" size="sm" className="h-6 text-[8px] font-black" onClick={(e) => { e.stopPropagation(); setReplyingPinId(null); }}>Cancel</Button>
-                                                                        <Button size="sm" className="h-6 text-[8px] font-black" onClick={(e) => { e.stopPropagation(); handleAddReply(pin.id); }}>Send</Button>
-                                                                    </div>
-                                                                </div>
-                                                            )}
-
                                                             <div className="flex items-center justify-between pt-2 border-t border-primary/5">
                                                                 <div className="flex gap-1.5">
-                                                                    {canInteractWithFeedback && !replyingPinId && (pin.status !== 'resolved') && (
-                                                                        <Button variant="ghost" size="sm" className="h-7 text-[9px] font-black uppercase px-2" onClick={(e) => { 
-                                                                            e.stopPropagation();
-                                                                            setReplyingPinId(pin.id); 
-                                                                            setDraftText(''); 
-                                                                        }}>
-                                                                            Reply
-                                                                        </Button>
-                                                                    )}
-                                                                    
-                                                                    {isDesigner && status === 'DRAFT' && isLatest && (pin.status === 'open' || pin.status === 'mistake') && (
-                                                                        <Button variant="secondary" size="sm" className="h-7 text-[9px] font-black uppercase px-2 bg-amber-100 text-amber-800 hover:bg-amber-200" onClick={(e) => { e.stopPropagation(); handleStatusChange(pin.id, 'fixed'); }}>
-                                                                            Mark Fixed
-                                                                        </Button>
-                                                                    )}
-
-                                                                    {!isDesigner && isLatest && (status === 'INTERNAL_REVIEW' || status === 'CUSTOMER_REVIEW') && (
-                                                                        <>
-                                                                            {(pin.status !== 'resolved') && (
-                                                                                <Button size="sm" className="h-7 text-[9px] font-black uppercase px-2 bg-green-600 text-white hover:bg-green-700" onClick={(e) => { e.stopPropagation(); handleStatusChange(pin.id, 'resolved'); }}>
-                                                                                    Resolve
-                                                                                </Button>
-                                                                            )}
-                                                                            {pin.status === 'fixed' && (
-                                                                                <Button variant="ghost" size="sm" className="h-7 text-[9px] font-black uppercase px-2 text-destructive hover:bg-destructive/5" onClick={(e) => { e.stopPropagation(); handleStatusChange(pin.id, 'open'); }}>
-                                                                                    Reject Fix
-                                                                                </Button>
-                                                                            )}
-                                                                        </>
+                                                                    {canInteractWithFeedback && (pin.status !== 'resolved') && (
+                                                                        <Button variant="ghost" size="sm" className="h-7 text-[9px] font-black uppercase px-2" onClick={(e) => { e.stopPropagation(); setReplyingPinId(pin.id); setDraftText(''); }}>Reply</Button>
                                                                     )}
                                                                 </div>
-                                                                <div className="flex items-center gap-2">
-                                                                    {pin.status === 'resolved' ? (
-                                                                        <div className="flex items-center gap-1 text-[9px] font-black text-green-600">
-                                                                            <CheckCircle2 className="h-3.5 w-3.5" /> RESOLVED
-                                                                        </div>
-                                                                    ) : canInteractWithFeedback && (
-                                                                        <Button 
-                                                                            variant="ghost" 
-                                                                            size="icon" 
-                                                                            className="h-7 w-7 text-destructive hover:bg-destructive/10" 
-                                                                            onClick={(e) => handleDeletePin(e, pin.id)}
-                                                                        >
-                                                                            <Trash2 className="h-3.5 w-3.5" />
-                                                                        </Button>
-                                                                    )}
-                                                                </div>
+                                                                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={(e) => handleDeletePin(e, pin.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
                                                             </div>
                                                         </div>
                                                     )}
