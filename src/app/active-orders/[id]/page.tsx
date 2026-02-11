@@ -149,8 +149,8 @@ export default function ActiveOrderCommandCenter() {
                 variant: "destructive", 
                 title: "Sync Failed", 
                 description: e instanceof Error && e.name === 'QuotaExceededError' 
-                    ? "Storage full. Please clear some designs." 
-                    : "Could not save changes." 
+                    ? "Storage quota exceeded. Please clear some older orders or drafts to save changes." 
+                    : "Could not save changes to local storage." 
             });
         }
     }, [id, toast]);
@@ -187,7 +187,13 @@ export default function ActiveOrderCommandCenter() {
                 }
             }
         } catch (e) {
-            toast({ variant: "destructive", title: "Save Failed", description: "Could not persist row changes." });
+            toast({ 
+                variant: "destructive", 
+                title: "Save Failed", 
+                description: e instanceof Error && e.name === 'QuotaExceededError' 
+                    ? "Storage full. Could not persist changes." 
+                    : "Could not persist row changes." 
+            });
         }
     }, [id, toast]);
 

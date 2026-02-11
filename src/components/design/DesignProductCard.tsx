@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useState, useMemo, useEffect } from 'react';
 import type { ConfiguredProduct, DesignData, DesignComponent, DesignPin, DesignWorkflowStatus, DesignVersion, CustomerData } from '@/lib/types';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { DesignCanvas } from './DesignCanvas';
@@ -115,7 +115,8 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
 
     const handleUpdateDesignInternal = (updatedData: DesignData) => {
         setLocalDesignData(updatedData);
-        onUpdateDesign(updatedData);
+        // Defer parent update to next tick to avoid "update during render" console errors
+        setTimeout(() => onUpdateDesign(updatedData), 0);
     };
 
     const handleStatusChange = (status: DesignWorkflowStatus) => {
@@ -225,7 +226,11 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
                         </div>
                         <div className="flex items-center gap-2">
                             {isEligibleForStock && (
-                                <Button variant="outline" size="sm" onClick={() => handleUpdateDesignInternal({ ...localDesignData, isStock: true })} className="h-8 font-black uppercase text-[10px] tracking-widest"><PackageCheck className="h-3.5 w-3.5 mr-1.5" /> Stock</Button>
+                                <Button variant="outline" size="sm" onClick={() => {
+                                    if(confirm("Mark this product as stock? This will hide all design tools.")) {
+                                        handleUpdateDesignInternal({ ...localDesignData, isStock: true });
+                                    }
+                                }} className="h-8 font-black uppercase text-[10px] tracking-widest"><PackageCheck className="h-3.5 w-3.5 mr-1.5" /> Stock</Button>
                             )}
                             <Button size="sm" onClick={() => setIsFullscreen(true)} className="h-8 font-black uppercase text-[10px] tracking-widest gap-1.5"><LayoutPanelTop className="h-3.5 w-3.5" /> Start Design</Button>
                         </div>
