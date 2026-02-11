@@ -158,7 +158,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
     };
 
     const handleStatusChange = (status: DesignWorkflowStatus) => {
-        // If submitting for review, clear the new draft flag
+        // If submitting for review or stopping work, clear the new draft flag
         if (status === 'INTERNAL_REVIEW' || status === 'PENDING') {
             setNewDrafts(prev => ({ ...prev, [activeCompId]: false }));
         }
@@ -212,6 +212,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign }: Desig
             const newVersions = [...activeComponent.versions];
             newVersions.pop(); // Remove the unsubmitted one
             handleUpdateVersions(newVersions);
+            // Reset the flag so "Upload Design" reappears
             setNewDrafts(prev => ({ ...prev, [activeCompId]: false }));
             setSelectedVersionId(null);
         }
