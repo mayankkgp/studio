@@ -4,9 +4,6 @@ import * as React from 'react';
 import { useState, useEffect, useRef, useMemo } from 'react';
 import type { DesignPin, DesignPinStatus, DesignReply, DesignWorkflowStatus, DesignVersion, CustomerData } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -14,7 +11,6 @@ import { cn } from '@/lib/utils';
 import { 
     MessageSquare, 
     AlertCircle, 
-    CheckCircle2, 
     History, 
     CornerDownRight, 
     Send,
@@ -28,7 +24,6 @@ import {
     Globe,
     Sparkles
 } from 'lucide-react';
-import { format } from 'date-fns';
 
 interface FeedbackSidebarProps {
     pins: DesignPin[];
@@ -79,12 +74,8 @@ export function FeedbackSidebar({
     activeProductId
 }: FeedbackSidebarProps) {
     const [filter, setFilter] = useState<'all' | 'open' | 'mistakes'>('open');
-    const [editingPinId, setEditingPinId] = useState<string | null>(null);
     const [replyingPinId, setReplyingPinId] = useState<string | null>(null);
-    const [draftText, setDraftText] = useState('');
-    const [isMistakeDraft, setIsMistakeDraft] = useState(false);
     const [activeTab, setActiveTab] = useState('feedback');
-    const isSavingRef = useRef(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const isLatest = viewedVersion === currentVersion;
@@ -107,26 +98,6 @@ export function FeedbackSidebar({
     }, [pins, filter, viewedVersion]);
 
     const hasOpenItems = pins.some(p => p.status === 'open' || p.status === 'mistake' || p.status === 'fixed');
-
-    const handleSaveComment = (pinId: string) => {
-        if (!draftText.trim()) return;
-        isSavingRef.current = true;
-        const updatedPins = pins.map(p => p.id === pinId ? { ...p, text: draftText.trim(), status: isMistakeDraft ? 'mistake' : 'open' } as DesignPin : p);
-        onUpdatePins(updatedPins);
-        setEditingPinId(null);
-        setDraftText('');
-        setTimeout(() => { isSavingRef.current = false; }, 100);
-    };
-
-    const handleAddReply = (pinId: string) => {
-        if (!draftText.trim()) return;
-        isSavingRef.current = true;
-        const newReply: DesignReply = { author: isDesigner ? 'Designer' : 'Manager', text: draftText.trim(), timestamp: new Date().toISOString() };
-        onUpdatePins(pins.map(p => p.id === pinId ? { ...p, replies: [...p.replies, newReply] } : p));
-        setReplyingPinId(null);
-        setDraftText('');
-        setTimeout(() => { isSavingRef.current = false; }, 100);
-    };
 
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];

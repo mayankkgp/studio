@@ -28,11 +28,8 @@ import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Textarea } from '@/components/ui/textarea';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { format } from 'date-fns';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface DesignCanvasProps {
     imageUrl: string | null;
@@ -188,10 +185,6 @@ export function DesignCanvas({
         onPinClick(null);
     };
 
-    const handleStatusChange = (pinId: string, newStatus: DesignPinStatus) => {
-        onUpdatePins(pins.map(p => p.id === pinId ? { ...p, status: newStatus } : p));
-    };
-
     const handleClosePopover = (e: React.MouseEvent, pinId: string) => {
         e.stopPropagation();
         const pin = pins.find(p => p.id === pinId);
@@ -243,7 +236,6 @@ export function DesignCanvas({
 
             {imageUrl && (
                 <>
-                    {/* Floating Tool Palette */}
                     <div className="absolute top-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-1.5 p-1.5 bg-background/90 backdrop-blur-xl border border-primary/20 rounded-full shadow-2xl scale-110">
                         <TooltipProvider>
                             <Tooltip>

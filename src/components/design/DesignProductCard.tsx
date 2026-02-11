@@ -32,7 +32,7 @@ import {
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@/dropdown-menu";
 import {
     Dialog,
     DialogContent,
@@ -128,17 +128,34 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
         const reader = new FileReader();
         reader.onload = (e) => {
             const result = e.target?.result as string;
-            setLocalDesignData(prev => {
-                const activeComp = prev.components.find(c => c.id === activeCompId);
-                const currentVNum = (activeComp?.versions && activeComp.versions.length > 0) ? activeComp.versions[activeComp.versions.length - 1].versionNumber : 0;
-                const newVersion: DesignVersion = { id: `v-${Date.now()}`, versionNumber: currentVNum + 1, imageUrl: result, timestamp: new Date().toISOString(), author: isDesigner ? 'Designer' : 'Manager' };
-                const updatedComponents = prev.components.map(c => c.id === activeCompId ? { ...c, versions: [...(c.versions || []), newVersion], status: 'DRAFT' as DesignWorkflowStatus } : c);
-                const nextData = { ...prev, components: updatedComponents };
-                setNewDrafts(d => ({ ...d, [activeCompId]: true }));
-                setSelectedVersionId(newVersion.id);
-                onUpdateDesign(nextData);
-                return nextData;
-            });
+            
+            // Fix: Functional update to derivation logic to prevent side-effects in render
+            const activeComp = localDesignData.components.find(c => c.id === activeCompId);
+            const currentVNum = (activeComp?.versions && activeComp.versions.length > 0) 
+                ? activeComp.versions[activeComp.versions.length - 1].versionNumber 
+                : 0;
+            
+            const newVersion: DesignVersion = { 
+                id: `v-${Date.now()}`, 
+                versionNumber: currentVNum + 1, 
+                imageUrl: result, 
+                timestamp: new Date().toISOString(), 
+                author: isDesigner ? 'Designer' : 'Manager' 
+            };
+            
+            const updatedComponents = localDesignData.components.map(c => 
+                c.id === activeCompId ? { ...c, versions: [...(c.versions || []), newVersion], status: 'DRAFT' as DesignWorkflowStatus } : c
+            );
+            
+            const nextData = { ...localDesignData, components: updatedComponents };
+            
+            // Perform local state updates synchronously
+            setLocalDesignData(nextData);
+            setNewDrafts(prev => ({ ...prev, [activeCompId]: true }));
+            setSelectedVersionId(newVersion.id);
+            
+            // Notify parent OUTSIDE of any state derivation logic to avoid 'Cannot update during render' error
+            onUpdateDesign(nextData);
         };
         reader.readAsDataURL(file);
     };
@@ -148,9 +165,13 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
             const newVersions = [...activeComponent.versions];
             newVersions.pop();
             const updatedComponents = localDesignData.components.map(c => c.id === activeCompId ? { ...c, versions: newVersions, status: newVersions.length === 0 ? 'PENDING' : c.status } : c);
-            handleUpdateDesignInternal({ ...localDesignData, components: updatedComponents });
+            const nextData = { ...localDesignData, components: updatedComponents };
+            
+            setLocalDesignData(nextData);
             setNewDrafts(prev => ({ ...prev, [activeCompId]: false }));
             setSelectedVersionId(null);
+            
+            onUpdateDesign(nextData);
         }
     };
 
@@ -241,7 +262,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
                 <DialogContent className="max-w-[100vw] w-screen h-screen p-0 gap-0 border-none rounded-none flex flex-col bg-background overflow-hidden animate-in zoom-in-95 duration-300">
                     <DialogHeader className="sr-only">
                         <DialogTitle>Design Workbench - {product.productName}</DialogTitle>
-                        <DialogDescription>Review and manage design proofs, feedback, and customer brief.</DialogDescription>
+                        <DialogDescription>Review and manage design proofs, feedback, and customer brief for {product.productName}.</DialogDescription>
                     </DialogHeader>
                     <div className={cn("flex-1 flex overflow-hidden border-[6px] transition-colors duration-500", 
                         activeComponent.status === 'APPROVED' ? "border-green-500/30" : 
@@ -307,7 +328,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
                                                     : "border-transparent opacity-60 hover:opacity-100 hover:border-primary/40"
                                             )}
                                         >
-                                            <img src={v.imageUrl} className="w-full h-full object-cover" />
+                                            <img src={v.imageUrl} className="w-full h-full object-cover" alt={`Version ${v.versionNumber}`} />
                                             <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                                                 <span className="text-[10px] font-black text-white font-mono">V{v.versionNumber}</span>
                                             </div>
