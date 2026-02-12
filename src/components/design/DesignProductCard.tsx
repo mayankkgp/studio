@@ -93,6 +93,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
 
     const handleUpdateDesignInternal = (updatedData: DesignData) => {
         setLocalDesignData(updatedData);
+        // Defer parent update to avoid setState in render issues
         setTimeout(() => onUpdateDesign(updatedData), 0);
     };
 
@@ -109,28 +110,35 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
         reader.onload = (e) => {
             const result = e.target?.result as string;
             
-            const activeComp = localDesignData.components.find(c => c.id === activeCompId);
-            const currentVNum = (activeComp?.versions && activeComp.versions.length > 0) 
-                ? activeComp.versions[activeComp.versions.length - 1].versionNumber 
-                : 0;
-            
-            const newVersion: DesignVersion = { 
-                id: `v-${Date.now()}`, 
-                versionNumber: currentVNum + 1, 
-                imageUrl: result, 
-                timestamp: new Date().toISOString(), 
-                author: isDesigner ? 'Designer' : 'Manager' 
-            };
-            
-            const updatedComponents = localDesignData.components.map(c => 
-                c.id === activeCompId ? { ...c, versions: [...(c.versions || []), newVersion], status: 'DRAFT' as DesignWorkflowStatus } : c
-            );
-            
-            const nextData = { ...localDesignData, components: updatedComponents };
-            
-            setNewDrafts(prevDrafts => ({ ...prevDrafts, [activeCompId]: true }));
-            setSelectedVersionId(newVersion.id);
-            handleUpdateDesignInternal(nextData);
+            setLocalDesignData(prev => {
+                const activeComp = prev.components.find(c => c.id === activeCompId);
+                const currentVNum = (activeComp?.versions && activeComp.versions.length > 0) 
+                    ? activeComp.versions[activeComp.versions.length - 1].versionNumber 
+                    : 0;
+                
+                const newVersion: DesignVersion = { 
+                    id: `v-${Date.now()}`, 
+                    versionNumber: currentVNum + 1, 
+                    imageUrl: result, 
+                    timestamp: new Date().toISOString(), 
+                    author: isDesigner ? 'Designer' : 'Manager' 
+                };
+                
+                const updatedComponents = prev.components.map(c => 
+                    c.id === activeCompId ? { ...c, versions: [...(c.versions || []), newVersion], status: 'DRAFT' as DesignWorkflowStatus } : c
+                );
+                
+                const nextData = { ...prev, components: updatedComponents };
+                
+                // Set visual state flags after calculating data
+                setNewDrafts(prevDrafts => ({ ...prevDrafts, [activeCompId]: true }));
+                setSelectedVersionId(newVersion.id);
+                
+                // Trigger persistent save outside of functional updater
+                setTimeout(() => onUpdateDesign(nextData), 0);
+                
+                return nextData;
+            });
         };
         reader.readAsDataURL(file);
     };

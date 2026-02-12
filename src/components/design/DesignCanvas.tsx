@@ -93,7 +93,7 @@ export function DesignCanvas({
         } else {
             setInteractionMode('NAVIGATE');
         }
-    }, [canInteract]);
+    }, [canInteract, status]);
 
     useEffect(() => {
         if (highlightedPinId) {
