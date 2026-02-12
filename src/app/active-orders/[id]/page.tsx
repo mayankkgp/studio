@@ -127,14 +127,15 @@ export default function ActiveOrderCommandCenter() {
             parsed[id] = { ...updatedOrder, lastModifiedAt: new Date().toISOString() };
             localStorage.setItem('srishbish_active_v1', JSON.stringify(parsed));
             setActiveOrder(updatedOrder);
-        } catch (e) {
+        } catch (e: any) {
             console.error('Storage Sync Error:', e);
+            const isQuotaError = e.name === 'QuotaExceededError' || e.code === 22 || e.name === 'NS_ERROR_DOM_QUOTA_REACHED';
             toast({ 
                 variant: "destructive", 
-                title: "Sync Failed", 
-                description: e instanceof Error && e.name === 'QuotaExceededError' 
-                    ? "Storage full. Please clear some older drafts to save new designs." 
-                    : "Could not save changes." 
+                title: isQuotaError ? "Storage Full" : "Sync Failed", 
+                description: isQuotaError 
+                    ? "Your browser storage is full. Please delete some old drafts or active orders to save new designs." 
+                    : "Could not save changes to local storage." 
             });
         }
     }, [id, toast]);
@@ -170,8 +171,13 @@ export default function ActiveOrderCommandCenter() {
                     setActiveOrder(updatedOrder);
                 }
             }
-        } catch (e) {
-            toast({ variant: "destructive", title: "Save Failed", description: "Storage full. Could not persist row." });
+        } catch (e: any) {
+            const isQuotaError = e.name === 'QuotaExceededError' || e.code === 22;
+            toast({ 
+                variant: "destructive", 
+                title: "Save Failed", 
+                description: isQuotaError ? "Storage full. Could not persist row." : "Unknown storage error." 
+            });
         }
     }, [id, toast]);
 

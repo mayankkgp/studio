@@ -75,8 +75,7 @@ export function DesignCanvas({
     const isLatest = version === currentVersion;
     const canInteract = isLatest && ((isDesigner && status === 'DRAFT') || (!isDesigner && (status === 'INTERNAL_REVIEW' || status === 'CUSTOMER_REVIEW')));
     
-    // Default to COMMENT mode if interaction is possible, otherwise NAVIGATE
-    const [interactionMode, setInteractionMode] = useState<'NAVIGATE' | 'COMMENT'>(canInteract ? 'COMMENT' : 'NAVIGATE');
+    const [interactionMode, setInteractionMode] = useState<'NAVIGATE' | 'COMMENT'>('NAVIGATE');
     
     const [draftText, setDraftText] = useState('');
     const [isMistakeDraft, setIsMistakeDraft] = useState(false);
@@ -87,6 +86,14 @@ export function DesignCanvas({
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const canAddPin = canInteract && interactionMode === 'COMMENT';
+
+    useEffect(() => {
+        if (canInteract) {
+            setInteractionMode('COMMENT');
+        } else {
+            setInteractionMode('NAVIGATE');
+        }
+    }, [canInteract]);
 
     useEffect(() => {
         if (highlightedPinId) {
