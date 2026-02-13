@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import type { ConfiguredProduct, DesignData, DesignPin, DesignWorkflowStatus, DesignVersion, CustomerData } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -35,6 +35,9 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [newDrafts, setNewDrafts] = useState<Record<string, boolean>>({});
 
+    // Tracks if the local state has been updated and we should ignore the next prop sync
+    const ignoreNextPropSyncRef = useRef(false);
+
     const initialDesignData = useMemo(() => {
         const baseData = product.designData || {
             productId: product.id,
@@ -54,7 +57,12 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
 
     const [localDesignData, setLocalDesignData] = useState<DesignData>(initialDesignData);
     
+    // Sync local state when props change, but ONLY if we haven't just performed a local update
     useEffect(() => { 
+        if (ignoreNextPropSyncRef.current) {
+            ignoreNextPropSyncRef.current = false;
+            return;
+        }
         setLocalDesignData(initialDesignData); 
     }, [initialDesignData]);
 
@@ -92,6 +100,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
     const viewedVersionNum = activeVersion?.versionNumber || 0;
 
     const handleUpdateDesignInternal = (updatedData: DesignData) => {
+        ignoreNextPropSyncRef.current = true;
         setLocalDesignData(updatedData);
         // Defer parent update to outside of render/state-update cycle
         setTimeout(() => onUpdateDesign(updatedData), 0);
@@ -110,35 +119,28 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
         reader.onload = (e) => {
             const result = e.target?.result as string;
             
-            setLocalDesignData(prev => {
-                const activeComp = prev.components.find(c => c.id === activeCompId);
-                const currentVNum = (activeComp?.versions && activeComp.versions.length > 0) 
-                    ? activeComp.versions[activeComp.versions.length - 1].versionNumber 
-                    : 0;
-                
-                const newVersion: DesignVersion = { 
-                    id: `v-${Date.now()}`, 
-                    versionNumber: currentVNum + 1, 
-                    imageUrl: result, 
-                    timestamp: new Date().toISOString(), 
-                    author: isDesigner ? 'Designer' : 'Manager' 
-                };
-                
-                const updatedComponents = prev.components.map(c => 
-                    c.id === activeCompId ? { ...c, versions: [...(c.versions || []), newVersion], status: 'DRAFT' as DesignWorkflowStatus } : c
-                );
-                
-                const nextData = { ...prev, components: updatedComponents };
-                
-                // Set UI state outside functional update to ensure synchronization
-                setTimeout(() => {
-                    setNewDrafts(prevDrafts => ({ ...prevDrafts, [activeCompId]: true }));
-                    setSelectedVersionId(newVersion.id);
-                    onUpdateDesign(nextData);
-                }, 0);
-                
-                return nextData;
-            });
+            const activeComp = localDesignData.components.find(c => c.id === activeCompId);
+            const currentVNum = (activeComp?.versions && activeComp.versions.length > 0) 
+                ? activeComp.versions[activeComp.versions.length - 1].versionNumber 
+                : 0;
+            
+            const newVersion: DesignVersion = { 
+                id: `v-${Date.now()}`, 
+                versionNumber: currentVNum + 1, 
+                imageUrl: result, 
+                timestamp: new Date().toISOString(), 
+                author: isDesigner ? 'Designer' : 'Manager' 
+            };
+            
+            const updatedComponents = localDesignData.components.map(c => 
+                c.id === activeCompId ? { ...c, versions: [...(c.versions || []), newVersion], status: 'DRAFT' as DesignWorkflowStatus } : c
+            );
+            
+            const nextData = { ...localDesignData, components: updatedComponents };
+            
+            setNewDrafts(prevDrafts => ({ ...prevDrafts, [activeCompId]: true }));
+            setSelectedVersionId(newVersion.id);
+            handleUpdateDesignInternal(nextData);
         };
         reader.readAsDataURL(file);
     };
