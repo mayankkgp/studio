@@ -121,7 +121,6 @@ export default function ActiveOrderCommandCenter() {
     }, [loadOrder]);
 
     const syncToStorage = useCallback((updatedOrder: Order) => {
-        // ALWAYS update the UI state optimistically
         setActiveOrder(updatedOrder);
         
         try {
@@ -132,13 +131,13 @@ export default function ActiveOrderCommandCenter() {
         } catch (e: any) {
             console.error('Storage Sync Error:', e);
             const isQuotaError = e.name === 'QuotaExceededError' || e.code === 22 || e.name === 'NS_ERROR_DOM_QUOTA_REACHED';
-            toast({ 
-                variant: "destructive", 
-                title: isQuotaError ? "Storage Full" : "Sync Failed", 
-                description: isQuotaError 
-                    ? "Your browser storage is full. Please delete some old drafts or active orders to save new designs." 
-                    : "Could not save changes to local storage." 
-            });
+            if (isQuotaError) {
+                toast({ 
+                    variant: "destructive", 
+                    title: "Storage Full", 
+                    description: "Your browser storage is full. Please delete some old drafts or active orders to save new designs." 
+                });
+            }
         }
     }, [id, toast]);
 

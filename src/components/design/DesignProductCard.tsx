@@ -35,7 +35,6 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [newDrafts, setNewDrafts] = useState<Record<string, boolean>>({});
 
-    // Timestamp Lockout: Prevents stale prop-syncs from overwriting local authoritative state.
     const lastLocalUpdateRef = useRef<number>(0);
 
     const initialDesignData = useMemo(() => {
@@ -58,16 +57,10 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
     const [localDesignData, setLocalDesignData] = useState<DesignData>(initialDesignData);
     
     useEffect(() => { 
-        // Calculate time since the last user action
         const timeSinceLastUpdate = Date.now() - lastLocalUpdateRef.current;
-        
-        // LOCKOUT: If less than 2000ms (2 seconds) has passed, IGNORE the prop sync.
-        // This protects against Strict Mode double-invocations and rapid parent re-renders.
         if (timeSinceLastUpdate < 2000) {
             return;
         }
-        
-        // Otherwise, it's safe to sync
         setLocalDesignData(initialDesignData); 
     }, [initialDesignData]);
 
@@ -123,7 +116,6 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
         reader.onload = (e) => {
             const result = e.target?.result as string;
             
-            // Defensive target: Use active component or fallback to the first one
             const targetComp = localDesignData.components.find(c => c.id === activeCompId) || localDesignData.components[0];
             const currentVNum = (targetComp?.versions && targetComp.versions.length > 0) 
                 ? targetComp.versions[targetComp.versions.length - 1].versionNumber 
@@ -183,7 +175,6 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
             replies: [] 
         };
         
-        // Defensive Mapping: Ensure the pin is added to a component even if activeCompId is missing/stale
         let componentUpdated = false;
         const updatedComponents = localDesignData.components.map(c => {
             if (c.id === activeCompId) {
@@ -193,7 +184,6 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
             return c;
         });
 
-        // Fallback: Add to first component if no match found
         let finalComponents = updatedComponents;
         if (!componentUpdated && localDesignData.components.length > 0) {
             finalComponents = localDesignData.components.map((c, idx) => 
