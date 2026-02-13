@@ -93,7 +93,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
 
     const handleUpdateDesignInternal = (updatedData: DesignData) => {
         setLocalDesignData(updatedData);
-        // Defer parent update to avoid setState in render issues
+        // Defer parent update to outside of render/state-update cycle
         setTimeout(() => onUpdateDesign(updatedData), 0);
     };
 
@@ -130,12 +130,12 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
                 
                 const nextData = { ...prev, components: updatedComponents };
                 
-                // Set visual state flags after calculating data
-                setNewDrafts(prevDrafts => ({ ...prevDrafts, [activeCompId]: true }));
-                setSelectedVersionId(newVersion.id);
-                
-                // Trigger persistent save outside of functional updater
-                setTimeout(() => onUpdateDesign(nextData), 0);
+                // Set UI state outside functional update to ensure synchronization
+                setTimeout(() => {
+                    setNewDrafts(prevDrafts => ({ ...prevDrafts, [activeCompId]: true }));
+                    setSelectedVersionId(newVersion.id);
+                    onUpdateDesign(nextData);
+                }, 0);
                 
                 return nextData;
             });
@@ -173,6 +173,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
         const updatedComponents = localDesignData.components.map(c => 
             c.id === activeCompId ? { ...c, pins: [...(c.pins || []), newPin] } : c
         );
+        
         handleUpdateDesignInternal({ ...localDesignData, components: updatedComponents });
         setHighlightedPinId(newPin.id);
     };
