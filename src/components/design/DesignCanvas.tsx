@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useState, useRef, useEffect } from 'react';
-import type { DesignPin, DesignPinStatus, DesignWorkflowStatus } from '@/lib/types';
+import type { DesignPin, DesignPinStatus, DesignWorkflowStatus, DesignReply } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { 
     ZoomIn, 
@@ -17,7 +17,11 @@ import {
     MousePointer2,
     MessageSquarePlus,
     Scaling,
-    CornerDownRight
+    CornerDownRight,
+    CheckCircle2,
+    AlertCircle,
+    RotateCcw,
+    Send
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -78,11 +82,14 @@ export function DesignCanvas({
     const [interactionMode, setInteractionMode] = useState<'NAVIGATE' | 'COMMENT'>(canInteract ? 'COMMENT' : 'NAVIGATE');
     
     const [draftText, setDraftText] = useState('');
+    const [replyText, setReplyText] = useState('');
+    const [isReplyMode, setIsReplyMode] = useState(false);
     const [isMistakeDraft, setIsMistakeDraft] = useState(false);
     
     const containerRef = useRef<HTMLDivElement>(null);
     const imageRef = useRef<HTMLImageElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const prevHighlightedId = useRef<string | null>(null);
 
     useEffect(() => {
         if (canInteract) {
@@ -90,15 +97,22 @@ export function DesignCanvas({
         } else {
             setInteractionMode('NAVIGATE');
         }
-    }, [canInteract]);
+    }, [canInteract, status]);
 
     useEffect(() => {
-        if (highlightedPinId) {
+        // Only reset text states if the ID has actually CHANGED
+        // This prevents wiping text during background synchronization/re-renders
+        if (highlightedPinId && highlightedPinId !== prevHighlightedId.current) {
             setDraftText('');
+            setReplyText('');
+            setIsReplyMode(false);
             const activePin = pins.find(p => p.id === highlightedPinId);
             if (activePin) {
                 setIsMistakeDraft(activePin.status === 'mistake');
             }
+            prevHighlightedId.current = highlightedPinId;
+        } else if (!highlightedPinId) {
+            prevHighlightedId.current = null;
         }
     }, [highlightedPinId, pins]);
 
@@ -163,6 +177,24 @@ export function DesignCanvas({
         onPinClick(null);
     };
 
+    const handleStatusUpdate = (pinId: string, newStatus: DesignPinStatus) => {
+        const updatedPins = pins.map(p => p.id === pinId ? { ...p, status: newStatus } : p);
+        onUpdatePins(updatedPins);
+    };
+
+    const handleAddReply = (pinId: string) => {
+        if (!replyText.trim()) return;
+        const newReply: DesignReply = {
+            author: isDesigner ? 'Designer' : 'Manager',
+            text: replyText.trim(),
+            timestamp: new Date().toISOString()
+        };
+        const updatedPins = pins.map(p => p.id === pinId ? { ...p, replies: [...(p.replies || []), newReply] } : p);
+        onUpdatePins(updatedPins);
+        setReplyText('');
+        setIsReplyMode(false);
+    };
+
     const handleDeletePin = (e: React.MouseEvent, pinId: string) => {
         e.stopPropagation();
         onUpdatePins(pins.filter(p => p.id !== pinId));
@@ -172,7 +204,6 @@ export function DesignCanvas({
     const handleClosePopover = (e: React.MouseEvent, pinId: string) => {
         e.stopPropagation();
         const pin = pins.find(p => p.id === pinId);
-        // If it was a fresh pin with no text, remove it on close
         if (pin && !pin.text && !draftText.trim()) {
             onUpdatePins(pins.filter(p => p.id !== pinId));
         }
@@ -371,6 +402,7 @@ export function DesignCanvas({
                                                     ) : (
                                                         <div className="space-y-4">
                                                             <p className="text-xs font-semibold leading-relaxed text-foreground/90">{pin.text}</p>
+                                                            
                                                             {pin.replies && pin.replies.length > 0 && (
                                                                 <div className="space-y-2 pt-2 border-t border-primary/5 max-h-[120px] overflow-y-auto custom-scrollbar">
                                                                     {pin.replies.map((reply, i) => (
@@ -381,9 +413,40 @@ export function DesignCanvas({
                                                                     ))}
                                                                 </div>
                                                             )}
-                                                            <div className="flex items-center justify-between pt-2 border-t border-primary/5">
-                                                                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={(e) => handleDeletePin(e, pin.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
-                                                            </div>
+
+                                                            {isReplyMode ? (
+                                                                <div className="space-y-2 pt-2 border-t">
+                                                                    <Textarea 
+                                                                        autoFocus
+                                                                        placeholder="Write a reply..." 
+                                                                        className="min-h-[60px] text-[10px] font-semibold"
+                                                                        value={replyText}
+                                                                        onChange={(e) => setReplyText(e.target.value)}
+                                                                    />
+                                                                    <div className="flex justify-end gap-2">
+                                                                        <Button variant="ghost" size="sm" className="h-6 text-[9px] font-black uppercase" onClick={() => setIsReplyMode(false)}>Cancel</Button>
+                                                                        <Button size="sm" className="h-6 text-[9px] font-black uppercase" onClick={() => handleAddReply(pin.id)}>Reply</Button>
+                                                                    </div>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-primary/5">
+                                                                    {canInteract && (
+                                                                        <>
+                                                                            <Button variant="outline" size="sm" className="h-7 text-[9px] font-black uppercase px-2" onClick={() => setIsReplyMode(true)}><Send className="h-3 w-3 mr-1" /> Reply</Button>
+                                                                            {isDesigner && (pin.status === 'open' || pin.status === 'mistake') && (
+                                                                                <Button variant="outline" size="sm" className="h-7 text-[9px] font-black uppercase px-2 border-amber-500 text-amber-600 hover:bg-amber-50" onClick={() => handleStatusUpdate(pin.id, 'fixed')}><CheckCircle2 className="h-3 w-3 mr-1" /> Fix</Button>
+                                                                            )}
+                                                                            {!isDesigner && pin.status === 'fixed' && (
+                                                                                <Button variant="outline" size="sm" className="h-7 text-[9px] font-black uppercase px-2 border-green-600 text-green-600 hover:bg-green-50" onClick={() => handleStatusUpdate(pin.id, 'resolved')}><CheckCircle2 className="h-3 w-3 mr-1" /> Resolve</Button>
+                                                                            )}
+                                                                            {!isDesigner && pin.status === 'open' && (
+                                                                                <Button variant="outline" size="sm" className="h-7 text-[9px] font-black uppercase px-2 border-destructive text-destructive" onClick={() => handleStatusUpdate(pin.id, 'mistake')}><AlertCircle className="h-3 w-3 mr-1" /> Mistake</Button>
+                                                                            )}
+                                                                        </>
+                                                                    )}
+                                                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive ml-auto" onClick={(e) => handleDeletePin(e, pin.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     )}
                                                 </div>

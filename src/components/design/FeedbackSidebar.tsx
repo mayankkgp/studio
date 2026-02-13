@@ -2,12 +2,13 @@
 
 import * as React from 'react';
 import { useState, useEffect, useRef, useMemo } from 'react';
-import type { DesignPin, DesignPinStatus, DesignWorkflowStatus, DesignVersion, CustomerData } from '@/lib/types';
+import type { DesignPin, DesignPinStatus, DesignWorkflowStatus, DesignVersion, CustomerData, DesignReply } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
+import { Textarea } from '@/components/ui/textarea';
 import { 
     MessageSquare, 
     AlertCircle, 
@@ -21,7 +22,8 @@ import {
     Send,
     Trash2,
     Lock,
-    CornerDownRight
+    CornerDownRight,
+    CheckCircle2
 } from 'lucide-react';
 
 const PIN_COLORS: Record<DesignPinStatus, string> = {
@@ -74,6 +76,8 @@ export function FeedbackSidebar({
 }: FeedbackSidebarProps) {
     const [filter, setFilter] = useState<'all' | 'open' | 'mistakes'>('open');
     const [activeTab, setActiveTab] = useState('feedback');
+    const [activeReplyId, setActiveReplyId] = useState<string | null>(null);
+    const [replyText, setReplyText] = useState('');
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const isLatest = viewedVersion === currentVersion;
@@ -102,6 +106,30 @@ export function FeedbackSidebar({
         if (file) {
             onUpload(file);
             e.target.value = '';
+        }
+    };
+
+    const handleStatusUpdate = (pinId: string, newStatus: DesignPinStatus) => {
+        const updatedPins = pins.map(p => p.id === pinId ? { ...p, status: newStatus } : p);
+        onUpdatePins(updatedPins);
+    };
+
+    const handleAddReply = (pinId: string) => {
+        if (!replyText.trim()) return;
+        const newReply: DesignReply = {
+            author: isDesigner ? 'Designer' : 'Manager',
+            text: replyText.trim(),
+            timestamp: new Date().toISOString()
+        };
+        const updatedPins = pins.map(p => p.id === pinId ? { ...p, replies: [...(p.replies || []), newReply] } : p);
+        onUpdatePins(updatedPins);
+        setReplyText('');
+        setActiveReplyId(null);
+    };
+
+    const handleDeletePin = (pinId: string) => {
+        if (confirm("Delete this feedback?")) {
+            onUpdatePins(pins.filter(p => p.id !== pinId));
         }
     };
 
@@ -205,13 +233,17 @@ export function FeedbackSidebar({
                             ) : (
                                 filteredPins.map((pin) => {
                                     const pinNumber = pins.findIndex(p => p.id === pin.id) + 1;
+                                    const isHighlighted = highlightedPinId === pin.id;
+                                    const isReplying = activeReplyId === pin.id;
+
                                     return (
                                         <div 
                                             key={pin.id} id={`comment-${pin.id}`} onClick={() => onPinSelect(pin.id)}
                                             className={cn(
                                                 "p-3 rounded-xl border-2 transition-all relative cursor-pointer", 
-                                                highlightedPinId === pin.id ? "border-primary bg-primary/5 shadow-lg scale-[1.02]" : "border-primary/5 bg-background hover:border-primary/20", 
-                                                pin.status === 'mistake' && "border-destructive/20 bg-destructive/5"
+                                                isHighlighted ? "border-primary bg-primary/5 shadow-lg" : "border-primary/5 bg-background hover:border-primary/20", 
+                                                pin.status === 'mistake' && "border-destructive/20 bg-destructive/5",
+                                                pin.status === 'resolved' && "opacity-60 grayscale-[0.5]"
                                             )}
                                         >
                                             <div className="flex items-center justify-between mb-2">
@@ -219,15 +251,52 @@ export function FeedbackSidebar({
                                                     <div className={cn("h-5 w-5 rounded flex items-center justify-center text-[10px] font-black text-white", PIN_COLORS[pin.status])}>{pinNumber}</div>
                                                     <span className="text-[10px] font-black uppercase tracking-tighter">{pin.author}</span>
                                                 </div>
-                                                <span className="text-[9px] font-bold text-muted-foreground uppercase opacity-60">V{pin.version}</span>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-[9px] font-bold text-muted-foreground uppercase opacity-60">V{pin.version}</span>
+                                                    <button onClick={(e) => { e.stopPropagation(); handleDeletePin(pin.id); }} className="text-muted-foreground hover:text-destructive"><Trash2 className="h-3 w-3" /></button>
+                                                </div>
                                             </div>
-                                            <p className="text-[11px] font-semibold leading-relaxed text-foreground/90">{pin.text}</p>
+                                            
+                                            <p className="text-[11px] font-semibold leading-relaxed text-foreground/90">{pin.text || <span className="italic opacity-50">Empty feedback</span>}</p>
+                                            
                                             {pin.replies && pin.replies.map((reply, i) => (
                                                 <div key={i} className="pl-3 border-l-2 border-primary/10 mt-3 space-y-0.5">
                                                     <div className="flex items-center gap-1.5 text-[8px] font-black uppercase text-muted-foreground"><CornerDownRight className="h-3 w-3" /> {reply.author}</div>
                                                     <p className="text-[10px] font-medium leading-relaxed">{reply.text}</p>
                                                 </div>
                                             ))}
+
+                                            <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-primary/5 pt-3">
+                                                {!isReplying ? (
+                                                    <>
+                                                        <Button variant="ghost" size="sm" className="h-6 text-[9px] font-black uppercase px-2" onClick={(e) => { e.stopPropagation(); setActiveReplyId(pin.id); setReplyText(''); }}>Reply</Button>
+                                                        {isDesigner && (pin.status === 'open' || pin.status === 'mistake') && (
+                                                            <Button variant="outline" size="sm" className="h-6 text-[9px] font-black uppercase px-2 border-amber-500 text-amber-600" onClick={(e) => { e.stopPropagation(); handleStatusUpdate(pin.id, 'fixed'); }}><CheckCircle2 className="h-3 w-3 mr-1" /> Fix</Button>
+                                                        )}
+                                                        {!isDesigner && pin.status === 'fixed' && (
+                                                            <Button variant="outline" size="sm" className="h-6 text-[9px] font-black uppercase px-2 border-green-600 text-green-600" onClick={(e) => { e.stopPropagation(); handleStatusUpdate(pin.id, 'resolved'); }}><CheckCircle2 className="h-3 w-3 mr-1" /> Resolve</Button>
+                                                        )}
+                                                        {!isDesigner && pin.status === 'open' && (
+                                                            <Button variant="outline" size="sm" className="h-6 text-[9px] font-black uppercase px-2 border-destructive text-destructive" onClick={(e) => { e.stopPropagation(); handleStatusUpdate(pin.id, 'mistake'); }}><AlertCircle className="h-3 w-3 mr-1" /> Mistake</Button>
+                                                        )}
+                                                    </>
+                                                ) : (
+                                                    <div className="w-full space-y-2">
+                                                        <Textarea 
+                                                            autoFocus
+                                                            placeholder="Write a reply..." 
+                                                            className="min-h-[60px] text-[10px] font-semibold"
+                                                            value={replyText}
+                                                            onChange={(e) => setReplyText(e.target.value)}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                        />
+                                                        <div className="flex justify-end gap-2">
+                                                            <Button variant="ghost" size="sm" className="h-6 text-[9px] font-black uppercase" onClick={(e) => { e.stopPropagation(); setActiveReplyId(null); }}>Cancel</Button>
+                                                            <Button size="sm" className="h-6 text-[9px] font-black uppercase" onClick={(e) => { e.stopPropagation(); handleAddReply(pin.id); }}>Send</Button>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                     );
                                 })
