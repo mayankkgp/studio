@@ -85,7 +85,9 @@ export function DesignCanvas({
     const imageRef = useRef<HTMLImageElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const canAddPin = canInteract && interactionMode === 'COMMENT';
+    // RELAXED GUARD: If user can interact, they can add pins. 
+    // We don't strictly force the tool palette to be in COMMENT mode to allow intuitive clicks.
+    const canAddPin = canInteract;
 
     useEffect(() => {
         if (canInteract) {

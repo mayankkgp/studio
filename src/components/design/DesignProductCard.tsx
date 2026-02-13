@@ -36,7 +36,6 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
     const [newDrafts, setNewDrafts] = useState<Record<string, boolean>>({});
 
     // Timestamp Lockout: Prevents stale prop-syncs from overwriting local authoritative state.
-    // We use a number to store the timestamp of the last local update.
     const lastLocalUpdateRef = useRef<number>(0);
 
     const initialDesignData = useMemo(() => {
@@ -58,7 +57,6 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
 
     const [localDesignData, setLocalDesignData] = useState<DesignData>(initialDesignData);
     
-    // Synchronize local state with props only if the temporal window of immunity has expired (2s)
     useEffect(() => { 
         // Calculate time since the last user action
         const timeSinceLastUpdate = Date.now() - lastLocalUpdateRef.current;
@@ -107,10 +105,8 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
     const viewedVersionNum = activeVersion?.versionNumber || 0;
 
     const handleUpdateDesignInternal = (updatedData: DesignData) => {
-        // Set lockout timestamp before updating state to lock out prop-sync for 2 seconds
         lastLocalUpdateRef.current = Date.now();
         setLocalDesignData(updatedData);
-        // Notify parent. The parent re-render will be ignored by our local useEffect due to the timestamp lockout.
         setTimeout(() => onUpdateDesign(updatedData), 0);
     };
 
@@ -127,9 +123,10 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
         reader.onload = (e) => {
             const result = e.target?.result as string;
             
-            const activeComp = localDesignData.components.find(c => c.id === activeCompId);
-            const currentVNum = (activeComp?.versions && activeComp.versions.length > 0) 
-                ? activeComp.versions[activeComp.versions.length - 1].versionNumber 
+            // Defensive target: Use active component or fallback to the first one
+            const targetComp = localDesignData.components.find(c => c.id === activeCompId) || localDesignData.components[0];
+            const currentVNum = (targetComp?.versions && targetComp.versions.length > 0) 
+                ? targetComp.versions[targetComp.versions.length - 1].versionNumber 
                 : 0;
             
             const newVersion: DesignVersion = { 
@@ -140,13 +137,18 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
                 author: isDesigner ? 'Designer' : 'Manager' 
             };
             
-            const updatedComponents = localDesignData.components.map(c => 
-                c.id === activeCompId ? { ...c, versions: [...(c.versions || []), newVersion], status: 'DRAFT' as DesignWorkflowStatus } : c
-            );
+            const updatedComponents = localDesignData.components.map((c, idx) => {
+                const isTarget = activeCompId ? c.id === activeCompId : idx === 0;
+                if (isTarget) {
+                    return { ...c, versions: [...(c.versions || []), newVersion], status: 'DRAFT' as DesignWorkflowStatus };
+                }
+                return c;
+            });
             
             const nextData = { ...localDesignData, components: updatedComponents };
+            const effectiveCompId = activeCompId || localDesignData.components[0].id;
             
-            setNewDrafts(prevDrafts => ({ ...prevDrafts, [activeCompId]: true }));
+            setNewDrafts(prevDrafts => ({ ...prevDrafts, [effectiveCompId]: true }));
             setSelectedVersionId(newVersion.id);
             handleUpdateDesignInternal(nextData);
         };
@@ -180,11 +182,26 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
             text: '', 
             replies: [] 
         };
-        const updatedComponents = localDesignData.components.map(c => 
-            c.id === activeCompId ? { ...c, pins: [...(c.pins || []), newPin] } : c
-        );
         
-        handleUpdateDesignInternal({ ...localDesignData, components: updatedComponents });
+        // Defensive Mapping: Ensure the pin is added to a component even if activeCompId is missing/stale
+        let componentUpdated = false;
+        const updatedComponents = localDesignData.components.map(c => {
+            if (c.id === activeCompId) {
+                componentUpdated = true;
+                return { ...c, pins: [...(c.pins || []), newPin] };
+            }
+            return c;
+        });
+
+        // Fallback: Add to first component if no match found
+        let finalComponents = updatedComponents;
+        if (!componentUpdated && localDesignData.components.length > 0) {
+            finalComponents = localDesignData.components.map((c, idx) => 
+                idx === 0 ? { ...c, pins: [...(c.pins || []), newPin] } : c
+            );
+        }
+        
+        handleUpdateDesignInternal({ ...localDesignData, components: finalComponents });
         setHighlightedPinId(newPin.id);
     };
 
