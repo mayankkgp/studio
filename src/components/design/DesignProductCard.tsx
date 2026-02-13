@@ -35,8 +35,8 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [newDrafts, setNewDrafts] = useState<Record<string, boolean>>({});
 
-    // Tracks if the local state has been updated and we should ignore the next prop sync
-    const ignoreNextPropSyncRef = useRef(false);
+    // Timestamp Lockout: Prevents stale prop-syncs from overwriting local authoritative state
+    const lastLocalUpdateRef = useRef<number>(0);
 
     const initialDesignData = useMemo(() => {
         const baseData = product.designData || {
@@ -57,10 +57,10 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
 
     const [localDesignData, setLocalDesignData] = useState<DesignData>(initialDesignData);
     
-    // Sync local state when props change, but ONLY if we haven't just performed a local update
+    // Synchronize local state with props only if the temporal window of immunity has expired (2s)
     useEffect(() => { 
-        if (ignoreNextPropSyncRef.current) {
-            ignoreNextPropSyncRef.current = false;
+        const timeSinceLastLocalUpdate = Date.now() - lastLocalUpdateRef.current;
+        if (timeSinceLastLocalUpdate < 2000) {
             return;
         }
         setLocalDesignData(initialDesignData); 
@@ -100,9 +100,10 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
     const viewedVersionNum = activeVersion?.versionNumber || 0;
 
     const handleUpdateDesignInternal = (updatedData: DesignData) => {
-        ignoreNextPropSyncRef.current = true;
+        // Set lockout timestamp before updating state
+        lastLocalUpdateRef.current = Date.now();
         setLocalDesignData(updatedData);
-        // Defer parent update to outside of render/state-update cycle
+        // Notify parent. The parent re-render will be ignored by our local useEffect due to the timestamp.
         setTimeout(() => onUpdateDesign(updatedData), 0);
     };
 
