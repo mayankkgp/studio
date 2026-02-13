@@ -75,6 +75,22 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
 
     const activeComponent = localDesignData.components.find(c => c.id === activeCompId) || localDesignData.components[0];
     
+    // Auto-open popover when a new pin is added locally
+    useEffect(() => {
+        const pins = activeComponent.pins || [];
+        if (pins.length > 0) {
+            const latestPin = pins[pins.length - 1];
+            const isVeryRecent = Date.now() - new Date(latestPin.timestamp).getTime() < 1000;
+            if (isVeryRecent && !latestPin.text && highlightedPinId !== latestPin.id) {
+                // Use a small delay to ensure the DOM is ready for the popover
+                const timer = setTimeout(() => {
+                    setHighlightedPinId(latestPin.id);
+                }, 50);
+                return () => clearTimeout(timer);
+            }
+        }
+    }, [activeComponent.pins]);
+
     const isEligibleForStock = useMemo(() => {
         if (localDesignData.isStock) return false;
         return localDesignData.components.every(c => c.status === 'PENDING' && (!c.versions || c.versions.length === 0));
@@ -193,11 +209,6 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
         }
         
         handleUpdateDesignInternal({ ...localDesignData, components: finalComponents });
-        
-        // Ensure the popover opens after state has settled
-        requestAnimationFrame(() => {
-            setHighlightedPinId(newPinId);
-        });
     };
 
     const handleUpdatePins = (newPins: DesignPin[]) => {

@@ -340,7 +340,7 @@ export function DesignCanvas({
                                                 {index + 1}
                                             </button>
                                         </PopoverTrigger>
-                                        <PopoverContent className="w-80 p-0 overflow-hidden shadow-2xl border-primary/20 popover-content" side="top" sideOffset={10} align="center">
+                                        <PopoverContent className="z-[150] w-80 p-0 overflow-hidden shadow-2xl border-primary/20 popover-content" side="top" sideOffset={10} align="center">
                                             <div className="bg-background">
                                                 <div className="p-3 border-b bg-muted/20 flex items-center justify-between">
                                                     <div className="flex items-center gap-2">
