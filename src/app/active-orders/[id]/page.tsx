@@ -121,12 +121,14 @@ export default function ActiveOrderCommandCenter() {
     }, [loadOrder]);
 
     const syncToStorage = useCallback((updatedOrder: Order) => {
+        // ALWAYS update the UI state optimistically
+        setActiveOrder(updatedOrder);
+        
         try {
             const raw = localStorage.getItem('srishbish_active_v1');
             const parsed = raw ? JSON.parse(raw) : {};
             parsed[id] = { ...updatedOrder, lastModifiedAt: new Date().toISOString() };
             localStorage.setItem('srishbish_active_v1', JSON.stringify(parsed));
-            setActiveOrder(updatedOrder);
         } catch (e: any) {
             console.error('Storage Sync Error:', e);
             const isQuotaError = e.name === 'QuotaExceededError' || e.code === 22 || e.name === 'NS_ERROR_DOM_QUOTA_REACHED';
