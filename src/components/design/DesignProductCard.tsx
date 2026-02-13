@@ -56,13 +56,22 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
 
     const [localDesignData, setLocalDesignData] = useState<DesignData>(initialDesignData);
     
+    // Sync props to local state, with a temporal lockout and draft protection
     useEffect(() => { 
         const timeSinceLastUpdate = Date.now() - lastLocalUpdateRef.current;
         if (timeSinceLastUpdate < 2000) {
             return;
         }
+
+        // If we have an unsubmitted local draft, do NOT let props overwrite it.
+        // This keeps the designer's work-in-progress safe until they click 'Submit'.
+        const hasUnsavedDraft = localDesignData.components.some(c => c.status === 'DRAFT');
+        if (hasUnsavedDraft && isFullscreen) {
+            return;
+        }
+
         setLocalDesignData(initialDesignData); 
-    }, [initialDesignData]);
+    }, [initialDesignData, isFullscreen, localDesignData.components]);
 
     const [activeCompId, setActiveCompId] = useState(localDesignData.components[0]?.id);
     const [highlightedPinId, setHighlightedPinId] = useState<string | null>(null);
@@ -97,10 +106,21 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
 
     const viewedVersionNum = activeVersion?.versionNumber || 0;
 
-    const handleUpdateDesignInternal = (updatedData: DesignData) => {
+    /**
+     * Internal state updater with conditional persistence.
+     * Designs in DRAFT state are NOT saved to persistent storage until submitted.
+     */
+    const handleUpdateDesignInternal = (updatedData: DesignData, forcePersist: boolean = false) => {
         lastLocalUpdateRef.current = Date.now();
         setLocalDesignData(updatedData);
-        setTimeout(() => onUpdateDesign(updatedData), 0);
+        
+        const activeComp = updatedData.components.find(c => c.id === activeCompId) || updatedData.components[0];
+        const isDraft = activeComp?.status === 'DRAFT';
+
+        // Persist only if NOT in draft session OR if specifically forced (like on submit)
+        if (forcePersist || !isDraft) {
+            onUpdateDesign(updatedData);
+        }
     };
 
     const handleStatusChange = (status: DesignWorkflowStatus) => {
@@ -108,7 +128,11 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
             setNewDrafts(prev => ({ ...prev, [activeCompId]: false }));
         }
         const updatedComponents = localDesignData.components.map(c => c.id === activeCompId ? { ...c, status } : c);
-        handleUpdateDesignInternal({ ...localDesignData, components: updatedComponents });
+        const updatedData = { ...localDesignData, components: updatedComponents };
+        
+        // If moving to INTERNAL_REVIEW, it means the user clicked 'Submit', so we force persist.
+        const isSubmitting = status === 'INTERNAL_REVIEW';
+        handleUpdateDesignInternal(updatedData, isSubmitting);
     };
 
     const handleUpload = (file: File) => {
@@ -142,7 +166,9 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
             
             setNewDrafts(prevDrafts => ({ ...prevDrafts, [effectiveCompId]: true }));
             setSelectedVersionId(newVersion.id);
-            handleUpdateDesignInternal(nextData);
+            
+            // Uploading enters DRAFT state -> Local only (no auto-persist)
+            handleUpdateDesignInternal(nextData, false);
         };
         reader.readAsDataURL(file);
     };
@@ -158,12 +184,13 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
             
             setNewDrafts(prev => ({ ...prev, [activeCompId]: false }));
             setSelectedVersionId(null);
-            handleUpdateDesignInternal(nextData);
+            
+            // Deleting an unsubmitted draft Reverts status locally
+            handleUpdateDesignInternal(nextData, false);
         }
     };
 
     const handleAddPin = (x: number, y: number) => {
-        // Use a more robust unique ID to prevent collisions during rapid re-renders
         const newPinId = `pin-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
         const newPin: DesignPin = { 
             id: newPinId, 
@@ -181,7 +208,6 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
         const updatedComponents = localDesignData.components.map(c => {
             if (c.id === activeCompId) {
                 componentUpdated = true;
-                // Cleanup logic: Remove any existing "Empty" pins when adding a new one
                 const cleanedPins = (c.pins || []).filter(p => p.text.trim().length > 0 || p.id === newPinId);
                 return { ...c, pins: [...cleanedPins, newPin] };
             }
@@ -197,7 +223,6 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
         
         handleUpdateDesignInternal({ ...localDesignData, components: finalComponents });
         
-        // Explicit Trigger: Set highlight with a brief window for the DOM to mount the pin
         setTimeout(() => {
             setHighlightedPinId(newPinId);
         }, 50);
@@ -211,7 +236,6 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
     };
 
     const handlePinSelect = (id: string | null) => {
-        // Safe context switch: cleanup empty pins when switching highlight away
         if (id === null && highlightedPinId) {
             const currentPin = activeComponent.pins?.find(p => p.id === highlightedPinId);
             if (currentPin && !currentPin.text.trim()) {
@@ -264,7 +288,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
                             {isEligibleForStock && (
                                 <Button variant="outline" size="sm" onClick={() => {
                                     if(confirm("Mark this product as stock? This will hide all design tools.")) {
-                                        handleUpdateDesignInternal({ ...localDesignData, isStock: true });
+                                        handleUpdateDesignInternal({ ...localDesignData, isStock: true }, true);
                                     }
                                 }} className="h-8 font-black uppercase text-[10px] tracking-widest"><PackageCheck className="h-3.5 w-3.5 mr-1.5" /> Stock</Button>
                             )}
@@ -277,7 +301,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
                         <div className="flex flex-col items-center justify-center h-[200px] bg-muted/5">
                             <PackageCheck className="h-10 w-10 text-primary/40 mb-3" />
                             <h3 className="font-headline font-black uppercase tracking-widest text-xs">Stock Item</h3>
-                            <Button variant="link" size="sm" onClick={() => handleUpdateDesignInternal({ ...localDesignData, isStock: false })} className="text-[10px] uppercase font-black tracking-widest">Restore Design Tools</Button>
+                            <Button variant="link" size="sm" onClick={() => handleUpdateDesignInternal({ ...localDesignData, isStock: false }, true)} className="text-[10px] uppercase font-black tracking-widest">Restore Design Tools</Button>
                         </div>
                     ) : (
                         <div className="p-4 grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -296,7 +320,13 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
                 </CardContent>
             </Card>
 
-            <Dialog open={isFullscreen} onOpenChange={setIsFullscreen}>
+            <Dialog open={isFullscreen} onOpenChange={(open) => {
+                if (!open) {
+                    // DISCARD: When the canvas is closed, reset local state back to persistent props
+                    setLocalDesignData(initialDesignData);
+                }
+                setIsFullscreen(open);
+            }}>
                 <DialogContent className="max-w-[100vw] w-screen h-screen p-0 gap-0 border-none rounded-none flex flex-col bg-background overflow-hidden animate-in zoom-in-95 duration-300">
                     <DialogHeader className="sr-only">
                         <DialogTitle>Design Workbench - {product.productName}</DialogTitle>
