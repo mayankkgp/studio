@@ -108,7 +108,6 @@ export function DesignCanvas({
             const activePin = pins.find(p => p.id === highlightedPinId);
             if (activePin) {
                 setIsMistakeDraft(activePin.status === 'mistake');
-                // Ensure focus on the input box when a pin is selected
                 setTimeout(() => {
                     textareaRef.current?.focus();
                 }, 100);
@@ -208,7 +207,6 @@ export function DesignCanvas({
     const handleClosePopover = (e: React.MouseEvent, pinId: string) => {
         e.stopPropagation();
         const pin = pins.find(p => p.id === pinId);
-        // If it's a new pin with no text, we clean it up when closing
         if (pin && !pin.text && !draftText.trim()) {
             onUpdatePins(pins.filter(p => p.id !== pinId));
         }
@@ -241,8 +239,10 @@ export function DesignCanvas({
                                 <Upload className="h-8 w-8" />
                             </div>
                             <div className="space-y-1">
-                                <h4 className="font-bold">Ready to Start</h4>
-                                <p className="text-xs text-muted-foreground">Upload the first draft to begin.</p>
+                                <h4 className="font-bold">{status === 'DRAFT' ? 'Design not uploaded' : 'Ready to Start'}</h4>
+                                <p className="text-xs text-muted-foreground">
+                                    {status === 'DRAFT' ? 'Upload the first draft to begin work.' : 'Start the design process to begin.'}
+                                </p>
                             </div>
                             <Button onClick={() => fileInputRef.current?.click()} size="sm">
                                 Select Design File
@@ -362,9 +362,6 @@ export function DesignCanvas({
                                         open={highlightedPinId === pin.id} 
                                         onOpenChange={(open) => { 
                                             if (!open && highlightedPinId === pin.id) {
-                                                // Handle switch away/close highlight
-                                                // We don't auto-delete here to prevent "Vanishing Pin" during re-renders.
-                                                // Explicit handleClosePopover or parent context switches handle cleanup.
                                                 onPinClick(null);
                                             } else if (open) {
                                                 onPinClick(pin.id);

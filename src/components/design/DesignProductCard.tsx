@@ -56,15 +56,12 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
 
     const [localDesignData, setLocalDesignData] = useState<DesignData>(initialDesignData);
     
-    // Sync props to local state, with a temporal lockout and draft protection
     useEffect(() => { 
         const timeSinceLastUpdate = Date.now() - lastLocalUpdateRef.current;
         if (timeSinceLastUpdate < 2000) {
             return;
         }
 
-        // If we have an unsubmitted local draft, do NOT let props overwrite it.
-        // This keeps the designer's work-in-progress safe until they click 'Submit'.
         const hasUnsavedDraft = localDesignData.components.some(c => c.status === 'DRAFT');
         if (hasUnsavedDraft && isFullscreen) {
             return;
@@ -106,10 +103,6 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
 
     const viewedVersionNum = activeVersion?.versionNumber || 0;
 
-    /**
-     * Internal state updater with conditional persistence.
-     * Designs in DRAFT state are NOT saved to persistent storage until submitted.
-     */
     const handleUpdateDesignInternal = (updatedData: DesignData, forcePersist: boolean = false) => {
         lastLocalUpdateRef.current = Date.now();
         setLocalDesignData(updatedData);
@@ -117,7 +110,6 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
         const activeComp = updatedData.components.find(c => c.id === activeCompId) || updatedData.components[0];
         const isDraft = activeComp?.status === 'DRAFT';
 
-        // Persist only if NOT in draft session OR if specifically forced (like on submit)
         if (forcePersist || !isDraft) {
             onUpdateDesign(updatedData);
         }
@@ -130,9 +122,10 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
         const updatedComponents = localDesignData.components.map(c => c.id === activeCompId ? { ...c, status } : c);
         const updatedData = { ...localDesignData, components: updatedComponents };
         
-        // If moving to INTERNAL_REVIEW, it means the user clicked 'Submit', so we force persist.
-        const isSubmitting = status === 'INTERNAL_REVIEW';
-        handleUpdateDesignInternal(updatedData, isSubmitting);
+        // STATUS COMMIT: Moving to DRAFT or SUBMITTING for review are persistent lifecycle events.
+        // We persist immediately so that 'DRAFT' status is not lost on close.
+        const shouldPersist = status === 'INTERNAL_REVIEW' || status === 'DRAFT' || status === 'PENDING';
+        handleUpdateDesignInternal(updatedData, shouldPersist);
     };
 
     const handleUpload = (file: File) => {
@@ -167,7 +160,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
             setNewDrafts(prevDrafts => ({ ...prevDrafts, [effectiveCompId]: true }));
             setSelectedVersionId(newVersion.id);
             
-            // Uploading enters DRAFT state -> Local only (no auto-persist)
+            // Uploading enters DRAFT state -> Local only until 'Submit' is clicked.
             handleUpdateDesignInternal(nextData, false);
         };
         reader.readAsDataURL(file);
@@ -178,14 +171,13 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
             const newVersions = [...activeComponent.versions];
             newVersions.pop();
             const updatedComponents = localDesignData.components.map(c => 
-                c.id === activeCompId ? { ...c, versions: newVersions, status: newVersions.length === 0 ? 'PENDING' : c.status } : c
+                c.id === activeCompId ? { ...c, versions: newVersions, status: newVersions.length === 0 ? 'DRAFT' : c.status } : c
             );
             const nextData = { ...localDesignData, components: updatedComponents };
             
             setNewDrafts(prev => ({ ...prev, [activeCompId]: false }));
             setSelectedVersionId(null);
             
-            // Deleting an unsubmitted draft Reverts status locally
             handleUpdateDesignInternal(nextData, false);
         }
     };
@@ -322,7 +314,8 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
 
             <Dialog open={isFullscreen} onOpenChange={(open) => {
                 if (!open) {
-                    // DISCARD: When the canvas is closed, reset local state back to persistent props
+                    // RESET: When closing, we revert to the last saved persistent state (the props).
+                    // If the user clicked 'Start Design', props will now be 'DRAFT' but without versions.
                     setLocalDesignData(initialDesignData);
                 }
                 setIsFullscreen(open);
