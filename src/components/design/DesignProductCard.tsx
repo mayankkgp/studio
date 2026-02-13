@@ -75,20 +75,18 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
 
     const activeComponent = localDesignData.components.find(c => c.id === activeCompId) || localDesignData.components[0];
     
-    // Auto-open popover when a new pin is added locally
+    // NEW ROBUST PIN MONITOR: Automatically highlight a pin when it's added
+    const prevPinsCount = useRef(activeComponent.pins?.length || 0);
     useEffect(() => {
-        const pins = activeComponent.pins || [];
-        if (pins.length > 0) {
-            const latestPin = pins[pins.length - 1];
-            const isVeryRecent = Date.now() - new Date(latestPin.timestamp).getTime() < 1000;
-            if (isVeryRecent && !latestPin.text && highlightedPinId !== latestPin.id) {
-                // Use a small delay to ensure the DOM is ready for the popover
-                const timer = setTimeout(() => {
-                    setHighlightedPinId(latestPin.id);
-                }, 50);
-                return () => clearTimeout(timer);
+        const currentPins = activeComponent.pins || [];
+        if (currentPins.length > prevPinsCount.current) {
+            const latestPin = currentPins[currentPins.length - 1];
+            // If it's a fresh pin with no text, it was likely just added
+            if (!latestPin.text) {
+                setHighlightedPinId(latestPin.id);
             }
         }
+        prevPinsCount.current = currentPins.length;
     }, [activeComponent.pins]);
 
     const isEligibleForStock = useMemo(() => {

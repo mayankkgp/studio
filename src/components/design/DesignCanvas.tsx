@@ -79,13 +79,10 @@ export function DesignCanvas({
     
     const [draftText, setDraftText] = useState('');
     const [isMistakeDraft, setIsMistakeDraft] = useState(false);
-    const isSavingRef = useRef(false);
     
     const containerRef = useRef<HTMLDivElement>(null);
     const imageRef = useRef<HTMLImageElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
-
-    const canAddPin = canInteract;
 
     useEffect(() => {
         if (canInteract) {
@@ -93,7 +90,7 @@ export function DesignCanvas({
         } else {
             setInteractionMode('NAVIGATE');
         }
-    }, [canInteract, status]);
+    }, [canInteract]);
 
     useEffect(() => {
         if (highlightedPinId) {
@@ -136,7 +133,7 @@ export function DesignCanvas({
         const target = e.target as HTMLElement;
         if (target.closest('.pin-bubble') || target.closest('button') || target.closest('.popover-content')) return;
         
-        if (!canAddPin) {
+        if (!canInteract) {
             if (highlightedPinId) onPinClick(null);
             return;
         }
@@ -152,7 +149,6 @@ export function DesignCanvas({
     const handleSaveComment = (pinId: string) => {
         if (!draftText.trim()) return;
 
-        isSavingRef.current = true;
         const updatedPins = pins.map(p => {
             if (p.id === pinId) {
                 return {
@@ -165,7 +161,6 @@ export function DesignCanvas({
         });
         onUpdatePins(updatedPins);
         onPinClick(null);
-        setTimeout(() => { isSavingRef.current = false; }, 100);
     };
 
     const handleDeletePin = (e: React.MouseEvent, pinId: string) => {
@@ -177,7 +172,8 @@ export function DesignCanvas({
     const handleClosePopover = (e: React.MouseEvent, pinId: string) => {
         e.stopPropagation();
         const pin = pins.find(p => p.id === pinId);
-        if (pin && !pin.text && !draftText.trim() && !isSavingRef.current) {
+        // If it was a fresh pin with no text, remove it on close
+        if (pin && !pin.text && !draftText.trim()) {
             onUpdatePins(pins.filter(p => p.id !== pinId));
         }
         onPinClick(null);
@@ -306,7 +302,7 @@ export function DesignCanvas({
                         ref={containerRef}
                         className={cn(
                             "flex-1 overflow-hidden relative select-none",
-                            canAddPin ? "cursor-crosshair" : "cursor-default",
+                            canInteract ? "cursor-crosshair" : "cursor-default",
                             (zoom > 1 || interactionMode === 'NAVIGATE') && isDragging && "cursor-grabbing",
                             (zoom > 1 || interactionMode === 'NAVIGATE') && !isDragging && "cursor-grab"
                         )}
