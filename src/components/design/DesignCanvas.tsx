@@ -67,9 +67,6 @@ export function DesignCanvas({
     isWorkbench = false
 }: DesignCanvasProps) {
     const [zoom, setZoom] = useState(1);
-    const [position, setPosition] = useState({ x: 0, y: 0 });
-    const [isDragging, setIsDragging] = useState(false);
-    const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
     const [showPins, setShowPins] = useState(true);
     
     const isLatest = version === currentVersion;
@@ -114,31 +111,10 @@ export function DesignCanvas({
     const handleZoomOut = () => setZoom(prev => Math.max(prev - 0.25, 0.5));
     const handleReset = () => {
         setZoom(1);
-        setPosition({ x: 0, y: 0 });
     };
-
-    const handleMouseDown = (e: React.MouseEvent) => {
-        if (!imageUrl || e.button !== 0) return;
-        
-        // Panning is allowed when zoomed in
-        if (zoom > 1) {
-            setIsDragging(true);
-            setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y });
-        }
-    };
-
-    const handleMouseMove = (e: React.MouseEvent) => {
-        if (!isDragging) return;
-        setPosition({
-            x: e.clientX - dragStart.x,
-            y: e.clientY - dragStart.y
-        });
-    };
-
-    const handleMouseUp = () => setIsDragging(false);
 
     const handleCanvasClick = (e: React.MouseEvent) => {
-        if (!imageUrl || isDragging) return;
+        if (!imageUrl) return;
         
         const target = e.target as HTMLElement;
         if (target.closest('.pin-bubble') || target.closest('button') || target.closest('.popover-content')) return;
@@ -307,19 +283,13 @@ export function DesignCanvas({
                         ref={containerRef}
                         className={cn(
                             "flex-1 overflow-hidden relative select-none",
-                            canInteract ? "cursor-crosshair" : "cursor-default",
-                            zoom > 1 && isDragging && "cursor-grabbing",
-                            zoom > 1 && !isDragging && "cursor-grab"
+                            canInteract ? "cursor-crosshair" : "cursor-default"
                         )}
-                        onMouseDown={handleMouseDown}
-                        onMouseMove={handleMouseMove}
-                        onMouseUp={handleMouseUp}
-                        onMouseLeave={handleMouseUp}
                         onClick={handleCanvasClick}
                     >
                         <div 
                             className="absolute inset-0 transition-transform duration-75 ease-out origin-center"
-                            style={{ transform: `translate(${position.x}px, ${position.y}px) scale(${zoom})` }}
+                            style={{ transform: `scale(${zoom})` }}
                         >
                             <img ref={imageRef} src={imageUrl} alt="Design View" className="w-full h-full object-contain pointer-events-none" draggable={false} />
                             
