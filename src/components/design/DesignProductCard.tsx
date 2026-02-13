@@ -35,7 +35,8 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [newDrafts, setNewDrafts] = useState<Record<string, boolean>>({});
 
-    // Timestamp Lockout: Prevents stale prop-syncs from overwriting local authoritative state
+    // Timestamp Lockout: Prevents stale prop-syncs from overwriting local authoritative state.
+    // We use a number to store the timestamp of the last local update.
     const lastLocalUpdateRef = useRef<number>(0);
 
     const initialDesignData = useMemo(() => {
@@ -59,10 +60,16 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
     
     // Synchronize local state with props only if the temporal window of immunity has expired (2s)
     useEffect(() => { 
-        const timeSinceLastLocalUpdate = Date.now() - lastLocalUpdateRef.current;
-        if (timeSinceLastLocalUpdate < 2000) {
+        // Calculate time since the last user action
+        const timeSinceLastUpdate = Date.now() - lastLocalUpdateRef.current;
+        
+        // LOCKOUT: If less than 2000ms (2 seconds) has passed, IGNORE the prop sync.
+        // This protects against Strict Mode double-invocations and rapid parent re-renders.
+        if (timeSinceLastUpdate < 2000) {
             return;
         }
+        
+        // Otherwise, it's safe to sync
         setLocalDesignData(initialDesignData); 
     }, [initialDesignData]);
 
@@ -100,10 +107,10 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
     const viewedVersionNum = activeVersion?.versionNumber || 0;
 
     const handleUpdateDesignInternal = (updatedData: DesignData) => {
-        // Set lockout timestamp before updating state
+        // Set lockout timestamp before updating state to lock out prop-sync for 2 seconds
         lastLocalUpdateRef.current = Date.now();
         setLocalDesignData(updatedData);
-        // Notify parent. The parent re-render will be ignored by our local useEffect due to the timestamp.
+        // Notify parent. The parent re-render will be ignored by our local useEffect due to the timestamp lockout.
         setTimeout(() => onUpdateDesign(updatedData), 0);
     };
 
