@@ -75,20 +75,6 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
 
     const activeComponent = localDesignData.components.find(c => c.id === activeCompId) || localDesignData.components[0];
     
-    // NEW ROBUST PIN MONITOR: Automatically highlight a pin when it's added
-    const prevPinsCount = useRef(activeComponent.pins?.length || 0);
-    useEffect(() => {
-        const currentPins = activeComponent.pins || [];
-        if (currentPins.length > prevPinsCount.current) {
-            const latestPin = currentPins[currentPins.length - 1];
-            // If it's a fresh pin with no text, it was likely just added
-            if (!latestPin.text) {
-                setHighlightedPinId(latestPin.id);
-            }
-        }
-        prevPinsCount.current = currentPins.length;
-    }, [activeComponent.pins]);
-
     const isEligibleForStock = useMemo(() => {
         if (localDesignData.isStock) return false;
         return localDesignData.components.every(c => c.status === 'PENDING' && (!c.versions || c.versions.length === 0));
@@ -207,6 +193,8 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
         }
         
         handleUpdateDesignInternal({ ...localDesignData, components: finalComponents });
+        // Trigger highlight immediately so the popover opens instantly
+        setHighlightedPinId(newPinId);
     };
 
     const handleUpdatePins = (newPins: DesignPin[]) => {

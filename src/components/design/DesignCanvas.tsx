@@ -100,8 +100,6 @@ export function DesignCanvas({
     }, [canInteract, status]);
 
     useEffect(() => {
-        // Only reset text states if the ID has actually CHANGED
-        // This prevents wiping text during background synchronization/re-renders
         if (highlightedPinId && highlightedPinId !== prevHighlightedId.current) {
             setDraftText('');
             setReplyText('');
@@ -352,7 +350,21 @@ export function DesignCanvas({
                             {showPins && pins.map((pin, index) => {
                                 if (pin.version > version) return null;
                                 return (
-                                    <Popover key={pin.id} open={highlightedPinId === pin.id} onOpenChange={(open) => { if (!open && highlightedPinId === pin.id) onPinClick(null); else if (open) onPinClick(pin.id); }}>
+                                    <Popover 
+                                        key={pin.id} 
+                                        open={highlightedPinId === pin.id} 
+                                        onOpenChange={(open) => { 
+                                            if (!open && highlightedPinId === pin.id) {
+                                                // Automatic Cleanup: Remove empty pins on closing if no content was added
+                                                if (!pin.text && !draftText.trim()) {
+                                                    onUpdatePins(pins.filter(p => p.id !== pin.id));
+                                                }
+                                                onPinClick(null);
+                                            } else if (open) {
+                                                onPinClick(pin.id);
+                                            }
+                                        }}
+                                    >
                                         <PopoverTrigger asChild>
                                             <button
                                                 className={cn(
