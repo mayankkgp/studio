@@ -35,6 +35,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [newDrafts, setNewDrafts] = useState<Record<string, boolean>>({});
 
+    // AUTHORITATIVE TIMESTAMP: Tracks the last time the user performed a local action.
     const lastLocalUpdateRef = useRef<number>(0);
 
     const initialDesignData = useMemo(() => {
@@ -57,6 +58,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
     const [localDesignData, setLocalDesignData] = useState<DesignData>(initialDesignData);
     
     useEffect(() => { 
+        // TEMPORAL IMMUNITY WINDOW: If the user just did something, don't let parent props overwrite them.
         const timeSinceLastUpdate = Date.now() - lastLocalUpdateRef.current;
         if (timeSinceLastUpdate < 2000) {
             return;
@@ -104,12 +106,15 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
     const viewedVersionNum = activeVersion?.versionNumber || 0;
 
     const handleUpdateDesignInternal = (updatedData: DesignData, forcePersist: boolean = false) => {
+        // MARK ACTION: Update the timestamp to trigger the lockout
         lastLocalUpdateRef.current = Date.now();
         setLocalDesignData(updatedData);
         
         const activeComp = updatedData.components.find(c => c.id === activeCompId) || updatedData.components[0];
         const isDraft = activeComp?.status === 'DRAFT';
 
+        // Draft images are handled locally until 'Submit' is clicked. 
+        // Status changes (DRAFT/PENDING) and feedback on non-draft versions are persisted.
         if (forcePersist || !isDraft) {
             onUpdateDesign(updatedData);
         }
@@ -122,10 +127,8 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
         const updatedComponents = localDesignData.components.map(c => c.id === activeCompId ? { ...c, status } : c);
         const updatedData = { ...localDesignData, components: updatedComponents };
         
-        // STATUS COMMIT: Moving to DRAFT or SUBMITTING for review are persistent lifecycle events.
-        // We persist immediately so that 'DRAFT' status is not lost on close.
-        const shouldPersist = status === 'INTERNAL_REVIEW' || status === 'DRAFT' || status === 'PENDING';
-        handleUpdateDesignInternal(updatedData, shouldPersist);
+        // STATUS COMMIT: Transitions are persistent lifecycle events.
+        handleUpdateDesignInternal(updatedData, true);
     };
 
     const handleUpload = (file: File) => {
@@ -200,6 +203,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
         const updatedComponents = localDesignData.components.map(c => {
             if (c.id === activeCompId) {
                 componentUpdated = true;
+                // CLEANUP: Drop any stale empty pins from the session to keep data structure lean
                 const cleanedPins = (c.pins || []).filter(p => p.text.trim().length > 0 || p.id === newPinId);
                 return { ...c, pins: [...cleanedPins, newPin] };
             }
@@ -215,6 +219,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
         
         handleUpdateDesignInternal({ ...localDesignData, components: finalComponents });
         
+        // EXPLICIT TRIGGER: Open the popover for the new pin after React paints the new DOM element.
         setTimeout(() => {
             setHighlightedPinId(newPinId);
         }, 50);
@@ -229,6 +234,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
 
     const handlePinSelect = (id: string | null) => {
         if (id === null && highlightedPinId) {
+            // DESELECT CLEANUP: If user closes an empty pin, remove it instantly
             const currentPin = activeComponent.pins?.find(p => p.id === highlightedPinId);
             if (currentPin && !currentPin.text.trim()) {
                 handleUpdatePins(activeComponent.pins.filter(p => p.id !== highlightedPinId));
@@ -314,8 +320,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
 
             <Dialog open={isFullscreen} onOpenChange={(open) => {
                 if (!open) {
-                    // RESET: When closing, we revert to the last saved persistent state (the props).
-                    // If the user clicked 'Start Design', props will now be 'DRAFT' but without versions.
+                    // RESET: On workbench close, we revert any unsubmitted drafts to match the persistent props.
                     setLocalDesignData(initialDesignData);
                 }
                 setIsFullscreen(open);

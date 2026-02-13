@@ -117,6 +117,7 @@ export function DesignCanvas({
         if (!imageUrl) return;
         
         const target = e.target as HTMLElement;
+        // Ignore clicks on existing UI elements
         if (target.closest('.pin-bubble') || target.closest('button') || target.closest('.popover-content')) return;
         
         if (!canInteract) {
@@ -227,7 +228,7 @@ export function DesignCanvas({
 
             {imageUrl && (
                 <>
-                    {/* Simplified Feedback-First Toolbar */}
+                    {/* Feedback-First Toolbar */}
                     <div className="absolute top-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-1.5 p-1.5 bg-background/90 backdrop-blur-xl border border-primary/20 rounded-full shadow-2xl scale-110">
                         <TooltipProvider>
                             <div className="flex items-center px-3 gap-2">
@@ -291,7 +292,14 @@ export function DesignCanvas({
                             className="absolute inset-0 transition-transform duration-75 ease-out origin-center"
                             style={{ transform: `scale(${zoom})` }}
                         >
-                            <img ref={imageRef} src={imageUrl} alt="Design View" className="w-full h-full object-contain pointer-events-none" draggable={false} />
+                            {/* draggable={false} ensures browser native drag-drop doesn't interfere with our click handlers */}
+                            <img 
+                                ref={imageRef} 
+                                src={imageUrl} 
+                                alt="Design View" 
+                                className="w-full h-full object-contain pointer-events-none" 
+                                draggable={false} 
+                            />
                             
                             {showPins && pins.map((pin, index) => {
                                 if (pin.version > version) return null;
