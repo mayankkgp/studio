@@ -193,8 +193,11 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
         }
         
         handleUpdateDesignInternal({ ...localDesignData, components: finalComponents });
-        // Trigger highlight immediately so the popover opens instantly
-        setHighlightedPinId(newPinId);
+        
+        // Explicitly trigger the popover with a small delay to ensure DOM readiness
+        setTimeout(() => {
+            setHighlightedPinId(newPinId);
+        }, 50);
     };
 
     const handleUpdatePins = (newPins: DesignPin[]) => {
