@@ -14,13 +14,10 @@ import {
     Trash2,
     Eye,
     EyeOff,
-    MousePointer2,
-    MessageSquarePlus,
     Scaling,
     CornerDownRight,
     CheckCircle2,
     AlertCircle,
-    RotateCcw,
     Send
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -67,7 +64,6 @@ export function DesignCanvas({
     version,
     currentVersion,
     status,
-    hasNewDraft = false,
     isWorkbench = false
 }: DesignCanvasProps) {
     const [zoom, setZoom] = useState(1);
@@ -78,8 +74,6 @@ export function DesignCanvas({
     
     const isLatest = version === currentVersion;
     const canInteract = isLatest && ((isDesigner && status === 'DRAFT') || (!isDesigner && (status === 'INTERNAL_REVIEW' || status === 'CUSTOMER_REVIEW')));
-    
-    const [interactionMode, setInteractionMode] = useState<'NAVIGATE' | 'COMMENT'>(canInteract ? 'COMMENT' : 'NAVIGATE');
     
     const [draftText, setDraftText] = useState('');
     const [replyText, setReplyText] = useState('');
@@ -92,13 +86,14 @@ export function DesignCanvas({
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const prevHighlightedId = useRef<string | null>(null);
 
+    // Auto-focus the comment box when a pin is selected
     useEffect(() => {
-        if (canInteract) {
-            setInteractionMode('COMMENT');
-        } else {
-            setInteractionMode('NAVIGATE');
+        if (highlightedPinId) {
+            setTimeout(() => {
+                textareaRef.current?.focus();
+            }, 100);
         }
-    }, [canInteract, status]);
+    }, [highlightedPinId]);
 
     useEffect(() => {
         if (highlightedPinId && highlightedPinId !== prevHighlightedId.current) {
@@ -108,9 +103,6 @@ export function DesignCanvas({
             const activePin = pins.find(p => p.id === highlightedPinId);
             if (activePin) {
                 setIsMistakeDraft(activePin.status === 'mistake');
-                setTimeout(() => {
-                    textareaRef.current?.focus();
-                }, 100);
             }
             prevHighlightedId.current = highlightedPinId;
         } else if (!highlightedPinId) {
@@ -127,7 +119,9 @@ export function DesignCanvas({
 
     const handleMouseDown = (e: React.MouseEvent) => {
         if (!imageUrl || e.button !== 0) return;
-        if (zoom > 1 || interactionMode === 'NAVIGATE') {
+        
+        // Panning is allowed when zoomed in
+        if (zoom > 1) {
             setIsDragging(true);
             setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y });
         }
@@ -206,10 +200,6 @@ export function DesignCanvas({
 
     const handleClosePopover = (e: React.MouseEvent, pinId: string) => {
         e.stopPropagation();
-        const pin = pins.find(p => p.id === pinId);
-        if (pin && !pin.text && !draftText.trim()) {
-            onUpdatePins(pins.filter(p => p.id !== pinId));
-        }
         onPinClick(null);
     };
 
@@ -261,34 +251,13 @@ export function DesignCanvas({
 
             {imageUrl && (
                 <>
+                    {/* Simplified Feedback-First Toolbar */}
                     <div className="absolute top-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-1.5 p-1.5 bg-background/90 backdrop-blur-xl border border-primary/20 rounded-full shadow-2xl scale-110">
                         <TooltipProvider>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Button 
-                                        variant={interactionMode === 'NAVIGATE' ? "default" : "ghost"} 
-                                        size="icon" 
-                                        className="h-9 w-9 rounded-full"
-                                        onClick={() => setInteractionMode('NAVIGATE')}
-                                    >
-                                        <MousePointer2 className="h-4 w-4" />
-                                    </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>Navigate (Pan/Zoom)</TooltipContent>
-                            </Tooltip>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Button 
-                                        variant={interactionMode === 'COMMENT' ? "default" : "ghost"} 
-                                        size="icon" 
-                                        className={cn("h-9 w-9 rounded-full", interactionMode === 'COMMENT' && "bg-blue-600")}
-                                        onClick={() => setInteractionMode('COMMENT')}
-                                    >
-                                        <MessageSquarePlus className="h-4 w-4" />
-                                    </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>Feedback (Drop Pin)</TooltipContent>
-                            </Tooltip>
+                            <div className="flex items-center px-3 gap-2">
+                                <div className="h-2 w-2 rounded-full bg-blue-600 animate-pulse" />
+                                <span className="text-[10px] font-black uppercase tracking-widest text-foreground">Feedback Mode</span>
+                            </div>
                             <div className="w-px h-4 bg-muted-foreground/20 mx-1" />
                             <Tooltip>
                                 <TooltipTrigger asChild>
@@ -339,8 +308,8 @@ export function DesignCanvas({
                         className={cn(
                             "flex-1 overflow-hidden relative select-none",
                             canInteract ? "cursor-crosshair" : "cursor-default",
-                            (zoom > 1 || interactionMode === 'NAVIGATE') && isDragging && "cursor-grabbing",
-                            (zoom > 1 || interactionMode === 'NAVIGATE') && !isDragging && "cursor-grab"
+                            zoom > 1 && isDragging && "cursor-grabbing",
+                            zoom > 1 && !isDragging && "cursor-grab"
                         )}
                         onMouseDown={handleMouseDown}
                         onMouseMove={handleMouseMove}
