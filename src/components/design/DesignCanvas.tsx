@@ -141,6 +141,7 @@ export function DesignCanvas({
             return;
         }
 
+        e.stopPropagation();
         const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
         const x = ((e.clientX - rect.left) / rect.width) * 100;
         const y = ((e.clientY - rect.top) / rect.height) * 100;
