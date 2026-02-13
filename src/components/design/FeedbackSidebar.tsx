@@ -24,6 +24,13 @@ import {
     CornerDownRight
 } from 'lucide-react';
 
+const PIN_COLORS: Record<DesignPinStatus, string> = {
+    open: 'bg-blue-600',
+    mistake: 'bg-destructive',
+    fixed: 'bg-amber-500',
+    resolved: 'bg-green-600'
+};
+
 interface FeedbackSidebarProps {
     pins: DesignPin[];
     versions: DesignVersion[];
@@ -44,13 +51,6 @@ interface FeedbackSidebarProps {
     customerData?: CustomerData;
     activeProductId?: string;
 }
-
-const PIN_COLORS: Record<DesignPinStatus, string> = {
-    open: 'bg-blue-600',
-    mistake: 'bg-destructive',
-    fixed: 'bg-amber-500',
-    resolved: 'bg-green-600'
-};
 
 export function FeedbackSidebar({ 
     pins, 

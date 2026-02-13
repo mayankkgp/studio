@@ -163,8 +163,9 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
     };
 
     const handleAddPin = (x: number, y: number) => {
+        const newPinId = `pin-${Date.now()}`;
         const newPin: DesignPin = { 
-            id: `pin-${Date.now()}`, 
+            id: newPinId, 
             x, 
             y, 
             status: 'open', 
@@ -192,7 +193,11 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
         }
         
         handleUpdateDesignInternal({ ...localDesignData, components: finalComponents });
-        setHighlightedPinId(newPin.id);
+        
+        // Ensure the popover opens after state has settled
+        requestAnimationFrame(() => {
+            setHighlightedPinId(newPinId);
+        });
     };
 
     const handleUpdatePins = (newPins: DesignPin[]) => {

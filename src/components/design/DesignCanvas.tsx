@@ -26,6 +26,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 
+const PIN_COLORS: Record<DesignPinStatus, string> = {
+    open: 'bg-blue-600',
+    mistake: 'bg-destructive',
+    fixed: 'bg-amber-500',
+    resolved: 'bg-green-600'
+};
+
 interface DesignCanvasProps {
     imageUrl: string | null;
     pins: DesignPin[];
@@ -42,13 +49,6 @@ interface DesignCanvasProps {
     hasNewDraft?: boolean;
     isWorkbench?: boolean;
 }
-
-const PIN_COLORS: Record<DesignPinStatus, string> = {
-    open: 'bg-blue-600',
-    mistake: 'bg-destructive',
-    fixed: 'bg-amber-500',
-    resolved: 'bg-green-600'
-};
 
 export function DesignCanvas({ 
     imageUrl, 
@@ -75,7 +75,7 @@ export function DesignCanvas({
     const isLatest = version === currentVersion;
     const canInteract = isLatest && ((isDesigner && status === 'DRAFT') || (!isDesigner && (status === 'INTERNAL_REVIEW' || status === 'CUSTOMER_REVIEW')));
     
-    const [interactionMode, setInteractionMode] = useState<'NAVIGATE' | 'COMMENT'>('NAVIGATE');
+    const [interactionMode, setInteractionMode] = useState<'NAVIGATE' | 'COMMENT'>(canInteract ? 'COMMENT' : 'NAVIGATE');
     
     const [draftText, setDraftText] = useState('');
     const [isMistakeDraft, setIsMistakeDraft] = useState(false);
@@ -134,7 +134,7 @@ export function DesignCanvas({
         if (!imageUrl || isDragging) return;
         
         const target = e.target as HTMLElement;
-        if (target.closest('.pin-bubble') || target.closest('button')) return;
+        if (target.closest('.pin-bubble') || target.closest('button') || target.closest('.popover-content')) return;
         
         if (!canAddPin) {
             if (highlightedPinId) onPinClick(null);
@@ -340,7 +340,7 @@ export function DesignCanvas({
                                                 {index + 1}
                                             </button>
                                         </PopoverTrigger>
-                                        <PopoverContent className="w-80 p-0 overflow-hidden shadow-2xl border-primary/20" side="top" sideOffset={10} align="center">
+                                        <PopoverContent className="w-80 p-0 overflow-hidden shadow-2xl border-primary/20 popover-content" side="top" sideOffset={10} align="center">
                                             <div className="bg-background">
                                                 <div className="p-3 border-b bg-muted/20 flex items-center justify-between">
                                                     <div className="flex items-center gap-2">
