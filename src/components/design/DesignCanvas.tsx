@@ -89,6 +89,7 @@ export function DesignCanvas({
     const containerRef = useRef<HTMLDivElement>(null);
     const imageRef = useRef<HTMLImageElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
     const prevHighlightedId = useRef<string | null>(null);
 
     useEffect(() => {
@@ -107,6 +108,10 @@ export function DesignCanvas({
             const activePin = pins.find(p => p.id === highlightedPinId);
             if (activePin) {
                 setIsMistakeDraft(activePin.status === 'mistake');
+                // Ensure focus on the input box when a pin is selected
+                setTimeout(() => {
+                    textareaRef.current?.focus();
+                }, 100);
             }
             prevHighlightedId.current = highlightedPinId;
         } else if (!highlightedPinId) {
@@ -151,6 +156,7 @@ export function DesignCanvas({
         }
 
         e.stopPropagation();
+        e.preventDefault();
         const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
         const x = ((e.clientX - rect.left) / rect.width) * 100;
         const y = ((e.clientY - rect.top) / rect.height) * 100;
@@ -202,6 +208,7 @@ export function DesignCanvas({
     const handleClosePopover = (e: React.MouseEvent, pinId: string) => {
         e.stopPropagation();
         const pin = pins.find(p => p.id === pinId);
+        // If it's a new pin with no text, we clean it up when closing
         if (pin && !pin.text && !draftText.trim()) {
             onUpdatePins(pins.filter(p => p.id !== pinId));
         }
@@ -355,10 +362,9 @@ export function DesignCanvas({
                                         open={highlightedPinId === pin.id} 
                                         onOpenChange={(open) => { 
                                             if (!open && highlightedPinId === pin.id) {
-                                                // Automatic Cleanup: Remove empty pins on closing if no content was added
-                                                if (!pin.text && !draftText.trim()) {
-                                                    onUpdatePins(pins.filter(p => p.id !== pin.id));
-                                                }
+                                                // Handle switch away/close highlight
+                                                // We don't auto-delete here to prevent "Vanishing Pin" during re-renders.
+                                                // Explicit handleClosePopover or parent context switches handle cleanup.
                                                 onPinClick(null);
                                             } else if (open) {
                                                 onPinClick(pin.id);
@@ -395,7 +401,7 @@ export function DesignCanvas({
                                                     {!pin.text ? (
                                                         <div className="space-y-3">
                                                             <Textarea 
-                                                                autoFocus 
+                                                                ref={textareaRef}
                                                                 placeholder="Enter feedback details..." 
                                                                 className="min-h-[80px] text-xs font-semibold" 
                                                                 value={draftText} 
@@ -429,7 +435,7 @@ export function DesignCanvas({
                                                             {isReplyMode ? (
                                                                 <div className="space-y-2 pt-2 border-t">
                                                                     <Textarea 
-                                                                        autoFocus
+                                                                        ref={textareaRef}
                                                                         placeholder="Write a reply..." 
                                                                         className="min-h-[60px] text-[10px] font-semibold"
                                                                         value={replyText}

@@ -163,7 +163,8 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
     };
 
     const handleAddPin = (x: number, y: number) => {
-        const newPinId = `pin-${Date.now()}`;
+        // Use a more robust unique ID to prevent collisions during rapid re-renders
+        const newPinId = `pin-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
         const newPin: DesignPin = { 
             id: newPinId, 
             x, 
@@ -180,7 +181,9 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
         const updatedComponents = localDesignData.components.map(c => {
             if (c.id === activeCompId) {
                 componentUpdated = true;
-                return { ...c, pins: [...(c.pins || []), newPin] };
+                // Cleanup logic: Remove any existing "Empty" pins when adding a new one
+                const cleanedPins = (c.pins || []).filter(p => p.text.trim().length > 0 || p.id === newPinId);
+                return { ...c, pins: [...cleanedPins, newPin] };
             }
             return c;
         });
@@ -194,7 +197,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
         
         handleUpdateDesignInternal({ ...localDesignData, components: finalComponents });
         
-        // Explicitly trigger the popover with a small delay to ensure DOM readiness
+        // Explicit Trigger: Set highlight with a brief window for the DOM to mount the pin
         setTimeout(() => {
             setHighlightedPinId(newPinId);
         }, 50);
@@ -205,6 +208,17 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
             c.id === activeCompId ? { ...c, pins: newPins } : c
         );
         handleUpdateDesignInternal({ ...localDesignData, components: updatedComponents });
+    };
+
+    const handlePinSelect = (id: string | null) => {
+        // Safe context switch: cleanup empty pins when switching highlight away
+        if (id === null && highlightedPinId) {
+            const currentPin = activeComponent.pins?.find(p => p.id === highlightedPinId);
+            if (currentPin && !currentPin.text.trim()) {
+                handleUpdatePins(activeComponent.pins.filter(p => p.id !== highlightedPinId));
+            }
+        }
+        setHighlightedPinId(id);
     };
 
     const getStatusColor = (status: DesignWorkflowStatus) => {
@@ -226,7 +240,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
         currentVersion: currentVersionNum,
         viewedVersion: viewedVersionNum,
         onUpdatePins: handleUpdatePins,
-        onPinSelect: setHighlightedPinId,
+        onPinSelect: handlePinSelect,
         onVersionSelect: setSelectedVersionId,
         onStatusChange: handleStatusChange,
         onUpdateVersions: (v: any) => {},
@@ -329,7 +343,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
                                     status={activeComponent.status}
                                     hasNewDraft={!!newDrafts[activeCompId]}
                                     onAddPin={handleAddPin}
-                                    onPinClick={setHighlightedPinId}
+                                    onPinClick={handlePinSelect}
                                     onUpdatePins={handleUpdatePins}
                                     onUpload={handleUpload}
                                     isWorkbench={true}
