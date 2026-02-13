@@ -80,8 +80,6 @@ export function FeedbackSidebar({
     const [replyText, setReplyText] = useState('');
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const isLatest = viewedVersion === currentVersion;
-
     useEffect(() => {
         if (highlightedPinId) {
             setActiveTab('feedback');
@@ -155,7 +153,6 @@ export function FeedbackSidebar({
                     return <div className="flex items-center justify-center p-3 bg-muted/20 rounded-lg text-muted-foreground gap-2 font-black uppercase text-[10px] tracking-widest"><Lock className="h-3 w-3" /> Design Locked</div>;
             }
         } else {
-            if (!isLatest) return <div className="flex items-center justify-center p-3 bg-muted/20 rounded-lg text-muted-foreground gap-2 font-black uppercase text-[10px] tracking-widest"><Lock className="h-3 w-3" /> Read Only</div>;
             switch (status) {
                 case 'PENDING': case 'DRAFT': return <div className="p-3 border-2 border-dashed rounded-lg text-center text-muted-foreground text-[10px] font-black uppercase tracking-widest">Waiting for designer...</div>;
                 case 'INTERNAL_REVIEW': return (
@@ -257,7 +254,7 @@ export function FeedbackSidebar({
                                                 </div>
                                             </div>
                                             
-                                            <p className="text-[11px] font-semibold leading-relaxed text-foreground/90">{pin.text || <span className="italic opacity-50">Empty feedback</span>}</p>
+                                            <p className="text-[11px] font-semibold leading-relaxed text-foreground/90">{pin.text || <span className="italic opacity-50">No description provided</span>}</p>
                                             
                                             {pin.replies && pin.replies.map((reply, i) => (
                                                 <div key={i} className="pl-3 border-l-2 border-primary/10 mt-3 space-y-0.5">
@@ -270,13 +267,13 @@ export function FeedbackSidebar({
                                                 {!isReplying ? (
                                                     <>
                                                         <Button variant="ghost" size="sm" className="h-6 text-[9px] font-black uppercase px-2" onClick={(e) => { e.stopPropagation(); setActiveReplyId(pin.id); setReplyText(''); }}>Reply</Button>
-                                                        {isDesigner && (pin.status === 'open' || pin.status === 'mistake') && (
+                                                        {(pin.status === 'open' || pin.status === 'mistake') && (
                                                             <Button variant="outline" size="sm" className="h-6 text-[9px] font-black uppercase px-2 border-amber-500 text-amber-600" onClick={(e) => { e.stopPropagation(); handleStatusUpdate(pin.id, 'fixed'); }}><CheckCircle2 className="h-3 w-3 mr-1" /> Fix</Button>
                                                         )}
-                                                        {!isDesigner && pin.status === 'fixed' && (
+                                                        {pin.status === 'fixed' && (
                                                             <Button variant="outline" size="sm" className="h-6 text-[9px] font-black uppercase px-2 border-green-600 text-green-600" onClick={(e) => { e.stopPropagation(); handleStatusUpdate(pin.id, 'resolved'); }}><CheckCircle2 className="h-3 w-3 mr-1" /> Resolve</Button>
                                                         )}
-                                                        {!isDesigner && pin.status === 'open' && (
+                                                        {pin.status === 'open' && (
                                                             <Button variant="outline" size="sm" className="h-6 text-[9px] font-black uppercase px-2 border-destructive text-destructive" onClick={(e) => { e.stopPropagation(); handleStatusUpdate(pin.id, 'mistake'); }}><AlertCircle className="h-3 w-3 mr-1" /> Mistake</Button>
                                                         )}
                                                     </>

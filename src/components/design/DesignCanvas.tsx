@@ -69,8 +69,8 @@ export function DesignCanvas({
     const [zoom, setZoom] = useState(1);
     const [showPins, setShowPins] = useState(true);
     
-    const isLatest = version === currentVersion;
-    const canInteract = isLatest && ((isDesigner && status === 'DRAFT') || (!isDesigner && (status === 'INTERNAL_REVIEW' || status === 'CUSTOMER_REVIEW')));
+    // ALLOW ALL ROLES, STATES, AND VERSIONS TO INTERACT
+    const canInteract = !!imageUrl;
     
     const [draftText, setDraftText] = useState('');
     const [replyText, setReplyText] = useState('');
@@ -100,6 +100,7 @@ export function DesignCanvas({
             const activePin = pins.find(p => p.id === highlightedPinId);
             if (activePin) {
                 setIsMistakeDraft(activePin.status === 'mistake');
+                setDraftText(activePin.text || '');
             }
             prevHighlightedId.current = highlightedPinId;
         } else if (!highlightedPinId) {
@@ -135,14 +136,13 @@ export function DesignCanvas({
     };
 
     const handleSaveComment = (pinId: string) => {
-        if (!draftText.trim()) return;
-
         const updatedPins = pins.map(p => {
             if (p.id === pinId) {
                 return {
                     ...p,
-                    text: draftText.trim(),
-                    status: isMistakeDraft ? 'mistake' : 'open'
+                    text: draftText, // ALLOW EMPTY TEXT
+                    status: isMistakeDraft ? 'mistake' : (p.status === 'resolved' ? 'resolved' : 'open'),
+                    isDraft: false // MARK AS COMMITTED
                 } as DesignPin;
             }
             return p;
@@ -200,7 +200,7 @@ export function DesignCanvas({
 
             {!imageUrl && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-muted/20 border-dashed border-2 rounded-xl m-4">
-                    {(isDesigner && (status === 'DRAFT' || status === 'PENDING')) ? (
+                    {status === 'DRAFT' || status === 'PENDING' ? (
                         <div className="text-center space-y-4">
                             <div className="h-16 w-16 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto">
                                 <Upload className="h-8 w-8" />
@@ -228,7 +228,6 @@ export function DesignCanvas({
 
             {imageUrl && (
                 <>
-                    {/* Feedback-First Toolbar */}
                     <div className="absolute top-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-1.5 p-1.5 bg-background/90 backdrop-blur-xl border border-primary/20 rounded-full shadow-2xl scale-110">
                         <TooltipProvider>
                             <div className="flex items-center px-3 gap-2">
@@ -292,7 +291,6 @@ export function DesignCanvas({
                             className="absolute inset-0 transition-transform duration-75 ease-out origin-center"
                             style={{ transform: `scale(${zoom})` }}
                         >
-                            {/* draggable={false} ensures browser native drag-drop doesn't interfere with our click handlers */}
                             <img 
                                 ref={imageRef} 
                                 src={imageUrl} 
@@ -342,7 +340,7 @@ export function DesignCanvas({
                                                     </div>
                                                 </div>
                                                 <div className="p-4 space-y-4">
-                                                    {!pin.text ? (
+                                                    {pin.isDraft ? (
                                                         <div className="space-y-3">
                                                             <Textarea 
                                                                 ref={textareaRef}
@@ -352,18 +350,16 @@ export function DesignCanvas({
                                                                 onChange={(e) => setDraftText(e.target.value)} 
                                                             />
                                                             <div className="flex items-center justify-between">
-                                                                {!isDesigner && (
-                                                                    <div className="flex items-center space-x-2">
-                                                                        <Checkbox id={`pop-mistake-${pin.id}`} checked={isMistakeDraft} onCheckedChange={(val) => setIsMistakeDraft(!!val)} />
-                                                                        <Label htmlFor={`pop-mistake-${pin.id}`} className="text-[9px] font-black uppercase tracking-wider text-destructive cursor-pointer">Mistake</Label>
-                                                                    </div>
-                                                                )}
+                                                                <div className="flex items-center space-x-2">
+                                                                    <Checkbox id={`pop-mistake-${pin.id}`} checked={isMistakeDraft} onCheckedChange={(val) => setIsMistakeDraft(!!val)} />
+                                                                    <Label htmlFor={`pop-mistake-${pin.id}`} className="text-[9px] font-black uppercase tracking-wider text-destructive cursor-pointer">Mistake</Label>
+                                                                </div>
                                                                 <Button size="sm" className="h-7 text-[10px] font-black uppercase px-3 ml-auto" onClick={() => handleSaveComment(pin.id)}>Save Feedback</Button>
                                                             </div>
                                                         </div>
                                                     ) : (
                                                         <div className="space-y-4">
-                                                            <p className="text-xs font-semibold leading-relaxed text-foreground/90">{pin.text}</p>
+                                                            <p className="text-xs font-semibold leading-relaxed text-foreground/90">{pin.text || <span className="italic opacity-50">No description provided</span>}</p>
                                                             
                                                             {pin.replies && pin.replies.length > 0 && (
                                                                 <div className="space-y-2 pt-2 border-t border-primary/5 max-h-[120px] overflow-y-auto custom-scrollbar">
@@ -392,19 +388,15 @@ export function DesignCanvas({
                                                                 </div>
                                                             ) : (
                                                                 <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-primary/5">
-                                                                    {canInteract && (
-                                                                        <>
-                                                                            <Button variant="outline" size="sm" className="h-7 text-[9px] font-black uppercase px-2" onClick={() => setIsReplyMode(true)}><Send className="h-3 w-3 mr-1" /> Reply</Button>
-                                                                            {isDesigner && (pin.status === 'open' || pin.status === 'mistake') && (
-                                                                                <Button variant="outline" size="sm" className="h-7 text-[9px] font-black uppercase px-2 border-amber-500 text-amber-600 hover:bg-amber-50" onClick={() => handleStatusUpdate(pin.id, 'fixed')}><CheckCircle2 className="h-3 w-3 mr-1" /> Fix</Button>
-                                                                            )}
-                                                                            {!isDesigner && pin.status === 'fixed' && (
-                                                                                <Button variant="outline" size="sm" className="h-7 text-[9px] font-black uppercase px-2 border-green-600 text-green-600 hover:bg-green-50" onClick={() => handleStatusUpdate(pin.id, 'resolved')}><CheckCircle2 className="h-3 w-3 mr-1" /> Resolve</Button>
-                                                                            )}
-                                                                            {!isDesigner && pin.status === 'open' && (
-                                                                                <Button variant="outline" size="sm" className="h-7 text-[9px] font-black uppercase px-2 border-destructive text-destructive" onClick={() => handleStatusUpdate(pin.id, 'mistake')}><AlertCircle className="h-3 w-3 mr-1" /> Mistake</Button>
-                                                                            )}
-                                                                        </>
+                                                                    <Button variant="outline" size="sm" className="h-7 text-[9px] font-black uppercase px-2" onClick={() => setIsReplyMode(true)}><Send className="h-3 w-3 mr-1" /> Reply</Button>
+                                                                    {(pin.status === 'open' || pin.status === 'mistake') && (
+                                                                        <Button variant="outline" size="sm" className="h-7 text-[9px] font-black uppercase px-2 border-amber-500 text-amber-600 hover:bg-amber-50" onClick={() => handleStatusUpdate(pin.id, 'fixed')}><CheckCircle2 className="h-3 w-3 mr-1" /> Fix</Button>
+                                                                    )}
+                                                                    {pin.status === 'fixed' && (
+                                                                        <Button variant="outline" size="sm" className="h-7 text-[9px] font-black uppercase px-2 border-green-600 text-green-600 hover:bg-green-50" onClick={() => handleStatusUpdate(pin.id, 'resolved')}><CheckCircle2 className="h-3 w-3 mr-1" /> Resolve</Button>
+                                                                    )}
+                                                                    {pin.status === 'open' && (
+                                                                        <Button variant="outline" size="sm" className="h-7 text-[9px] font-black uppercase px-2 border-destructive text-destructive" onClick={() => handleStatusUpdate(pin.id, 'mistake')}><AlertCircle className="h-3 w-3 mr-1" /> Mistake</Button>
                                                                     )}
                                                                     <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive ml-auto" onClick={(e) => handleDeletePin(e, pin.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
                                                                 </div>

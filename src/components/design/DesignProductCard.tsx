@@ -58,7 +58,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
     const [localDesignData, setLocalDesignData] = useState<DesignData>(initialDesignData);
     
     useEffect(() => { 
-        // TEMPORAL IMMUNITY WINDOW: If the user just did something, don't let parent props overwrite them.
+        // TEMPORAL IMMUNITY WINDOW
         const timeSinceLastUpdate = Date.now() - lastLocalUpdateRef.current;
         if (timeSinceLastUpdate < 2000) {
             return;
@@ -106,15 +106,12 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
     const viewedVersionNum = activeVersion?.versionNumber || 0;
 
     const handleUpdateDesignInternal = (updatedData: DesignData, forcePersist: boolean = false) => {
-        // MARK ACTION: Update the timestamp to trigger the lockout
         lastLocalUpdateRef.current = Date.now();
         setLocalDesignData(updatedData);
         
         const activeComp = updatedData.components.find(c => c.id === activeCompId) || updatedData.components[0];
         const isDraft = activeComp?.status === 'DRAFT';
 
-        // Draft images are handled locally until 'Submit' is clicked. 
-        // Status changes (DRAFT/PENDING) and feedback on non-draft versions are persisted.
         if (forcePersist || !isDraft) {
             onUpdateDesign(updatedData);
         }
@@ -126,8 +123,6 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
         }
         const updatedComponents = localDesignData.components.map(c => c.id === activeCompId ? { ...c, status } : c);
         const updatedData = { ...localDesignData, components: updatedComponents };
-        
-        // STATUS COMMIT: Transitions are persistent lifecycle events.
         handleUpdateDesignInternal(updatedData, true);
     };
 
@@ -135,7 +130,6 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
         const reader = new FileReader();
         reader.onload = (e) => {
             const result = e.target?.result as string;
-            
             const targetComp = localDesignData.components.find(c => c.id === activeCompId) || localDesignData.components[0];
             const currentVNum = (targetComp?.versions && targetComp.versions.length > 0) 
                 ? targetComp.versions[targetComp.versions.length - 1].versionNumber 
@@ -159,11 +153,8 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
             
             const nextData = { ...localDesignData, components: updatedComponents };
             const effectiveCompId = activeCompId || localDesignData.components[0].id;
-            
             setNewDrafts(prevDrafts => ({ ...prevDrafts, [effectiveCompId]: true }));
             setSelectedVersionId(newVersion.id);
-            
-            // Uploading enters DRAFT state -> Local only until 'Submit' is clicked.
             handleUpdateDesignInternal(nextData, false);
         };
         reader.readAsDataURL(file);
@@ -177,10 +168,8 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
                 c.id === activeCompId ? { ...c, versions: newVersions, status: newVersions.length === 0 ? 'DRAFT' : c.status } : c
             );
             const nextData = { ...localDesignData, components: updatedComponents };
-            
             setNewDrafts(prev => ({ ...prev, [activeCompId]: false }));
             setSelectedVersionId(null);
-            
             handleUpdateDesignInternal(nextData, false);
         }
     };
@@ -196,30 +185,19 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
             timestamp: new Date().toISOString(), 
             version: viewedVersionNum, 
             text: '', 
-            replies: [] 
+            replies: [],
+            isDraft: true // TRACK AS NEW PIN
         };
         
-        let componentUpdated = false;
         const updatedComponents = localDesignData.components.map(c => {
             if (c.id === activeCompId) {
-                componentUpdated = true;
-                // CLEANUP: Drop any stale empty pins from the session to keep data structure lean
-                const cleanedPins = (c.pins || []).filter(p => p.text.trim().length > 0 || p.id === newPinId);
-                return { ...c, pins: [...cleanedPins, newPin] };
+                return { ...c, pins: [...(c.pins || []), newPin] };
             }
             return c;
         });
 
-        let finalComponents = updatedComponents;
-        if (!componentUpdated && localDesignData.components.length > 0) {
-            finalComponents = localDesignData.components.map((c, idx) => 
-                idx === 0 ? { ...c, pins: [...(c.pins || []), newPin] } : c
-            );
-        }
+        handleUpdateDesignInternal({ ...localDesignData, components: updatedComponents });
         
-        handleUpdateDesignInternal({ ...localDesignData, components: finalComponents });
-        
-        // EXPLICIT TRIGGER: Open the popover for the new pin after React paints the new DOM element.
         setTimeout(() => {
             setHighlightedPinId(newPinId);
         }, 50);
@@ -233,13 +211,6 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
     };
 
     const handlePinSelect = (id: string | null) => {
-        if (id === null && highlightedPinId) {
-            // DESELECT CLEANUP: If user closes an empty pin, remove it instantly
-            const currentPin = activeComponent.pins?.find(p => p.id === highlightedPinId);
-            if (currentPin && !currentPin.text.trim()) {
-                handleUpdatePins(activeComponent.pins.filter(p => p.id !== highlightedPinId));
-            }
-        }
         setHighlightedPinId(id);
     };
 
@@ -320,7 +291,6 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
 
             <Dialog open={isFullscreen} onOpenChange={(open) => {
                 if (!open) {
-                    // RESET: On workbench close, we revert any unsubmitted drafts to match the persistent props.
                     setLocalDesignData(initialDesignData);
                 }
                 setIsFullscreen(open);

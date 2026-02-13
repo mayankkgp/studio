@@ -70,6 +70,7 @@ export type DesignPin = {
   version: number;
   text: string;
   replies: DesignReply[];
+  isDraft?: boolean;
 };
 
 export type DesignVersion = {
