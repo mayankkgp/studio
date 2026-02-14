@@ -68,9 +68,14 @@ export function DesignCanvas({
     const [zoom, setZoom] = useState(1);
     const [showPins, setShowPins] = useState(true);
     
-    // RESTRICTION: Pin addition is only allowed on the latest version
     const isLatest = version === currentVersion;
-    const canInteract = !!imageUrl && isLatest;
+    
+    // RESTRICTION LOGIC:
+    // 1. New comments can ONLY be added to the latest version.
+    // 2. Designer can ONLY add comments in DRAFT state with design uploaded.
+    // 3. Manager (isDesigner=false) has no state restrictions on latest version.
+    const designerCanComment = !isDesigner || (status === 'DRAFT');
+    const canInteract = !!imageUrl && isLatest && designerCanComment;
     
     const [draftText, setDraftText] = useState('');
     const [replyText, setReplyText] = useState('');
@@ -120,7 +125,7 @@ export function DesignCanvas({
         const target = e.target as HTMLElement;
         if (target.closest('.pin-bubble') || target.closest('button') || target.closest('.fixed-comment-box')) return;
         
-        // If not latest version, only allow deselecting highlighted pin
+        // If restricted, only allow deselecting highlighted pin
         if (!canInteract) {
             if (highlightedPinId) onPinClick(null);
             return;
@@ -199,10 +204,12 @@ export function DesignCanvas({
                             <Upload className="h-8 w-8" />
                         </div>
                         <div className="space-y-1">
-                            <h4 className="font-bold">Design not uploaded</h4>
-                            <p className="text-xs text-muted-foreground">Upload the first draft to begin feedback.</p>
+                            <h4 className="font-bold">{status === 'DRAFT' ? "Design not uploaded" : "No Proof Uploaded"}</h4>
+                            <p className="text-xs text-muted-foreground">
+                                {isDesigner ? "Upload the design proof to begin feedback." : "Waiting for designer to upload proof."}
+                            </p>
                         </div>
-                        <Button onClick={() => fileInputRef.current?.click()} size="sm">Select Design File</Button>
+                        {isDesigner && <Button onClick={() => fileInputRef.current?.click()} size="sm">Select Design File</Button>}
                     </div>
                 </div>
             )}
@@ -213,7 +220,7 @@ export function DesignCanvas({
                     <div className="absolute top-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-1.5 p-1.5 bg-background/90 backdrop-blur-xl border border-primary/20 rounded-full shadow-2xl scale-110">
                         <TooltipProvider>
                             <div className="flex items-center px-3 gap-2">
-                                {isLatest ? (
+                                {canInteract ? (
                                     <>
                                         <div className="h-2 w-2 rounded-full bg-blue-600 animate-pulse" />
                                         <span className="text-[10px] font-black uppercase tracking-widest text-foreground">Feedback Mode</span>
@@ -270,11 +277,17 @@ export function DesignCanvas({
                         </div>
                     </div>
 
-                    {/* Version Restriction Banner */}
+                    {/* Restriction Banners */}
                     {!isLatest && (
                         <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-50 px-4 py-2 bg-black/80 backdrop-blur-md text-white rounded-full flex items-center gap-3 shadow-2xl animate-in slide-in-from-bottom-2">
                             <Lock className="h-3.5 w-3.5 text-primary" />
                             <span className="text-[10px] font-black uppercase tracking-widest">Feedback disabled on older versions</span>
+                        </div>
+                    )}
+                    {isLatest && !designerCanComment && isDesigner && (
+                        <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-50 px-4 py-2 bg-black/80 backdrop-blur-md text-white rounded-full flex items-center gap-3 shadow-2xl animate-in slide-in-from-bottom-2">
+                            <Lock className="h-3.5 w-3.5 text-primary" />
+                            <span className="text-[10px] font-black uppercase tracking-widest">Designer feedback locked in {status.replace('_', ' ')}</span>
                         </div>
                     )}
 
@@ -288,7 +301,7 @@ export function DesignCanvas({
                         onClick={handleCanvasClick}
                     >
                         <div 
-                            className="absolute inset-0 transition-transform duration-75 ease-out origin-center pointer-events-none"
+                            className="absolute inset-0 origin-center pointer-events-none"
                             style={{ transform: `scale(${zoom})` }}
                         >
                             <img 
@@ -319,7 +332,7 @@ export function DesignCanvas({
                             })}
                         </div>
 
-                        {/* FIXED POSITIONED COMMENT BOX */}
+                        {/* FIXED POSITIONED COMMENT BOX IN CORNER */}
                         {highlightedPinId && activePin && (
                             <div className="absolute bottom-6 right-6 z-[100] w-80 animate-in slide-in-from-bottom-4 duration-300 pointer-events-auto fixed-comment-box">
                                 <div className="bg-background rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] border-2 border-primary/20 overflow-hidden">
