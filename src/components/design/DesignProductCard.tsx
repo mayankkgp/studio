@@ -17,7 +17,8 @@ import {
     Plus,
     Check,
     Lock,
-    Trash2
+    Trash2,
+    Info
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -33,6 +34,7 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover";
+import { productCatalog } from '@/lib/product-data';
 
 interface AddComponentWidgetProps {
     mode: 'card' | 'workbench';
@@ -384,6 +386,51 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
         }
     };
 
+    const getProductSpecsSummary = () => {
+        const catalogItem = productCatalog.find(p => p.id === product.productId);
+        const parts: React.ReactNode[] = [];
+        
+        if (product.variant) {
+            parts.push(<span key="variant" className="font-black text-foreground">{product.variant}</span>);
+        }
+
+        if (catalogItem?.configType === 'A' && typeof product.quantity === 'number' && product.quantity > 0) {
+            parts.push(<span key="qty" className="font-bold">Qty: {product.quantity}</span>);
+        } else if (catalogItem?.configType === 'B' && typeof product.pages === 'number' && product.pages > 0) {
+            parts.push(<span key="pages" className="font-bold">{product.pages} Pgs</span>);
+        }
+
+        if (catalogItem?.customFields && product.customFieldValues) {
+            catalogItem.customFields.forEach(field => {
+                const val = product.customFieldValues?.[field.id];
+                if (val && typeof val === 'number' && val > 0) {
+                    parts.push(<span key={field.id} className="font-bold">{field.name}: {val}</span>);
+                }
+            });
+        }
+
+        const activeAddons = (product.addons || []).filter((a: any) => a.value !== undefined && a.value !== false && a.value !== null);
+        if (activeAddons.length > 0) {
+            const addonsDisplay = activeAddons.map(a => {
+                const valDisplay = typeof a.value === 'number' ? `: ${a.value}` : '';
+                return `${a.name}${valDisplay}`;
+            }).join(', ');
+            parts.push(<span key="addons-label" className="font-black text-primary">Add-on: {addonsDisplay}</span>);
+        }
+
+        if (product.specialRequest) {
+            parts.push(<span key="special" className="italic font-bold text-destructive">Note: {product.specialRequest}</span>);
+        }
+
+        if (parts.length === 0) return null;
+        
+        return parts.reduce((prev, curr, i) => [
+            prev, 
+            <span key={`sep-${i}`} className="mx-2 text-muted-foreground/30 font-black tracking-tighter">•</span>, 
+            curr
+        ]);
+    };
+
     const feedbackSidebarProps = {
         pins: activeComponent.pins || [],
         versions: visibleVersions,
@@ -427,6 +474,12 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
                     </div>
                 </CardHeader>
                 <CardContent className="p-0">
+                    <div className="px-4 py-2 border-b bg-muted/10 flex items-center gap-2 overflow-x-auto no-scrollbar">
+                        <Info className="h-3 w-3 text-muted-foreground shrink-0" />
+                        <div className="text-[10px] uppercase font-bold text-muted-foreground whitespace-nowrap flex items-center">
+                            {getProductSpecsSummary() || "No specs configured"}
+                        </div>
+                    </div>
                     {localDesignData.isStock ? (
                         <div className="flex flex-col items-center justify-center h-[200px] bg-muted/5">
                             <PackageCheck className="h-10 w-10 text-primary/40 mb-3" />
