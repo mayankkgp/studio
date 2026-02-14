@@ -21,7 +21,9 @@ import {
     RotateCcw,
     GripHorizontal,
     Layers,
-    Hand
+    Hand,
+    MousePointer2,
+    MessageSquarePlus
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -56,6 +58,8 @@ interface DesignCanvasProps {
     onDraftTextChange: (text: string) => void;
 }
 
+type ToolMode = 'pointer' | 'comment';
+
 export function DesignCanvas({ 
     imageUrl, 
     comparisonImageUrl,
@@ -79,6 +83,7 @@ export function DesignCanvas({
     const [zoom, setZoom] = useState(1);
     const [showPins, setShowPins] = useState(true);
     const [showComparison, setShowComparison] = useState(false);
+    const [activeTool, setActiveTool] = useState<ToolMode>('comment');
     
     // Pan state
     const [isSpacePressed, setIsSpacePressed] = useState(false);
@@ -99,7 +104,7 @@ export function DesignCanvas({
 
     const isLatest = version === currentVersion;
     
-    const canInteract = useMemo(() => {
+    const isFeedbackUnlocked = useMemo(() => {
         if (!imageUrl || !isLatest || isSpacePressed) return false;
 
         if (isDesigner) {
@@ -108,6 +113,8 @@ export function DesignCanvas({
             return status !== 'PENDING' && status !== 'DRAFT';
         }
     }, [imageUrl, isLatest, isDesigner, status, hasNewDraft, isSpacePressed]);
+
+    const canDropPin = isFeedbackUnlocked && activeTool === 'comment';
     
     const [replyText, setReplyText] = useState('');
     const [isReplyMode, setIsReplyMode] = useState(false);
@@ -121,20 +128,31 @@ export function DesignCanvas({
     const activePin = useMemo(() => pins.find(p => p.id === selectedPinId), [pins, selectedPinId]);
     const activePinNumber = useMemo(() => pins.findIndex(p => p.id === selectedPinId) + 1, [pins, selectedPinId]);
 
-    // Spacebar listener for Panning
+    // Keyboard Shortcuts Listener
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
+            const target = e.target as HTMLElement;
+            const isTyping = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA';
+
             if (e.code === 'Space' && !isSpacePressed) {
-                // Only trigger if not typing in an input/textarea
-                const target = e.target as HTMLElement;
-                if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
-                
+                if (isTyping) return;
                 e.preventDefault();
                 setIsSpacePressed(true);
             }
+
             if (e.key === 'Escape') {
                 if (selectedPinId || highlightedPinId) {
                     onPinClick(null);
+                }
+            }
+
+            // Single key tool switching (only if not typing)
+            if (!isTyping && isFeedbackUnlocked) {
+                if (e.key.toLowerCase() === 'c') {
+                    setActiveTool('comment');
+                }
+                if (e.key.toLowerCase() === 'v') {
+                    setActiveTool('pointer');
                 }
             }
         };
@@ -152,7 +170,7 @@ export function DesignCanvas({
             window.removeEventListener('keydown', handleKeyDown);
             window.removeEventListener('keyup', handleKeyUp);
         };
-    }, [isSpacePressed, selectedPinId, highlightedPinId, onPinClick]);
+    }, [isSpacePressed, selectedPinId, highlightedPinId, onPinClick, isFeedbackUnlocked]);
 
     // Disable comparison if version changes and no comparison is available for new version
     useEffect(() => {
@@ -171,8 +189,6 @@ export function DesignCanvas({
             if (containerRef.current) {
                 const containerRect = containerRef.current.getBoundingClientRect();
                 
-                // Note: Popover positioning doesn't currently account for panOffset
-                // because it's relative to the container, not the scaled/panned layer.
                 const px = (activePin.x / 100) * containerRect.width;
                 const py = (activePin.y / 100) * containerRect.height;
                 
@@ -251,19 +267,13 @@ export function DesignCanvas({
             return;
         }
 
-        if (!canInteract) return;
+        if (!canDropPin) return;
 
         e.stopPropagation();
         e.preventDefault();
         
-        // Pin creation needs to account for pan and zoom if we want it to be perfectly accurate
-        // However, since the wrapper scale/translate uses % coordinates for pins relative to its OWN bounds,
-        // we can still use the relative container click if the wrapper is same size as container.
         const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
         
-        // Simple logic for now: Click coordinates relative to the container.
-        // If we want pin to land on the image pixels correctly while panned/zoomed:
-        // x_internal = (clickX - rect.left - panX) / zoom
         const x = ((e.clientX - rect.left - panOffset.x - (rect.width/2)) / zoom + (rect.width/2)) / rect.width * 100;
         const y = ((e.clientY - rect.top - panOffset.y - (rect.height/2)) / zoom + (rect.height/2)) / rect.height * 100;
         
@@ -431,26 +441,50 @@ export function DesignCanvas({
                 <>
                     <div className="absolute top-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-1.5 p-1.5 bg-background/90 backdrop-blur-xl border border-primary/20 rounded-full shadow-2xl scale-110">
                         <TooltipProvider>
-                            <div className="flex items-center px-3 gap-2">
-                                {canInteract ? (
+                            <div className="flex items-center px-1.5 gap-1.5">
+                                {isFeedbackUnlocked ? (
                                     <>
-                                        <div className="h-2 w-2 rounded-full bg-blue-600 animate-pulse" />
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-foreground">Feedback Mode</span>
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <Button 
+                                                    variant={activeTool === 'pointer' ? 'default' : 'ghost'} 
+                                                    size="icon" 
+                                                    className={cn("h-9 w-9 rounded-full transition-all", activeTool === 'pointer' && "shadow-lg scale-105")}
+                                                    onClick={() => setActiveTool('pointer')}
+                                                >
+                                                    <MousePointer2 className="h-4 w-4" />
+                                                </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent>Select Tool (V)</TooltipContent>
+                                        </Tooltip>
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <Button 
+                                                    variant={activeTool === 'comment' ? 'default' : 'ghost'} 
+                                                    size="icon" 
+                                                    className={cn("h-9 w-9 rounded-full transition-all", activeTool === 'comment' && "shadow-lg scale-105")}
+                                                    onClick={() => setActiveTool('comment')}
+                                                >
+                                                    <MessageSquarePlus className="h-4 w-4" />
+                                                </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent>Comment Tool (C)</TooltipContent>
+                                        </Tooltip>
                                     </>
                                 ) : isSpacePressed ? (
-                                    <>
+                                    <div className="flex items-center px-3 gap-2">
                                         <Hand className="h-3 w-3 text-primary animate-pulse" />
                                         <span className="text-[10px] font-black uppercase tracking-widest text-primary">Pan Mode</span>
-                                    </>
+                                    </div>
                                 ) : (
-                                    <>
+                                    <div className="flex items-center px-3 gap-2">
                                         <Lock className="h-3 w-3 text-muted-foreground" />
                                         <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
                                             {!isDesigner && (status === 'DRAFT' || status === 'PENDING') 
                                                 ? "Manager feedback locked during draft" 
                                                 : isLatest ? "Locked" : "Viewing History"}
                                         </span>
-                                    </>
+                                    </div>
                                 )}
                             </div>
                             <div className="w-px h-4 bg-muted-foreground/20 mx-1" />
@@ -509,7 +543,7 @@ export function DesignCanvas({
                         ref={containerRef}
                         className={cn(
                             "flex-1 overflow-hidden relative select-none",
-                            isSpacePressed ? (isDraggingCanvas ? "cursor-grabbing" : "cursor-grab") : (canInteract ? "cursor-crosshair" : "cursor-default")
+                            isSpacePressed ? (isDraggingCanvas ? "cursor-grabbing" : "cursor-grab") : (canDropPin ? "cursor-crosshair" : "cursor-default")
                         )}
                         onMouseDown={handleCanvasMouseDown}
                         onMouseMove={handleCanvasMouseMove}
