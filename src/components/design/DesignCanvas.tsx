@@ -25,6 +25,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
 
 const PIN_COLORS: Record<DesignPinStatus, string> = {
     open: 'bg-blue-600',
@@ -371,7 +372,17 @@ export function DesignCanvas({
                                             <div className={cn("h-5 w-5 rounded flex items-center justify-center text-[10px] font-black text-white", PIN_COLORS[activePin.status])}>
                                                 {activePinNumber}
                                             </div>
-                                            <span className="text-[10px] font-black uppercase tracking-widest">{activePin.author}</span>
+                                            <div className="flex flex-col -space-y-0.5">
+                                                <span className="text-[10px] font-black uppercase tracking-widest">{activePin.author}</span>
+                                                {!activePin.isDraft && (
+                                                    <span className={cn(
+                                                        "text-[8px] font-black uppercase tracking-widest",
+                                                        activePin.status === 'mistake' ? "text-destructive" : "text-primary"
+                                                    )}>
+                                                        {activePin.status}
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <span className="text-[9px] font-bold text-muted-foreground uppercase opacity-60">V{activePin.version}</span>

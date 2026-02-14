@@ -248,11 +248,12 @@ export function FeedbackSidebar({
                                                 <div className="flex items-center gap-2">
                                                     <div className={cn("h-5 w-5 rounded flex items-center justify-center text-[10px] font-black text-white", PIN_COLORS[pin.status])}>{pinNumber}</div>
                                                     <span className="text-[10px] font-black uppercase tracking-tighter">{pin.author}</span>
-                                                    {isDesigner && (
-                                                        <Badge variant="outline" className="text-[8px] h-4 font-black uppercase px-1 border-primary/20 text-primary bg-primary/5">
-                                                            {pin.status}
-                                                        </Badge>
-                                                    )}
+                                                    <Badge variant="outline" className={cn(
+                                                        "text-[8px] h-4 font-black uppercase px-1 border-primary/20",
+                                                        pin.status === 'mistake' ? "text-destructive border-destructive/20 bg-destructive/5" : "text-primary bg-primary/5"
+                                                    )}>
+                                                        {pin.status}
+                                                    </Badge>
                                                 </div>
                                                 <div className="flex items-center gap-2">
                                                     <span className="text-[9px] font-bold text-muted-foreground uppercase opacity-60">V{pin.version}</span>
