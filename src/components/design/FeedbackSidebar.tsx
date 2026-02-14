@@ -232,6 +232,7 @@ export function FeedbackSidebar({
                                     const pinNumber = pins.findIndex(p => p.id === pin.id) + 1;
                                     const isHighlighted = highlightedPinId === pin.id;
                                     const isReplying = activeReplyId === pin.id;
+                                    const canDelete = !isDesigner || (status === 'DRAFT' && pin.version === currentVersion);
 
                                     return (
                                         <div 
@@ -247,10 +248,17 @@ export function FeedbackSidebar({
                                                 <div className="flex items-center gap-2">
                                                     <div className={cn("h-5 w-5 rounded flex items-center justify-center text-[10px] font-black text-white", PIN_COLORS[pin.status])}>{pinNumber}</div>
                                                     <span className="text-[10px] font-black uppercase tracking-tighter">{pin.author}</span>
+                                                    {isDesigner && (
+                                                        <Badge variant="outline" className="text-[8px] h-4 font-black uppercase px-1 border-primary/20 text-primary bg-primary/5">
+                                                            {pin.status}
+                                                        </Badge>
+                                                    )}
                                                 </div>
                                                 <div className="flex items-center gap-2">
                                                     <span className="text-[9px] font-bold text-muted-foreground uppercase opacity-60">V{pin.version}</span>
-                                                    <button onClick={(e) => { e.stopPropagation(); handleDeletePin(pin.id); }} className="text-muted-foreground hover:text-destructive"><Trash2 className="h-3 w-3" /></button>
+                                                    {canDelete && (
+                                                        <button onClick={(e) => { e.stopPropagation(); handleDeletePin(pin.id); }} className="text-muted-foreground hover:text-destructive"><Trash2 className="h-3 w-3" /></button>
+                                                    )}
                                                 </div>
                                             </div>
                                             
@@ -267,14 +275,18 @@ export function FeedbackSidebar({
                                                 {!isReplying ? (
                                                     <>
                                                         <Button variant="ghost" size="sm" className="h-6 text-[9px] font-black uppercase px-2" onClick={(e) => { e.stopPropagation(); setActiveReplyId(pin.id); setReplyText(''); }}>Reply</Button>
-                                                        {(pin.status === 'open' || pin.status === 'mistake') && (
-                                                            <Button variant="outline" size="sm" className="h-6 text-[9px] font-black uppercase px-2 border-amber-500 text-amber-600" onClick={(e) => { e.stopPropagation(); handleStatusUpdate(pin.id, 'fixed'); }}><CheckCircle2 className="h-3 w-3 mr-1" /> Fix</Button>
-                                                        )}
-                                                        {pin.status === 'fixed' && (
-                                                            <Button variant="outline" size="sm" className="h-6 text-[9px] font-black uppercase px-2 border-green-600 text-green-600" onClick={(e) => { e.stopPropagation(); handleStatusUpdate(pin.id, 'resolved'); }}><CheckCircle2 className="h-3 w-3 mr-1" /> Resolve</Button>
-                                                        )}
-                                                        {pin.status === 'open' && (
-                                                            <Button variant="outline" size="sm" className="h-6 text-[9px] font-black uppercase px-2 border-destructive text-destructive" onClick={(e) => { e.stopPropagation(); handleStatusUpdate(pin.id, 'mistake'); }}><AlertCircle className="h-3 w-3 mr-1" /> Mistake</Button>
+                                                        {!isDesigner && (
+                                                            <>
+                                                                {(pin.status === 'open' || pin.status === 'mistake') && (
+                                                                    <Button variant="outline" size="sm" className="h-6 text-[9px] font-black uppercase px-2 border-amber-500 text-amber-600" onClick={(e) => { e.stopPropagation(); handleStatusUpdate(pin.id, 'fixed'); }}><CheckCircle2 className="h-3 w-3 mr-1" /> Fix</Button>
+                                                                )}
+                                                                {pin.status === 'fixed' && (
+                                                                    <Button variant="outline" size="sm" className="h-6 text-[9px] font-black uppercase px-2 border-green-600 text-green-600" onClick={(e) => { e.stopPropagation(); handleStatusUpdate(pin.id, 'resolved'); }}><CheckCircle2 className="h-3 w-3 mr-1" /> Resolve</Button>
+                                                                )}
+                                                                {pin.status === 'open' && (
+                                                                    <Button variant="outline" size="sm" className="h-6 text-[9px] font-black uppercase px-2 border-destructive text-destructive" onClick={(e) => { e.stopPropagation(); handleStatusUpdate(pin.id, 'mistake'); }}><AlertCircle className="h-3 w-3 mr-1" /> Mistake</Button>
+                                                                )}
+                                                            </>
                                                         )}
                                                     </>
                                                 ) : (

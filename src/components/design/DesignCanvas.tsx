@@ -81,8 +81,10 @@ export function DesignCanvas({
         if (!imageUrl || !isLatest) return false;
 
         if (isDesigner) {
+            // Designer can only add comments in DRAFT state AND if they have actually uploaded a proof for this session
             return status === 'DRAFT' && hasNewDraft;
         } else {
+            // Manager cannot add comments in PENDING or DRAFT states
             return status !== 'PENDING' && status !== 'DRAFT';
         }
     }, [imageUrl, isLatest, isDesigner, status, hasNewDraft]);
@@ -388,10 +390,12 @@ export function DesignCanvas({
                                                     onChange={(e) => onDraftTextChange(e.target.value)} 
                                                 />
                                                 <div className="flex items-center justify-between">
-                                                    <div className="flex items-center space-x-2">
-                                                        <Checkbox id={`fixed-mistake-${activePin.id}`} checked={isMistakeDraft} onCheckedChange={(val) => setIsMistakeDraft(!!val)} />
-                                                        <Label htmlFor={`fixed-mistake-${activePin.id}`} className="text-[9px] font-black uppercase tracking-wider text-destructive cursor-pointer">Mistake</Label>
-                                                    </div>
+                                                    {!isDesigner && (
+                                                        <div className="flex items-center space-x-2">
+                                                            <Checkbox id={`fixed-mistake-${activePin.id}`} checked={isMistakeDraft} onCheckedChange={(val) => setIsMistakeDraft(!!val)} />
+                                                            <Label htmlFor={`fixed-mistake-${activePin.id}`} className="text-[9px] font-black uppercase tracking-wider text-destructive cursor-pointer">Mistake</Label>
+                                                        </div>
+                                                    )}
                                                     <Button size="sm" className="h-7 text-[10px] font-black uppercase px-3 ml-auto shadow-md" onClick={handleSaveComment}>Save Feedback</Button>
                                                 </div>
                                             </div>
@@ -429,14 +433,18 @@ export function DesignCanvas({
                                                 ) : (
                                                     <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-primary/5">
                                                         <Button variant="outline" size="sm" className="h-7 text-[9px] font-black uppercase px-2" onClick={() => setIsReplyMode(true)}><Send className="h-3 w-3 mr-1" /> Reply</Button>
-                                                        {(activePin.status === 'open' || activePin.status === 'mistake') && (
-                                                            <Button variant="outline" size="sm" className="h-7 text-[9px] font-black uppercase px-2 border-amber-500 text-amber-600 hover:bg-amber-50" onClick={() => handleStatusUpdate(activePin.id, 'fixed')}><CheckCircle2 className="h-3 w-3 mr-1" /> Fix</Button>
-                                                        )}
-                                                        {activePin.status === 'fixed' && (
-                                                            <Button variant="outline" size="sm" className="h-7 text-[9px] font-black uppercase px-2 border-green-600 text-green-600 hover:bg-green-50" onClick={() => handleStatusUpdate(activePin.id, 'resolved')}><CheckCircle2 className="h-3 w-3 mr-1" /> Resolve</Button>
-                                                        )}
-                                                        {activePin.status === 'open' && (
-                                                            <Button variant="outline" size="sm" className="h-7 text-[9px] font-black uppercase px-2 border-destructive text-destructive" onClick={(e) => { e.stopPropagation(); handleStatusUpdate(activePin.id, 'mistake'); }}><AlertCircle className="h-3 w-3 mr-1" /> Mistake</Button>
+                                                        {!isDesigner && (
+                                                            <>
+                                                                {(activePin.status === 'open' || activePin.status === 'mistake') && (
+                                                                    <Button variant="outline" size="sm" className="h-7 text-[9px] font-black uppercase px-2 border-amber-500 text-amber-600 hover:bg-amber-50" onClick={() => handleStatusUpdate(activePin.id, 'fixed')}><CheckCircle2 className="h-3 w-3 mr-1" /> Fix</Button>
+                                                                )}
+                                                                {activePin.status === 'fixed' && (
+                                                                    <Button variant="outline" size="sm" className="h-7 text-[9px] font-black uppercase px-2 border-green-600 text-green-600 hover:bg-green-50" onClick={() => handleStatusUpdate(activePin.id, 'resolved')}><CheckCircle2 className="h-3 w-3 mr-1" /> Resolve</Button>
+                                                                )}
+                                                                {activePin.status === 'open' && (
+                                                                    <Button variant="outline" size="sm" className="h-7 text-[9px] font-black uppercase px-2 border-destructive text-destructive" onClick={(e) => { e.stopPropagation(); handleStatusUpdate(activePin.id, 'mistake'); }}><AlertCircle className="h-3 w-3 mr-1" /> Mistake</Button>
+                                                                )}
+                                                            </>
                                                         )}
                                                         <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive ml-auto" onClick={(e) => handleDeletePin(e, activePin.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
                                                     </div>
