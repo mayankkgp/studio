@@ -38,7 +38,7 @@ interface AddComponentWidgetProps {
 
 /**
  * Isolated Add Component Widget to prevent state conflicts between Card and Workbench views.
- * Implements focus-trap bypass for reliable input interaction inside Dialogs.
+ * Implements focus-trap bypass and pointer-event restoration for reliable interaction inside Dialogs.
  */
 function AddComponentWidget({ mode, onAdd }: AddComponentWidgetProps) {
     const [isOpen, setIsOpen] = useState(false);
@@ -56,8 +56,11 @@ function AddComponentWidget({ mode, onAdd }: AddComponentWidgetProps) {
     useEffect(() => {
         if (isOpen) {
             const timer = setTimeout(() => {
-                inputRef.current?.focus();
-            }, 100);
+                if (inputRef.current) {
+                    inputRef.current.focus();
+                    // Optional: select text for easier editing if there was a default
+                }
+            }, 150);
             return () => clearTimeout(timer);
         }
     }, [isOpen]);
@@ -83,7 +86,7 @@ function AddComponentWidget({ mode, onAdd }: AddComponentWidgetProps) {
                 )}
             </PopoverTrigger>
             <PopoverContent 
-                className="w-64 p-4 shadow-2xl border-2 border-primary/20 z-[150]" 
+                className="w-64 p-4 shadow-2xl border-2 border-primary/20 z-[150] pointer-events-auto" 
                 align={mode === 'workbench' ? "start" : "center"} 
                 sideOffset={10}
                 onOpenAutoFocus={(e) => e.preventDefault()}
@@ -98,7 +101,7 @@ function AddComponentWidget({ mode, onAdd }: AddComponentWidgetProps) {
                     <Input 
                         ref={inputRef}
                         placeholder="e.g. Back Side, Inner Page..." 
-                        className="h-9 text-xs font-bold border-primary/20 focus-visible:ring-primary/20 bg-muted/5"
+                        className="h-9 text-xs font-bold border-primary/20 focus-visible:ring-primary/20 bg-muted/5 cursor-text"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         onKeyDown={(e) => {
