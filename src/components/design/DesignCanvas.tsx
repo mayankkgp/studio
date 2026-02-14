@@ -309,7 +309,7 @@ export function DesignCanvas({
     }, [isDraggingPopover]);
 
     return (
-        <div className="h-full flex flex-col relative group/canvas bg-stone-100 overflow-hidden">
+        <div className="h-full flex flex-col relative group/canvas bg-stone-950 overflow-hidden">
             <input 
                 type="file" 
                 ref={fileInputRef} 
@@ -319,28 +319,28 @@ export function DesignCanvas({
             />
 
             {!imageUrl && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-muted/20 border-dashed border-2 rounded-xl m-4">
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/5 border-dashed border-2 border-white/10 rounded-xl m-4">
                     {isLatestDraftLocked ? (
                         <div className="text-center space-y-4 animate-in fade-in zoom-in-95 duration-500">
-                            <div className="h-16 w-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto shadow-sm">
+                            <div className="h-16 w-16 bg-amber-500/20 text-amber-500 rounded-full flex items-center justify-center mx-auto shadow-sm">
                                 <Lock className="h-8 w-8" />
                             </div>
-                            <div className="space-y-1">
+                            <div className="space-y-1 text-white">
                                 <h4 className="font-bold text-base">Work in Progress</h4>
-                                <p className="text-[11px] text-muted-foreground font-medium leading-relaxed">
+                                <p className="text-[11px] text-white/60 font-medium leading-relaxed">
                                     The designer is currently drafting V{version}. <br/>
                                     This version will be visible once submitted for review.
                                 </p>
                             </div>
                         </div>
                     ) : (
-                        <div className="text-center space-y-4">
-                            <div className="h-16 w-16 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto">
+                        <div className="text-center space-y-4 text-white">
+                            <div className="h-16 w-16 bg-primary/20 text-primary rounded-full flex items-center justify-center mx-auto">
                                 <Upload className="h-8 w-8" />
                             </div>
                             <div className="space-y-1">
                                 <h4 className="font-bold">{status === 'DRAFT' || status === 'PENDING' ? "Design not uploaded" : "No Proof Uploaded"}</h4>
-                                <p className="text-xs text-muted-foreground">
+                                <p className="text-xs text-white/60">
                                     {isDesigner ? "Upload the design proof to begin feedback." : "Waiting for designer to upload proof."}
                                 </p>
                             </div>

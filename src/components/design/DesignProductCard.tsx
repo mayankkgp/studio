@@ -459,7 +459,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
                         activeComponent.status === 'APPROVED' ? "border-green-500/30" : 
                         activeComponent.status === 'DRAFT' ? "border-orange-500/30" : "border-blue-500/30"
                     )}>
-                        <div className="flex-1 relative flex flex-col min-w-0 bg-stone-100">
+                        <div className="flex-1 relative flex flex-col min-w-0 bg-stone-950">
                             <div className="h-14 shrink-0 flex items-center justify-between px-6 bg-background/80 backdrop-blur-xl border-b z-50">
                                 <div className="flex-1 flex items-center gap-4 overflow-hidden">
                                     <h2 className="font-headline font-black text-sm truncate shrink-0">{product.productName}</h2>
