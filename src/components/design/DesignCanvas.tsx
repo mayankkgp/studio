@@ -68,8 +68,18 @@ export function DesignCanvas({
     
     const isLatest = version === currentVersion;
     
-    const designerCanComment = !isDesigner || (status === 'DRAFT' && hasNewDraft);
-    const canInteract = !!imageUrl && isLatest && designerCanComment;
+    // Feedback availability logic based on role and state
+    const canInteract = useMemo(() => {
+        if (!imageUrl || !isLatest) return false;
+
+        if (isDesigner) {
+            // Designer: Only in DRAFT mode with a new upload staged
+            return status === 'DRAFT' && hasNewDraft;
+        } else {
+            // Manager: Restricted in PENDING and DRAFT
+            return status !== 'PENDING' && status !== 'DRAFT';
+        }
+    }, [imageUrl, isLatest, isDesigner, status, hasNewDraft]);
     
     const [draftText, setDraftText] = useState('');
     const [replyText, setReplyText] = useState('');
@@ -196,7 +206,7 @@ export function DesignCanvas({
                             <Upload className="h-8 w-8" />
                         </div>
                         <div className="space-y-1">
-                            <h4 className="font-bold">{status === 'DRAFT' ? "Design not uploaded" : "No Proof Uploaded"}</h4>
+                            <h4 className="font-bold">{status === 'DRAFT' || status === 'PENDING' ? "Design not uploaded" : "No Proof Uploaded"}</h4>
                             <p className="text-xs text-muted-foreground">
                                 {isDesigner ? "Upload the design proof to begin feedback." : "Waiting for designer to upload proof."}
                             </p>
@@ -219,7 +229,7 @@ export function DesignCanvas({
                                 ) : (
                                     <>
                                         <Lock className="h-3 w-3 text-muted-foreground" />
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Viewing History</span>
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{isLatest ? "Locked" : "Viewing History"}</span>
                                     </>
                                 )}
                             </div>
@@ -266,11 +276,15 @@ export function DesignCanvas({
                             <span className="text-[10px] font-black uppercase tracking-widest">Feedback disabled on older versions</span>
                         </div>
                     )}
-                    {isLatest && !designerCanComment && isDesigner && (
+                    
+                    {isLatest && !canInteract && (
                         <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-50 px-4 py-2 bg-black/80 backdrop-blur-md text-white rounded-full flex items-center gap-3 shadow-2xl animate-in slide-in-from-bottom-2">
                             <Lock className="h-3.5 w-3.5 text-primary" />
                             <span className="text-[10px] font-black uppercase tracking-widest">
-                                {status === 'DRAFT' ? "Upload design to add feedback" : `Designer feedback locked in ${status.replace('_', ' ')}`}
+                                {isDesigner 
+                                    ? (status === 'DRAFT' ? "Upload design to add feedback" : `Designer feedback locked in ${status.replace('_', ' ')}`)
+                                    : (status === 'DRAFT' || status === 'PENDING' ? "Manager feedback locked during draft" : "Manager feedback restricted in this state")
+                                }
                             </span>
                         </div>
                     )}
