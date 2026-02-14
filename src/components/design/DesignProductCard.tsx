@@ -15,7 +15,8 @@ import {
     PackageCheck,
     LayoutPanelTop,
     Plus,
-    Check
+    Check,
+    Lock
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -199,10 +200,9 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
         ? activeComponent.versions[activeComponent.versions.length - 1].versionNumber : 0;
     
     const visibleVersions = useMemo(() => {
-        if (isDesigner) return activeComponent.versions;
-        if (activeComponent.status === 'DRAFT' && activeComponent.versions.length > 0) return activeComponent.versions.slice(0, -1);
-        return activeComponent.versions;
-    }, [activeComponent.versions, activeComponent.status, isDesigner]);
+        // Manager and Designer roles now stay in sync with version numbering
+        return activeComponent.versions || [];
+    }, [activeComponent.versions]);
 
     const activeVersion = useMemo(() => {
         if (!visibleVersions || visibleVersions.length === 0) return null;
@@ -211,6 +211,9 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
     }, [visibleVersions, selectedVersionId]);
 
     const viewedVersionNum = activeVersion?.versionNumber || 0;
+
+    // Strict state logic: Managers can reference the version number but cannot see the design content during active drafting
+    const isLatestDraftLocked = !isDesigner && activeComponent.status === 'DRAFT' && viewedVersionNum === currentVersionNum && viewedVersionNum > 0;
 
     const handleUpdateDesignInternal = (updatedData: DesignData, forcePersist: boolean = false) => {
         lastLocalUpdateRef.current = Date.now();
@@ -459,7 +462,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
 
                             <div className="flex-1 relative overflow-hidden">
                                 <DesignCanvas 
-                                    imageUrl={activeVersion?.imageUrl || null}
+                                    imageUrl={isLatestDraftLocked ? null : (activeVersion?.imageUrl || null)}
                                     pins={activeComponent.pins || []}
                                     highlightedPinId={highlightedPinId}
                                     isDesigner={isDesigner}
@@ -472,32 +475,42 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
                                     onUpdatePins={handleUpdatePins}
                                     onUpload={handleUpload}
                                     isWorkbench={true}
+                                    isLatestDraftLocked={isLatestDraftLocked}
                                 />
                             </div>
 
                             {visibleVersions.length > 0 && (
                                 <div className="h-24 shrink-0 bg-background/80 backdrop-blur-xl border-t z-50 flex items-center px-6 overflow-x-auto no-scrollbar gap-4">
                                     <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground vertical-text shrink-0 mr-4">Timeline</div>
-                                    {visibleVersions.map((v) => (
-                                        <button 
-                                            key={v.id} 
-                                            onClick={() => setSelectedVersionId(v.id)}
-                                            className={cn(
-                                                "h-16 w-24 shrink-0 rounded-lg border-2 overflow-hidden transition-all relative group",
-                                                selectedVersionId === v.id || (!selectedVersionId && v.versionNumber === viewedVersionNum) 
-                                                    ? "border-primary ring-4 ring-primary/10 scale-105 shadow-xl" 
-                                                    : "border-transparent opacity-60 hover:opacity-100 hover:border-primary/40"
-                                            )}
-                                        >
-                                            <img src={v.imageUrl} className="w-full h-full object-cover" alt={`Version ${v.versionNumber}`} />
-                                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <span className="text-[10px] font-black text-white font-mono">V{v.versionNumber}</span>
-                                            </div>
-                                            {(selectedVersionId === v.id || (!selectedVersionId && v.versionNumber === viewedVersionNum)) && (
-                                                <div className="absolute bottom-0 left-0 right-0 h-1 bg-primary" />
-                                            )}
-                                        </button>
-                                    ))}
+                                    {visibleVersions.map((v) => {
+                                        const isThisVersionLocked = !isDesigner && activeComponent.status === 'DRAFT' && v.versionNumber === currentVersionNum;
+                                        return (
+                                            <button 
+                                                key={v.id} 
+                                                onClick={() => setSelectedVersionId(v.id)}
+                                                className={cn(
+                                                    "h-16 w-24 shrink-0 rounded-lg border-2 overflow-hidden transition-all relative group",
+                                                    selectedVersionId === v.id || (!selectedVersionId && v.versionNumber === viewedVersionNum) 
+                                                        ? "border-primary ring-4 ring-primary/10 scale-105 shadow-xl" 
+                                                        : "border-transparent opacity-60 hover:opacity-100 hover:border-primary/40"
+                                                )}
+                                            >
+                                                {isThisVersionLocked ? (
+                                                    <div className="w-full h-full bg-muted flex items-center justify-center">
+                                                        <Lock className="h-5 w-5 text-muted-foreground/40" />
+                                                    </div>
+                                                ) : (
+                                                    <img src={v.imageUrl} className="w-full h-full object-cover" alt={`Version ${v.versionNumber}`} />
+                                                )}
+                                                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <span className="text-[10px] font-black text-white font-mono">V{v.versionNumber}</span>
+                                                </div>
+                                                {(selectedVersionId === v.id || (!selectedVersionId && v.versionNumber === viewedVersionNum)) && (
+                                                    <div className="absolute bottom-0 left-0 right-0 h-1 bg-primary" />
+                                                )}
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>

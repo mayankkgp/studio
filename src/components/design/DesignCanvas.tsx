@@ -46,6 +46,7 @@ interface DesignCanvasProps {
     status: DesignWorkflowStatus;
     hasNewDraft?: boolean;
     isWorkbench?: boolean;
+    isLatestDraftLocked?: boolean;
 }
 
 export function DesignCanvas({ 
@@ -61,7 +62,8 @@ export function DesignCanvas({
     currentVersion,
     status,
     hasNewDraft = false,
-    isWorkbench = false
+    isWorkbench = false,
+    isLatestDraftLocked = false
 }: DesignCanvasProps) {
     const [zoom, setZoom] = useState(1);
     const [showPins, setShowPins] = useState(true);
@@ -201,18 +203,33 @@ export function DesignCanvas({
 
             {!imageUrl && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-muted/20 border-dashed border-2 rounded-xl m-4">
-                    <div className="text-center space-y-4">
-                        <div className="h-16 w-16 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto">
-                            <Upload className="h-8 w-8" />
+                    {isLatestDraftLocked ? (
+                        <div className="text-center space-y-4 animate-in fade-in zoom-in-95 duration-500">
+                            <div className="h-16 w-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto shadow-sm">
+                                <Lock className="h-8 w-8" />
+                            </div>
+                            <div className="space-y-1">
+                                <h4 className="font-bold text-base">Work in Progress</h4>
+                                <p className="text-[11px] text-muted-foreground font-medium leading-relaxed">
+                                    The designer is currently drafting V{version}. <br/>
+                                    This version will be visible once submitted for review.
+                                </p>
+                            </div>
                         </div>
-                        <div className="space-y-1">
-                            <h4 className="font-bold">{status === 'DRAFT' || status === 'PENDING' ? "Design not uploaded" : "No Proof Uploaded"}</h4>
-                            <p className="text-xs text-muted-foreground">
-                                {isDesigner ? "Upload the design proof to begin feedback." : "Waiting for designer to upload proof."}
-                            </p>
+                    ) : (
+                        <div className="text-center space-y-4">
+                            <div className="h-16 w-16 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto">
+                                <Upload className="h-8 w-8" />
+                            </div>
+                            <div className="space-y-1">
+                                <h4 className="font-bold">{status === 'DRAFT' || status === 'PENDING' ? "Design not uploaded" : "No Proof Uploaded"}</h4>
+                                <p className="text-xs text-muted-foreground">
+                                    {isDesigner ? "Upload the design proof to begin feedback." : "Waiting for designer to upload proof."}
+                                </p>
+                            </div>
+                            {isDesigner && <Button onClick={() => fileInputRef.current?.click()} size="sm">Select Design File</Button>}
                         </div>
-                        {isDesigner && <Button onClick={() => fileInputRef.current?.click()} size="sm">Select Design File</Button>}
-                    </div>
+                    )}
                 </div>
             )}
 
