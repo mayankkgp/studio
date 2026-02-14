@@ -72,9 +72,9 @@ export function DesignCanvas({
     
     // RESTRICTION LOGIC:
     // 1. New comments can ONLY be added to the latest version.
-    // 2. Designer can ONLY add comments in DRAFT state with design uploaded.
-    // 3. Manager (isDesigner=false) has no state restrictions on latest version.
-    const designerCanComment = !isDesigner || (status === 'DRAFT');
+    // 2. Designer can ONLY add comments if status is 'DRAFT' AND a design is uploaded.
+    // 3. Manager (isDesigner=false) has no state restrictions on latest version if design is uploaded.
+    const designerCanComment = !isDesigner || (status === 'DRAFT' && !!imageUrl);
     const canInteract = !!imageUrl && isLatest && designerCanComment;
     
     const [draftText, setDraftText] = useState('');
@@ -287,7 +287,9 @@ export function DesignCanvas({
                     {isLatest && !designerCanComment && isDesigner && (
                         <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-50 px-4 py-2 bg-black/80 backdrop-blur-md text-white rounded-full flex items-center gap-3 shadow-2xl animate-in slide-in-from-bottom-2">
                             <Lock className="h-3.5 w-3.5 text-primary" />
-                            <span className="text-[10px] font-black uppercase tracking-widest">Designer feedback locked in {status.replace('_', ' ')}</span>
+                            <span className="text-[10px] font-black uppercase tracking-widest">
+                                {status === 'DRAFT' ? "Upload design to add feedback" : `Designer feedback locked in ${status.replace('_', ' ')}`}
+                            </span>
                         </div>
                     )}
 
