@@ -17,7 +17,8 @@ import {
     CheckCircle2,
     AlertCircle,
     Send,
-    Lock
+    Lock,
+    RotateCcw
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -81,10 +82,10 @@ export function DesignCanvas({
         if (!imageUrl || !isLatest) return false;
 
         if (isDesigner) {
-            // Designer can only add comments in DRAFT state AND if they have actually uploaded a proof for this session
+            // Designer can only add feedback in DRAFT state AND if they have actually uploaded a proof for this session
             return status === 'DRAFT' && hasNewDraft;
         } else {
-            // Manager cannot add comments in PENDING or DRAFT states
+            // Manager cannot add feedback in PENDING or DRAFT states
             return status !== 'PENDING' && status !== 'DRAFT';
         }
     }, [imageUrl, isLatest, isDesigner, status, hasNewDraft]);
@@ -435,14 +436,20 @@ export function DesignCanvas({
                                                         <Button variant="outline" size="sm" className="h-7 text-[9px] font-black uppercase px-2" onClick={() => setIsReplyMode(true)}><Send className="h-3 w-3 mr-1" /> Reply</Button>
                                                         {!isDesigner && (
                                                             <>
-                                                                {(activePin.status === 'open' || activePin.status === 'mistake') && (
-                                                                    <Button variant="outline" size="sm" className="h-7 text-[9px] font-black uppercase px-2 border-amber-500 text-amber-600 hover:bg-amber-50" onClick={() => handleStatusUpdate(activePin.id, 'fixed')}><CheckCircle2 className="h-3 w-3 mr-1" /> Fix</Button>
-                                                                )}
-                                                                {activePin.status === 'fixed' && (
-                                                                    <Button variant="outline" size="sm" className="h-7 text-[9px] font-black uppercase px-2 border-green-600 text-green-600 hover:bg-green-50" onClick={() => handleStatusUpdate(activePin.id, 'resolved')}><CheckCircle2 className="h-3 w-3 mr-1" /> Resolve</Button>
-                                                                )}
-                                                                {activePin.status === 'open' && (
-                                                                    <Button variant="outline" size="sm" className="h-7 text-[9px] font-black uppercase px-2 border-destructive text-destructive" onClick={(e) => { e.stopPropagation(); handleStatusUpdate(activePin.id, 'mistake'); }}><AlertCircle className="h-3 w-3 mr-1" /> Mistake</Button>
+                                                                {activePin.status !== 'resolved' ? (
+                                                                    <>
+                                                                        <Button variant="outline" size="sm" className="h-7 text-[9px] font-black uppercase px-2 border-green-600 text-green-600 hover:bg-green-50" onClick={() => handleStatusUpdate(activePin.id, 'resolved')}><CheckCircle2 className="h-3 w-3 mr-1" /> Resolve</Button>
+                                                                        <Button 
+                                                                            variant="outline" 
+                                                                            size="sm" 
+                                                                            className={cn("h-7 text-[9px] font-black uppercase px-2", activePin.status === 'mistake' ? "border-primary text-primary" : "border-destructive text-destructive")} 
+                                                                            onClick={() => handleStatusUpdate(activePin.id, activePin.status === 'mistake' ? 'open' : 'mistake')}
+                                                                        >
+                                                                            <AlertCircle className="h-3 w-3 mr-1" /> {activePin.status === 'mistake' ? 'Unmark Mistake' : 'Mark Mistake'}
+                                                                        </Button>
+                                                                    </>
+                                                                ) : (
+                                                                    <Button variant="outline" size="sm" className="h-7 text-[9px] font-black uppercase px-2 border-primary text-primary hover:bg-primary/5" onClick={() => handleStatusUpdate(activePin.id, 'open')}><RotateCcw className="h-3 w-3 mr-1" /> Re-open</Button>
                                                                 )}
                                                             </>
                                                         )}

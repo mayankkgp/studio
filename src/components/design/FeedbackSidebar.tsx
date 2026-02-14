@@ -277,14 +277,20 @@ export function FeedbackSidebar({
                                                         <Button variant="ghost" size="sm" className="h-6 text-[9px] font-black uppercase px-2" onClick={(e) => { e.stopPropagation(); setActiveReplyId(pin.id); setReplyText(''); }}>Reply</Button>
                                                         {!isDesigner && (
                                                             <>
-                                                                {(pin.status === 'open' || pin.status === 'mistake') && (
-                                                                    <Button variant="outline" size="sm" className="h-6 text-[9px] font-black uppercase px-2 border-amber-500 text-amber-600" onClick={(e) => { e.stopPropagation(); handleStatusUpdate(pin.id, 'fixed'); }}><CheckCircle2 className="h-3 w-3 mr-1" /> Fix</Button>
-                                                                )}
-                                                                {pin.status === 'fixed' && (
-                                                                    <Button variant="outline" size="sm" className="h-6 text-[9px] font-black uppercase px-2 border-green-600 text-green-600" onClick={(e) => { e.stopPropagation(); handleStatusUpdate(pin.id, 'resolved'); }}><CheckCircle2 className="h-3 w-3 mr-1" /> Resolve</Button>
-                                                                )}
-                                                                {pin.status === 'open' && (
-                                                                    <Button variant="outline" size="sm" className="h-6 text-[9px] font-black uppercase px-2 border-destructive text-destructive" onClick={(e) => { e.stopPropagation(); handleStatusUpdate(pin.id, 'mistake'); }}><AlertCircle className="h-3 w-3 mr-1" /> Mistake</Button>
+                                                                {pin.status !== 'resolved' ? (
+                                                                    <>
+                                                                        <Button variant="outline" size="sm" className="h-6 text-[9px] font-black uppercase px-2 border-green-600 text-green-600 hover:bg-green-50" onClick={(e) => { e.stopPropagation(); handleStatusUpdate(pin.id, 'resolved'); }}><CheckCircle2 className="h-3 w-3 mr-1" /> Resolve</Button>
+                                                                        <Button 
+                                                                            variant="outline" 
+                                                                            size="sm" 
+                                                                            className={cn("h-6 text-[9px] font-black uppercase px-2", pin.status === 'mistake' ? "border-primary text-primary" : "border-destructive text-destructive")} 
+                                                                            onClick={(e) => { e.stopPropagation(); handleStatusUpdate(pin.id, pin.status === 'mistake' ? 'open' : 'mistake'); }}
+                                                                        >
+                                                                            <AlertCircle className="h-3 w-3 mr-1" /> {pin.status === 'mistake' ? 'Unmark Mistake' : 'Mark Mistake'}
+                                                                        </Button>
+                                                                    </>
+                                                                ) : (
+                                                                    <Button variant="outline" size="sm" className="h-6 text-[9px] font-black uppercase px-2 border-primary text-primary hover:bg-primary/5" onClick={(e) => { e.stopPropagation(); handleStatusUpdate(pin.id, 'open'); }}><RotateCcw className="h-3 w-3 mr-1" /> Re-open</Button>
                                                                 )}
                                                             </>
                                                         )}
