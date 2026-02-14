@@ -31,6 +31,75 @@ import {
 } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 
+interface AddComponentWidgetProps {
+    mode: 'card' | 'workbench';
+    onAdd: (name: string) => void;
+}
+
+/**
+ * Isolated Add Component Widget to prevent state conflicts between Card and Workbench views.
+ */
+function AddComponentWidget({ mode, onAdd }: AddComponentWidgetProps) {
+    const [isOpen, setIsOpen] = useState(false);
+    const [name, setName] = useState('');
+
+    const handleSubmit = () => {
+        if (!name.trim()) return;
+        onAdd(name.trim());
+        setName('');
+        setIsOpen(false);
+    };
+
+    return (
+        <Popover open={isOpen} onOpenChange={setIsOpen}>
+            <PopoverTrigger asChild>
+                {mode === 'workbench' ? (
+                    <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="h-7 w-7 rounded-full p-0 border-dashed border-primary/40 text-primary hover:bg-primary/5 shrink-0"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <Plus className="h-3.5 w-3.5" />
+                    </Button>
+                ) : (
+                    <button 
+                        className="p-3 rounded-lg border-2 border-dashed border-primary/20 hover:border-primary/40 hover:bg-primary/5 transition-all flex flex-col items-center justify-center gap-1 group w-full h-full"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <Plus className="h-4 w-4 text-primary/40 group-hover:text-primary transition-colors" />
+                        <span className="text-[9px] font-black uppercase tracking-wider text-muted-foreground group-hover:text-primary transition-colors">Add Component</span>
+                    </button>
+                )}
+            </PopoverTrigger>
+            <PopoverContent 
+                className="w-64 p-4 shadow-2xl border-2 border-primary/20 z-[150]" 
+                align={mode === 'workbench' ? "start" : "center"} 
+                sideOffset={10}
+                onOpenAutoFocus={(e) => e.preventDefault()}
+            >
+                <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                        <div className="h-5 w-5 rounded bg-primary/10 flex items-center justify-center">
+                            <Plus className="h-3 w-3 text-primary" />
+                        </div>
+                        <h4 className="text-[10px] font-black uppercase tracking-widest text-foreground">New Design Component</h4>
+                    </div>
+                    <Input 
+                        placeholder="e.g. Back Side, Inner Page..." 
+                        className="h-9 text-xs font-bold border-primary/20 focus-visible:ring-primary/20 bg-muted/5"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
+                        autoFocus
+                    />
+                    <Button size="sm" className="w-full h-9 text-[10px] font-black uppercase tracking-widest shadow-md" onClick={handleSubmit}>Create Component</Button>
+                </div>
+            </PopoverContent>
+        </Popover>
+    );
+}
+
 interface DesignProductCardProps {
     product: ConfiguredProduct;
     isDesigner: boolean;
@@ -41,8 +110,6 @@ interface DesignProductCardProps {
 export function DesignProductCard({ product, isDesigner, onUpdateDesign, customerData }: DesignProductCardProps) {
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [newDrafts, setNewDrafts] = useState<Record<string, boolean>>({});
-    const [newCompName, setNewCompName] = useState('');
-    const [isAddingComp, setIsAddingComp] = useState(false);
 
     // AUTHORITATIVE TIMESTAMP: Tracks the last time the user performed a local action.
     const lastLocalUpdateRef = useRef<number>(0);
@@ -135,12 +202,10 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
         handleUpdateDesignInternal(updatedData, true);
     };
 
-    const handleAddComponent = () => {
-        if (!newCompName.trim()) return;
-        
+    const handleAddComponent = (name: string) => {
         const newComp: DesignComponent = {
             id: `comp-${Date.now()}`,
-            name: newCompName.trim(),
+            name: name,
             status: 'PENDING',
             versions: [],
             pins: []
@@ -153,8 +218,6 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
         
         handleUpdateDesignInternal(updatedData, true);
         setActiveCompId(newComp.id);
-        setNewCompName('');
-        setIsAddingComp(false);
     };
 
     const handleUpload = (file: File) => {
@@ -275,43 +338,6 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
         activeProductId: product.id.toString()
     };
 
-    // Reusable Add Component Interface to ensure independent instances
-    const AddComponentWidget = ({ mode }: { mode: 'card' | 'workbench' }) => (
-        <Popover open={isAddingComp} onOpenChange={setIsAddingComp}>
-            <PopoverTrigger asChild>
-                {mode === 'workbench' ? (
-                    <Button variant="outline" size="sm" className="h-7 w-7 rounded-full p-0 border-dashed border-primary/40 text-primary hover:bg-primary/5 shrink-0">
-                        <Plus className="h-3.5 w-3.5" />
-                    </Button>
-                ) : (
-                    <button className="p-3 rounded-lg border-2 border-dashed border-primary/20 hover:border-primary/40 hover:bg-primary/5 transition-all flex flex-col items-center justify-center gap-1 group">
-                        <Plus className="h-4 w-4 text-primary/40 group-hover:text-primary transition-colors" />
-                        <span className="text-[9px] font-black uppercase tracking-wider text-muted-foreground group-hover:text-primary transition-colors">Add Component</span>
-                    </button>
-                )}
-            </PopoverTrigger>
-            <PopoverContent className="w-64 p-4 shadow-2xl border-2 border-primary/20 z-[110]" align={mode === 'workbench' ? "start" : "center"} sideOffset={10}>
-                <div className="space-y-4">
-                    <div className="flex items-center gap-2">
-                        <div className="h-5 w-5 rounded bg-primary/10 flex items-center justify-center">
-                            <Plus className="h-3 w-3 text-primary" />
-                        </div>
-                        <h4 className="text-[10px] font-black uppercase tracking-widest text-foreground">New Design Component</h4>
-                    </div>
-                    <Input 
-                        placeholder="e.g. Back Side, Inner Page..." 
-                        className="h-9 text-xs font-bold border-primary/20 focus-visible:ring-primary/20 bg-muted/5"
-                        value={newCompName}
-                        onChange={(e) => setNewCompName(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleAddComponent()}
-                        autoFocus
-                    />
-                    <Button size="sm" className="w-full h-9 text-[10px] font-black uppercase tracking-widest shadow-md" onClick={handleAddComponent}>Create Component</Button>
-                </div>
-            </PopoverContent>
-        </Popover>
-    );
-
     return (
         <>
             <Card className="overflow-hidden border-2 border-primary/10 shadow-lg bg-card/50 backdrop-blur-sm">
@@ -352,7 +378,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
                                     </div>
                                 </div>
                             ))}
-                            <AddComponentWidget mode="card" />
+                            <AddComponentWidget mode="card" onAdd={handleAddComponent} />
                         </div>
                     )}
                 </CardContent>
@@ -388,7 +414,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
                                                 ))}
                                             </TabsList>
                                         </Tabs>
-                                        <AddComponentWidget mode="workbench" />
+                                        <AddComponentWidget mode="workbench" onAdd={handleAddComponent} />
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-3 shrink-0 ml-4">
