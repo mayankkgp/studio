@@ -209,7 +209,6 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
 
     const isLatestDraftLocked = !isDesigner && activeComponent.status === 'DRAFT' && viewedVersionNum === currentVersionNum && viewedVersionNum > 0;
 
-    // Onion Skinning Logic: Find the version immediately preceding the viewed version
     const comparisonImageUrl = useMemo(() => {
         if (!activeComponent.versions || viewedVersionNum <= 1) return null;
         const prevVersion = activeComponent.versions.find(v => v.versionNumber === viewedVersionNum - 1);
@@ -493,7 +492,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
                             <div className="flex-1 relative overflow-hidden">
                                 <DesignCanvas 
                                     imageUrl={isLatestDraftLocked ? null : (activeVersion?.imageUrl || null)}
-                                    comparisonImageUrl={showComparison && comparisonImageUrl ? comparisonImageUrl : null}
+                                    comparisonImageUrl={comparisonImageUrl}
                                     pins={activeComponent.pins || []}
                                     highlightedPinId={highlightedPinId}
                                     selectedPinId={selectedPinId}
