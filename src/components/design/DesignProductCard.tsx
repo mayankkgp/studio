@@ -470,7 +470,10 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
                 }
                 setIsFullscreen(open);
             }}>
-                <DialogContent className="max-w-[100vw] w-screen h-screen p-0 gap-0 border-none rounded-none flex flex-col bg-background overflow-hidden animate-in zoom-in-95 duration-300">
+                <DialogContent 
+                    className="max-w-[100vw] w-screen h-screen p-0 gap-0 border-none rounded-none flex flex-col bg-background overflow-hidden animate-in zoom-in-95 duration-300"
+                    onEscapeKeyDown={(e) => e.preventDefault()}
+                >
                     <DialogHeader className="sr-only">
                         <DialogTitle>Design Workbench - {product.productName}</DialogTitle>
                         <DialogDescription>Review design proofs and feedback for {product.productName}.</DialogDescription>
