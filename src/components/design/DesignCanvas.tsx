@@ -79,6 +79,7 @@ export function DesignCanvas({
     const [popoverPos, setPopoverPos] = useState<{ x: number; y: number } | null>(null);
     const [isDraggingPopover, setIsDraggingPopover] = useState(false);
     const dragStartRef = useRef<{ mouseX: number; mouseY: number; popoverX: number; popoverY: number } | null>(null);
+    const lastPositionedId = useRef<string | null>(null);
 
     const isLatest = version === currentVersion;
     
@@ -108,24 +109,55 @@ export function DesignCanvas({
     const activePin = useMemo(() => pins.find(p => p.id === selectedPinId), [pins, selectedPinId]);
     const activePinNumber = useMemo(() => pins.findIndex(p => p.id === selectedPinId) + 1, [pins, selectedPinId]);
 
-    useEffect(() => {
-        if (selectedPinId) {
-            setTimeout(() => {
-                textareaRef.current?.focus();
-            }, 100);
-        }
-    }, [selectedPinId]);
-
+    // Handle Selection & Auto-positioning logic
     useEffect(() => {
         if (selectedPinId && selectedPinId !== prevSelectedId.current) {
             setReplyText('');
             setIsReplyMode(false);
+            
             if (activePin) {
                 setIsMistakeDraft(!!activePin.isMistake);
+                
+                // Auto-position popover next to the pin if not manually dragged for this ID yet
+                if (containerRef.current && lastPositionedId.current !== selectedPinId) {
+                    const containerRect = containerRef.current.getBoundingClientRect();
+                    const px = (activePin.x / 100) * containerRect.width;
+                    const py = (activePin.y / 100) * containerRect.height;
+                    
+                    const popoverWidth = 320;
+                    const popoverHeight = 300; // Estimated height for safer bounding
+                    const offset = 24;
+
+                    let x = px + offset;
+                    let y = py + offset;
+
+                    // Bounding: Check Right Edge
+                    if (x + popoverWidth > containerRect.width - 20) {
+                        x = px - popoverWidth - offset;
+                    }
+                    // Bounding: Check Bottom Edge
+                    if (y + popoverHeight > containerRect.height - 20) {
+                        y = py - popoverHeight - offset;
+                    }
+
+                    // Final safety clamps
+                    x = Math.max(20, Math.min(x, containerRect.width - popoverWidth - 20));
+                    y = Math.max(20, Math.min(y, containerRect.height - 150));
+
+                    setPopoverPos({ x, y });
+                    lastPositionedId.current = selectedPinId;
+                }
             }
             prevSelectedId.current = selectedPinId;
+            
+            // Focus textarea after selection
+            setTimeout(() => {
+                textareaRef.current?.focus();
+            }, 150);
         } else if (!selectedPinId) {
             prevSelectedId.current = null;
+            lastPositionedId.current = null;
+            setPopoverPos(null);
         }
     }, [selectedPinId, activePin]);
 
@@ -370,13 +402,6 @@ export function DesignCanvas({
                         </div>
                     </div>
 
-                    {!isLatest && (
-                        <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-50 px-4 py-2 bg-black/80 backdrop-blur-md text-white rounded-full flex items-center gap-3 shadow-2xl animate-in slide-in-from-bottom-2">
-                            <Lock className="h-3.5 w-3.5 text-primary" />
-                            <span className="text-[10px] font-black uppercase tracking-widest">Feedback disabled on older versions</span>
-                        </div>
-                    )}
-                    
                     {isLatest && !canInteract && (
                         <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-50 px-4 py-2 bg-black/80 backdrop-blur-md text-white rounded-full flex items-center gap-3 shadow-2xl animate-in slide-in-from-bottom-2">
                             <Lock className="h-3.5 w-3.5 text-primary" />
