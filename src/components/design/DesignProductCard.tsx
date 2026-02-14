@@ -14,7 +14,8 @@ import {
     X, 
     PackageCheck,
     LayoutPanelTop,
-    Plus
+    Plus,
+    Check
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -37,12 +38,14 @@ interface AddComponentWidgetProps {
 }
 
 /**
- * Isolated Add Component Widget to prevent state conflicts between Card and Workbench views.
- * Uses modal Popover to correctly handle nested focus traps within the Workbench Dialog.
+ * Isolated Add Component Widget.
+ * In 'card' mode, it uses a standard Popover.
+ * In 'workbench' mode, it uses an Inline Input to bypass portal/focus-trap conflicts within the full-screen Dialog.
  */
 function AddComponentWidget({ mode, onAdd }: AddComponentWidgetProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [name, setName] = useState('');
+    const inputRef = useRef<HTMLInputElement>(null);
 
     const handleSubmit = () => {
         if (!name.trim()) return;
@@ -51,29 +54,67 @@ function AddComponentWidget({ mode, onAdd }: AddComponentWidgetProps) {
         setIsOpen(false);
     };
 
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        e.stopPropagation();
+        if (e.key === 'Enter') handleSubmit();
+        if (e.key === 'Escape') setIsOpen(false);
+    };
+
+    // Auto-focus when inline mode is activated
+    useEffect(() => {
+        if (mode === 'workbench' && isOpen) {
+            setTimeout(() => inputRef.current?.focus(), 50);
+        }
+    }, [mode, isOpen]);
+
+    if (mode === 'workbench') {
+        if (!isOpen) {
+            return (
+                <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-7 w-7 rounded-full p-0 border-dashed border-primary/40 text-primary hover:bg-primary/5 shrink-0 ml-2"
+                    onClick={() => setIsOpen(true)}
+                >
+                    <Plus className="h-3.5 w-3.5" />
+                </Button>
+            );
+        }
+
+        return (
+            <div className="flex items-center gap-1.5 ml-2 animate-in slide-in-from-left-2 duration-200">
+                <Input 
+                    ref={inputRef}
+                    placeholder="Component name..." 
+                    className="h-7 w-32 text-[10px] font-bold border-primary/40 bg-background px-2"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    onBlur={() => { if (!name.trim()) setIsOpen(false); }}
+                />
+                <Button size="icon" className="h-7 w-7 shrink-0" onClick={handleSubmit}>
+                    <Check className="h-3.5 w-3.5" />
+                </Button>
+                <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-muted-foreground" onClick={() => setIsOpen(false)}>
+                    <X className="h-3.5 w-3.5" />
+                </Button>
+            </div>
+        );
+    }
+
     return (
-        <Popover open={isOpen} onOpenChange={setIsOpen} modal={true}>
+        <Popover open={isOpen} onOpenChange={setIsOpen}>
             <PopoverTrigger asChild>
-                {mode === 'workbench' ? (
-                    <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="h-7 w-7 rounded-full p-0 border-dashed border-primary/40 text-primary hover:bg-primary/5 shrink-0"
-                    >
-                        <Plus className="h-3.5 w-3.5" />
-                    </Button>
-                ) : (
-                    <button 
-                        className="p-3 rounded-lg border-2 border-dashed border-primary/20 hover:border-primary/40 hover:bg-primary/5 transition-all flex flex-col items-center justify-center gap-1 group w-full h-full"
-                    >
-                        <Plus className="h-4 w-4 text-primary/40 group-hover:text-primary transition-colors" />
-                        <span className="text-[9px] font-black uppercase tracking-wider text-muted-foreground group-hover:text-primary transition-colors">Add Component</span>
-                    </button>
-                )}
+                <button 
+                    className="p-3 rounded-lg border-2 border-dashed border-primary/20 hover:border-primary/40 hover:bg-primary/5 transition-all flex flex-col items-center justify-center gap-1 group w-full h-full"
+                >
+                    <Plus className="h-4 w-4 text-primary/40 group-hover:text-primary transition-colors" />
+                    <span className="text-[9px] font-black uppercase tracking-wider text-muted-foreground group-hover:text-primary transition-colors">Add Component</span>
+                </button>
             </PopoverTrigger>
             <PopoverContent 
-                className="w-64 p-4 shadow-2xl border-2 border-primary/20 z-[150] pointer-events-auto" 
-                align={mode === 'workbench' ? "start" : "center"} 
+                className="w-64 p-4 shadow-2xl border-2 border-primary/20 z-[100]" 
+                align="center" 
                 sideOffset={10}
             >
                 <div className="space-y-4">
@@ -86,13 +127,10 @@ function AddComponentWidget({ mode, onAdd }: AddComponentWidgetProps) {
                     <Input 
                         autoFocus
                         placeholder="e.g. Back Side, Inner Page..." 
-                        className="h-9 text-xs font-bold border-primary/20 focus-visible:ring-primary/20 bg-muted/5 cursor-text"
+                        className="h-9 text-xs font-bold border-primary/20 focus-visible:ring-primary/20 bg-muted/5"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        onKeyDown={(e) => {
-                            e.stopPropagation();
-                            if (e.key === 'Enter') handleSubmit();
-                        }}
+                        onKeyDown={handleKeyDown}
                     />
                     <Button size="sm" className="w-full h-9 text-[10px] font-black uppercase tracking-widest shadow-md" onClick={handleSubmit}>Create Component</Button>
                 </div>
@@ -112,7 +150,6 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [newDrafts, setNewDrafts] = useState<Record<string, boolean>>({});
 
-    // AUTHORITATIVE TIMESTAMP: Tracks the last time the user performed a local action.
     const lastLocalUpdateRef = useRef<number>(0);
 
     const initialDesignData = useMemo(() => {
@@ -135,17 +172,10 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
     const [localDesignData, setLocalDesignData] = useState<DesignData>(initialDesignData);
     
     useEffect(() => { 
-        // TEMPORAL IMMUNITY WINDOW
         const timeSinceLastUpdate = Date.now() - lastLocalUpdateRef.current;
-        if (timeSinceLastUpdate < 2000) {
-            return;
-        }
-
+        if (timeSinceLastUpdate < 2000) return;
         const hasUnsavedDraft = localDesignData.components.some(c => c.status === 'DRAFT');
-        if (hasUnsavedDraft && isFullscreen) {
-            return;
-        }
-
+        if (hasUnsavedDraft && isFullscreen) return;
         setLocalDesignData(initialDesignData); 
     }, [initialDesignData, isFullscreen, localDesignData.components]);
 
@@ -386,9 +416,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
             </Card>
 
             <Dialog open={isFullscreen} onOpenChange={(open) => {
-                if (!open) {
-                    setLocalDesignData(initialDesignData);
-                }
+                if (!open) setLocalDesignData(initialDesignData);
                 setIsFullscreen(open);
             }}>
                 <DialogContent className="max-w-[100vw] w-screen h-screen p-0 gap-0 border-none rounded-none flex flex-col bg-background overflow-hidden animate-in zoom-in-95 duration-300">
@@ -405,7 +433,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
                                 <div className="flex-1 flex items-center gap-4 overflow-hidden">
                                     <h2 className="font-headline font-black text-sm truncate shrink-0">{product.productName}</h2>
                                     <div className="h-4 w-px bg-border shrink-0" />
-                                    <div className="flex items-center gap-3 overflow-x-auto no-scrollbar py-1">
+                                    <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-1 pr-4">
                                         <Tabs value={activeCompId} onValueChange={setActiveCompId} className="shrink-0">
                                             <TabsList className="bg-transparent h-10 p-0 gap-4">
                                                 {localDesignData.components.map(comp => (

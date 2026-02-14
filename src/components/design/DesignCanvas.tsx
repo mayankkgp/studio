@@ -68,10 +68,6 @@ export function DesignCanvas({
     
     const isLatest = version === currentVersion;
     
-    // RESTRICTION LOGIC:
-    // 1. New comments can ONLY be added to the latest version.
-    // 2. Designer can ONLY add comments if status is 'DRAFT' AND a NEW design proof has been uploaded in this session.
-    // 3. Manager (isDesigner=false) has no state restrictions on the latest version if an image exists.
     const designerCanComment = !isDesigner || (status === 'DRAFT' && hasNewDraft);
     const canInteract = !!imageUrl && isLatest && designerCanComment;
     
@@ -89,7 +85,6 @@ export function DesignCanvas({
     const activePin = useMemo(() => pins.find(p => p.id === highlightedPinId), [pins, highlightedPinId]);
     const activePinNumber = useMemo(() => pins.findIndex(p => p.id === highlightedPinId) + 1, [pins, highlightedPinId]);
 
-    // Auto-focus the comment box when a pin is selected
     useEffect(() => {
         if (highlightedPinId) {
             setTimeout(() => {
@@ -123,7 +118,6 @@ export function DesignCanvas({
         const target = e.target as HTMLElement;
         if (target.closest('.pin-bubble') || target.closest('button') || target.closest('.fixed-comment-box')) return;
         
-        // If restricted, only allow deselecting highlighted pin
         if (!canInteract) {
             if (highlightedPinId) onPinClick(null);
             return;
@@ -214,7 +208,6 @@ export function DesignCanvas({
 
             {imageUrl && (
                 <>
-                    {/* Toolbar */}
                     <div className="absolute top-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-1.5 p-1.5 bg-background/90 backdrop-blur-xl border border-primary/20 rounded-full shadow-2xl scale-110">
                         <TooltipProvider>
                             <div className="flex items-center px-3 gap-2">
@@ -267,7 +260,6 @@ export function DesignCanvas({
                         </div>
                     </div>
 
-                    {/* Restriction Banners */}
                     {!isLatest && (
                         <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-50 px-4 py-2 bg-black/80 backdrop-blur-md text-white rounded-full flex items-center gap-3 shadow-2xl animate-in slide-in-from-bottom-2">
                             <Lock className="h-3.5 w-3.5 text-primary" />
@@ -283,7 +275,6 @@ export function DesignCanvas({
                         </div>
                     )}
 
-                    {/* Canvas Main Area */}
                     <div 
                         ref={containerRef}
                         className={cn(
@@ -324,7 +315,6 @@ export function DesignCanvas({
                             })}
                         </div>
 
-                        {/* FIXED POSITIONED COMMENT BOX IN CORNER */}
                         {highlightedPinId && activePin && (
                             <div className="absolute bottom-6 right-6 z-[100] w-80 animate-in slide-in-from-bottom-4 duration-300 pointer-events-auto fixed-comment-box">
                                 <div className="bg-background rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] border-2 border-primary/20 overflow-hidden">
