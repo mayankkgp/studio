@@ -9,7 +9,6 @@ import {
     ZoomOut, 
     Upload, 
     X, 
-    Maximize2, 
     Trash2,
     Eye,
     EyeOff,
@@ -41,7 +40,6 @@ interface DesignCanvasProps {
     onPinClick: (id: string | null) => void;
     onUpdatePins: (pins: DesignPin[]) => void;
     onUpload?: (file: File) => void;
-    onToggleFullscreen?: () => void;
     isDesigner: boolean;
     version: number;
     currentVersion: number;
@@ -58,11 +56,11 @@ export function DesignCanvas({
     onPinClick, 
     onUpdatePins,
     onUpload,
-    onToggleFullscreen,
     isDesigner,
     version,
     currentVersion,
     status,
+    hasNewDraft = false,
     isWorkbench = false
 }: DesignCanvasProps) {
     const [zoom, setZoom] = useState(1);
@@ -72,9 +70,9 @@ export function DesignCanvas({
     
     // RESTRICTION LOGIC:
     // 1. New comments can ONLY be added to the latest version.
-    // 2. Designer can ONLY add comments if status is 'DRAFT' AND a design is uploaded.
-    // 3. Manager (isDesigner=false) has no state restrictions on latest version if design is uploaded.
-    const designerCanComment = !isDesigner || (status === 'DRAFT' && !!imageUrl);
+    // 2. Designer can ONLY add comments if status is 'DRAFT' AND a NEW design proof has been uploaded in this session.
+    // 3. Manager (isDesigner=false) has no state restrictions on the latest version if an image exists.
+    const designerCanComment = !isDesigner || (status === 'DRAFT' && hasNewDraft);
     const canInteract = !!imageUrl && isLatest && designerCanComment;
     
     const [draftText, setDraftText] = useState('');
@@ -265,14 +263,6 @@ export function DesignCanvas({
                                     </TooltipTrigger>
                                     <TooltipContent side="left">Zoom Out</TooltipContent>
                                 </Tooltip>
-                                {!isWorkbench && onToggleFullscreen && (
-                                    <Tooltip>
-                                        <TooltipTrigger asChild>
-                                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onToggleFullscreen}><Maximize2 className="h-4 w-4" /></Button>
-                                        </TooltipTrigger>
-                                        <TooltipContent side="left">Full Screen</TooltipContent>
-                                    </Tooltip>
-                                )}
                             </TooltipProvider>
                         </div>
                     </div>
