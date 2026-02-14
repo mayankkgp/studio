@@ -183,6 +183,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
 
     const [activeCompId, setActiveCompId] = useState(localDesignData.components[0]?.id);
     const [highlightedPinId, setHighlightedPinId] = useState<string | null>(null);
+    const [selectedPinId, setSelectedPinId] = useState<string | null>(null);
     const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
 
     useEffect(() => {
@@ -302,6 +303,33 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
         }
     };
 
+    const handlePinSelect = (id: string | null, openPopover: boolean = false) => {
+        // DISCARD LOGIC: If switching away from an empty draft, discard it.
+        if (highlightedPinId && id !== highlightedPinId) {
+            const pinToClose = activeComponent.pins.find(p => p.id === highlightedPinId);
+            if (pinToClose?.isDraft && !draftText.trim()) {
+                const updatedComponents = localDesignData.components.map(c => {
+                    if (c.id === activeCompId) {
+                        return { ...c, pins: c.pins.filter(p => p.id !== highlightedPinId) };
+                    }
+                    return c;
+                });
+                handleUpdateDesignInternal({ ...localDesignData, components: updatedComponents }, true);
+            }
+        }
+
+        setHighlightedPinId(id);
+        setSelectedPinId(openPopover ? id : null);
+        
+        // Load text for the newly selected pin
+        if (id) {
+            const pin = activeComponent.pins.find(p => p.id === id);
+            setDraftText(pin?.text || '');
+        } else {
+            setDraftText('');
+        }
+    };
+
     const handleAddPin = (x: number, y: number) => {
         const newPinId = `pin-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
         const newPin: DesignPin = { 
@@ -328,7 +356,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
         handleUpdateDesignInternal({ ...localDesignData, components: updatedComponents });
         
         setTimeout(() => {
-            setHighlightedPinId(newPinId);
+            handlePinSelect(newPinId, true);
         }, 50);
     };
 
@@ -337,32 +365,6 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
             c.id === activeCompId ? { ...c, pins: newPins } : c
         );
         handleUpdateDesignInternal({ ...localDesignData, components: updatedComponents });
-    };
-
-    const handlePinSelect = (id: string | null) => {
-        // DISCARD LOGIC: If switching away from an empty draft, discard it.
-        if (highlightedPinId && id !== highlightedPinId) {
-            const pinToClose = activeComponent.pins.find(p => p.id === highlightedPinId);
-            if (pinToClose?.isDraft && !draftText.trim()) {
-                const updatedComponents = localDesignData.components.map(c => {
-                    if (c.id === activeCompId) {
-                        return { ...c, pins: c.pins.filter(p => p.id !== highlightedPinId) };
-                    }
-                    return c;
-                });
-                handleUpdateDesignInternal({ ...localDesignData, components: updatedComponents }, true);
-            }
-        }
-
-        setHighlightedPinId(id);
-        
-        // Load text for the newly selected pin
-        if (id) {
-            const pin = activeComponent.pins.find(p => p.id === id);
-            setDraftText(pin?.text || '');
-        } else {
-            setDraftText('');
-        }
     };
 
     const getStatusColor = (status: DesignWorkflowStatus) => {
@@ -384,7 +386,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
         currentVersion: currentVersionNum,
         viewedVersion: viewedVersionNum,
         onUpdatePins: handleUpdatePins,
-        onPinSelect: handlePinSelect,
+        onPinSelect: (id: string | null) => handlePinSelect(id, false),
         onVersionSelect: setSelectedVersionId,
         onStatusChange: handleStatusChange,
         onUpdateVersions: (v: any) => {},
@@ -494,13 +496,14 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
                                     imageUrl={isLatestDraftLocked ? null : (activeVersion?.imageUrl || null)}
                                     pins={activeComponent.pins || []}
                                     highlightedPinId={highlightedPinId}
+                                    selectedPinId={selectedPinId}
                                     isDesigner={isDesigner}
                                     version={viewedVersionNum}
                                     currentVersion={currentVersionNum}
                                     status={activeComponent.status}
                                     hasNewDraft={!!newDrafts[activeCompId]}
                                     onAddPin={handleAddPin}
-                                    onPinClick={handlePinSelect}
+                                    onPinClick={(id) => handlePinSelect(id, true)}
                                     onUpdatePins={handleUpdatePins}
                                     onUpload={handleUpload}
                                     isWorkbench={true}

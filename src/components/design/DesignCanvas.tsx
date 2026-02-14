@@ -36,6 +36,7 @@ interface DesignCanvasProps {
     imageUrl: string | null;
     pins: DesignPin[];
     highlightedPinId: string | null;
+    selectedPinId: string | null;
     onAddPin: (x: number, y: number) => void;
     onPinClick: (id: string | null) => void;
     onUpdatePins: (pins: DesignPin[]) => void;
@@ -55,9 +56,10 @@ export function DesignCanvas({
     imageUrl, 
     pins, 
     highlightedPinId, 
+    selectedPinId,
     onAddPin, 
     onPinClick, 
-    onUpdatePins,
+    onUpdatePins, 
     onUpload,
     isDesigner,
     version,
@@ -93,31 +95,31 @@ export function DesignCanvas({
     const imageRef = useRef<HTMLImageElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
-    const prevHighlightedId = useRef<string | null>(null);
+    const prevSelectedId = useRef<string | null>(null);
 
-    const activePin = useMemo(() => pins.find(p => p.id === highlightedPinId), [pins, highlightedPinId]);
-    const activePinNumber = useMemo(() => pins.findIndex(p => p.id === highlightedPinId) + 1, [pins, highlightedPinId]);
+    const activePin = useMemo(() => pins.find(p => p.id === selectedPinId), [pins, selectedPinId]);
+    const activePinNumber = useMemo(() => pins.findIndex(p => p.id === selectedPinId) + 1, [pins, selectedPinId]);
 
     useEffect(() => {
-        if (highlightedPinId) {
+        if (selectedPinId) {
             setTimeout(() => {
                 textareaRef.current?.focus();
             }, 100);
         }
-    }, [highlightedPinId]);
+    }, [selectedPinId]);
 
     useEffect(() => {
-        if (highlightedPinId && highlightedPinId !== prevHighlightedId.current) {
+        if (selectedPinId && selectedPinId !== prevSelectedId.current) {
             setReplyText('');
             setIsReplyMode(false);
             if (activePin) {
                 setIsMistakeDraft(activePin.status === 'mistake');
             }
-            prevHighlightedId.current = highlightedPinId;
-        } else if (!highlightedPinId) {
-            prevHighlightedId.current = null;
+            prevSelectedId.current = selectedPinId;
+        } else if (!selectedPinId) {
+            prevSelectedId.current = null;
         }
-    }, [highlightedPinId, activePin]);
+    }, [selectedPinId, activePin]);
 
     const handleZoomIn = () => setZoom(prev => Math.min(prev + 0.25, 4));
     const handleZoomOut = () => setZoom(prev => Math.max(prev - 0.25, 0.5));
@@ -130,7 +132,7 @@ export function DesignCanvas({
         if (target.closest('.pin-bubble') || target.closest('button') || target.closest('.fixed-comment-box')) return;
         
         // If clicking away and we have a highlighted pin, handle close logic
-        if (highlightedPinId) {
+        if (highlightedPinId || selectedPinId) {
             onPinClick(null);
             return;
         }
@@ -147,19 +149,19 @@ export function DesignCanvas({
     };
 
     const handleSaveComment = () => {
-        if (!highlightedPinId) return;
+        if (!selectedPinId) return;
         
         const trimmed = draftText.trim();
         
         // DISCARD LOGIC: If "Save" is clicked but text is empty, discard/remove the pin.
         if (!trimmed) {
-            onUpdatePins(pins.filter(p => p.id !== highlightedPinId));
+            onUpdatePins(pins.filter(p => p.id !== selectedPinId));
             onPinClick(null);
             return;
         }
 
         const updatedPins = pins.map(p => {
-            if (p.id === highlightedPinId) {
+            if (p.id === selectedPinId) {
                 return {
                     ...p,
                     text: trimmed,
@@ -358,7 +360,7 @@ export function DesignCanvas({
                             })}
                         </div>
 
-                        {highlightedPinId && activePin && (
+                        {selectedPinId && activePin && (
                             <div className="absolute bottom-6 right-6 z-[100] w-80 animate-in slide-in-from-bottom-4 duration-300 pointer-events-auto fixed-comment-box">
                                 <div className="bg-background rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] border-2 border-primary/20 overflow-hidden">
                                     <div className="p-3 border-b bg-muted/20 flex items-center justify-between">
