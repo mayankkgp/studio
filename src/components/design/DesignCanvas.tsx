@@ -29,8 +29,6 @@ import { Badge } from '@/components/ui/badge';
 
 const PIN_COLORS: Record<DesignPinStatus, string> = {
     open: 'bg-blue-600',
-    mistake: 'bg-destructive',
-    fixed: 'bg-amber-500',
     resolved: 'bg-green-600'
 };
 
@@ -117,7 +115,7 @@ export function DesignCanvas({
             setReplyText('');
             setIsReplyMode(false);
             if (activePin) {
-                setIsMistakeDraft(activePin.status === 'mistake');
+                setIsMistakeDraft(!!activePin.isMistake);
             }
             prevSelectedId.current = selectedPinId;
         } else if (!selectedPinId) {
@@ -169,7 +167,8 @@ export function DesignCanvas({
                 return {
                     ...p,
                     text: trimmed,
-                    status: isMistakeDraft ? 'mistake' : (p.status === 'resolved' ? 'resolved' : 'open'),
+                    status: 'open',
+                    isMistake: isMistakeDraft,
                     isDraft: false
                 } as DesignPin;
             }
@@ -181,6 +180,11 @@ export function DesignCanvas({
 
     const handleStatusUpdate = (pinId: string, newStatus: DesignPinStatus) => {
         const updatedPins = pins.map(p => p.id === pinId ? { ...p, status: newStatus } : p);
+        onUpdatePins(updatedPins);
+    };
+
+    const handleMistakeToggle = (pinId: string) => {
+        const updatedPins = pins.map(p => p.id === pinId ? { ...p, isMistake: !p.isMistake } : p);
         onUpdatePins(updatedPins);
     };
 
@@ -351,8 +355,9 @@ export function DesignCanvas({
                                         key={pin.id}
                                         className={cn(
                                             "pin-bubble absolute h-8 w-8 rounded-full flex items-center justify-center text-[11px] font-black text-white shadow-xl border-2 border-white transition-all transform -translate-x-1/2 -translate-y-1/2 pointer-events-auto",
-                                            PIN_COLORS[pin.status],
-                                            highlightedPinId === pin.id ? "scale-125 ring-4 ring-primary ring-offset-2 z-50" : "scale-100 z-10 hover:scale-110",
+                                            PIN_COLORS[pin.status || 'open'],
+                                            pin.isMistake && "ring-4 ring-destructive ring-offset-0 scale-110",
+                                            highlightedPinId === pin.id ? "ring-4 ring-primary ring-offset-2 z-50 scale-125" : "scale-100 z-10 hover:scale-110",
                                             pin.status === 'resolved' && "opacity-60 grayscale-[0.5]"
                                         )}
                                         style={{ left: `${pin.x}%`, top: `${pin.y}%`, transform: `translate(-50%, -50%) scale(${1/zoom})` }}
@@ -369,18 +374,22 @@ export function DesignCanvas({
                                 <div className="bg-background rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] border-2 border-primary/20 overflow-hidden">
                                     <div className="p-3 border-b bg-muted/20 flex items-center justify-between">
                                         <div className="flex items-center gap-2">
-                                            <div className={cn("h-5 w-5 rounded flex items-center justify-center text-[10px] font-black text-white", PIN_COLORS[activePin.status])}>
+                                            <div className={cn("h-5 w-5 rounded flex items-center justify-center text-[10px] font-black text-white", PIN_COLORS[activePin.status || 'open'])}>
                                                 {activePinNumber}
                                             </div>
                                             <div className="flex flex-col -space-y-0.5">
                                                 <span className="text-[10px] font-black uppercase tracking-widest">{activePin.author}</span>
                                                 {!activePin.isDraft && (
-                                                    <span className={cn(
-                                                        "text-[8px] font-black uppercase tracking-widest",
-                                                        activePin.status === 'mistake' ? "text-destructive" : "text-primary"
-                                                    )}>
-                                                        {activePin.status}
-                                                    </span>
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span className="text-[8px] font-black uppercase tracking-widest text-primary">
+                                                            {activePin.status}
+                                                        </span>
+                                                        {activePin.isMistake && (
+                                                            <span className="text-[8px] font-black uppercase tracking-widest text-destructive">
+                                                                • MISTAKE
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 )}
                                             </div>
                                         </div>
@@ -453,10 +462,10 @@ export function DesignCanvas({
                                                                         <Button 
                                                                             variant="outline" 
                                                                             size="sm" 
-                                                                            className={cn("h-7 text-[9px] font-black uppercase px-2", activePin.status === 'mistake' ? "border-primary text-primary" : "border-destructive text-destructive")} 
-                                                                            onClick={() => handleStatusUpdate(activePin.id, activePin.status === 'mistake' ? 'open' : 'mistake')}
+                                                                            className={cn("h-7 text-[9px] font-black uppercase px-2", activePin.isMistake ? "border-primary text-primary" : "border-destructive text-destructive")} 
+                                                                            onClick={() => handleMistakeToggle(activePin.id)}
                                                                         >
-                                                                            <AlertCircle className="h-3 w-3 mr-1" /> {activePin.status === 'mistake' ? 'Unmark Mistake' : 'Mark Mistake'}
+                                                                            <AlertCircle className="h-3 w-3 mr-1" /> {activePin.isMistake ? 'Unmark Mistake' : 'Mark Mistake'}
                                                                         </Button>
                                                                     </>
                                                                 ) : (

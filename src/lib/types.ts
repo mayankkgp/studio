@@ -51,7 +51,7 @@ export type ConfiguredProductAddon = {
   value: boolean | number | null;
 };
 
-export type DesignPinStatus = 'open' | 'mistake' | 'fixed' | 'resolved';
+export type DesignPinStatus = 'open' | 'resolved';
 export type DesignWorkflowStatus = 'PENDING' | 'DRAFT' | 'INTERNAL_REVIEW' | 'CUSTOMER_REVIEW' | 'APPROVED';
 
 export type DesignReply = {
@@ -65,6 +65,7 @@ export type DesignPin = {
   x: number; // percentage
   y: number; // percentage
   status: DesignPinStatus;
+  isMistake?: boolean;
   author: string;
   timestamp: string;
   version: number;

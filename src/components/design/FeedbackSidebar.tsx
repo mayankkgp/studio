@@ -28,8 +28,6 @@ import {
 
 const PIN_COLORS: Record<DesignPinStatus, string> = {
     open: 'bg-blue-600',
-    mistake: 'bg-destructive',
-    fixed: 'bg-amber-500',
     resolved: 'bg-green-600'
 };
 
@@ -91,13 +89,13 @@ export function FeedbackSidebar({
     const filteredPins = useMemo(() => {
         return pins.filter(pin => {
             if (pin.version > viewedVersion) return false;
-            if (filter === 'open') return pin.status === 'open' || pin.status === 'mistake' || pin.status === 'fixed';
-            if (filter === 'mistakes') return pin.status === 'mistake';
+            if (filter === 'open') return pin.status !== 'resolved';
+            if (filter === 'mistakes') return !!pin.isMistake;
             return true;
         }).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
     }, [pins, filter, viewedVersion]);
 
-    const hasOpenItems = pins.some(p => p.status === 'open' || p.status === 'mistake' || p.status === 'fixed');
+    const hasOpenItems = pins.some(p => p.status !== 'resolved');
 
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -109,6 +107,11 @@ export function FeedbackSidebar({
 
     const handleStatusUpdate = (pinId: string, newStatus: DesignPinStatus) => {
         const updatedPins = pins.map(p => p.id === pinId ? { ...p, status: newStatus } : p);
+        onUpdatePins(updatedPins);
+    };
+
+    const handleMistakeToggle = (pinId: string) => {
+        const updatedPins = pins.map(p => p.id === pinId ? { ...p, isMistake: !p.isMistake } : p);
         onUpdatePins(updatedPins);
     };
 
@@ -240,20 +243,24 @@ export function FeedbackSidebar({
                                             className={cn(
                                                 "p-3 rounded-xl border-2 transition-all relative cursor-pointer", 
                                                 isHighlighted ? "border-primary bg-primary/5 shadow-lg" : "border-primary/5 bg-background hover:border-primary/20", 
-                                                pin.status === 'mistake' && "border-destructive/20 bg-destructive/5",
+                                                pin.isMistake && "ring-4 ring-destructive/20 bg-destructive/5 border-destructive/30",
                                                 pin.status === 'resolved' && "opacity-60 grayscale-[0.5]"
                                             )}
                                         >
                                             <div className="flex items-center justify-between mb-2">
                                                 <div className="flex items-center gap-2">
-                                                    <div className={cn("h-5 w-5 rounded flex items-center justify-center text-[10px] font-black text-white", PIN_COLORS[pin.status])}>{pinNumber}</div>
+                                                    <div className={cn("h-5 w-5 rounded flex items-center justify-center text-[10px] font-black text-white", PIN_COLORS[pin.status || 'open'])}>{pinNumber}</div>
                                                     <span className="text-[10px] font-black uppercase tracking-tighter">{pin.author}</span>
-                                                    <Badge variant="outline" className={cn(
-                                                        "text-[8px] h-4 font-black uppercase px-1 border-primary/20",
-                                                        pin.status === 'mistake' ? "text-destructive border-destructive/20 bg-destructive/5" : "text-primary bg-primary/5"
-                                                    )}>
-                                                        {pin.status}
-                                                    </Badge>
+                                                    <div className="flex items-center gap-1">
+                                                        <Badge variant="outline" className="text-[8px] h-4 font-black uppercase px-1 border-primary/20 bg-primary/5 text-primary">
+                                                            {pin.status}
+                                                        </Badge>
+                                                        {pin.isMistake && (
+                                                            <Badge variant="destructive" className="text-[8px] h-4 font-black uppercase px-1 shadow-sm">
+                                                                MISTAKE
+                                                            </Badge>
+                                                        )}
+                                                    </div>
                                                 </div>
                                                 <div className="flex items-center gap-2">
                                                     <span className="text-[9px] font-bold text-muted-foreground uppercase opacity-60">V{pin.version}</span>
@@ -284,10 +291,10 @@ export function FeedbackSidebar({
                                                                         <Button 
                                                                             variant="outline" 
                                                                             size="sm" 
-                                                                            className={cn("h-6 text-[9px] font-black uppercase px-2", pin.status === 'mistake' ? "border-primary text-primary" : "border-destructive text-destructive")} 
-                                                                            onClick={(e) => { e.stopPropagation(); handleStatusUpdate(pin.id, pin.status === 'mistake' ? 'open' : 'mistake'); }}
+                                                                            className={cn("h-6 text-[9px] font-black uppercase px-2", pin.isMistake ? "border-primary text-primary" : "border-destructive text-destructive")} 
+                                                                            onClick={(e) => { e.stopPropagation(); handleMistakeToggle(pin.id); }}
                                                                         >
-                                                                            <AlertCircle className="h-3 w-3 mr-1" /> {pin.status === 'mistake' ? 'Unmark Mistake' : 'Mark Mistake'}
+                                                                            <AlertCircle className="h-3 w-3 mr-1" /> {pin.isMistake ? 'Unmark Mistake' : 'Mark Mistake'}
                                                                         </Button>
                                                                     </>
                                                                 ) : (
