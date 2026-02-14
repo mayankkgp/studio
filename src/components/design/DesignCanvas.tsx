@@ -20,7 +20,8 @@ import {
     Lock,
     RotateCcw,
     GripHorizontal,
-    Layers
+    Layers,
+    Hand
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -79,6 +80,13 @@ export function DesignCanvas({
     const [showPins, setShowPins] = useState(true);
     const [showComparison, setShowComparison] = useState(false);
     
+    // Pan state
+    const [isSpacePressed, setIsSpacePressed] = useState(false);
+    const [isDraggingCanvas, setIsDraggingCanvas] = useState(false);
+    const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+    const dragStartMousePos = useRef<{ x: number; y: number } | null>(null);
+    const initialPanOffset = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+
     // Drag state for popover
     const [popoverPos, setPopoverPos] = useState<{ x: number; y: number } | null>(null);
     const [isDraggingPopover, setIsDraggingPopover] = useState(false);
@@ -91,17 +99,15 @@ export function DesignCanvas({
 
     const isLatest = version === currentVersion;
     
-    // Feedback availability logic based on role and state
     const canInteract = useMemo(() => {
-        if (!imageUrl || !isLatest) return false;
+        if (!imageUrl || !isLatest || isSpacePressed) return false;
 
         if (isDesigner) {
             return status === 'DRAFT' && hasNewDraft;
         } else {
-            // Manager can only feedback in review/approval states
             return status !== 'PENDING' && status !== 'DRAFT';
         }
-    }, [imageUrl, isLatest, isDesigner, status, hasNewDraft]);
+    }, [imageUrl, isLatest, isDesigner, status, hasNewDraft, isSpacePressed]);
     
     const [replyText, setReplyText] = useState('');
     const [isReplyMode, setIsReplyMode] = useState(false);
@@ -115,9 +121,17 @@ export function DesignCanvas({
     const activePin = useMemo(() => pins.find(p => p.id === selectedPinId), [pins, selectedPinId]);
     const activePinNumber = useMemo(() => pins.findIndex(p => p.id === selectedPinId) + 1, [pins, selectedPinId]);
 
-    // Global Escape key listener to close popover and cancel pending pins
+    // Spacebar listener for Panning
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.code === 'Space' && !isSpacePressed) {
+                // Only trigger if not typing in an input/textarea
+                const target = e.target as HTMLElement;
+                if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
+                
+                e.preventDefault();
+                setIsSpacePressed(true);
+            }
             if (e.key === 'Escape') {
                 if (selectedPinId || highlightedPinId) {
                     onPinClick(null);
@@ -125,9 +139,20 @@ export function DesignCanvas({
             }
         };
 
+        const handleKeyUp = (e: KeyboardEvent) => {
+            if (e.code === 'Space') {
+                setIsSpacePressed(false);
+                setIsDraggingCanvas(false);
+            }
+        };
+
         window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [selectedPinId, highlightedPinId, onPinClick]);
+        window.addEventListener('keyup', handleKeyUp);
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+            window.removeEventListener('keyup', handleKeyUp);
+        };
+    }, [isSpacePressed, selectedPinId, highlightedPinId, onPinClick]);
 
     // Disable comparison if version changes and no comparison is available for new version
     useEffect(() => {
@@ -143,9 +168,11 @@ export function DesignCanvas({
             setIsReplyMode(false);
             setIsMistakeDraft(!!activePin.isMistake);
             
-            // Auto-position popover next to the pin
             if (containerRef.current) {
                 const containerRect = containerRef.current.getBoundingClientRect();
+                
+                // Note: Popover positioning doesn't currently account for panOffset
+                // because it's relative to the container, not the scaled/panned layer.
                 const px = (activePin.x / 100) * containerRect.width;
                 const py = (activePin.y / 100) * containerRect.height;
                 
@@ -184,10 +211,37 @@ export function DesignCanvas({
 
     const handleZoomIn = () => setZoom(prev => Math.min(prev + 0.25, 4));
     const handleZoomOut = () => setZoom(prev => Math.max(prev - 0.25, 0.5));
-    const handleReset = () => setZoom(1);
+    const handleReset = () => {
+        setZoom(1);
+        setPanOffset({ x: 0, y: 0 });
+    };
+
+    const handleCanvasMouseDown = (e: React.MouseEvent) => {
+        if (isSpacePressed) {
+            setIsDraggingCanvas(true);
+            dragStartMousePos.current = { x: e.clientX, y: e.clientY };
+            initialPanOffset.current = panOffset;
+            e.preventDefault();
+        }
+    };
+
+    const handleCanvasMouseMove = (e: React.MouseEvent) => {
+        if (isDraggingCanvas && dragStartMousePos.current) {
+            const dx = e.clientX - dragStartMousePos.current.x;
+            const dy = e.clientY - dragStartMousePos.current.y;
+            setPanOffset({
+                x: initialPanOffset.current.x + dx,
+                y: initialPanOffset.current.y + dy
+            });
+        }
+    };
+
+    const handleCanvasMouseUp = () => {
+        setIsDraggingCanvas(false);
+    };
 
     const handleCanvasClick = (e: React.MouseEvent) => {
-        if (!imageUrl) return;
+        if (!imageUrl || isSpacePressed) return;
         
         const target = e.target as HTMLElement;
         if (target.closest('.pin-bubble') || target.closest('button') || target.closest('.fixed-comment-box')) return;
@@ -201,9 +255,17 @@ export function DesignCanvas({
 
         e.stopPropagation();
         e.preventDefault();
+        
+        // Pin creation needs to account for pan and zoom if we want it to be perfectly accurate
+        // However, since the wrapper scale/translate uses % coordinates for pins relative to its OWN bounds,
+        // we can still use the relative container click if the wrapper is same size as container.
         const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-        const x = ((e.clientX - rect.left) / rect.width) * 100;
-        const y = ((e.clientY - rect.top) / rect.height) * 100;
+        
+        // Simple logic for now: Click coordinates relative to the container.
+        // If we want pin to land on the image pixels correctly while panned/zoomed:
+        // x_internal = (clickX - rect.left - panX) / zoom
+        const x = ((e.clientX - rect.left - panOffset.x - (rect.width/2)) / zoom + (rect.width/2)) / rect.width * 100;
+        const y = ((e.clientY - rect.top - panOffset.y - (rect.height/2)) / zoom + (rect.height/2)) / rect.height * 100;
         
         onAddPin(x, y);
     };
@@ -375,6 +437,11 @@ export function DesignCanvas({
                                         <div className="h-2 w-2 rounded-full bg-blue-600 animate-pulse" />
                                         <span className="text-[10px] font-black uppercase tracking-widest text-foreground">Feedback Mode</span>
                                     </>
+                                ) : isSpacePressed ? (
+                                    <>
+                                        <Hand className="h-3 w-3 text-primary animate-pulse" />
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-primary">Pan Mode</span>
+                                    </>
                                 ) : (
                                     <>
                                         <Lock className="h-3 w-3 text-muted-foreground" />
@@ -391,7 +458,7 @@ export function DesignCanvas({
                                 <TooltipTrigger asChild>
                                     <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full" onClick={handleReset}><Scaling className="h-4 w-4" /></Button>
                                 </TooltipTrigger>
-                                <TooltipContent>Fit to Screen</TooltipContent>
+                                <TooltipContent>Fit to Screen (R)</TooltipContent>
                             </Tooltip>
                             <Tooltip>
                                 <TooltipTrigger asChild>
@@ -442,13 +509,19 @@ export function DesignCanvas({
                         ref={containerRef}
                         className={cn(
                             "flex-1 overflow-hidden relative select-none",
-                            canInteract ? "cursor-crosshair" : "cursor-default"
+                            isSpacePressed ? (isDraggingCanvas ? "cursor-grabbing" : "cursor-grab") : (canInteract ? "cursor-crosshair" : "cursor-default")
                         )}
+                        onMouseDown={handleCanvasMouseDown}
+                        onMouseMove={handleCanvasMouseMove}
+                        onMouseUp={handleCanvasMouseUp}
+                        onMouseLeave={handleCanvasMouseUp}
                         onClick={handleCanvasClick}
                     >
                         <div 
-                            className="absolute inset-0 origin-center pointer-events-none"
-                            style={{ transform: `scale(${zoom})` }}
+                            className="absolute inset-0 origin-center pointer-events-none transition-transform duration-75 ease-out"
+                            style={{ 
+                                transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoom})` 
+                            }}
                         >
                             {imageUrl && (
                                 <img 
@@ -483,6 +556,7 @@ export function DesignCanvas({
                                         )}
                                         style={{ left: `${pin.x}%`, top: `${pin.y}%`, transform: `translate(-50%, -50%) scale(${1/zoom})` }}
                                         onClick={(e) => { 
+                                            if (isSpacePressed) return;
                                             e.stopPropagation(); 
                                             setRepositionKey(prev => prev + 1); 
                                             onPinClick(pin.id); 
@@ -516,18 +590,16 @@ export function DesignCanvas({
                                             </div>
                                             <div className="flex flex-col -space-y-0.5">
                                                 <span className="text-[10px] font-black uppercase tracking-widest">{activePin.author}</span>
-                                                {!activePin.isDraft && (
-                                                    <div className="flex items-center gap-1.5">
-                                                        <span className="text-[8px] font-black uppercase tracking-widest text-primary">
-                                                            {activePin.status}
+                                                <div className="flex items-center gap-1.5">
+                                                    <span className="text-[8px] font-black uppercase tracking-widest text-primary">
+                                                        {activePin.status}
+                                                    </span>
+                                                    {activePin.isMistake && (
+                                                        <span className="text-[8px] font-black uppercase tracking-widest text-destructive">
+                                                            • MISTAKE
                                                         </span>
-                                                        {activePin.isMistake && (
-                                                            <span className="text-[8px] font-black uppercase tracking-widest text-destructive">
-                                                                • MISTAKE
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                )}
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2">
