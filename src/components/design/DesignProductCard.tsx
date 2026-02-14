@@ -38,11 +38,6 @@ interface AddComponentWidgetProps {
     onAdd: (name: string) => void;
 }
 
-/**
- * Isolated Add Component Widget.
- * In 'card' mode, it uses a standard Popover.
- * In 'workbench' mode, it uses an Inline Input to bypass portal/focus-trap conflicts within the full-screen Dialog.
- */
 function AddComponentWidget({ mode, onAdd }: AddComponentWidgetProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [name, setName] = useState('');
@@ -61,7 +56,6 @@ function AddComponentWidget({ mode, onAdd }: AddComponentWidgetProps) {
         if (e.key === 'Escape') setIsOpen(false);
     };
 
-    // Auto-focus when inline mode is activated
     useEffect(() => {
         if (mode === 'workbench' && isOpen) {
             setTimeout(() => inputRef.current?.focus(), 50);
@@ -215,6 +209,13 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
 
     const isLatestDraftLocked = !isDesigner && activeComponent.status === 'DRAFT' && viewedVersionNum === currentVersionNum && viewedVersionNum > 0;
 
+    // Onion Skinning Logic: Find the version immediately preceding the viewed version
+    const comparisonImageUrl = useMemo(() => {
+        if (!activeComponent.versions || viewedVersionNum <= 1) return null;
+        const prevVersion = activeComponent.versions.find(v => v.versionNumber === viewedVersionNum - 1);
+        return prevVersion?.imageUrl || null;
+    }, [activeComponent.versions, viewedVersionNum]);
+
     const handleUpdateDesignInternal = (updatedData: DesignData, forcePersist: boolean = false) => {
         lastLocalUpdateRef.current = Date.now();
         setLocalDesignData(updatedData);
@@ -303,7 +304,6 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
     };
 
     const handlePinSelect = (id: string | null, openPopover: boolean = false) => {
-        // DISCARD LOGIC: If closing or switching away from an empty draft, discard it.
         if (highlightedPinId && id !== highlightedPinId) {
             const pinToClose = activeComponent.pins.find(p => p.id === highlightedPinId);
             if (pinToClose?.isDraft && !draftText.trim()) {
@@ -320,7 +320,6 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
         setHighlightedPinId(id);
         setSelectedPinId(openPopover ? id : null);
         
-        // Load text for the newly selected pin
         if (id) {
             const pin = activeComponent.pins.find(p => p.id === id);
             setDraftText(pin?.text || '');
@@ -494,6 +493,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
                             <div className="flex-1 relative overflow-hidden">
                                 <DesignCanvas 
                                     imageUrl={isLatestDraftLocked ? null : (activeVersion?.imageUrl || null)}
+                                    comparisonImageUrl={showComparison && comparisonImageUrl ? comparisonImageUrl : null}
                                     pins={activeComponent.pins || []}
                                     highlightedPinId={highlightedPinId}
                                     selectedPinId={selectedPinId}

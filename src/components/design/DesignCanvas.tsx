@@ -19,7 +19,8 @@ import {
     Send,
     Lock,
     RotateCcw,
-    GripHorizontal
+    GripHorizontal,
+    Layers
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -35,6 +36,7 @@ const PIN_COLORS: Record<DesignPinStatus, string> = {
 
 interface DesignCanvasProps {
     imageUrl: string | null;
+    comparisonImageUrl?: string | null;
     pins: DesignPin[];
     highlightedPinId: string | null;
     selectedPinId: string | null;
@@ -55,6 +57,7 @@ interface DesignCanvasProps {
 
 export function DesignCanvas({ 
     imageUrl, 
+    comparisonImageUrl,
     pins, 
     highlightedPinId, 
     selectedPinId,
@@ -74,6 +77,7 @@ export function DesignCanvas({
 }: DesignCanvasProps) {
     const [zoom, setZoom] = useState(1);
     const [showPins, setShowPins] = useState(true);
+    const [showComparison, setShowComparison] = useState(false);
     
     // Drag state for popover
     const [popoverPos, setPopoverPos] = useState<{ x: number; y: number } | null>(null);
@@ -110,9 +114,13 @@ export function DesignCanvas({
     const activePin = useMemo(() => pins.find(p => p.id === selectedPinId), [pins, selectedPinId]);
     const activePinNumber = useMemo(() => pins.findIndex(p => p.id === selectedPinId) + 1, [pins, selectedPinId]);
 
+    // Disable comparison if version changes and no comparison is available for new version
+    useEffect(() => {
+        if (!comparisonImageUrl) setShowComparison(false);
+    }, [comparisonImageUrl]);
+
     // Handle Selection & Auto-positioning logic
     useEffect(() => {
-        // We only reposition if the selection explicitly changed OR if a force-reposition was triggered via click
         const isFreshSelection = selectedPinId !== lastSelectionId.current || repositionKey !== lastRepositionKey.current;
 
         if (selectedPinId && isFreshSelection && activePin) {
@@ -127,33 +135,28 @@ export function DesignCanvas({
                 const py = (activePin.y / 100) * containerRect.height;
                 
                 const popoverWidth = 320;
-                const popoverHeight = 250; // Estimated baseline
+                const popoverHeight = 250; 
                 const offset = 24;
 
                 let x = px + offset;
                 let y = py + offset;
 
-                // Bounding: Check Right Edge
                 if (x + popoverWidth > containerRect.width - 20) {
                     x = px - popoverWidth - offset;
                 }
-                // Bounding: Check Bottom Edge
                 if (y + popoverHeight > containerRect.height - 20) {
                     y = py - popoverHeight - offset;
                 }
 
-                // Final safety clamps
                 x = Math.max(20, Math.min(x, containerRect.width - popoverWidth - 20));
                 y = Math.max(20, Math.min(y, containerRect.height - 150));
 
                 setPopoverPos({ x, y });
                 
-                // Mark this instance as handled
                 lastSelectionId.current = selectedPinId;
                 lastRepositionKey.current = repositionKey;
             }
             
-            // Focus textarea after selection
             setTimeout(() => {
                 textareaRef.current?.focus();
             }, 150);
@@ -195,7 +198,6 @@ export function DesignCanvas({
         
         const trimmed = draftText.trim();
         
-        // DISCARD LOGIC: If "Save" is clicked but text is empty, discard/remove the pin.
         if (!trimmed) {
             onUpdatePins(pins.filter(p => p.id !== selectedPinId));
             onPinClick(null);
@@ -253,7 +255,6 @@ export function DesignCanvas({
         e.target.value = '';
     };
 
-    // Popover dragging logic
     const handlePopoverMouseDown = (e: React.MouseEvent) => {
         const header = e.currentTarget as HTMLElement;
         const popover = header.closest('.fixed-comment-box') as HTMLElement;
@@ -286,7 +287,6 @@ export function DesignCanvas({
             let newY = dragStartRef.current.popoverY + deltaY;
 
             const containerRect = containerRef.current.getBoundingClientRect();
-            // Clamp to container bounds
             newX = Math.max(0, Math.min(newX, containerRect.width - 320));
             newY = Math.max(0, Math.min(newY, containerRect.height - 150));
 
@@ -382,6 +382,21 @@ export function DesignCanvas({
                                 </TooltipTrigger>
                                 <TooltipContent>{showPins ? "Hide Pins" : "Show Pins"}</TooltipContent>
                             </Tooltip>
+                            {comparisonImageUrl && (
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button 
+                                            variant="ghost" 
+                                            size="icon" 
+                                            className={cn("h-9 w-9 rounded-full", showComparison && "text-primary bg-primary/10")} 
+                                            onClick={() => setShowComparison(!showComparison)}
+                                        >
+                                            <Layers className="h-4 w-4" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Onion Skinning (Compare with V{version - 1})</TooltipContent>
+                                </Tooltip>
+                            )}
                         </TooltipProvider>
                     </div>
 
@@ -423,6 +438,15 @@ export function DesignCanvas({
                                 className="w-full h-full object-contain" 
                                 draggable={false} 
                             />
+
+                            {showComparison && comparisonImageUrl && (
+                                <img 
+                                    src={comparisonImageUrl} 
+                                    alt="Comparison View" 
+                                    className="absolute inset-0 w-full h-full object-contain opacity-50 pointer-events-none" 
+                                    draggable={false} 
+                                />
+                            )}
                             
                             {showPins && pins.map((pin, index) => {
                                 if (pin.version > version) return null;
@@ -439,7 +463,7 @@ export function DesignCanvas({
                                         style={{ left: `${pin.x}%`, top: `${pin.y}%`, transform: `translate(-50%, -50%) scale(${1/zoom})` }}
                                         onClick={(e) => { 
                                             e.stopPropagation(); 
-                                            setRepositionKey(prev => prev + 1); // Force default position logic
+                                            setRepositionKey(prev => prev + 1); 
                                             onPinClick(pin.id); 
                                         }}
                                     >
