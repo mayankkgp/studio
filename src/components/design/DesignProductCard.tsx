@@ -26,12 +26,12 @@ import {
     DialogTitle,
     DialogDescription,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import {
     Popover,
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover";
-import { Input } from "@/components/ui/input";
 
 interface AddComponentWidgetProps {
     mode: 'card' | 'workbench';
@@ -213,7 +213,6 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
 
     const viewedVersionNum = activeVersion?.versionNumber || 0;
 
-    // Strict state logic: Managers can reference the version number but cannot see the design content during active drafting
     const isLatestDraftLocked = !isDesigner && activeComponent.status === 'DRAFT' && viewedVersionNum === currentVersionNum && viewedVersionNum > 0;
 
     const handleUpdateDesignInternal = (updatedData: DesignData, forcePersist: boolean = false) => {
@@ -304,7 +303,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
     };
 
     const handlePinSelect = (id: string | null, openPopover: boolean = false) => {
-        // DISCARD LOGIC: If switching away from an empty draft, discard it.
+        // DISCARD LOGIC: If closing or switching away from an empty draft, discard it.
         if (highlightedPinId && id !== highlightedPinId) {
             const pinToClose = activeComponent.pins.find(p => p.id === highlightedPinId);
             if (pinToClose?.isDraft && !draftText.trim()) {

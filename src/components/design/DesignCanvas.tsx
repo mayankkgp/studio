@@ -79,7 +79,11 @@ export function DesignCanvas({
     const [popoverPos, setPopoverPos] = useState<{ x: number; y: number } | null>(null);
     const [isDraggingPopover, setIsDraggingPopover] = useState(false);
     const dragStartRef = useRef<{ mouseX: number; mouseY: number; popoverX: number; popoverY: number } | null>(null);
-    const lastPositionedId = useRef<string | null>(null);
+    
+    // Tracking state to force repositioning on click even if same pin
+    const [repositionKey, setRepositionKey] = useState(0);
+    const lastSelectionId = useRef<string | null>(null);
+    const lastRepositionKey = useRef<number>(-1);
 
     const isLatest = version === currentVersion;
     
@@ -88,10 +92,8 @@ export function DesignCanvas({
         if (!imageUrl || !isLatest) return false;
 
         if (isDesigner) {
-            // Designer can only add feedback in DRAFT state AND if they have actually uploaded a proof for this session
             return status === 'DRAFT' && hasNewDraft;
         } else {
-            // Manager cannot add feedback in PENDING or DRAFT states
             return status !== 'PENDING' && status !== 'DRAFT';
         }
     }, [imageUrl, isLatest, isDesigner, status, hasNewDraft]);
@@ -104,62 +106,63 @@ export function DesignCanvas({
     const imageRef = useRef<HTMLImageElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
-    const prevSelectedId = useRef<string | null>(null);
 
     const activePin = useMemo(() => pins.find(p => p.id === selectedPinId), [pins, selectedPinId]);
     const activePinNumber = useMemo(() => pins.findIndex(p => p.id === selectedPinId) + 1, [pins, selectedPinId]);
 
     // Handle Selection & Auto-positioning logic
     useEffect(() => {
-        if (selectedPinId && selectedPinId !== prevSelectedId.current) {
+        // We only reposition if the selection explicitly changed OR if a force-reposition was triggered via click
+        const isFreshSelection = selectedPinId !== lastSelectionId.current || repositionKey !== lastRepositionKey.current;
+
+        if (selectedPinId && isFreshSelection && activePin) {
             setReplyText('');
             setIsReplyMode(false);
+            setIsMistakeDraft(!!activePin.isMistake);
             
-            if (activePin) {
-                setIsMistakeDraft(!!activePin.isMistake);
+            // Auto-position popover next to the pin
+            if (containerRef.current) {
+                const containerRect = containerRef.current.getBoundingClientRect();
+                const px = (activePin.x / 100) * containerRect.width;
+                const py = (activePin.y / 100) * containerRect.height;
                 
-                // Auto-position popover next to the pin if not manually dragged for this ID yet
-                if (containerRef.current && lastPositionedId.current !== selectedPinId) {
-                    const containerRect = containerRef.current.getBoundingClientRect();
-                    const px = (activePin.x / 100) * containerRect.width;
-                    const py = (activePin.y / 100) * containerRect.height;
-                    
-                    const popoverWidth = 320;
-                    const popoverHeight = 300; // Estimated height for safer bounding
-                    const offset = 24;
+                const popoverWidth = 320;
+                const popoverHeight = 250; // Estimated baseline
+                const offset = 24;
 
-                    let x = px + offset;
-                    let y = py + offset;
+                let x = px + offset;
+                let y = py + offset;
 
-                    // Bounding: Check Right Edge
-                    if (x + popoverWidth > containerRect.width - 20) {
-                        x = px - popoverWidth - offset;
-                    }
-                    // Bounding: Check Bottom Edge
-                    if (y + popoverHeight > containerRect.height - 20) {
-                        y = py - popoverHeight - offset;
-                    }
-
-                    // Final safety clamps
-                    x = Math.max(20, Math.min(x, containerRect.width - popoverWidth - 20));
-                    y = Math.max(20, Math.min(y, containerRect.height - 150));
-
-                    setPopoverPos({ x, y });
-                    lastPositionedId.current = selectedPinId;
+                // Bounding: Check Right Edge
+                if (x + popoverWidth > containerRect.width - 20) {
+                    x = px - popoverWidth - offset;
                 }
+                // Bounding: Check Bottom Edge
+                if (y + popoverHeight > containerRect.height - 20) {
+                    y = py - popoverHeight - offset;
+                }
+
+                // Final safety clamps
+                x = Math.max(20, Math.min(x, containerRect.width - popoverWidth - 20));
+                y = Math.max(20, Math.min(y, containerRect.height - 150));
+
+                setPopoverPos({ x, y });
+                
+                // Mark this instance as handled
+                lastSelectionId.current = selectedPinId;
+                lastRepositionKey.current = repositionKey;
             }
-            prevSelectedId.current = selectedPinId;
             
             // Focus textarea after selection
             setTimeout(() => {
                 textareaRef.current?.focus();
             }, 150);
         } else if (!selectedPinId) {
-            prevSelectedId.current = null;
-            lastPositionedId.current = null;
+            lastSelectionId.current = null;
+            lastRepositionKey.current = -1;
             setPopoverPos(null);
         }
-    }, [selectedPinId, activePin]);
+    }, [selectedPinId, activePin, repositionKey]);
 
     const handleZoomIn = () => setZoom(prev => Math.min(prev + 0.25, 4));
     const handleZoomOut = () => setZoom(prev => Math.max(prev - 0.25, 0.5));
@@ -171,7 +174,6 @@ export function DesignCanvas({
         const target = e.target as HTMLElement;
         if (target.closest('.pin-bubble') || target.closest('button') || target.closest('.fixed-comment-box')) return;
         
-        // If clicking away and we have a highlighted pin, handle close logic
         if (highlightedPinId || selectedPinId) {
             onPinClick(null);
             return;
@@ -285,7 +287,7 @@ export function DesignCanvas({
 
             const containerRect = containerRef.current.getBoundingClientRect();
             // Clamp to container bounds
-            newX = Math.max(0, Math.min(newX, containerRect.width - 320)); // w-80 is 320px
+            newX = Math.max(0, Math.min(newX, containerRect.width - 320));
             newY = Math.max(0, Math.min(newY, containerRect.height - 150));
 
             setPopoverPos({ x: newX, y: newY });
@@ -402,18 +404,6 @@ export function DesignCanvas({
                         </div>
                     </div>
 
-                    {isLatest && !canInteract && (
-                        <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-50 px-4 py-2 bg-black/80 backdrop-blur-md text-white rounded-full flex items-center gap-3 shadow-2xl animate-in slide-in-from-bottom-2">
-                            <Lock className="h-3.5 w-3.5 text-primary" />
-                            <span className="text-[10px] font-black uppercase tracking-widest">
-                                {isDesigner 
-                                    ? (status === 'DRAFT' ? "Upload design to add feedback" : `Designer feedback locked in ${status.replace('_', ' ')}`)
-                                    : (status === 'DRAFT' || status === 'PENDING' ? "Manager feedback locked during draft" : "Manager feedback restricted in this state")
-                                }
-                            </span>
-                        </div>
-                    )}
-
                     <div 
                         ref={containerRef}
                         className={cn(
@@ -447,7 +437,11 @@ export function DesignCanvas({
                                             pin.status === 'resolved' && "opacity-60 grayscale-[0.5]"
                                         )}
                                         style={{ left: `${pin.x}%`, top: `${pin.y}%`, transform: `translate(-50%, -50%) scale(${1/zoom})` }}
-                                        onClick={(e) => { e.stopPropagation(); onPinClick(pin.id); }}
+                                        onClick={(e) => { 
+                                            e.stopPropagation(); 
+                                            setRepositionKey(prev => prev + 1); // Force default position logic
+                                            onPinClick(pin.id); 
+                                        }}
                                     >
                                         {index + 1}
                                     </button>
