@@ -545,7 +545,13 @@ export function DesignCanvas({
                                                     placeholder="Enter feedback details..." 
                                                     className="min-h-[80px] text-xs font-semibold leading-relaxed" 
                                                     value={draftText} 
-                                                    onChange={(e) => onDraftTextChange(e.target.value)} 
+                                                    onChange={(e) => onDraftTextChange(e.target.value)}
+                                                    onKeyDown={(e) => {
+                                                        if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+                                                            e.preventDefault();
+                                                            handleSaveComment();
+                                                        }
+                                                    }}
                                                 />
                                                 <div className="flex items-center justify-between">
                                                     {!isDesigner && (
@@ -582,6 +588,12 @@ export function DesignCanvas({
                                                             className="min-h-[60px] text-[10px] font-semibold"
                                                             value={replyText}
                                                             onChange={(e) => setReplyText(e.target.value)}
+                                                            onKeyDown={(e) => {
+                                                                if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+                                                                    e.preventDefault();
+                                                                    handleAddReply(activePin.id);
+                                                                }
+                                                            }}
                                                         />
                                                         <div className="flex justify-end gap-2">
                                                             <Button variant="ghost" size="sm" className="h-6 text-[9px] font-black uppercase" onClick={() => setIsReplyMode(false)}>Cancel</Button>

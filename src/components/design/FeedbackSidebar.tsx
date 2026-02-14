@@ -312,6 +312,12 @@ export function FeedbackSidebar({
                                                             value={replyText}
                                                             onChange={(e) => setReplyText(e.target.value)}
                                                             onClick={(e) => e.stopPropagation()}
+                                                            onKeyDown={(e) => {
+                                                                if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+                                                                    e.preventDefault();
+                                                                    handleAddReply(pin.id);
+                                                                }
+                                                            }}
                                                         />
                                                         <div className="flex justify-end gap-2">
                                                             <Button variant="ghost" size="sm" className="h-6 text-[9px] font-black uppercase" onClick={(e) => { e.stopPropagation(); setActiveReplyId(null); }}>Cancel</Button>
@@ -334,7 +340,7 @@ export function FeedbackSidebar({
                             <div>
                                 <h3 className="font-headline font-black text-sm uppercase tracking-widest text-foreground border-b-2 border-primary/10 pb-2 mb-6">Visual Identity</h3>
                                 <BriefSection title="Mood & Style" icon={Palette} content={customerData?.visualIdentity?.moodStyle} />
-                                <BriefSection title="Palette & Type" icon={Palette} content={customerData?.visualIdentity?.colorTypography} />
+                                BriefSection title="Palette & Type" icon={Palette} content={customerData?.visualIdentity?.colorTypography} />
                                 <BriefSection title="Dislikes" icon={AlertCircle} content={customerData?.visualIdentity?.designDislikes} />
                             </div>
 
