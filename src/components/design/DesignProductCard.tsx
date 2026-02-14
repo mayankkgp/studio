@@ -38,12 +38,11 @@ interface AddComponentWidgetProps {
 
 /**
  * Isolated Add Component Widget to prevent state conflicts between Card and Workbench views.
- * Implements focus-trap bypass and pointer-event restoration for reliable interaction inside Dialogs.
+ * Uses modal Popover to correctly handle nested focus traps within the Workbench Dialog.
  */
 function AddComponentWidget({ mode, onAdd }: AddComponentWidgetProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [name, setName] = useState('');
-    const inputRef = useRef<HTMLInputElement>(null);
 
     const handleSubmit = () => {
         if (!name.trim()) return;
@@ -52,21 +51,8 @@ function AddComponentWidget({ mode, onAdd }: AddComponentWidgetProps) {
         setIsOpen(false);
     };
 
-    // Manual focus management to bypass Dialog focus-trapping race conditions
-    useEffect(() => {
-        if (isOpen) {
-            const timer = setTimeout(() => {
-                if (inputRef.current) {
-                    inputRef.current.focus();
-                    // Optional: select text for easier editing if there was a default
-                }
-            }, 150);
-            return () => clearTimeout(timer);
-        }
-    }, [isOpen]);
-
     return (
-        <Popover open={isOpen} onOpenChange={setIsOpen}>
+        <Popover open={isOpen} onOpenChange={setIsOpen} modal={true}>
             <PopoverTrigger asChild>
                 {mode === 'workbench' ? (
                     <Button 
@@ -89,7 +75,6 @@ function AddComponentWidget({ mode, onAdd }: AddComponentWidgetProps) {
                 className="w-64 p-4 shadow-2xl border-2 border-primary/20 z-[150] pointer-events-auto" 
                 align={mode === 'workbench' ? "start" : "center"} 
                 sideOffset={10}
-                onOpenAutoFocus={(e) => e.preventDefault()}
             >
                 <div className="space-y-4">
                     <div className="flex items-center gap-2">
@@ -99,7 +84,7 @@ function AddComponentWidget({ mode, onAdd }: AddComponentWidgetProps) {
                         <h4 className="text-[10px] font-black uppercase tracking-widest text-foreground">New Design Component</h4>
                     </div>
                     <Input 
-                        ref={inputRef}
+                        autoFocus
                         placeholder="e.g. Back Side, Inner Page..." 
                         className="h-9 text-xs font-bold border-primary/20 focus-visible:ring-primary/20 bg-muted/5 cursor-text"
                         value={name}
