@@ -38,10 +38,12 @@ interface AddComponentWidgetProps {
 
 /**
  * Isolated Add Component Widget to prevent state conflicts between Card and Workbench views.
+ * Implements focus-trap bypass for reliable input interaction inside Dialogs.
  */
 function AddComponentWidget({ mode, onAdd }: AddComponentWidgetProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [name, setName] = useState('');
+    const inputRef = useRef<HTMLInputElement>(null);
 
     const handleSubmit = () => {
         if (!name.trim()) return;
@@ -49,6 +51,16 @@ function AddComponentWidget({ mode, onAdd }: AddComponentWidgetProps) {
         setName('');
         setIsOpen(false);
     };
+
+    // Manual focus management to bypass Dialog focus-trapping race conditions
+    useEffect(() => {
+        if (isOpen) {
+            const timer = setTimeout(() => {
+                inputRef.current?.focus();
+            }, 100);
+            return () => clearTimeout(timer);
+        }
+    }, [isOpen]);
 
     return (
         <Popover open={isOpen} onOpenChange={setIsOpen}>
@@ -58,14 +70,12 @@ function AddComponentWidget({ mode, onAdd }: AddComponentWidgetProps) {
                         variant="outline" 
                         size="sm" 
                         className="h-7 w-7 rounded-full p-0 border-dashed border-primary/40 text-primary hover:bg-primary/5 shrink-0"
-                        onClick={(e) => e.stopPropagation()}
                     >
                         <Plus className="h-3.5 w-3.5" />
                     </Button>
                 ) : (
                     <button 
                         className="p-3 rounded-lg border-2 border-dashed border-primary/20 hover:border-primary/40 hover:bg-primary/5 transition-all flex flex-col items-center justify-center gap-1 group w-full h-full"
-                        onClick={(e) => e.stopPropagation()}
                     >
                         <Plus className="h-4 w-4 text-primary/40 group-hover:text-primary transition-colors" />
                         <span className="text-[9px] font-black uppercase tracking-wider text-muted-foreground group-hover:text-primary transition-colors">Add Component</span>
@@ -76,6 +86,7 @@ function AddComponentWidget({ mode, onAdd }: AddComponentWidgetProps) {
                 className="w-64 p-4 shadow-2xl border-2 border-primary/20 z-[150]" 
                 align={mode === 'workbench' ? "start" : "center"} 
                 sideOffset={10}
+                onOpenAutoFocus={(e) => e.preventDefault()}
             >
                 <div className="space-y-4">
                     <div className="flex items-center gap-2">
@@ -85,12 +96,15 @@ function AddComponentWidget({ mode, onAdd }: AddComponentWidgetProps) {
                         <h4 className="text-[10px] font-black uppercase tracking-widest text-foreground">New Design Component</h4>
                     </div>
                     <Input 
+                        ref={inputRef}
                         placeholder="e.g. Back Side, Inner Page..." 
                         className="h-9 text-xs font-bold border-primary/20 focus-visible:ring-primary/20 bg-muted/5"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
-                        autoFocus
+                        onKeyDown={(e) => {
+                            e.stopPropagation();
+                            if (e.key === 'Enter') handleSubmit();
+                        }}
                     />
                     <Button size="sm" className="w-full h-9 text-[10px] font-black uppercase tracking-widest shadow-md" onClick={handleSubmit}>Create Component</Button>
                 </div>
