@@ -18,7 +18,8 @@ import {
     AlertCircle,
     Send,
     Lock,
-    RotateCcw
+    RotateCcw,
+    GripHorizontal
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -74,6 +75,11 @@ export function DesignCanvas({
     const [zoom, setZoom] = useState(1);
     const [showPins, setShowPins] = useState(true);
     
+    // Drag state for popover
+    const [popoverPos, setPopoverPos] = useState<{ x: number; y: number } | null>(null);
+    const [isDraggingPopover, setIsDraggingPopover] = useState(false);
+    const dragStartRef = useRef<{ mouseX: number; mouseY: number; popoverX: number; popoverY: number } | null>(null);
+
     const isLatest = version === currentVersion;
     
     // Feedback availability logic based on role and state
@@ -212,6 +218,61 @@ export function DesignCanvas({
         if (file && onUpload) onUpload(file);
         e.target.value = '';
     };
+
+    // Popover dragging logic
+    const handlePopoverMouseDown = (e: React.MouseEvent) => {
+        const header = e.currentTarget as HTMLElement;
+        const popover = header.closest('.fixed-comment-box') as HTMLElement;
+        if (!popover || !containerRef.current) return;
+
+        const containerRect = containerRef.current.getBoundingClientRect();
+        const popoverRect = popover.getBoundingClientRect();
+
+        const initialX = popoverRect.left - containerRect.left;
+        const initialY = popoverRect.top - containerRect.top;
+
+        setIsDraggingPopover(true);
+        dragStartRef.current = {
+            mouseX: e.clientX,
+            mouseY: e.clientY,
+            popoverX: initialX,
+            popoverY: initialY
+        };
+        e.preventDefault();
+    };
+
+    useEffect(() => {
+        const handleMouseMove = (e: MouseEvent) => {
+            if (!isDraggingPopover || !dragStartRef.current || !containerRef.current) return;
+
+            const deltaX = e.clientX - dragStartRef.current.mouseX;
+            const deltaY = e.clientY - dragStartRef.current.mouseY;
+
+            let newX = dragStartRef.current.popoverX + deltaX;
+            let newY = dragStartRef.current.popoverY + deltaY;
+
+            const containerRect = containerRef.current.getBoundingClientRect();
+            // Clamp to container bounds
+            newX = Math.max(0, Math.min(newX, containerRect.width - 320)); // w-80 is 320px
+            newY = Math.max(0, Math.min(newY, containerRect.height - 150));
+
+            setPopoverPos({ x: newX, y: newY });
+        };
+
+        const handleMouseUp = () => {
+            setIsDraggingPopover(false);
+        };
+
+        if (isDraggingPopover) {
+            window.addEventListener('mousemove', handleMouseMove);
+            window.addEventListener('mouseup', handleMouseUp);
+        }
+
+        return () => {
+            window.removeEventListener('mousemove', handleMouseMove);
+            window.removeEventListener('mouseup', handleMouseUp);
+        };
+    }, [isDraggingPopover]);
 
     return (
         <div className="h-full flex flex-col relative group/canvas bg-stone-100 overflow-hidden">
@@ -370,10 +431,22 @@ export function DesignCanvas({
                         </div>
 
                         {selectedPinId && activePin && (
-                            <div className="absolute bottom-6 right-6 z-[100] w-80 animate-in slide-in-from-bottom-4 duration-300 pointer-events-auto fixed-comment-box">
+                            <div 
+                                className={cn(
+                                    "absolute z-[100] w-80 animate-in slide-in-from-bottom-4 duration-300 pointer-events-auto fixed-comment-box transition-[box-shadow]",
+                                    isDraggingPopover && "shadow-[0_30px_60px_rgba(0,0,0,0.4)] scale-[1.02]"
+                                )}
+                                style={popoverPos ? { left: `${popoverPos.x}px`, top: `${popoverPos.y}px` } : { bottom: '24px', right: '24px' }}
+                            >
                                 <div className="bg-background rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] border-2 border-primary/20 overflow-hidden">
-                                    <div className="p-3 border-b bg-muted/20 flex items-center justify-between">
+                                    <div 
+                                        className="p-3 border-b bg-muted/20 flex items-center justify-between cursor-grab active:cursor-grabbing group/header"
+                                        onMouseDown={handlePopoverMouseDown}
+                                    >
                                         <div className="flex items-center gap-2">
+                                            <div className="flex flex-col gap-0.5 opacity-30 group-hover/header:opacity-60 transition-opacity">
+                                                <GripHorizontal className="h-3 w-3" />
+                                            </div>
                                             <div className={cn("h-5 w-5 rounded flex items-center justify-center text-[10px] font-black text-white", PIN_COLORS[activePin.status || 'open'])}>
                                                 {activePinNumber}
                                             </div>
