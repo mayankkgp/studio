@@ -217,7 +217,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
             version: viewedVersionNum, 
             text: '', 
             replies: [],
-            isDraft: true // TRACK AS NEW PIN
+            isDraft: true
         };
         
         const updatedComponents = localDesignData.components.map(c => {
@@ -254,42 +254,6 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
         }
     };
 
-    const AddComponentPopover = (
-        <Popover open={isAddingComp} onOpenChange={setIsAddingComp}>
-            <PopoverTrigger asChild>
-                {isFullscreen ? (
-                    <Button variant="outline" size="sm" className="h-7 w-7 rounded-full p-0 border-dashed border-primary/40 text-primary hover:bg-primary/5">
-                        <Plus className="h-3.5 w-3.5" />
-                    </Button>
-                ) : (
-                    <button className="p-3 rounded-lg border-2 border-dashed border-primary/20 hover:border-primary/40 hover:bg-primary/5 transition-all flex flex-col items-center justify-center gap-1 group">
-                        <Plus className="h-4 w-4 text-primary/40 group-hover:text-primary transition-colors" />
-                        <span className="text-[9px] font-black uppercase tracking-wider text-muted-foreground group-hover:text-primary transition-colors">Add Component</span>
-                    </button>
-                )}
-            </PopoverTrigger>
-            <PopoverContent className="w-64 p-4 shadow-2xl border-2 border-primary/20" align={isFullscreen ? "start" : "center"} sideOffset={10}>
-                <div className="space-y-4">
-                    <div className="flex items-center gap-2">
-                        <div className="h-5 w-5 rounded bg-primary/10 flex items-center justify-center">
-                            <Plus className="h-3 w-3 text-primary" />
-                        </div>
-                        <h4 className="text-[10px] font-black uppercase tracking-widest text-foreground">New Design Component</h4>
-                    </div>
-                    <Input 
-                        placeholder="e.g. Back Side, Inner Page..." 
-                        className="h-9 text-xs font-bold border-primary/20 focus-visible:ring-primary/20 bg-muted/5"
-                        value={newCompName}
-                        onChange={(e) => setNewCompName(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleAddComponent()}
-                        autoFocus
-                    />
-                    <Button size="sm" className="w-full h-9 text-[10px] font-black uppercase tracking-widest shadow-md" onClick={handleAddComponent}>Create Component</Button>
-                </div>
-            </PopoverContent>
-        </Popover>
-    );
-
     const feedbackSidebarProps = {
         pins: activeComponent.pins || [],
         versions: visibleVersions,
@@ -310,6 +274,43 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
         customerData,
         activeProductId: product.id.toString()
     };
+
+    // Reusable Add Component Interface to ensure independent instances
+    const AddComponentWidget = ({ mode }: { mode: 'card' | 'workbench' }) => (
+        <Popover open={isAddingComp} onOpenChange={setIsAddingComp}>
+            <PopoverTrigger asChild>
+                {mode === 'workbench' ? (
+                    <Button variant="outline" size="sm" className="h-7 w-7 rounded-full p-0 border-dashed border-primary/40 text-primary hover:bg-primary/5 shrink-0">
+                        <Plus className="h-3.5 w-3.5" />
+                    </Button>
+                ) : (
+                    <button className="p-3 rounded-lg border-2 border-dashed border-primary/20 hover:border-primary/40 hover:bg-primary/5 transition-all flex flex-col items-center justify-center gap-1 group">
+                        <Plus className="h-4 w-4 text-primary/40 group-hover:text-primary transition-colors" />
+                        <span className="text-[9px] font-black uppercase tracking-wider text-muted-foreground group-hover:text-primary transition-colors">Add Component</span>
+                    </button>
+                )}
+            </PopoverTrigger>
+            <PopoverContent className="w-64 p-4 shadow-2xl border-2 border-primary/20 z-[110]" align={mode === 'workbench' ? "start" : "center"} sideOffset={10}>
+                <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                        <div className="h-5 w-5 rounded bg-primary/10 flex items-center justify-center">
+                            <Plus className="h-3 w-3 text-primary" />
+                        </div>
+                        <h4 className="text-[10px] font-black uppercase tracking-widest text-foreground">New Design Component</h4>
+                    </div>
+                    <Input 
+                        placeholder="e.g. Back Side, Inner Page..." 
+                        className="h-9 text-xs font-bold border-primary/20 focus-visible:ring-primary/20 bg-muted/5"
+                        value={newCompName}
+                        onChange={(e) => setNewCompName(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleAddComponent()}
+                        autoFocus
+                    />
+                    <Button size="sm" className="w-full h-9 text-[10px] font-black uppercase tracking-widest shadow-md" onClick={handleAddComponent}>Create Component</Button>
+                </div>
+            </PopoverContent>
+        </Popover>
+    );
 
     return (
         <>
@@ -351,7 +352,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
                                     </div>
                                 </div>
                             ))}
-                            {AddComponentPopover}
+                            <AddComponentWidget mode="card" />
                         </div>
                     )}
                 </CardContent>
@@ -374,11 +375,11 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
                     )}>
                         <div className="flex-1 relative flex flex-col min-w-0 bg-stone-100">
                             <div className="h-14 shrink-0 flex items-center justify-between px-6 bg-background/80 backdrop-blur-xl border-b z-50">
-                                <div className="flex items-center gap-4 overflow-hidden">
-                                    <h2 className="font-headline font-black text-sm truncate">{product.productName}</h2>
-                                    <div className="h-4 w-px bg-border" />
-                                    <div className="flex items-center gap-3">
-                                        <Tabs value={activeCompId} onValueChange={setActiveCompId} className="hidden sm:block">
+                                <div className="flex-1 flex items-center gap-4 overflow-hidden">
+                                    <h2 className="font-headline font-black text-sm truncate shrink-0">{product.productName}</h2>
+                                    <div className="h-4 w-px bg-border shrink-0" />
+                                    <div className="flex items-center gap-3 overflow-x-auto no-scrollbar py-1">
+                                        <Tabs value={activeCompId} onValueChange={setActiveCompId} className="shrink-0">
                                             <TabsList className="bg-transparent h-10 p-0 gap-4">
                                                 {localDesignData.components.map(comp => (
                                                     <TabsTrigger key={comp.id} value={comp.id} className="h-10 rounded-none border-b-2 border-transparent data-[state=active]:border-primary bg-transparent font-black uppercase text-[10px] tracking-widest px-0">
@@ -387,10 +388,10 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
                                                 ))}
                                             </TabsList>
                                         </Tabs>
-                                        {AddComponentPopover}
+                                        <AddComponentWidget mode="workbench" />
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-3 shrink-0 ml-4">
                                     <Badge className={cn("font-black text-[10px] px-3 h-7 tracking-widest shadow-sm", 
                                         activeComponent.status === 'APPROVED' ? "bg-green-600 text-white" :
                                         activeComponent.status === 'DRAFT' ? "bg-orange-500 text-white" : "bg-blue-600 text-white"
