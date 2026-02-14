@@ -76,7 +76,6 @@ function AddComponentWidget({ mode, onAdd }: AddComponentWidgetProps) {
                 className="w-64 p-4 shadow-2xl border-2 border-primary/20 z-[150]" 
                 align={mode === 'workbench' ? "start" : "center"} 
                 sideOffset={10}
-                onOpenAutoFocus={(e) => e.preventDefault()}
             >
                 <div className="space-y-4">
                     <div className="flex items-center gap-2">
