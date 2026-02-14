@@ -98,6 +98,7 @@ export function DesignCanvas({
         if (isDesigner) {
             return status === 'DRAFT' && hasNewDraft;
         } else {
+            // Manager can only feedback in review/approval states
             return status !== 'PENDING' && status !== 'DRAFT';
         }
     }, [imageUrl, isLatest, isDesigner, status, hasNewDraft]);
@@ -113,6 +114,20 @@ export function DesignCanvas({
 
     const activePin = useMemo(() => pins.find(p => p.id === selectedPinId), [pins, selectedPinId]);
     const activePinNumber = useMemo(() => pins.findIndex(p => p.id === selectedPinId) + 1, [pins, selectedPinId]);
+
+    // Global Escape key listener to close popover and cancel pending pins
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                if (selectedPinId || highlightedPinId) {
+                    onPinClick(null);
+                }
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [selectedPinId, highlightedPinId, onPinClick]);
 
     // Disable comparison if version changes and no comparison is available for new version
     useEffect(() => {
@@ -363,7 +378,11 @@ export function DesignCanvas({
                                 ) : (
                                     <>
                                         <Lock className="h-3 w-3 text-muted-foreground" />
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{isLatest ? "Locked" : "Viewing History"}</span>
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                                            {!isDesigner && (status === 'DRAFT' || status === 'PENDING') 
+                                                ? "Manager feedback locked during draft" 
+                                                : isLatest ? "Locked" : "Viewing History"}
+                                        </span>
                                     </>
                                 )}
                             </div>
@@ -431,13 +450,15 @@ export function DesignCanvas({
                             className="absolute inset-0 origin-center pointer-events-none"
                             style={{ transform: `scale(${zoom})` }}
                         >
-                            <img 
-                                ref={imageRef} 
-                                src={imageUrl} 
-                                alt="Design View" 
-                                className="w-full h-full object-contain" 
-                                draggable={false} 
-                            />
+                            {imageUrl && (
+                                <img 
+                                    ref={imageRef} 
+                                    src={imageUrl} 
+                                    alt="Design View" 
+                                    className="w-full h-full object-contain" 
+                                    draggable={false} 
+                                />
+                            )}
 
                             {showComparison && comparisonImageUrl && (
                                 <img 
