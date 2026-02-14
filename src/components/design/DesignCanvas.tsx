@@ -47,6 +47,8 @@ interface DesignCanvasProps {
     hasNewDraft?: boolean;
     isWorkbench?: boolean;
     isLatestDraftLocked?: boolean;
+    draftText: string;
+    onDraftTextChange: (text: string) => void;
 }
 
 export function DesignCanvas({ 
@@ -63,7 +65,9 @@ export function DesignCanvas({
     status,
     hasNewDraft = false,
     isWorkbench = false,
-    isLatestDraftLocked = false
+    isLatestDraftLocked = false,
+    draftText,
+    onDraftTextChange
 }: DesignCanvasProps) {
     const [zoom, setZoom] = useState(1);
     const [showPins, setShowPins] = useState(true);
@@ -75,15 +79,12 @@ export function DesignCanvas({
         if (!imageUrl || !isLatest) return false;
 
         if (isDesigner) {
-            // Designer: Only in DRAFT mode with a new upload staged
             return status === 'DRAFT' && hasNewDraft;
         } else {
-            // Manager: Restricted in PENDING and DRAFT
             return status !== 'PENDING' && status !== 'DRAFT';
         }
     }, [imageUrl, isLatest, isDesigner, status, hasNewDraft]);
     
-    const [draftText, setDraftText] = useState('');
     const [replyText, setReplyText] = useState('');
     const [isReplyMode, setIsReplyMode] = useState(false);
     const [isMistakeDraft, setIsMistakeDraft] = useState(false);
@@ -107,12 +108,10 @@ export function DesignCanvas({
 
     useEffect(() => {
         if (highlightedPinId && highlightedPinId !== prevHighlightedId.current) {
-            setDraftText('');
             setReplyText('');
             setIsReplyMode(false);
             if (activePin) {
                 setIsMistakeDraft(activePin.status === 'mistake');
-                setDraftText(activePin.text || '');
             }
             prevHighlightedId.current = highlightedPinId;
         } else if (!highlightedPinId) {
@@ -130,10 +129,13 @@ export function DesignCanvas({
         const target = e.target as HTMLElement;
         if (target.closest('.pin-bubble') || target.closest('button') || target.closest('.fixed-comment-box')) return;
         
-        if (!canInteract) {
-            if (highlightedPinId) onPinClick(null);
+        // If clicking away and we have a highlighted pin, handle close logic
+        if (highlightedPinId) {
+            onPinClick(null);
             return;
         }
+
+        if (!canInteract) return;
 
         e.stopPropagation();
         e.preventDefault();
@@ -146,11 +148,21 @@ export function DesignCanvas({
 
     const handleSaveComment = () => {
         if (!highlightedPinId) return;
+        
+        const trimmed = draftText.trim();
+        
+        // DISCARD LOGIC: If "Save" is clicked but text is empty, discard/remove the pin.
+        if (!trimmed) {
+            onUpdatePins(pins.filter(p => p.id !== highlightedPinId));
+            onPinClick(null);
+            return;
+        }
+
         const updatedPins = pins.map(p => {
             if (p.id === highlightedPinId) {
                 return {
                     ...p,
-                    text: draftText,
+                    text: trimmed,
                     status: isMistakeDraft ? 'mistake' : (p.status === 'resolved' ? 'resolved' : 'open'),
                     isDraft: false
                 } as DesignPin;
@@ -371,7 +383,7 @@ export function DesignCanvas({
                                                     placeholder="Enter feedback details..." 
                                                     className="min-h-[80px] text-xs font-semibold leading-relaxed" 
                                                     value={draftText} 
-                                                    onChange={(e) => setDraftText(e.target.value)} 
+                                                    onChange={(e) => onDraftTextChange(e.target.value)} 
                                                 />
                                                 <div className="flex items-center justify-between">
                                                     <div className="flex items-center space-x-2">

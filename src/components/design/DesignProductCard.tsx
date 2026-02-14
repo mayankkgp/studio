@@ -150,6 +150,7 @@ interface DesignProductCardProps {
 export function DesignProductCard({ product, isDesigner, onUpdateDesign, customerData }: DesignProductCardProps) {
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [newDrafts, setNewDrafts] = useState<Record<string, boolean>>({});
+    const [draftText, setDraftText] = useState('');
 
     const lastLocalUpdateRef = useRef<number>(0);
 
@@ -200,7 +201,6 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
         ? activeComponent.versions[activeComponent.versions.length - 1].versionNumber : 0;
     
     const visibleVersions = useMemo(() => {
-        // Manager and Designer roles now stay in sync with version numbering
         return activeComponent.versions || [];
     }, [activeComponent.versions]);
 
@@ -324,6 +324,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
             return c;
         });
 
+        setDraftText('');
         handleUpdateDesignInternal({ ...localDesignData, components: updatedComponents });
         
         setTimeout(() => {
@@ -339,7 +340,29 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
     };
 
     const handlePinSelect = (id: string | null) => {
+        // DISCARD LOGIC: If switching away from an empty draft, discard it.
+        if (highlightedPinId && id !== highlightedPinId) {
+            const pinToClose = activeComponent.pins.find(p => p.id === highlightedPinId);
+            if (pinToClose?.isDraft && !draftText.trim()) {
+                const updatedComponents = localDesignData.components.map(c => {
+                    if (c.id === activeCompId) {
+                        return { ...c, pins: c.pins.filter(p => p.id !== highlightedPinId) };
+                    }
+                    return c;
+                });
+                handleUpdateDesignInternal({ ...localDesignData, components: updatedComponents }, true);
+            }
+        }
+
         setHighlightedPinId(id);
+        
+        // Load text for the newly selected pin
+        if (id) {
+            const pin = activeComponent.pins.find(p => p.id === id);
+            setDraftText(pin?.text || '');
+        } else {
+            setDraftText('');
+        }
     };
 
     const getStatusColor = (status: DesignWorkflowStatus) => {
@@ -419,7 +442,10 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
             </Card>
 
             <Dialog open={isFullscreen} onOpenChange={(open) => {
-                if (!open) setLocalDesignData(initialDesignData);
+                if (!open) {
+                    handlePinSelect(null);
+                    setLocalDesignData(initialDesignData);
+                }
                 setIsFullscreen(open);
             }}>
                 <DialogContent className="max-w-[100vw] w-screen h-screen p-0 gap-0 border-none rounded-none flex flex-col bg-background overflow-hidden animate-in zoom-in-95 duration-300">
@@ -437,7 +463,10 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
                                     <h2 className="font-headline font-black text-sm truncate shrink-0">{product.productName}</h2>
                                     <div className="h-4 w-px bg-border shrink-0" />
                                     <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-1 pr-4">
-                                        <Tabs value={activeCompId} onValueChange={setActiveCompId} className="shrink-0">
+                                        <Tabs value={activeCompId} onValueChange={(val) => {
+                                            handlePinSelect(null);
+                                            setActiveCompId(val);
+                                        }} className="shrink-0">
                                             <TabsList className="bg-transparent h-10 p-0 gap-4">
                                                 {localDesignData.components.map(comp => (
                                                     <TabsTrigger key={comp.id} value={comp.id} className="h-10 rounded-none border-b-2 border-transparent data-[state=active]:border-primary bg-transparent font-black uppercase text-[10px] tracking-widest px-0">
@@ -476,6 +505,8 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
                                     onUpload={handleUpload}
                                     isWorkbench={true}
                                     isLatestDraftLocked={isLatestDraftLocked}
+                                    draftText={draftText}
+                                    onDraftTextChange={setDraftText}
                                 />
                             </div>
 
