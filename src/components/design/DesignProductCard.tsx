@@ -16,7 +16,8 @@ import {
     LayoutPanelTop,
     Plus,
     Check,
-    Lock
+    Lock,
+    Trash2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -254,6 +255,15 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
         setActiveCompId(newComp.id);
     };
 
+    const handleDeleteComponent = (compId: string) => {
+        if (!confirm("Are you sure you want to delete this component?")) return;
+        
+        const updatedComponents = localDesignData.components.filter(c => c.id !== compId);
+        const updatedData = { ...localDesignData, components: updatedComponents };
+        
+        handleUpdateDesignInternal(updatedData, true);
+    };
+
     const handleUpload = (file: File) => {
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -426,7 +436,19 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
                     ) : (
                         <div className="p-4 grid grid-cols-2 md:grid-cols-4 gap-4">
                             {localDesignData.components.map(comp => (
-                                <div key={comp.id} className={cn("p-3 rounded-lg border-2 text-center space-y-1 transition-all shadow-sm", getStatusColor(comp.status))}>
+                                <div key={comp.id} className={cn("p-3 rounded-lg border-2 text-center space-y-1 transition-all shadow-sm relative group/comp", getStatusColor(comp.status))}>
+                                    {comp.status === 'PENDING' && (!comp.versions || comp.versions.length === 0) && (
+                                        <button 
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleDeleteComponent(comp.id);
+                                            }}
+                                            className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-destructive text-destructive-foreground opacity-0 group-hover/comp:opacity-100 transition-opacity flex items-center justify-center shadow-lg border-2 border-background z-20"
+                                            title="Delete Component"
+                                        >
+                                            <Trash2 className="h-3 w-3" />
+                                        </button>
+                                    )}
                                     <div className="text-[10px] font-black uppercase tracking-wider truncate">{comp.name}</div>
                                     <div className="flex items-center justify-center gap-2 text-[9px] font-bold opacity-60">
                                         <span>V{(comp.versions || []).length}</span>
