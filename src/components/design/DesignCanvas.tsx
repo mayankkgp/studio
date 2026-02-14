@@ -8,7 +8,6 @@ import {
     ZoomIn, 
     ZoomOut, 
     Upload, 
-    Image as ImageIcon, 
     X, 
     Maximize2, 
     Trash2,
@@ -18,7 +17,8 @@ import {
     CornerDownRight,
     CheckCircle2,
     AlertCircle,
-    Send
+    Send,
+    Lock
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -68,7 +68,9 @@ export function DesignCanvas({
     const [zoom, setZoom] = useState(1);
     const [showPins, setShowPins] = useState(true);
     
-    const canInteract = !!imageUrl;
+    // RESTRICTION: Pin addition is only allowed on the latest version
+    const isLatest = version === currentVersion;
+    const canInteract = !!imageUrl && isLatest;
     
     const [draftText, setDraftText] = useState('');
     const [replyText, setReplyText] = useState('');
@@ -118,6 +120,7 @@ export function DesignCanvas({
         const target = e.target as HTMLElement;
         if (target.closest('.pin-bubble') || target.closest('button') || target.closest('.fixed-comment-box')) return;
         
+        // If not latest version, only allow deselecting highlighted pin
         if (!canInteract) {
             if (highlightedPinId) onPinClick(null);
             return;
@@ -210,8 +213,17 @@ export function DesignCanvas({
                     <div className="absolute top-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-1.5 p-1.5 bg-background/90 backdrop-blur-xl border border-primary/20 rounded-full shadow-2xl scale-110">
                         <TooltipProvider>
                             <div className="flex items-center px-3 gap-2">
-                                <div className="h-2 w-2 rounded-full bg-blue-600 animate-pulse" />
-                                <span className="text-[10px] font-black uppercase tracking-widest text-foreground">Feedback Mode</span>
+                                {isLatest ? (
+                                    <>
+                                        <div className="h-2 w-2 rounded-full bg-blue-600 animate-pulse" />
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-foreground">Feedback Mode</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Lock className="h-3 w-3 text-muted-foreground" />
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Viewing History</span>
+                                    </>
+                                )}
                             </div>
                             <div className="w-px h-4 bg-muted-foreground/20 mx-1" />
                             <Tooltip>
@@ -257,6 +269,14 @@ export function DesignCanvas({
                             </TooltipProvider>
                         </div>
                     </div>
+
+                    {/* Version Restriction Banner */}
+                    {!isLatest && (
+                        <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-50 px-4 py-2 bg-black/80 backdrop-blur-md text-white rounded-full flex items-center gap-3 shadow-2xl animate-in slide-in-from-bottom-2">
+                            <Lock className="h-3.5 w-3.5 text-primary" />
+                            <span className="text-[10px] font-black uppercase tracking-widest">Feedback disabled on older versions</span>
+                        </div>
+                    )}
 
                     {/* Canvas Main Area */}
                     <div 
@@ -376,7 +396,7 @@ export function DesignCanvas({
                                                             <Button variant="outline" size="sm" className="h-7 text-[9px] font-black uppercase px-2 border-green-600 text-green-600 hover:bg-green-50" onClick={() => handleStatusUpdate(activePin.id, 'resolved')}><CheckCircle2 className="h-3 w-3 mr-1" /> Resolve</Button>
                                                         )}
                                                         {activePin.status === 'open' && (
-                                                            <Button variant="outline" size="sm" className="h-7 text-[9px] font-black uppercase px-2 border-destructive text-destructive" onClick={() => handleStatusUpdate(activePin.id, 'mistake')}><AlertCircle className="h-3 w-3 mr-1" /> Mistake</Button>
+                                                            <Button variant="outline" size="sm" className="h-7 text-[9px] font-black uppercase px-2 border-destructive text-destructive" onClick={(e) => { e.stopPropagation(); handleStatusUpdate(activePin.id, 'mistake'); }}><AlertCircle className="h-3 w-3 mr-1" /> Mistake</Button>
                                                         )}
                                                         <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive ml-auto" onClick={(e) => handleDeletePin(e, activePin.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
                                                     </div>
