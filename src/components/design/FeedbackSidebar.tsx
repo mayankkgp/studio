@@ -340,7 +340,7 @@ export function FeedbackSidebar({
                             <div>
                                 <h3 className="font-headline font-black text-sm uppercase tracking-widest text-foreground border-b-2 border-primary/10 pb-2 mb-6">Visual Identity</h3>
                                 <BriefSection title="Mood & Style" icon={Palette} content={customerData?.visualIdentity?.moodStyle} />
-                                BriefSection title="Palette & Type" icon={Palette} content={customerData?.visualIdentity?.colorTypography} />
+                                <BriefSection title="Palette & Type" icon={Palette} content={customerData?.visualIdentity?.colorTypography} />
                                 <BriefSection title="Dislikes" icon={AlertCircle} content={customerData?.visualIdentity?.designDislikes} />
                             </div>
 
