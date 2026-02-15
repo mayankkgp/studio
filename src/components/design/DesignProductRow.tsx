@@ -112,11 +112,11 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
                 </div>
 
                 {/* Zone C: Unified Specs */}
-                <div className="flex-1 min-w-0 px-4 space-y-0.5">
+                <div className="flex-1 min-w-0 px-4 space-y-0.5 overflow-hidden">
                     <div className="text-[11px] font-bold text-foreground/80 truncate">
                         {getCoreSpecs() || "No core specs"}
                     </div>
-                    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+                    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-0.5">
                         {activeAddons.length > 0 && activeAddons.map((addon) => (
                             <Badge 
                                 key={addon.id} 
@@ -135,13 +135,13 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
                 </div>
 
                 {/* Zone D: Component Track */}
-                <div className="w-72 px-4 flex items-center gap-1 overflow-x-auto no-scrollbar">
+                <div className="w-72 px-4 flex items-center gap-1 overflow-x-auto no-scrollbar scroll-smooth">
                     {!designData.isStock ? (
                         designData.components.map((comp) => (
                             <div 
                                 key={comp.id}
                                 className={cn(
-                                    "h-6 px-2 rounded-md flex items-center justify-center min-w-[3rem] shrink-0 shadow-sm border",
+                                    "h-6 px-2 rounded-md flex items-center justify-center min-w-[3rem] shrink-0 shadow-sm border transition-all",
                                     STATUS_CONFIG[comp.status].bg,
                                     STATUS_CONFIG[comp.status].border,
                                     STATUS_CONFIG[comp.status].text
@@ -152,7 +152,7 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
                             </div>
                         ))
                     ) : (
-                        <div className="h-6 px-3 rounded-full bg-green-100 text-green-700 border border-green-200 flex items-center gap-1.5">
+                        <div className="h-6 px-3 rounded-full bg-green-100 text-green-700 border border-green-200 flex items-center gap-1.5 shrink-0">
                             <PackageCheck className="h-3 w-3" />
                             <span className="text-[9px] font-black uppercase tracking-widest">Ready</span>
                         </div>
@@ -223,6 +223,11 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
                     </div>
                 </div>
             )}
+
+            <style jsx>{`
+                .no-scrollbar::-webkit-scrollbar { display: none; }
+                .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+            `}</style>
         </div>
     );
 }
