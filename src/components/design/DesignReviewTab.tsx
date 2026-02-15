@@ -143,7 +143,7 @@ export function DesignReviewTab({ order, onUpdateOrder, role, layout }: DesignRe
                             ))}
                         </div>
                     ) : (
-                        <div className="w-[500px] min-w-[500px] border rounded-xl bg-card/20 overflow-hidden flex flex-col mx-auto">
+                        <div className="w-full max-w-full border rounded-xl bg-card/20 overflow-hidden flex flex-col">
                             {filteredProducts.map((product) => (
                                 <DesignProductRow 
                                     key={product.id} 
