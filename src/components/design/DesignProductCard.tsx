@@ -166,6 +166,7 @@ export function DesignProductCard({
     const [draftText, setDraftText] = useState('');
     const [isTimelineCollapsed, setIsTimelineCollapsed] = useState(false);
     const [isZenMode, setIsZenMode] = useState(false);
+    const [showPopovers, setShowPopovers] = useState(true);
 
     // Overflow Tab indicators
     const tabScrollRef = useRef<HTMLDivElement>(null);
@@ -695,6 +696,8 @@ export function DesignProductCard({
                                     onDraftTextChange={setDraftText}
                                     isZenMode={isZenMode}
                                     onToggleZen={() => setIsZenMode(!isZenMode)}
+                                    showPopovers={showPopovers}
+                                    onTogglePopovers={() => setShowPopovers(!showPopovers)}
                                 />
                             </div>
 

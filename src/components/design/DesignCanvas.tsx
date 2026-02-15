@@ -24,6 +24,8 @@ import {
     Hand,
     MousePointer2,
     MessageSquarePlus,
+    MessageSquare,
+    MessageSquareOff,
     Maximize,
     Minimize
 } from 'lucide-react';
@@ -65,6 +67,8 @@ interface DesignCanvasProps {
     onDraftTextChange: (text: string) => void;
     isZenMode?: boolean;
     onToggleZen?: () => void;
+    showPopovers: boolean;
+    onTogglePopovers: () => void;
 }
 
 type ToolMode = 'pointer' | 'comment';
@@ -89,7 +93,9 @@ export function DesignCanvas({
     draftText,
     onDraftTextChange,
     isZenMode = false,
-    onToggleZen
+    onToggleZen,
+    showPopovers,
+    onTogglePopovers
 }: DesignCanvasProps) {
     const [zoom, setZoom] = useState(FIT_ZOOM);
     const [showPins, setShowPins] = useState(true);
@@ -144,6 +150,9 @@ export function DesignCanvas({
 
     const activePin = useMemo(() => pins.find(p => p.id === selectedPinId), [pins, selectedPinId]);
     const activePinNumber = useMemo(() => pins.findIndex(p => p.id === selectedPinId) + 1, [pins, selectedPinId]);
+
+    // ZEN MODE OVERRIDE: If sidebar is hidden, popovers must be ON to read feedback
+    const effectiveShowPopovers = isZenMode ? true : showPopovers;
 
     useEffect(() => {
         const container = containerRef.current;
@@ -255,15 +264,18 @@ export function DesignCanvas({
                 lastRepositionKey.current = repositionKey;
             }
             
-            setTimeout(() => {
-                textareaRef.current?.focus();
-            }, 150);
+            // Focus textarea only if popover is visible
+            if (effectiveShowPopovers) {
+                setTimeout(() => {
+                    textareaRef.current?.focus();
+                }, 150);
+            }
         } else if (!selectedPinId) {
             lastSelectionId.current = null;
             lastRepositionKey.current = -1;
             setPopoverPos(null);
         }
-    }, [selectedPinId, activePin, repositionKey]);
+    }, [selectedPinId, activePin, repositionKey, effectiveShowPopovers]);
 
     const handleZoomIn = () => setZoom(prev => Math.min(prev + 0.25, MAX_ZOOM));
     const handleZoomOut = () => setZoom(prev => Math.max(prev - 0.25, MIN_ZOOM));
@@ -556,6 +568,20 @@ export function DesignCanvas({
                                 </TooltipTrigger>
                                 <TooltipContent>{showPins ? "Hide Pins" : "Show Pins"}</TooltipContent>
                             </Tooltip>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        className={cn("h-9 w-9 rounded-full", !effectiveShowPopovers && "text-primary")} 
+                                        onClick={onTogglePopovers}
+                                        disabled={isZenMode} // Popovers forced ON in Zen Mode
+                                    >
+                                        {effectiveShowPopovers ? <MessageSquare className="h-4 w-4" /> : <MessageSquareOff className="h-4 w-4" />}
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>{isZenMode ? "Popovers forced ON in Zen Mode" : effectiveShowPopovers ? "Hide Comment Boxes" : "Show Comment Boxes"}</TooltipContent>
+                            </Tooltip>
                             {comparisonImageUrl && (
                                 <Tooltip>
                                     <TooltipTrigger asChild>
@@ -704,7 +730,7 @@ export function DesignCanvas({
                             </div>
                         )}
 
-                        {selectedPinId && activePin && (
+                        {selectedPinId && activePin && effectiveShowPopovers && (
                             <div 
                                 className={cn(
                                     "absolute z-[100] w-80 animate-in slide-in-from-bottom-4 duration-300 pointer-events-auto fixed-comment-box transition-[box-shadow]",
