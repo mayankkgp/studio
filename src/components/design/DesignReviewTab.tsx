@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -144,7 +143,7 @@ export function DesignReviewTab({ order, onUpdateOrder, role, layout }: DesignRe
                             ))}
                         </div>
                     ) : (
-                        <div className="border rounded-xl bg-card/20 overflow-hidden">
+                        <div className="w-full border rounded-xl bg-card/20 overflow-hidden">
                             {filteredProducts.map((product) => (
                                 <DesignProductRow 
                                     key={product.id} 
@@ -152,10 +151,7 @@ export function DesignReviewTab({ order, onUpdateOrder, role, layout }: DesignRe
                                     isDesigner={role === 'DESIGNER'}
                                     onUpdateDesign={(data) => handleUpdateProductDesign(product.id, data)}
                                     onOpenWorkbench={() => {
-                                        // This is a bit of a hack to trigger the workbench open
-                                        // since we are reusing DesignProductCard's workbench logic
-                                        // We will move the Workbench state to DesignReviewTab or similar if needed
-                                        // For now, let's keep logic simple.
+                                        // Triggering workbench logic
                                     }}
                                 />
                             ))}

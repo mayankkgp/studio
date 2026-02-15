@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -102,7 +101,7 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
             <div 
                 onClick={() => setIsExpanded(!isExpanded)}
                 className={cn(
-                    "flex items-center h-16 bg-card hover:bg-muted/30 transition-all border-y border-primary/5 cursor-pointer relative w-full",
+                    "flex items-center h-16 bg-card hover:bg-muted/30 transition-all border-y border-primary/5 cursor-pointer relative w-full min-w-0",
                     isExpanded && "bg-muted/20"
                 )}
             >
@@ -120,12 +119,12 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
                     </div>
                 </div>
 
-                {/* Zone C: Unified Specs - The Scrolling Column */}
+                {/* Zone C: Unified Specifications - The Scrolling Column */}
                 <div className="flex-1 min-w-0 px-4 space-y-0.5 overflow-hidden flex flex-col justify-center">
                     <div className="text-[11px] font-bold text-foreground/80 truncate">
                         {getCoreSpecs() || "No core specs"}
                     </div>
-                    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-0.5 whitespace-nowrap min-w-0">
+                    <div className="w-full flex items-center gap-2 overflow-x-auto no-scrollbar pb-0.5 whitespace-nowrap">
                         {activeAddons.length > 0 && activeAddons.map((addon) => (
                             <Badge 
                                 key={addon.id} 
@@ -170,27 +169,38 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
 
                 {/* Zone E: Actions */}
                 <div className="w-64 px-6 flex items-center justify-end gap-3 shrink-0">
-                    <div className="flex items-center justify-center w-8">
-                        {(designData.isStock || isEligibleForStock) && (
+                    <div className="flex items-center justify-center w-8 shrink-0">
+                        {isEligibleForStock && (
                             <Button 
                                 size="sm" 
                                 variant="outline" 
                                 className="h-8 w-8 p-0 border-primary/20 text-muted-foreground hover:text-primary opacity-0 group-hover/row:opacity-100 transition-opacity"
                                 onClick={handleToggleStock}
-                                title={designData.isStock ? "Restore Design Tools" : "Mark as Stock"}
+                                title="Mark as Stock"
                             >
-                                {designData.isStock ? <Package className="h-3.5 w-3.5" /> : <Archive className="h-3.5 w-3.5" />}
+                                <Archive className="h-3.5 w-3.5" />
+                            </Button>
+                        )}
+                        {designData.isStock && (
+                            <Button 
+                                size="sm" 
+                                variant="outline" 
+                                className="h-8 w-8 p-0 border-primary/20 text-primary hover:bg-primary/5 opacity-0 group-hover/row:opacity-100 transition-opacity"
+                                onClick={handleToggleStock}
+                                title="Restore Design Tools"
+                            >
+                                <Package className="h-3.5 w-3.5" />
                             </Button>
                         )}
                     </div>
                     <Button 
                         size="sm" 
-                        className="h-8 text-[10px] font-black uppercase tracking-widest gap-1.5 shadow-sm min-w-[120px]"
+                        className="h-8 text-[10px] font-black uppercase tracking-widest gap-1.5 shadow-sm min-w-[120px] shrink-0"
                         onClick={(e) => { e.stopPropagation(); onOpenWorkbench(); }}
                     >
                         <ExternalLink className="h-3.5 w-3.5" /> Workbench
                     </Button>
-                    <div className="w-6 flex items-center justify-center">
+                    <div className="w-6 flex items-center justify-center shrink-0">
                         {isExpanded ? <ChevronUp className="h-4 w-4 opacity-30" /> : <ChevronDown className="h-4 w-4 opacity-30" />}
                     </div>
                 </div>
@@ -246,4 +256,11 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
             `}</style>
         </div>
     );
+}
+
+interface DeliverableRowProps {
+    product: ConfiguredProduct;
+    isDesigner: boolean;
+    onUpdateDesign: (data: DesignData) => void;
+    onOpenWorkbench: () => void;
 }
