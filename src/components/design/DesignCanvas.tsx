@@ -87,6 +87,7 @@ export function DesignCanvas({
     
     // Split Slider State
     const [sliderPosition, setSliderPosition] = useState(50);
+    const [sliderVerticalPosition, setSliderVerticalPosition] = useState(50);
     const [isDraggingSlider, setIsDraggingSlider] = useState(false);
 
     // Pan state
@@ -297,7 +298,7 @@ export function DesignCanvas({
         if (!imageUrl || isSpacePressed || isMiddleMouseDown || isDraggingSlider) return;
         
         const target = e.target as HTMLElement;
-        if (target.closest('.pin-bubble') || target.closest('button') || target.closest('.fixed-comment-box') || target.closest('.slider-handle')) return;
+        if (target.closest('.pin-bubble') || target.closest('button') || target.closest('.fixed-comment-box') || target.closest('.slider-hit-zone')) return;
         
         if (highlightedPinId || selectedPinId) {
             onPinClick(null);
@@ -400,7 +401,7 @@ export function DesignCanvas({
         e.preventDefault();
     };
 
-    // Slider Drag Logic
+    // Global Drag Logic for Popover and Slider
     useEffect(() => {
         const handleMouseMove = (e: MouseEvent) => {
             if (isDraggingPopover && dragStartRef.current && containerRef.current) {
@@ -420,7 +421,9 @@ export function DesignCanvas({
             if (isDraggingSlider && containerRef.current) {
                 const rect = containerRef.current.getBoundingClientRect();
                 const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
+                const y = Math.max(0, Math.min(e.clientY - rect.top, rect.height));
                 setSliderPosition((x / rect.width) * 100);
+                setSliderVerticalPosition((y / rect.height) * 100);
             }
         };
 
@@ -654,24 +657,44 @@ export function DesignCanvas({
                             })}
                         </div>
 
-                        {/* Slider Handle (Outside the zoomed content to maintain scale) */}
+                        {/* Split Slider Wiper System */}
                         {showComparison && comparisonImageUrl && (
-                            <div 
-                                className="absolute inset-y-0 z-[60] group/slider pointer-events-none"
-                                style={{ left: `${sliderPosition}%` }}
-                            >
-                                <div className="absolute inset-y-0 w-px bg-primary shadow-[0_0_10px_rgba(var(--primary),0.5)]" />
-                                <button
-                                    className="slider-handle absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center shadow-2xl pointer-events-auto cursor-ew-resize active:scale-95 transition-transform border-4 border-background"
+                            <div className="absolute inset-0 z-[60] pointer-events-none overflow-hidden">
+                                <div 
+                                    className="slider-hit-zone absolute inset-y-0 w-8 -ml-4 pointer-events-auto cursor-ew-resize group/slider"
+                                    style={{ left: `${sliderPosition}%` }}
                                     onMouseDown={(e) => {
                                         e.preventDefault();
                                         setIsDraggingSlider(true);
+                                        // Jump position immediately on click
+                                        const rect = containerRef.current?.getBoundingClientRect();
+                                        if (rect) {
+                                            const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
+                                            const y = Math.max(0, Math.min(e.clientY - rect.top, rect.height));
+                                            setSliderPosition((x / rect.width) * 100);
+                                            setSliderVerticalPosition((y / rect.height) * 100);
+                                        }
                                     }}
                                 >
-                                    <GripHorizontal className="h-5 w-5" />
-                                </button>
-                                <div className="absolute top-1/2 -translate-y-1/2 right-12 bg-black/80 text-white text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded border border-white/10 opacity-0 group-hover/slider:opacity-100 transition-opacity">Before</div>
-                                <div className="absolute top-1/2 -translate-y-1/2 left-12 bg-primary text-white text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded opacity-0 group-hover/slider:opacity-100 transition-opacity">After</div>
+                                    {/* 1px High-Contrast Hairline (Sharp Transition) */}
+                                    <div className="absolute inset-y-0 left-1/2 w-px bg-blue-600 pointer-events-none" />
+                                    
+                                    {/* Draggable Obstruction-Free Handle */}
+                                    <button
+                                        className="slider-handle absolute left-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-2xl transition-transform border-4 border-background active:scale-95 pointer-events-none"
+                                        style={{ top: `${sliderVerticalPosition}%` }}
+                                    >
+                                        <GripHorizontal className="h-5 w-5" />
+                                    </button>
+
+                                    {/* labels at top edge to clear central vision */}
+                                    <div className="absolute top-6 right-12 bg-black/80 text-white text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded border border-white/10 opacity-0 group-hover/slider:opacity-100 transition-opacity whitespace-nowrap">
+                                        Before
+                                    </div>
+                                    <div className="absolute top-6 left-12 bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded opacity-0 group-hover/slider:opacity-100 transition-opacity whitespace-nowrap">
+                                        After
+                                    </div>
+                                </div>
                             </div>
                         )}
 
