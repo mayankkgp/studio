@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -142,12 +143,17 @@ interface DesignProductCardProps {
     isDesigner: boolean;
     onUpdateDesign: (data: DesignData) => void;
     customerData?: CustomerData;
+    forceOpenWorkbench?: boolean;
 }
 
-export function DesignProductCard({ product, isDesigner, onUpdateDesign, customerData }: DesignProductCardProps) {
+export function DesignProductCard({ product, isDesigner, onUpdateDesign, customerData, forceOpenWorkbench }: DesignProductCardProps) {
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [newDrafts, setNewDrafts] = useState<Record<string, boolean>>({});
     const [draftText, setDraftText] = useState('');
+
+    useEffect(() => {
+        if (forceOpenWorkbench) setIsFullscreen(true);
+    }, [forceOpenWorkbench]);
 
     const lastLocalUpdateRef = useRef<number>(0);
 
