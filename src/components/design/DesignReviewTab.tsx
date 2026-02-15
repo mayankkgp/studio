@@ -77,14 +77,14 @@ export function DesignReviewTab({ order, onUpdateOrder, role, layout }: DesignRe
     }
 
     return (
-        <div className="flex flex-col h-full w-full max-w-full overflow-hidden bg-background/50">
+        <div className="flex flex-col h-full w-full max-w-full overflow-hidden bg-background/50 min-w-0">
             {/* Triage Filters Bar */}
-            <div className="shrink-0 px-4 md:px-8 py-4 border-b bg-card/20 flex items-center gap-4">
-                <div className="flex items-center gap-2 text-muted-foreground mr-4">
+            <div className="shrink-0 px-4 md:px-8 py-4 border-b bg-card/20 flex items-center gap-4 w-full">
+                <div className="flex items-center gap-2 text-muted-foreground mr-4 shrink-0">
                     <Filter className="h-3.5 w-3.5" />
                     <span className="text-[10px] font-black uppercase tracking-widest">Filter Items:</span>
                 </div>
-                <div className="flex items-center gap-1.5 bg-muted/40 p-1 rounded-lg border">
+                <div className="flex items-center gap-1.5 bg-muted/40 p-1 rounded-lg border overflow-x-auto no-scrollbar">
                     <FilterTab 
                         active={activeFilter === 'all'} 
                         onClick={() => setActiveFilter('all')} 
@@ -123,11 +123,11 @@ export function DesignReviewTab({ order, onUpdateOrder, role, layout }: DesignRe
 
             <ScrollArea className="flex-1 w-full max-w-full overflow-hidden">
                 <div className={cn(
-                    "max-w-full mx-auto p-4 md:p-8 space-y-12 pb-32 overflow-hidden",
+                    "w-full max-w-full p-4 md:p-8 space-y-12 pb-32 min-w-0",
                     layout === 'table' && "md:p-0"
                 )}>
                     {filteredProducts.length === 0 ? (
-                        <div className="py-20 text-center opacity-40 italic text-[11px] font-black uppercase tracking-widest">
+                        <div className="py-20 text-center opacity-40 italic text-[11px] font-black uppercase tracking-widest w-full">
                             No items match the selected filter.
                         </div>
                     ) : layout === 'grid' ? (
@@ -143,7 +143,7 @@ export function DesignReviewTab({ order, onUpdateOrder, role, layout }: DesignRe
                             ))}
                         </div>
                     ) : (
-                        <div className="w-full max-w-full border rounded-xl bg-card/20 overflow-hidden flex flex-col min-w-0">
+                        <div className="w-full max-w-full border-y border-r rounded-xl bg-card/20 overflow-hidden flex flex-col min-w-0">
                             {filteredProducts.map((product) => (
                                 <DesignProductRow 
                                     key={product.id} 
@@ -173,7 +173,7 @@ function FilterTab({ active, onClick, label, count, icon: Icon, color }: {
         <button
             onClick={onClick}
             className={cn(
-                "h-8 px-3 rounded-md flex items-center gap-2 transition-all",
+                "h-8 px-3 rounded-md flex items-center gap-2 transition-all shrink-0",
                 active ? "bg-background text-foreground shadow-sm ring-1 ring-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-background/50"
             )}
         >
