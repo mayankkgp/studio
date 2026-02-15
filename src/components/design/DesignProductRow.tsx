@@ -97,7 +97,7 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
     };
 
     return (
-        <div className="group/row w-full max-w-full overflow-hidden border-b border-primary/5">
+        <div className="group/row w-full max-w-full overflow-hidden border-b border-primary/5 min-w-0">
             <div 
                 onClick={() => setIsExpanded(!isExpanded)}
                 className={cn(
@@ -113,18 +113,18 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
                     <div className="h-8 w-8 rounded bg-primary/10 flex items-center justify-center text-primary shrink-0">
                         <Package className="h-4 w-4" />
                     </div>
-                    <div className="min-w-0">
+                    <div className="min-w-0 overflow-hidden">
                         <div className="font-bold text-sm truncate">{product.productName}</div>
                         {designData.isStock && <Badge variant="secondary" className="h-4 text-[8px] font-black uppercase px-1">Stock</Badge>}
                     </div>
                 </div>
 
-                {/* Zone C: Unified Specifications - Fluid with Horizontal Scroll */}
-                <div className="flex-1 min-w-0 px-4 flex flex-col justify-center overflow-hidden">
+                {/* Zone C: Unified Specifications - Using explicit flex properties to force shrinkage */}
+                <div className="flex-[1_1_0%] min-w-0 px-4 flex flex-col justify-center overflow-hidden">
                     <div className="text-[11px] font-bold text-foreground/80 truncate">
                         {getCoreSpecs() || "No core specs"}
                     </div>
-                    <div className="w-full max-w-full flex items-center gap-2 overflow-x-auto no-scrollbar pb-0.5 whitespace-nowrap">
+                    <div className="w-full flex items-center gap-2 overflow-x-auto no-scrollbar pb-0.5 whitespace-nowrap">
                         {activeAddons.length > 0 && activeAddons.map((addon) => (
                             <Badge 
                                 key={addon.id} 
