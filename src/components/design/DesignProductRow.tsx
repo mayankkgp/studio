@@ -98,16 +98,16 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
     };
 
     return (
-        <div className="group/row">
+        <div className="group/row w-full max-w-full overflow-hidden">
             <div 
                 onClick={() => setIsExpanded(!isExpanded)}
                 className={cn(
-                    "flex items-center h-16 bg-card hover:bg-muted/30 transition-all border-y border-primary/5 cursor-pointer relative",
+                    "flex items-center h-16 bg-card hover:bg-muted/30 transition-all border-y border-primary/5 cursor-pointer relative w-full",
                     isExpanded && "bg-muted/20"
                 )}
             >
                 {/* Zone A: Status Indicator */}
-                <div className={cn("absolute left-0 top-0 bottom-0 w-1.5 transition-colors", STATUS_CONFIG[aggregateStatus].bg)} />
+                <div className={cn("absolute left-0 top-0 bottom-0 w-1.5 transition-colors shrink-0", STATUS_CONFIG[aggregateStatus].bg)} />
 
                 {/* Zone B: Identity */}
                 <div className="w-64 px-6 shrink-0 flex items-center gap-3">
@@ -120,12 +120,12 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
                     </div>
                 </div>
 
-                {/* Zone C: Unified Specs */}
-                <div className="flex-1 min-w-0 px-4 space-y-0.5 overflow-hidden">
+                {/* Zone C: Unified Specs - The Scrolling Column */}
+                <div className="flex-1 min-w-0 px-4 space-y-0.5 overflow-hidden flex flex-col justify-center">
                     <div className="text-[11px] font-bold text-foreground/80 truncate">
                         {getCoreSpecs() || "No core specs"}
                     </div>
-                    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-0.5 whitespace-nowrap">
+                    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-0.5 whitespace-nowrap min-w-0">
                         {activeAddons.length > 0 && activeAddons.map((addon) => (
                             <Badge 
                                 key={addon.id} 
@@ -144,7 +144,7 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
                 </div>
 
                 {/* Zone D: Component Track */}
-                <div className="w-72 px-4 flex items-center gap-1 overflow-x-auto no-scrollbar scroll-smooth whitespace-nowrap">
+                <div className="w-72 px-4 flex items-center gap-1 overflow-x-auto no-scrollbar scroll-smooth whitespace-nowrap shrink-0">
                     {!designData.isStock ? (
                         designData.components.map((comp) => (
                             <div 
@@ -198,7 +198,7 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
 
             {/* Zone F: Expansion Detail Panel */}
             {isExpanded && (
-                <div className="bg-muted/10 border-b border-primary/5 animate-in slide-in-from-top-2 duration-200">
+                <div className="bg-muted/10 border-b border-primary/5 animate-in slide-in-from-top-2 duration-200 w-full">
                     <div className="px-24 py-4">
                         <div className="rounded-lg border bg-background/50 overflow-hidden shadow-inner">
                             <table className="w-full text-left">
