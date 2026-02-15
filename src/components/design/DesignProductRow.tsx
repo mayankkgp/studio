@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -80,7 +79,9 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
         return parts.join(' • ');
     };
 
-    const addonCount = (product.addons || []).filter((a: any) => a.value !== undefined && a.value !== false && a.value !== null).length;
+    const activeAddons = useMemo(() => {
+        return (product.addons || []).filter((a: any) => a.value !== undefined && a.value !== false && a.value !== null);
+    }, [product.addons]);
 
     const handleToggleStock = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -115,14 +116,18 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
                     <div className="text-[11px] font-bold text-foreground/80 truncate">
                         {getCoreSpecs() || "No core specs"}
                     </div>
-                    <div className="flex items-center gap-3 overflow-hidden">
-                        {addonCount > 0 && (
-                            <Badge variant="outline" className="h-4 text-[8px] font-black uppercase px-1 border-primary/20 text-primary shrink-0">
-                                +{addonCount} Add-ons
+                    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+                        {activeAddons.length > 0 && activeAddons.map((addon) => (
+                            <Badge 
+                                key={addon.id} 
+                                variant="outline" 
+                                className="h-4 text-[8px] font-black uppercase px-1 border-primary/20 text-primary shrink-0 whitespace-nowrap"
+                            >
+                                {addon.name}{typeof addon.value === 'number' ? `: ${addon.value}` : ''}
                             </Badge>
-                        )}
+                        ))}
                         {product.specialRequest && (
-                            <div className="text-[10px] italic font-semibold text-destructive truncate">
+                            <div className="text-[10px] italic font-semibold text-destructive truncate shrink-0 ml-1">
                                 Req: {product.specialRequest}
                             </div>
                         )}
