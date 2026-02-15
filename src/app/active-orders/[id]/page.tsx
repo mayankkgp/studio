@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -73,7 +72,6 @@ export default function ActiveOrderCommandCenter() {
     const [isSavingBrief, setIsSavingBrief] = useState(false);
     const [isCustomerEditMode, setIsCustomerEditMode] = useState(false);
     const [simulationRole, setSimulationRole] = useState<'MANAGER' | 'DESIGNER'>('MANAGER');
-    const [designLayout, setDesignLayout] = useState<'grid' | 'table'>('table');
     
     const [projectedTotals, setProjectedTotals] = useState<Record<string, number>>({});
     const [initialTotal, setInitialTotal] = useState(0);
@@ -421,13 +419,6 @@ export default function ActiveOrderCommandCenter() {
                             )}
                             {activeTab === 'design' && (
                                 <div className="flex items-center gap-4 ml-auto">
-                                    <Tabs value={designLayout} onValueChange={(v: any) => setDesignLayout(v)}>
-                                        <TabsList className="h-8 bg-muted/40 border p-1">
-                                            <TabsTrigger value="grid" className="h-6 px-2"><LayoutGrid className="h-3.5 w-3.5" /></TabsTrigger>
-                                            <TabsTrigger value="table" className="h-6 px-2"><TableIcon className="h-3.5 w-3.5" /></TabsTrigger>
-                                        </TabsList>
-                                    </Tabs>
-                                    <div className="w-px h-4 bg-border" />
                                     <Tabs value={simulationRole} onValueChange={(v: any) => setSimulationRole(v)}>
                                         <TabsList className="h-8 bg-muted/40 border p-1">
                                             <TabsTrigger value="MANAGER" className="text-[10px] font-black uppercase h-6 gap-1.5"><Users className="h-3 w-3" /> Manager</TabsTrigger>
@@ -492,7 +483,7 @@ export default function ActiveOrderCommandCenter() {
                             </div>
                         </TabsContent>
                         <TabsContent value="customer" className="absolute inset-0 m-0 outline-none overflow-y-auto custom-scrollbar bg-background/50"><div className="max-w-5xl mx-auto p-4 md:p-12"><CustomerDataForm order={activeOrder} onSave={handleSaveCustomerData} isSaving={isSavingBrief} isEditMode={isCustomerEditMode} onEnterEditMode={() => setIsCustomerEditMode(true)} /></div></TabsContent>
-                        <TabsContent value="design" className="absolute inset-0 m-0 outline-none overflow-hidden"><DesignReviewTab order={activeOrder} onUpdateOrder={syncToStorage} role={simulationRole} layout={designLayout} /></TabsContent>
+                        <TabsContent value="design" className="absolute inset-0 m-0 outline-none overflow-hidden"><DesignReviewTab order={activeOrder} onUpdateOrder={syncToStorage} role={simulationRole} /></TabsContent>
                     </div>
                 </Tabs>
             </div>

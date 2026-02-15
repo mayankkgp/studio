@@ -3,7 +3,6 @@
 import * as React from 'react';
 import { useState, useMemo } from 'react';
 import type { Order, DesignData, DesignComponent } from '@/lib/types';
-import { DesignProductCard } from './DesignProductCard';
 import { DesignProductRow } from './DesignProductRow';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Palette, Filter, AlertCircle, Clock, CheckCircle2, Archive } from 'lucide-react';
@@ -13,12 +12,11 @@ interface DesignReviewTabProps {
     order: Order;
     onUpdateOrder: (updatedOrder: Order) => void;
     role: 'MANAGER' | 'DESIGNER';
-    layout: 'grid' | 'table';
 }
 
 type FilterMode = 'needs_action' | 'waiting' | 'approved' | 'stock' | 'all';
 
-export function DesignReviewTab({ order, onUpdateOrder, role, layout }: DesignReviewTabProps) {
+export function DesignReviewTab({ order, onUpdateOrder, role }: DesignReviewTabProps) {
     const [activeFilter, setActiveFilter] = useState<FilterMode>('all');
 
     const handleUpdateProductDesign = (productId: string, designData: DesignData) => {
@@ -122,25 +120,10 @@ export function DesignReviewTab({ order, onUpdateOrder, role, layout }: DesignRe
             </div>
 
             <ScrollArea className="flex-1 w-full lg:max-w-[calc(100vw-16.5rem)] overflow-hidden min-w-0">
-                <div className={cn(
-                    "w-full p-4 md:p-8 space-y-12 pb-32 min-w-0 overflow-hidden",
-                    layout === 'table' && "md:px-8 md:py-8 md:space-y-0"
-                )}>
+                <div className="w-full p-4 md:p-8 pb-32 min-w-0 overflow-hidden">
                     {filteredProducts.length === 0 ? (
                         <div className="py-20 text-center opacity-40 italic text-[11px] font-black uppercase tracking-widest w-full">
                             No items match the selected filter.
-                        </div>
-                    ) : layout === 'grid' ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-8">
-                            {filteredProducts.map((product) => (
-                                <DesignProductCard 
-                                    key={product.id} 
-                                    product={product} 
-                                    isDesigner={role === 'DESIGNER'}
-                                    onUpdateDesign={(data) => handleUpdateProductDesign(product.id, data)}
-                                    customerData={order.customerData}
-                                />
-                            ))}
                         </div>
                     ) : (
                         <div className="w-full border rounded-xl bg-card/20 overflow-hidden flex flex-col min-w-0 shadow-sm">
