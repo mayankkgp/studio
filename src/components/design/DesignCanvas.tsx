@@ -85,6 +85,10 @@ export function DesignCanvas({
     const [showComparison, setShowComparison] = useState(false);
     const [activeTool, setActiveTool] = useState<ToolMode>('comment');
     
+    // Split Slider State
+    const [sliderPosition, setSliderPosition] = useState(50);
+    const [isDraggingSlider, setIsDraggingSlider] = useState(false);
+
     // Pan state
     const [isSpacePressed, setIsSpacePressed] = useState(false);
     const [isMiddleMouseDown, setIsMiddleMouseDown] = useState(false);
@@ -106,14 +110,14 @@ export function DesignCanvas({
     const isLatest = version === currentVersion;
     
     const isFeedbackUnlocked = useMemo(() => {
-        if (!imageUrl || !isLatest || isSpacePressed || isMiddleMouseDown) return false;
+        if (!imageUrl || !isLatest || isSpacePressed || isMiddleMouseDown || isDraggingSlider) return false;
 
         if (isDesigner) {
             return status === 'DRAFT' && hasNewDraft;
         } else {
             return status !== 'PENDING' && status !== 'DRAFT';
         }
-    }, [imageUrl, isLatest, isDesigner, status, hasNewDraft, isSpacePressed, isMiddleMouseDown]);
+    }, [imageUrl, isLatest, isDesigner, status, hasNewDraft, isSpacePressed, isMiddleMouseDown, isDraggingSlider]);
 
     const canDropPin = isFeedbackUnlocked && activeTool === 'comment';
     
@@ -261,6 +265,8 @@ export function DesignCanvas({
     };
 
     const handleCanvasMouseDown = (e: React.MouseEvent) => {
+        if (isDraggingSlider) return;
+
         // Space or Middle Button triggers dragging
         if (isSpacePressed || e.button === 1) {
             if (e.button === 1) setIsMiddleMouseDown(true);
@@ -288,10 +294,10 @@ export function DesignCanvas({
     };
 
     const handleCanvasClick = (e: React.MouseEvent) => {
-        if (!imageUrl || isSpacePressed || isMiddleMouseDown) return;
+        if (!imageUrl || isSpacePressed || isMiddleMouseDown || isDraggingSlider) return;
         
         const target = e.target as HTMLElement;
-        if (target.closest('.pin-bubble') || target.closest('button') || target.closest('.fixed-comment-box')) return;
+        if (target.closest('.pin-bubble') || target.closest('button') || target.closest('.fixed-comment-box') || target.closest('.slider-handle')) return;
         
         if (highlightedPinId || selectedPinId) {
             onPinClick(null);
@@ -394,28 +400,36 @@ export function DesignCanvas({
         e.preventDefault();
     };
 
+    // Slider Drag Logic
     useEffect(() => {
         const handleMouseMove = (e: MouseEvent) => {
-            if (!isDraggingPopover || !dragStartRef.current || !containerRef.current) return;
+            if (isDraggingPopover && dragStartRef.current && containerRef.current) {
+                const deltaX = e.clientX - dragStartRef.current.mouseX;
+                const deltaY = e.clientY - dragStartRef.current.mouseY;
 
-            const deltaX = e.clientX - dragStartRef.current.mouseX;
-            const deltaY = e.clientY - dragStartRef.current.mouseY;
+                let newX = dragStartRef.current.popoverX + deltaX;
+                let newY = dragStartRef.current.popoverY + deltaY;
 
-            let newX = dragStartRef.current.popoverX + deltaX;
-            let newY = dragStartRef.current.popoverY + deltaY;
+                const containerRect = containerRef.current.getBoundingClientRect();
+                newX = Math.max(0, Math.min(newX, containerRect.width - 320));
+                newY = Math.max(0, Math.min(newY, containerRect.height - 150));
 
-            const containerRect = containerRef.current.getBoundingClientRect();
-            newX = Math.max(0, Math.min(newX, containerRect.width - 320));
-            newY = Math.max(0, Math.min(newY, containerRect.height - 150));
+                setPopoverPos({ x: newX, y: newY });
+            }
 
-            setPopoverPos({ x: newX, y: newY });
+            if (isDraggingSlider && containerRef.current) {
+                const rect = containerRef.current.getBoundingClientRect();
+                const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
+                setSliderPosition((x / rect.width) * 100);
+            }
         };
 
         const handleMouseUp = () => {
             setIsDraggingPopover(false);
+            setIsDraggingSlider(false);
         };
 
-        if (isDraggingPopover) {
+        if (isDraggingPopover || isDraggingSlider) {
             window.addEventListener('mousemove', handleMouseMove);
             window.addEventListener('mouseup', handleMouseUp);
         }
@@ -424,7 +438,7 @@ export function DesignCanvas({
             window.removeEventListener('mousemove', handleMouseMove);
             window.removeEventListener('mouseup', handleMouseUp);
         };
-    }, [isDraggingPopover]);
+    }, [isDraggingPopover, isDraggingSlider]);
 
     const isPanModeActive = isSpacePressed || isMiddleMouseDown;
 
@@ -547,7 +561,7 @@ export function DesignCanvas({
                                             <Layers className="h-4 w-4" />
                                         </Button>
                                     </TooltipTrigger>
-                                    <TooltipContent>Onion Skinning (Compare with V{version - 1})</TooltipContent>
+                                    <TooltipContent>Split Comparison (Before/After Wiper)</TooltipContent>
                                 </Tooltip>
                             )}
                         </TooltipProvider>
@@ -590,21 +604,26 @@ export function DesignCanvas({
                                 transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoom})` 
                             }}
                         >
+                            {/* Base Image (Before - Previous Version) */}
+                            {showComparison && comparisonImageUrl && (
+                                <img 
+                                    src={comparisonImageUrl} 
+                                    alt="Comparison (Before)" 
+                                    className="absolute inset-0 w-full h-full object-contain" 
+                                    draggable={false} 
+                                />
+                            )}
+
+                            {/* Current Image (After) */}
                             {imageUrl && (
                                 <img 
                                     ref={imageRef} 
                                     src={imageUrl} 
                                     alt="Design View" 
                                     className="w-full h-full object-contain" 
-                                    draggable={false} 
-                                />
-                            )}
-
-                            {showComparison && comparisonImageUrl && (
-                                <img 
-                                    src={comparisonImageUrl} 
-                                    alt="Comparison View" 
-                                    className="absolute inset-0 w-full h-full object-contain opacity-50 pointer-events-none" 
+                                    style={showComparison ? {
+                                        clipPath: `inset(0 ${100 - sliderPosition}% 0 0)`
+                                    } : undefined}
                                     draggable={false} 
                                 />
                             )}
@@ -623,7 +642,7 @@ export function DesignCanvas({
                                         )}
                                         style={{ left: `${pin.x}%`, top: `${pin.y}%`, transform: `translate(-50%, -50%) scale(${1/zoom})` }}
                                         onClick={(e) => { 
-                                            if (isPanModeActive) return;
+                                            if (isPanModeActive || isDraggingSlider) return;
                                             e.stopPropagation(); 
                                             setRepositionKey(prev => prev + 1); 
                                             onPinClick(pin.id); 
@@ -634,6 +653,27 @@ export function DesignCanvas({
                                 );
                             })}
                         </div>
+
+                        {/* Slider Handle (Outside the zoomed content to maintain scale) */}
+                        {showComparison && comparisonImageUrl && (
+                            <div 
+                                className="absolute inset-y-0 z-[60] group/slider pointer-events-none"
+                                style={{ left: `${sliderPosition}%` }}
+                            >
+                                <div className="absolute inset-y-0 w-px bg-primary shadow-[0_0_10px_rgba(var(--primary),0.5)]" />
+                                <button
+                                    className="slider-handle absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center shadow-2xl pointer-events-auto cursor-ew-resize active:scale-95 transition-transform border-4 border-background"
+                                    onMouseDown={(e) => {
+                                        e.preventDefault();
+                                        setIsDraggingSlider(true);
+                                    }}
+                                >
+                                    <GripHorizontal className="h-5 w-5" />
+                                </button>
+                                <div className="absolute top-1/2 -translate-y-1/2 right-12 bg-black/80 text-white text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded border border-white/10 opacity-0 group-hover/slider:opacity-100 transition-opacity">Before</div>
+                                <div className="absolute top-1/2 -translate-y-1/2 left-12 bg-primary text-white text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded opacity-0 group-hover/slider:opacity-100 transition-opacity">After</div>
+                            </div>
+                        )}
 
                         {selectedPinId && activePin && (
                             <div 
