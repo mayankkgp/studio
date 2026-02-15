@@ -87,6 +87,7 @@ export function DesignCanvas({
     
     // Pan state
     const [isSpacePressed, setIsSpacePressed] = useState(false);
+    const [isMiddleMouseDown, setIsMiddleMouseDown] = useState(false);
     const [isDraggingCanvas, setIsDraggingCanvas] = useState(false);
     const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
     const dragStartMousePos = useRef<{ x: number; y: number } | null>(null);
@@ -105,14 +106,14 @@ export function DesignCanvas({
     const isLatest = version === currentVersion;
     
     const isFeedbackUnlocked = useMemo(() => {
-        if (!imageUrl || !isLatest || isSpacePressed) return false;
+        if (!imageUrl || !isLatest || isSpacePressed || isMiddleMouseDown) return false;
 
         if (isDesigner) {
             return status === 'DRAFT' && hasNewDraft;
         } else {
             return status !== 'PENDING' && status !== 'DRAFT';
         }
-    }, [imageUrl, isLatest, isDesigner, status, hasNewDraft, isSpacePressed]);
+    }, [imageUrl, isLatest, isDesigner, status, hasNewDraft, isSpacePressed, isMiddleMouseDown]);
 
     const canDropPin = isFeedbackUnlocked && activeTool === 'comment';
     
@@ -127,6 +128,36 @@ export function DesignCanvas({
 
     const activePin = useMemo(() => pins.find(p => p.id === selectedPinId), [pins, selectedPinId]);
     const activePinNumber = useMemo(() => pins.findIndex(p => p.id === selectedPinId) + 1, [pins, selectedPinId]);
+
+    // Natural Pan & Zoom Effect
+    useEffect(() => {
+        const container = containerRef.current;
+        if (!container) return;
+
+        const handleWheel = (e: WheelEvent) => {
+            if (!imageUrl) return;
+            e.preventDefault();
+
+            // Native Pinch-to-zoom or Ctrl+Wheel
+            if (e.ctrlKey || e.metaKey) {
+                const delta = e.deltaY;
+                setZoom(prev => {
+                    const factor = delta > 0 ? 0.9 : 1.1;
+                    const next = prev * factor;
+                    return Math.max(0.5, Math.min(next, 4));
+                });
+            } else {
+                // Natural Pan (Swipes/Wheels)
+                setPanOffset(prev => ({
+                    x: prev.x - e.deltaX,
+                    y: prev.y - e.deltaY
+                }));
+            }
+        };
+
+        container.addEventListener('wheel', handleWheel, { passive: false });
+        return () => container.removeEventListener('wheel', handleWheel);
+    }, [imageUrl]);
 
     // Keyboard Shortcuts Listener
     useEffect(() => {
@@ -146,7 +177,6 @@ export function DesignCanvas({
                 }
             }
 
-            // Single key tool switching (only if not typing)
             if (!isTyping && isFeedbackUnlocked) {
                 if (e.key.toLowerCase() === 'c') {
                     setActiveTool('comment');
@@ -172,12 +202,10 @@ export function DesignCanvas({
         };
     }, [isSpacePressed, selectedPinId, highlightedPinId, onPinClick, isFeedbackUnlocked]);
 
-    // Disable comparison if version changes and no comparison is available for new version
     useEffect(() => {
         if (!comparisonImageUrl) setShowComparison(false);
     }, [comparisonImageUrl]);
 
-    // Handle Selection & Auto-positioning logic
     useEffect(() => {
         const isFreshSelection = selectedPinId !== lastSelectionId.current || repositionKey !== lastRepositionKey.current;
 
@@ -233,7 +261,9 @@ export function DesignCanvas({
     };
 
     const handleCanvasMouseDown = (e: React.MouseEvent) => {
-        if (isSpacePressed) {
+        // Space or Middle Button triggers dragging
+        if (isSpacePressed || e.button === 1) {
+            if (e.button === 1) setIsMiddleMouseDown(true);
             setIsDraggingCanvas(true);
             dragStartMousePos.current = { x: e.clientX, y: e.clientY };
             initialPanOffset.current = panOffset;
@@ -252,12 +282,13 @@ export function DesignCanvas({
         }
     };
 
-    const handleCanvasMouseUp = () => {
+    const handleCanvasMouseUp = (e: React.MouseEvent) => {
         setIsDraggingCanvas(false);
+        if (e.button === 1) setIsMiddleMouseDown(false);
     };
 
     const handleCanvasClick = (e: React.MouseEvent) => {
-        if (!imageUrl || isSpacePressed) return;
+        if (!imageUrl || isSpacePressed || isMiddleMouseDown) return;
         
         const target = e.target as HTMLElement;
         if (target.closest('.pin-bubble') || target.closest('button') || target.closest('.fixed-comment-box')) return;
@@ -395,6 +426,8 @@ export function DesignCanvas({
         };
     }, [isDraggingPopover]);
 
+    const isPanModeActive = isSpacePressed || isMiddleMouseDown;
+
     return (
         <div className="h-full flex flex-col relative group/canvas bg-stone-950 overflow-hidden">
             <input 
@@ -471,7 +504,7 @@ export function DesignCanvas({
                                             <TooltipContent>Comment Tool (C)</TooltipContent>
                                         </Tooltip>
                                     </>
-                                ) : isSpacePressed ? (
+                                ) : isPanModeActive ? (
                                     <div className="flex items-center px-3 gap-2">
                                         <Hand className="h-3 w-3 text-primary animate-pulse" />
                                         <span className="text-[10px] font-black uppercase tracking-widest text-primary">Pan Mode</span>
@@ -543,12 +576,12 @@ export function DesignCanvas({
                         ref={containerRef}
                         className={cn(
                             "flex-1 overflow-hidden relative select-none",
-                            isSpacePressed ? (isDraggingCanvas ? "cursor-grabbing" : "cursor-grab") : (canDropPin ? "cursor-crosshair" : "cursor-default")
+                            isPanModeActive ? (isDraggingCanvas ? "cursor-grabbing" : "cursor-grab") : (canDropPin ? "cursor-crosshair" : "cursor-default")
                         )}
                         onMouseDown={handleCanvasMouseDown}
                         onMouseMove={handleCanvasMouseMove}
                         onMouseUp={handleCanvasMouseUp}
-                        onMouseLeave={handleCanvasMouseUp}
+                        onMouseLeave={(e) => handleCanvasMouseUp(e)}
                         onClick={handleCanvasClick}
                     >
                         <div 
@@ -590,7 +623,7 @@ export function DesignCanvas({
                                         )}
                                         style={{ left: `${pin.x}%`, top: `${pin.y}%`, transform: `translate(-50%, -50%) scale(${1/zoom})` }}
                                         onClick={(e) => { 
-                                            if (isSpacePressed) return;
+                                            if (isPanModeActive) return;
                                             e.stopPropagation(); 
                                             setRepositionKey(prev => prev + 1); 
                                             onPinClick(pin.id); 
