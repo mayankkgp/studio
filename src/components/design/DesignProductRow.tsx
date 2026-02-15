@@ -12,8 +12,7 @@ import {
     ChevronUp, 
     ExternalLink, 
     PackageCheck,
-    Archive,
-    History
+    Archive
 } from 'lucide-react';
 import { productCatalog } from '@/lib/product-data';
 import { format } from 'date-fns';
@@ -57,8 +56,8 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
 
     const isEligibleForStock = useMemo(() => {
         if (designData.isStock) return false;
-        // Eligibility: All components must be PENDING and have 0 versions
-        return designData.components.every(c => 
+        // Eligibility: All components must be PENDING AND contain exactly zero versions
+        return (designData.components || []).every(c => 
             c.status === 'PENDING' && (!c.versions || c.versions.length === 0)
         );
     }, [designData]);
@@ -108,7 +107,7 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
                 {/* Zone A: Status Indicator */}
                 <div className={cn("absolute left-0 top-0 bottom-0 w-1.5 transition-colors shrink-0", STATUS_CONFIG[aggregateStatus].bg)} />
 
-                {/* Zone B: Identity */}
+                {/* Zone B: Identity - Fixed Width */}
                 <div className="w-64 px-6 shrink-0 flex items-center gap-3">
                     <div className="h-8 w-8 rounded bg-primary/10 flex items-center justify-center text-primary shrink-0">
                         <Package className="h-4 w-4" />
@@ -119,7 +118,7 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
                     </div>
                 </div>
 
-                {/* Zone C: Unified Specifications - Fluid with min-w-0 to enable scrolling */}
+                {/* Zone C: Specifications - Responsive Fluid Width */}
                 <div className="flex-[1_1_0%] min-w-0 px-4 flex flex-col justify-center overflow-hidden">
                     <div className="text-[11px] font-bold text-foreground/80 truncate">
                         {getCoreSpecs() || "No core specs"}
@@ -142,7 +141,7 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
                     </div>
                 </div>
 
-                {/* Zone D: Component Track */}
+                {/* Zone D: Component Track - Fixed Width with internal scroll */}
                 <div className="w-72 px-4 flex items-center gap-1 overflow-x-auto no-scrollbar scroll-smooth whitespace-nowrap shrink-0">
                     {!designData.isStock ? (
                         designData.components.map((comp) => (
@@ -167,31 +166,30 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
                     )}
                 </div>
 
-                {/* Zone E: Actions */}
+                {/* Zone E: Actions - Fixed Width */}
                 <div className="w-64 px-6 flex items-center justify-end gap-3 shrink-0">
                     <div className="flex items-center justify-center w-8 shrink-0">
-                        {isEligibleForStock && (
+                        {isEligibleForStock ? (
                             <Button 
                                 size="sm" 
                                 variant="outline" 
-                                className="h-8 w-8 p-0 border-primary/20 text-muted-foreground hover:text-primary opacity-0 group-hover/row:opacity-100 transition-opacity"
+                                className="h-8 w-8 p-0 border-primary/20 text-muted-foreground hover:text-primary transition-opacity"
                                 onClick={handleToggleStock}
                                 title="Mark as Stock"
                             >
                                 <Archive className="h-3.5 w-3.5" />
                             </Button>
-                        )}
-                        {designData.isStock && (
+                        ) : designData.isStock ? (
                             <Button 
                                 size="sm" 
                                 variant="outline" 
-                                className="h-8 w-8 p-0 border-primary/20 text-primary hover:bg-primary/5 opacity-0 group-hover/row:opacity-100 transition-opacity"
+                                className="h-8 w-8 p-0 border-primary/20 text-primary hover:bg-primary/5 transition-opacity"
                                 onClick={handleToggleStock}
                                 title="Restore Design Tools"
                             >
                                 <Package className="h-3.5 w-3.5" />
                             </Button>
-                        )}
+                        ) : null}
                     </div>
                     <Button 
                         size="sm" 
