@@ -7,6 +7,7 @@ import { DesignProductRow } from './DesignProductRow';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Palette, Filter, AlertCircle, Clock, CheckCircle2, Archive } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Separator } from '@/components/ui/separator';
 
 interface DesignReviewTabProps {
     order: Order;
@@ -14,10 +15,10 @@ interface DesignReviewTabProps {
     role: 'MANAGER' | 'DESIGNER';
 }
 
-type FilterMode = 'needs_action' | 'waiting' | 'approved' | 'stock' | 'all';
+type FilterMode = 'active' | 'needs_action' | 'waiting' | 'approved' | 'stock';
 
 export function DesignReviewTab({ order, onUpdateOrder, role }: DesignReviewTabProps) {
-    const [activeFilter, setActiveFilter] = useState<FilterMode>('all');
+    const [activeFilter, setActiveFilter] = useState<FilterMode>('active');
 
     const handleUpdateProductDesign = (productId: string, designData: DesignData) => {
         const updatedDeliverables = order.deliverables.map(d => 
@@ -32,9 +33,13 @@ export function DesignReviewTab({ order, onUpdateOrder, role }: DesignReviewTabP
         return deliverables.filter(p => {
             const data = p.designData || { components: [] as DesignComponent[], isStock: false };
             const components = data.components || [];
-            
-            if (activeFilter === 'all') return true;
-            if (activeFilter === 'stock') return !!data.isStock;
+            const isStock = !!data.isStock;
+
+            // Strict Isolation: Stock items ONLY show in stock filter
+            if (activeFilter === 'stock') return isStock;
+            if (isStock) return false;
+
+            if (activeFilter === 'active') return true;
             
             if (activeFilter === 'needs_action') {
                 if (role === 'MANAGER') {
@@ -84,10 +89,10 @@ export function DesignReviewTab({ order, onUpdateOrder, role }: DesignReviewTabP
                 </div>
                 <div className="flex items-center gap-1.5 bg-muted/40 p-1 rounded-lg border overflow-x-auto no-scrollbar min-w-0">
                     <FilterTab 
-                        active={activeFilter === 'all'} 
-                        onClick={() => setActiveFilter('all')} 
-                        label="All Items" 
-                        count={order.deliverables.length} 
+                        active={activeFilter === 'active'} 
+                        onClick={() => setActiveFilter('active')} 
+                        label="Active Items" 
+                        count={order.deliverables.filter(d => !d.designData?.isStock).length} 
                     />
                     <FilterTab 
                         active={activeFilter === 'needs_action'} 
@@ -110,6 +115,9 @@ export function DesignReviewTab({ order, onUpdateOrder, role }: DesignReviewTabP
                         icon={CheckCircle2}
                         color="text-green-600"
                     />
+                    
+                    <div className="w-px h-4 bg-border mx-2" />
+
                     <FilterTab 
                         active={activeFilter === 'stock'} 
                         onClick={() => setActiveFilter('stock')} 

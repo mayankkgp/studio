@@ -13,7 +13,8 @@ import {
     ExternalLink, 
     PackageCheck,
     Archive,
-    Wand2
+    Wand2,
+    Play
 } from 'lucide-react';
 import { productCatalog } from '@/lib/product-data';
 import { format } from 'date-fns';
@@ -105,7 +106,10 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
                 )}
             >
                 {/* Zone A: Status Indicator */}
-                <div className={cn("absolute left-0 top-0 bottom-0 w-1.5 transition-colors shrink-0", STATUS_CONFIG[aggregateStatus].bg)} />
+                <div className={cn(
+                    "absolute left-0 top-0 bottom-0 w-1.5 transition-colors shrink-0", 
+                    designData.isStock ? "bg-transparent" : STATUS_CONFIG[aggregateStatus].bg
+                )} />
 
                 {/* Zone B: Identity */}
                 <div className="w-[15vw] min-w-[12vw] max-w-[15vw] px-6 shrink-0 flex items-center gap-3 overflow-hidden min-w-0">
@@ -118,8 +122,11 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
                     </div>
                 </div>
 
-                {/* Zone C: Specifications - Spacing stabilized with gap-1 */}
-                <div className="flex-[1_1_0px] basis-0 min-w-[20vw] max-w-[30vw] px-4 flex flex-col justify-center overflow-hidden min-w-0 gap-1">
+                {/* Zone C: Specifications */}
+                <div className={cn(
+                    "px-4 flex flex-col justify-center overflow-hidden min-w-0 gap-1",
+                    designData.isStock ? "flex-1" : "flex-[1_1_0px] basis-0 min-w-[20vw] max-w-[30vw]"
+                )}>
                     {/* Line 1: Core Specs */}
                     <div className={cn(
                         "text-[11px] font-bold text-foreground/80 scroll-smooth w-full block",
@@ -153,10 +160,10 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
                     </div>
                 </div>
 
-                {/* Zone D: Component Track */}
-                <div className="w-[15vw] min-w-[12vw] max-w-[15vw] px-4 flex items-center gap-1 overflow-x-auto no-scrollbar scroll-smooth whitespace-nowrap shrink-0 min-w-0">
-                    {!designData.isStock ? (
-                        designData.components.map((comp) => (
+                {/* Zone D: Component Track (Hidden for Stock) */}
+                {!designData.isStock && (
+                    <div className="w-[15vw] min-w-[12vw] max-w-[15vw] px-4 flex items-center gap-1 overflow-x-auto no-scrollbar scroll-smooth whitespace-nowrap shrink-0 min-w-0">
+                        {designData.components.map((comp) => (
                             <div 
                                 key={comp.id}
                                 className={cn(
@@ -169,46 +176,45 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
                             >
                                 <span className="text-[10px] font-black tracking-tighter">V{comp.versions.length}</span>
                             </div>
-                        ))
-                    ) : (
-                        <div className="h-6 px-3 rounded-full bg-green-100 text-green-700 border border-green-200 flex items-center gap-1.5 shrink-0">
-                            <PackageCheck className="h-3 w-3" />
-                            <span className="text-[9px] font-black uppercase tracking-widest">Ready</span>
-                        </div>
-                    )}
-                </div>
+                        ))}
+                    </div>
+                )}
 
                 {/* Zone E: Actions */}
                 <div className="w-[15vw] min-w-[12vw] max-w-[15vw] px-6 flex items-center justify-end gap-3 shrink-0 min-w-0">
-                    <div className="flex items-center justify-center w-8 shrink-0">
-                        {isEligibleForStock ? (
-                            <Button 
-                                size="sm" 
-                                variant="outline" 
-                                className="h-8 w-8 p-0 border-primary/20 text-muted-foreground hover:text-primary transition-opacity"
-                                onClick={handleToggleStock}
-                                title="Mark as Stock"
-                            >
-                                <Archive className="h-3.5 w-3.5" />
-                            </Button>
-                        ) : designData.isStock ? (
-                            <Button 
-                                size="sm" 
-                                variant="outline" 
-                                className="h-8 w-8 p-0 border-primary/20 text-primary hover:bg-primary/5 transition-opacity"
-                                onClick={handleToggleStock}
-                                title="Restore Design Tools"
-                            >
-                                <Package className="h-3.5 w-3.5" />
-                            </Button>
-                        ) : null}
-                    </div>
+                    {!designData.isStock && (
+                        <div className="flex items-center justify-center w-8 shrink-0">
+                            {isEligibleForStock ? (
+                                <Button 
+                                    size="sm" 
+                                    variant="outline" 
+                                    className="h-8 w-8 p-0 border-primary/20 text-muted-foreground hover:text-primary transition-opacity"
+                                    onClick={handleToggleStock}
+                                    title="Mark as Stock"
+                                >
+                                    <Archive className="h-3.5 w-3.5" />
+                                </Button>
+                            ) : null}
+                        </div>
+                    )}
                     <Button 
                         size="sm" 
+                        variant={designData.isStock ? "outline" : "default"}
                         className="h-8 text-[10px] font-black uppercase tracking-widest gap-1.5 shadow-sm min-w-[100px] shrink-0"
-                        onClick={(e) => { e.stopPropagation(); onOpenWorkbench(); }}
+                        onClick={(e) => { 
+                            e.stopPropagation(); 
+                            if (designData.isStock) {
+                                onUpdateDesign({ ...designData, isStock: false });
+                            } else {
+                                onOpenWorkbench(); 
+                            }
+                        }}
                     >
-                        <ExternalLink className="h-3.5 w-3.5" /> Workbench
+                        {designData.isStock ? (
+                            <><Play className="h-3.5 w-3.5" /> Start Design</>
+                        ) : (
+                            <><ExternalLink className="h-3.5 w-3.5" /> Workbench</>
+                        )}
                     </Button>
                     <div className="w-6 flex items-center justify-center shrink-0">
                         {isExpanded ? <ChevronUp className="h-4 w-4 opacity-30" /> : <ChevronDown className="h-4 w-4 opacity-30" />}
@@ -220,49 +226,56 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
             {isExpanded && (
                 <div className="bg-muted/10 border-t border-primary/5 animate-in slide-in-from-top-2 duration-200 w-full overflow-hidden min-w-0">
                     <div className="px-24 py-4 w-full overflow-hidden min-w-0">
-                        <div className="rounded-lg border bg-background/50 overflow-hidden shadow-inner w-full overflow-x-auto min-w-0">
-                            <table className="w-full text-left min-w-[600px]">
-                                <thead>
-                                    <tr className="bg-muted/30 text-[9px] font-black uppercase tracking-widest text-muted-foreground border-b">
-                                        <th className="px-4 py-2">Component Name</th>
-                                        <th className="px-4 py-2">Version</th>
-                                        <th className="px-4 py-2">Status</th>
-                                        <th className="px-4 py-2">Last Updated</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="text-[11px] font-semibold">
-                                    {designData.components.map((comp) => {
-                                        const lastVersion = comp.versions[comp.versions.length - 1];
-                                        return (
-                                            <tr key={comp.id} className="border-b last:border-0 hover:bg-muted/20">
-                                                <td className="px-4 py-2.5 font-bold">{comp.name}</td>
-                                                <td className="px-4 py-2.5">
-                                                    <div 
-                                                        className={cn(
-                                                            "h-6 px-2 rounded-md flex items-center justify-center w-fit min-w-[2.5rem] shadow-sm border transition-all",
-                                                            STATUS_CONFIG[comp.status].bg,
-                                                            STATUS_CONFIG[comp.status].border,
-                                                            STATUS_CONFIG[comp.status].text
-                                                        )}
-                                                    >
-                                                        <span className="text-[10px] font-black tracking-tighter">V{comp.versions.length}</span>
-                                                    </div>
-                                                </td>
-                                                <td className="px-4 py-2.5">
-                                                    <div className="flex items-center gap-2">
-                                                        <div className={cn("h-2 w-2 rounded-full", STATUS_CONFIG[comp.status].bg)} />
-                                                        <span className="uppercase text-[9px] tracking-tight text-muted-foreground">{comp.status.replace('_', ' ')}</span>
-                                                    </div>
-                                                </td>
-                                                <td className="px-4 py-2.5 text-muted-foreground text-[10px]">
-                                                    {lastVersion ? format(new Date(lastVersion.timestamp), 'dd MMM, HH:mm') : '-'}
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
-                        </div>
+                        {designData.isStock ? (
+                            <div className="p-6 border-2 border-dashed rounded-xl bg-background/50 flex flex-col items-center justify-center text-center space-y-2">
+                                <PackageCheck className="h-8 w-8 text-primary/40" />
+                                <p className="text-[11px] font-black uppercase tracking-widest text-muted-foreground">Ready for Production • No Design Manifest</p>
+                            </div>
+                        ) : (
+                            <div className="rounded-lg border bg-background/50 overflow-hidden shadow-inner w-full overflow-x-auto min-w-0">
+                                <table className="w-full text-left min-w-[600px]">
+                                    <thead>
+                                        <tr className="bg-muted/30 text-[9px] font-black uppercase tracking-widest text-muted-foreground border-b">
+                                            <th className="px-4 py-2">Component Name</th>
+                                            <th className="px-4 py-2">Version</th>
+                                            <th className="px-4 py-2">Status</th>
+                                            <th className="px-4 py-2">Last Updated</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="text-[11px] font-semibold">
+                                        {designData.components.map((comp) => {
+                                            const lastVersion = comp.versions[comp.versions.length - 1];
+                                            return (
+                                                <tr key={comp.id} className="border-b last:border-0 hover:bg-muted/20">
+                                                    <td className="px-4 py-2.5 font-bold">{comp.name}</td>
+                                                    <td className="px-4 py-2.5">
+                                                        <div 
+                                                            className={cn(
+                                                                "h-6 px-2 rounded-md flex items-center justify-center w-fit min-w-[2.5rem] shadow-sm border transition-all",
+                                                                STATUS_CONFIG[comp.status].bg,
+                                                                STATUS_CONFIG[comp.status].border,
+                                                                STATUS_CONFIG[comp.status].text
+                                                            )}
+                                                        >
+                                                            <span className="text-[10px] font-black tracking-tighter">V{comp.versions.length}</span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-4 py-2.5">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className={cn("h-2 w-2 rounded-full", STATUS_CONFIG[comp.status].bg)} />
+                                                            <span className="uppercase text-[9px] tracking-tight text-muted-foreground">{comp.status.replace('_', ' ')}</span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-4 py-2.5 text-muted-foreground text-[10px]">
+                                                        {lastVersion ? format(new Date(lastVersion.timestamp), 'dd MMM, HH:mm') : '-'}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}
