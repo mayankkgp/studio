@@ -23,7 +23,8 @@ import {
     ChevronUp,
     Clock,
     ChevronLeft,
-    ChevronRight
+    ChevronRight,
+    LayoutGrid
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -167,6 +168,7 @@ export function DesignProductCard({
     const [isTimelineCollapsed, setIsTimelineCollapsed] = useState(false);
     const [isZenMode, setIsZenMode] = useState(false);
     const [showPopovers, setShowPopovers] = useState(true);
+    const [isLightTable, setIsLightTable] = useState(false);
 
     // Overflow Tab indicators
     const tabScrollRef = useRef<HTMLDivElement>(null);
@@ -397,15 +399,20 @@ export function DesignProductCard({
         setSelectedPinId(openPopover ? id : null);
         
         if (id) {
-            const pin = activeComponent.pins.find(p => p.id === id);
+            const allPins = isLightTable ? localDesignData.components.flatMap(c => c.pins) : activeComponent.pins;
+            const pin = allPins.find(p => p.id === id);
             setDraftText(pin?.text || '');
         } else {
             setDraftText('');
         }
     };
 
-    const handleAddPin = (x: number, y: number) => {
+    const handleAddPin = (x: number, y: number, componentId?: string) => {
         const newPinId = `pin-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+        const targetVNum = isLightTable && componentId 
+            ? (localDesignData.components.find(c => c.id === componentId)?.versions.length || 0)
+            : viewedVersionNum;
+
         const newPin: DesignPin = { 
             id: newPinId, 
             x, 
@@ -414,14 +421,15 @@ export function DesignProductCard({
             isMistake: false,
             author: isDesigner ? 'Designer' : 'Manager', 
             timestamp: new Date().toISOString(), 
-            version: viewedVersionNum, 
+            version: targetVNum, 
             text: '', 
             replies: [],
             isDraft: true
         };
         
+        const targetCompId = componentId || activeCompId;
         const updatedComponents = localDesignData.components.map(c => {
-            if (c.id === activeCompId) {
+            if (c.id === targetCompId) {
                 return { ...c, pins: [...(c.pins || []), newPin] };
             }
             return c;
@@ -436,10 +444,21 @@ export function DesignProductCard({
     };
 
     const handleUpdatePins = (newPins: DesignPin[]) => {
-        const updatedComponents = localDesignData.components.map(c => 
-            c.id === activeCompId ? { ...c, pins: newPins } : c
-        );
-        handleUpdateDesignInternal({ ...localDesignData, components: updatedComponents });
+        // If Light Table, update pins for individual components correctly
+        if (isLightTable) {
+            const updatedComponents = localDesignData.components.map(c => {
+                const componentPins = newPins.filter(p => c.pins.some(cp => cp.id === p.id));
+                // Handle new pins that might have been added to this component but aren't in newPins yet?
+                // Actually newPins should be the source of truth if passed back correctly.
+                return { ...c, pins: componentPins };
+            });
+            handleUpdateDesignInternal({ ...localDesignData, components: updatedComponents });
+        } else {
+            const updatedComponents = localDesignData.components.map(c => 
+                c.id === activeCompId ? { ...c, pins: newPins } : c
+            );
+            handleUpdateDesignInternal({ ...localDesignData, components: updatedComponents });
+        }
     };
 
     const getStatusColor = (status: DesignWorkflowStatus) => {
@@ -497,7 +516,7 @@ export function DesignProductCard({
     };
 
     const feedbackSidebarProps = {
-        pins: activeComponent.pins || [],
+        pins: isLightTable ? localDesignData.components.flatMap(c => c.pins) : activeComponent.pins || [],
         versions: visibleVersions,
         highlightedPinId: highlightedPinId,
         selectedVersionId: activeVersion?.id || null,
@@ -505,7 +524,17 @@ export function DesignProductCard({
         isDesigner: isDesigner,
         currentVersion: currentVersionNum,
         viewedVersion: viewedVersionNum,
-        onUpdatePins: handleUpdatePins,
+        onUpdatePins: (newPins: DesignPin[]) => {
+            if (isLightTable) {
+                const updatedComponents = localDesignData.components.map(c => {
+                    const cPins = newPins.filter(p => c.pins.some(cp => cp.id === p.id));
+                    return { ...c, pins: cPins };
+                });
+                handleUpdateDesignInternal({ ...localDesignData, components: updatedComponents });
+            } else {
+                handleUpdatePins(newPins);
+            }
+        },
         onPinSelect: (id: string | null) => handlePinSelect(id, false),
         onVersionSelect: setSelectedVersionId,
         onStatusChange: handleStatusChange,
@@ -525,7 +554,10 @@ export function DesignProductCard({
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
                                 <div className="h-8 w-8 rounded bg-primary/10 flex items-center justify-center text-primary"><Package className="h-5 w-5" /></div>
-                                <div><CardTitle className="text-sm font-headline font-black">{product.productName}</CardTitle></div>
+                                <div className="flex flex-col">
+                                    <CardTitle className="text-sm font-headline font-black">{product.productName}</CardTitle>
+                                    <div className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">{localDesignData.components.length} Components</div>
+                                </div>
                             </div>
                             <div className="flex items-center gap-2">
                                 {isEligibleForStock && (
@@ -588,6 +620,7 @@ export function DesignProductCard({
                     handlePinSelect(null);
                     setLocalDesignData(initialDesignData);
                     setIsZenMode(false);
+                    setIsLightTable(false);
                     onCloseWorkbench?.();
                 }
                 setIsFullscreen(open);
@@ -609,65 +642,80 @@ export function DesignProductCard({
                             {!isZenMode && (
                                 <div className="h-14 shrink-0 flex items-center justify-between px-6 bg-background/80 backdrop-blur-xl border-b z-50">
                                     <div className="flex-1 flex items-center gap-4 overflow-hidden">
-                                        <h2 className="font-headline font-black text-sm truncate shrink-0">{product.productName}</h2>
-                                        <div className="h-4 w-px bg-border shrink-0" />
-                                        
-                                        <div className="relative flex-1 flex items-center overflow-hidden min-w-0 group/tabs">
-                                            {canScrollLeft && (
-                                                <>
-                                                    <div className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none" />
-                                                    <Button 
-                                                        variant="ghost" 
-                                                        size="icon" 
-                                                        className="absolute left-0 z-20 h-7 w-7 bg-background/80 backdrop-blur rounded-full shadow-md hover:bg-background"
-                                                        onClick={() => scrollTabs('left')}
-                                                    >
-                                                        <ChevronLeft className="h-4 w-4" />
-                                                    </Button>
-                                                </>
-                                            )}
-                                            
-                                            <div 
-                                                ref={tabScrollRef}
-                                                onScroll={checkTabOverflow}
-                                                className="flex-1 flex items-center gap-1 overflow-x-auto no-scrollbar py-1 pr-4"
+                                        <div className="flex items-center gap-2 shrink-0">
+                                            <h2 className="font-headline font-black text-sm truncate">{product.productName}</h2>
+                                            <Button 
+                                                variant={isLightTable ? "default" : "ghost"} 
+                                                size="sm" 
+                                                onClick={() => setIsLightTable(!isLightTable)}
+                                                className="h-7 px-2 gap-1.5 text-[9px] font-black uppercase tracking-widest shadow-sm"
                                             >
-                                                <Tabs value={activeCompId} onValueChange={(val) => {
-                                                    handlePinSelect(null);
-                                                    setActiveCompId(val);
-                                                }} className="shrink-0">
-                                                    <TabsList className="bg-transparent h-10 p-0 gap-4">
-                                                        {localDesignData.components.map(comp => (
-                                                            <TabsTrigger key={comp.id} value={comp.id} className="h-10 rounded-none border-b-2 border-transparent data-[state=active]:border-primary bg-transparent font-black uppercase text-[10px] tracking-widest px-0">
-                                                                {comp.name} <span className="ml-1 opacity-40 font-mono">V{(comp.versions || []).length}</span>
-                                                            </TabsTrigger>
-                                                        ))}
-                                                    </TabsList>
-                                                </Tabs>
-                                                <AddComponentWidget mode="workbench" onAdd={handleAddComponent} />
-                                            </div>
-
-                                            {canScrollRight && (
-                                                <>
-                                                    <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none" />
-                                                    <Button 
-                                                        variant="ghost" 
-                                                        size="icon" 
-                                                        className="absolute right-0 z-20 h-7 w-7 bg-background/80 backdrop-blur rounded-full shadow-md hover:bg-background"
-                                                        onClick={() => scrollTabs('right')}
-                                                    >
-                                                        <ChevronRight className="h-4 w-4" />
-                                                    </Button>
-                                                </>
-                                            )}
+                                                <LayoutGrid className="h-3 w-3" />
+                                                Light Table
+                                            </Button>
                                         </div>
+                                        
+                                        {!isLightTable && (
+                                            <>
+                                                <div className="h-4 w-px bg-border shrink-0" />
+                                                <div className="relative flex-1 flex items-center overflow-hidden min-w-0 group/tabs">
+                                                    {canScrollLeft && (
+                                                        <>
+                                                            <div className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none" />
+                                                            <Button 
+                                                                variant="ghost" 
+                                                                size="icon" 
+                                                                className="absolute left-0 z-20 h-7 w-7 bg-background/80 backdrop-blur rounded-full shadow-md hover:bg-background"
+                                                                onClick={() => scrollTabs('left')}
+                                                            >
+                                                                <ChevronLeft className="h-4 w-4" />
+                                                            </Button>
+                                                        </>
+                                                    )}
+                                                    
+                                                    <div 
+                                                        ref={tabScrollRef}
+                                                        onScroll={checkTabOverflow}
+                                                        className="flex-1 flex items-center gap-1 overflow-x-auto no-scrollbar py-1 pr-4"
+                                                    >
+                                                        <Tabs value={activeCompId} onValueChange={(val) => {
+                                                            handlePinSelect(null);
+                                                            setActiveCompId(val);
+                                                        }} className="shrink-0">
+                                                            <TabsList className="bg-transparent h-10 p-0 gap-4">
+                                                                {localDesignData.components.map(comp => (
+                                                                    <TabsTrigger key={comp.id} value={comp.id} className="h-10 rounded-none border-b-2 border-transparent data-[state=active]:border-primary bg-transparent font-black uppercase text-[10px] tracking-widest px-0">
+                                                                        {comp.name} <span className="ml-1 opacity-40 font-mono">V{(comp.versions || []).length}</span>
+                                                                    </TabsTrigger>
+                                                                ))}
+                                                            </TabsList>
+                                                        </Tabs>
+                                                        <AddComponentWidget mode="workbench" onAdd={handleAddComponent} />
+                                                    </div>
+
+                                                    {canScrollRight && (
+                                                        <>
+                                                            <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none" />
+                                                            <Button 
+                                                                variant="ghost" 
+                                                                size="icon" 
+                                                                className="absolute right-0 z-20 h-7 w-7 bg-background/80 backdrop-blur rounded-full shadow-md hover:bg-background"
+                                                                onClick={() => scrollTabs('right')}
+                                                            >
+                                                                <ChevronRight className="h-4 w-4" />
+                                                            </Button>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            </>
+                                        )}
                                     </div>
                                     <div className="flex items-center gap-3 shrink-0 ml-4">
                                         <Badge className={cn("font-black text-[10px] px-3 h-7 tracking-widest shadow-sm", 
                                             activeComponent.status === 'APPROVED' ? "bg-green-600 text-white" :
                                             activeComponent.status === 'DRAFT' ? "bg-orange-500 text-white" : "bg-blue-600 text-white"
                                         )}>
-                                            {activeComponent.status.replace('_', ' ')}
+                                            {isLightTable ? 'MULTI-VIEW' : activeComponent.status.replace('_', ' ')}
                                         </Badge>
                                         <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full" onClick={() => setIsFullscreen(false)}><X className="h-5 w-5" /></Button>
                                     </div>
@@ -678,7 +726,7 @@ export function DesignProductCard({
                                 <DesignCanvas 
                                     imageUrl={isLatestDraftLocked ? null : (activeVersion?.imageUrl || null)}
                                     comparisonImageUrl={comparisonImageUrl}
-                                    pins={activeComponent.pins || []}
+                                    pins={isLightTable ? localDesignData.components.flatMap(c => c.pins) : (activeComponent.pins || [])}
                                     highlightedPinId={highlightedPinId}
                                     selectedPinId={selectedPinId}
                                     isDesigner={isDesigner}
@@ -698,10 +746,12 @@ export function DesignProductCard({
                                     onToggleZen={() => setIsZenMode(!isZenMode)}
                                     showPopovers={showPopovers}
                                     onTogglePopovers={() => setShowPopovers(!showPopovers)}
+                                    isLightTable={isLightTable}
+                                    allComponents={localDesignData.components}
                                 />
                             </div>
 
-                            {visibleVersions.length > 0 && (
+                            {visibleVersions.length > 0 && !isLightTable && (
                                 <div className={cn(
                                     "shrink-0 bg-background/80 backdrop-blur-xl border-t z-50 flex flex-col transition-all duration-300 ease-in-out",
                                     isTimelineCollapsed ? "h-9" : "h-32"

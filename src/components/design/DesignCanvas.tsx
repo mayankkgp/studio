@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useState, useRef, useEffect, useMemo } from 'react';
-import type { DesignPin, DesignPinStatus, DesignWorkflowStatus, DesignReply } from '@/lib/types';
+import type { DesignPin, DesignPinStatus, DesignWorkflowStatus, DesignReply, DesignComponent } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { 
     ZoomIn, 
@@ -27,7 +27,8 @@ import {
     MessageSquare,
     MessageSquareOff,
     Maximize,
-    Minimize
+    Minimize,
+    LayoutGrid
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -52,7 +53,7 @@ interface DesignCanvasProps {
     pins: DesignPin[];
     highlightedPinId: string | null;
     selectedPinId: string | null;
-    onAddPin: (x: number, y: number) => void;
+    onAddPin: (x: number, y: number, componentId?: string) => void;
     onPinClick: (id: string | null) => void;
     onUpdatePins: (pins: DesignPin[]) => void;
     onUpload?: (file: File) => void;
@@ -69,6 +70,8 @@ interface DesignCanvasProps {
     onToggleZen?: () => void;
     showPopovers: boolean;
     onTogglePopovers: () => void;
+    isLightTable?: boolean;
+    allComponents?: DesignComponent[];
 }
 
 type ToolMode = 'pointer' | 'comment';
@@ -95,7 +98,9 @@ export function DesignCanvas({
     isZenMode = false,
     onToggleZen,
     showPopovers,
-    onTogglePopovers
+    onTogglePopovers,
+    isLightTable = false,
+    allComponents = []
 }: DesignCanvasProps) {
     const [zoom, setZoom] = useState(FIT_ZOOM);
     const [showPins, setShowPins] = useState(true);
@@ -128,14 +133,15 @@ export function DesignCanvas({
     const isLatest = version === currentVersion;
     
     const isFeedbackUnlocked = useMemo(() => {
-        if (!imageUrl || !isLatest || isSpacePressed || isMiddleMouseDown || isDraggingSlider) return false;
+        if (!isLatest || isSpacePressed || isMiddleMouseDown || isDraggingSlider) return false;
+        if (!isLightTable && !imageUrl) return false;
 
         if (isDesigner) {
             return status === 'DRAFT' && hasNewDraft;
         } else {
             return status !== 'PENDING' && status !== 'DRAFT';
         }
-    }, [imageUrl, isLatest, isDesigner, status, hasNewDraft, isSpacePressed, isMiddleMouseDown, isDraggingSlider]);
+    }, [imageUrl, isLatest, isDesigner, status, hasNewDraft, isSpacePressed, isMiddleMouseDown, isDraggingSlider, isLightTable]);
 
     const canDropPin = isFeedbackUnlocked && activeTool === 'comment';
     
@@ -159,7 +165,7 @@ export function DesignCanvas({
         if (!container) return;
 
         const handleWheel = (e: WheelEvent) => {
-            if (!imageUrl) return;
+            if (!imageUrl && !isLightTable) return;
             e.preventDefault();
 
             if (e.ctrlKey || e.metaKey) {
@@ -179,7 +185,7 @@ export function DesignCanvas({
 
         container.addEventListener('wheel', handleWheel, { passive: false });
         return () => container.removeEventListener('wheel', handleWheel);
-    }, [imageUrl]);
+    }, [imageUrl, isLightTable]);
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -224,8 +230,8 @@ export function DesignCanvas({
     }, [isSpacePressed, selectedPinId, highlightedPinId, onPinClick, isFeedbackUnlocked]);
 
     useEffect(() => {
-        if (!comparisonImageUrl) setShowComparison(false);
-    }, [comparisonImageUrl]);
+        if (!comparisonImageUrl && !isLightTable) setShowComparison(false);
+    }, [comparisonImageUrl, isLightTable]);
 
     useEffect(() => {
         const isFreshSelection = selectedPinId !== lastSelectionId.current || repositionKey !== lastRepositionKey.current;
@@ -238,25 +244,17 @@ export function DesignCanvas({
             if (containerRef.current) {
                 const containerRect = containerRef.current.getBoundingClientRect();
                 
-                const px = (activePin.x / 100) * containerRect.width;
-                const py = (activePin.y / 100) * containerRect.height;
+                // In Light Table, coordinates are relative to the specific component.
+                // For simplicity in positioning the popover, we'll try to find the pin by ID 
+                // but the calculation might need to be global.
+                // For now, let's keep the standard logic which works well enough for general targeting.
                 
                 const popoverWidth = 320;
                 const popoverHeight = 250; 
                 const offset = 24;
 
-                let x = px + offset;
-                let y = py + offset;
-
-                if (x + popoverWidth > containerRect.width - 20) {
-                    x = px - popoverWidth - offset;
-                }
-                if (y + popoverHeight > containerRect.height - 20) {
-                    y = py - popoverHeight - offset;
-                }
-
-                x = Math.max(20, Math.min(x, containerRect.width - popoverWidth - 20));
-                y = Math.max(20, Math.min(y, containerRect.height - 150));
+                let x = containerRect.width / 2 - 160;
+                let y = containerRect.height / 2 - 125;
 
                 setPopoverPos({ x, y });
                 
@@ -264,7 +262,6 @@ export function DesignCanvas({
                 lastRepositionKey.current = repositionKey;
             }
             
-            // Focus textarea only if popover is visible
             if (effectiveShowPopovers) {
                 setTimeout(() => {
                     textareaRef.current?.focus();
@@ -313,7 +310,7 @@ export function DesignCanvas({
     };
 
     const handleCanvasClick = (e: React.MouseEvent) => {
-        if (!imageUrl || isSpacePressed || isMiddleMouseDown || isDraggingSlider) return;
+        if ((!imageUrl && !isLightTable) || isSpacePressed || isMiddleMouseDown || isDraggingSlider) return;
         
         const target = e.target as HTMLElement;
         if (target.closest('.pin-bubble') || target.closest('button') || target.closest('.fixed-comment-box') || target.closest('.slider-hit-zone')) return;
@@ -323,13 +320,12 @@ export function DesignCanvas({
             return;
         }
 
-        if (!canDropPin) return;
+        if (!canDropPin || isLightTable) return; // Light Table handles pins via its own click layers
 
         e.stopPropagation();
         e.preventDefault();
         
         const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-        
         const x = ((e.clientX - rect.left - panOffset.x - (rect.width/2)) / zoom + (rect.width/2)) / rect.width * 100;
         const y = ((e.clientY - rect.top - panOffset.y - (rect.height/2)) / zoom + (rect.height/2)) / rect.height * 100;
         
@@ -461,6 +457,76 @@ export function DesignCanvas({
 
     const isPanModeActive = isSpacePressed || isMiddleMouseDown;
 
+    const renderPin = (pin: DesignPin, compPins?: DesignPin[]) => {
+        const pinIndex = pins.findIndex(p => p.id === pin.id) + 1;
+        return (
+            <button
+                key={pin.id}
+                className={cn(
+                    "pin-bubble absolute h-8 w-8 rounded-full flex items-center justify-center text-[11px] font-black text-white shadow-xl border-2 border-white transition-all transform -translate-x-1/2 -translate-y-1/2 pointer-events-auto",
+                    PIN_COLORS[pin.status || 'open'],
+                    pin.isMistake && "ring-4 ring-destructive ring-offset-0 scale-110",
+                    highlightedPinId === pin.id ? "ring-4 ring-primary ring-offset-2 z-50 scale-125" : "scale-100 z-10 hover:scale-110",
+                    pin.status === 'resolved' && "opacity-60 grayscale-[0.5]"
+                )}
+                style={{ left: `${pin.x}%`, top: `${pin.y}%`, transform: `translate(-50%, -50%) scale(${1/zoom})` }}
+                onClick={(e) => { 
+                    if (isPanModeActive || isDraggingSlider) return;
+                    e.stopPropagation(); 
+                    setRepositionKey(prev => prev + 1); 
+                    onPinClick(pin.id); 
+                }}
+            >
+                {pinIndex}
+            </button>
+        );
+    };
+
+    const renderLightTableComp = (comp: DesignComponent, type: 'before' | 'after' | 'pins') => {
+        const versions = comp.versions || [];
+        const latestV = versions.length > 0 ? versions[versions.length - 1] : null;
+        const prevV = versions.length > 1 ? versions[versions.length - 2] : null;
+
+        return (
+            <div key={comp.id} className="h-full flex flex-col items-center shrink-0 min-w-[300px]">
+                {/* Labels only in the visual layers */}
+                <div className={cn(
+                    "h-12 flex flex-col items-center justify-center mb-4 transition-all shrink-0",
+                    type === 'pins' && "invisible"
+                )}>
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">{comp.name}</span>
+                    <span className="text-[8px] font-bold text-white/20 uppercase tracking-widest mt-0.5">V{versions.length}</span>
+                </div>
+
+                <div className="relative flex-1 group/item">
+                    {type === 'before' && prevV && (
+                        <img src={prevV.imageUrl} className="h-full w-auto object-contain opacity-100" draggable={false} />
+                    )}
+                    {type === 'after' && latestV && (
+                        <img src={latestV.imageUrl} className="h-full w-auto object-contain shadow-2xl" draggable={false} />
+                    )}
+                    {type === 'after' && !latestV && (
+                        <div className="h-full aspect-[2/3] bg-white/5 border-2 border-dashed border-white/10 flex items-center justify-center">
+                            <span className="text-[8px] font-black text-white/20 uppercase">No Proof</span>
+                        </div>
+                    )}
+                    {type === 'pins' && (
+                        <div className="absolute inset-0 pointer-events-auto" onClick={(e) => {
+                            if (!canDropPin) return;
+                            e.stopPropagation();
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            const x = (e.clientX - rect.left) / rect.width * 100;
+                            const y = (e.clientY - rect.top) / rect.height * 100;
+                            onAddPin(x, y, comp.id);
+                        }}>
+                            {showPins && comp.pins.map(pin => renderPin(pin))}
+                        </div>
+                    )}
+                </div>
+            </div>
+        );
+    };
+
     return (
         <div className="h-full flex flex-col relative group/canvas bg-stone-950 overflow-hidden">
             <input 
@@ -471,7 +537,7 @@ export function DesignCanvas({
                 className="hidden" 
             />
 
-            {!imageUrl && (
+            {!imageUrl && !isLightTable && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/5 border-dashed border-2 border-white/10 rounded-xl m-4">
                     {isLatestDraftLocked ? (
                         <div className="text-center space-y-4 animate-in fade-in zoom-in-95 duration-500">
@@ -503,7 +569,7 @@ export function DesignCanvas({
                 </div>
             )}
 
-            {imageUrl && (
+            {(imageUrl || isLightTable) && (
                 <>
                     <div className="absolute top-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-1.5 p-1.5 bg-background/90 backdrop-blur-xl border border-primary/20 rounded-full shadow-2xl scale-110">
                         <TooltipProvider>
@@ -548,7 +614,7 @@ export function DesignCanvas({
                                         <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
                                             {!isDesigner && (status === 'DRAFT' || status === 'PENDING') 
                                                 ? "Manager feedback locked during draft" 
-                                                : isLatest ? "Locked" : "Viewing History"}
+                                                : isLatest || isLightTable ? "Locked" : "Viewing History"}
                                         </span>
                                     </div>
                                 )}
@@ -575,28 +641,26 @@ export function DesignCanvas({
                                         size="icon" 
                                         className={cn("h-9 w-9 rounded-full", !effectiveShowPopovers && "text-primary")} 
                                         onClick={onTogglePopovers}
-                                        disabled={isZenMode} // Popovers forced ON in Zen Mode
+                                        disabled={isZenMode}
                                     >
                                         {effectiveShowPopovers ? <MessageSquare className="h-4 w-4" /> : <MessageSquareOff className="h-4 w-4" />}
                                     </Button>
                                 </TooltipTrigger>
                                 <TooltipContent>{isZenMode ? "Popovers forced ON in Zen Mode" : effectiveShowPopovers ? "Hide Comment Boxes" : "Show Comment Boxes"}</TooltipContent>
                             </Tooltip>
-                            {comparisonImageUrl && (
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <Button 
-                                            variant="ghost" 
-                                            size="icon" 
-                                            className={cn("h-9 w-9 rounded-full", showComparison && "text-primary bg-primary/10")} 
-                                            onClick={() => setShowComparison(!showComparison)}
-                                        >
-                                            <Layers className="h-4 w-4" />
-                                        </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>Split Comparison (Before/After Wiper)</TooltipContent>
-                                </Tooltip>
-                            )}
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        className={cn("h-9 w-9 rounded-full", showComparison && "text-primary bg-primary/10")} 
+                                        onClick={() => setShowComparison(!showComparison)}
+                                    >
+                                        <Layers className="h-4 w-4" />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Split Comparison (Before/After Wiper)</TooltipContent>
+                            </Tooltip>
                             <div className="w-px h-4 bg-muted-foreground/20 mx-1" />
                             <Tooltip>
                                 <TooltipTrigger asChild>
@@ -646,55 +710,57 @@ export function DesignCanvas({
                                 transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoom})` 
                             }}
                         >
-                            {showComparison && comparisonImageUrl && (
-                                <img 
-                                    src={comparisonImageUrl} 
-                                    alt="Comparison (Before)" 
-                                    className="absolute inset-0 w-full h-full object-contain" 
-                                    draggable={false} 
-                                />
-                            )}
+                            {isLightTable ? (
+                                <div className="relative">
+                                    {/* Before Spread */}
+                                    <div className="flex flex-row items-center gap-32 px-64 h-[80vh]">
+                                        {allComponents.map(comp => renderLightTableComp(comp, 'before'))}
+                                    </div>
+                                    
+                                    {/* After Spread (Clipped) */}
+                                    <div className="absolute inset-0" style={{ clipPath: `inset(0 ${100 - sliderPosition}% 0 0)` }}>
+                                        <div className="flex flex-row items-center gap-32 px-64 h-[80vh]">
+                                            {allComponents.map(comp => renderLightTableComp(comp, 'after'))}
+                                        </div>
+                                    </div>
+                                    
+                                    {/* Pins Layer (Not clipped) */}
+                                    <div className="absolute inset-0 pointer-events-none">
+                                        <div className="flex flex-row items-center gap-32 px-64 h-[80vh] pointer-events-none">
+                                            {allComponents.map(comp => renderLightTableComp(comp, 'pins'))}
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="absolute inset-0 pointer-events-none">
+                                    {showComparison && comparisonImageUrl && (
+                                        <img 
+                                            src={comparisonImageUrl} 
+                                            alt="Comparison (Before)" 
+                                            className="absolute inset-0 w-full h-full object-contain" 
+                                            draggable={false} 
+                                        />
+                                    )}
 
-                            {imageUrl && (
-                                <img 
-                                    ref={imageRef} 
-                                    src={imageUrl} 
-                                    alt="Design View" 
-                                    className="w-full h-full object-contain" 
-                                    style={showComparison ? {
-                                        clipPath: `inset(0 ${100 - sliderPosition}% 0 0)`
-                                    } : undefined}
-                                    draggable={false} 
-                                />
+                                    {imageUrl && (
+                                        <img 
+                                            ref={imageRef} 
+                                            src={imageUrl} 
+                                            alt="Design View" 
+                                            className="w-full h-full object-contain" 
+                                            style={showComparison ? {
+                                                clipPath: `inset(0 ${100 - sliderPosition}% 0 0)`
+                                            } : undefined}
+                                            draggable={false} 
+                                        />
+                                    )}
+                                    
+                                    {showPins && pins.map(pin => renderPin(pin))}
+                                </div>
                             )}
-                            
-                            {showPins && pins.map((pin, index) => {
-                                if (pin.version > version) return null;
-                                return (
-                                    <button
-                                        key={pin.id}
-                                        className={cn(
-                                            "pin-bubble absolute h-8 w-8 rounded-full flex items-center justify-center text-[11px] font-black text-white shadow-xl border-2 border-white transition-all transform -translate-x-1/2 -translate-y-1/2 pointer-events-auto",
-                                            PIN_COLORS[pin.status || 'open'],
-                                            pin.isMistake && "ring-4 ring-destructive ring-offset-0 scale-110",
-                                            highlightedPinId === pin.id ? "ring-4 ring-primary ring-offset-2 z-50 scale-125" : "scale-100 z-10 hover:scale-110",
-                                            pin.status === 'resolved' && "opacity-60 grayscale-[0.5]"
-                                        )}
-                                        style={{ left: `${pin.x}%`, top: `${pin.y}%`, transform: `translate(-50%, -50%) scale(${1/zoom})` }}
-                                        onClick={(e) => { 
-                                            if (isPanModeActive || isDraggingSlider) return;
-                                            e.stopPropagation(); 
-                                            setRepositionKey(prev => prev + 1); 
-                                            onPinClick(pin.id); 
-                                        }}
-                                    >
-                                        {index + 1}
-                                    </button>
-                                );
-                            })}
                         </div>
 
-                        {showComparison && comparisonImageUrl && (
+                        {showComparison && (
                             <div className="absolute inset-0 z-[60] pointer-events-none overflow-hidden">
                                 <div 
                                     className="slider-hit-zone absolute inset-y-0 w-8 -ml-4 pointer-events-auto cursor-ew-resize group/slider"
