@@ -57,7 +57,7 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
 
     const isEligibleForStock = useMemo(() => {
         if (designData.isStock) return false;
-        // MUST be all PENDING and NO versions added in any component
+        // Eligibility: All components must be PENDING and have 0 versions
         return designData.components.every(c => 
             c.status === 'PENDING' && (!c.versions || c.versions.length === 0)
         );
@@ -97,11 +97,11 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
     };
 
     return (
-        <div className="group/row w-full min-w-0 overflow-hidden">
+        <div className="group/row w-full max-w-full min-w-0 overflow-hidden">
             <div 
                 onClick={() => setIsExpanded(!isExpanded)}
                 className={cn(
-                    "flex items-center h-16 bg-card hover:bg-muted/30 transition-all border-y border-primary/5 cursor-pointer relative w-full min-w-0",
+                    "flex items-center h-16 bg-card hover:bg-muted/30 transition-all border-y border-primary/5 cursor-pointer relative w-full max-w-full min-w-0",
                     isExpanded && "bg-muted/20"
                 )}
             >
@@ -119,12 +119,12 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
                     </div>
                 </div>
 
-                {/* Zone C: Unified Specifications - The Scrolling Column */}
+                {/* Zone C: Unified Specifications - Strict Scroll Column */}
                 <div className="flex-1 min-w-0 px-4 space-y-0.5 overflow-hidden flex flex-col justify-center">
                     <div className="text-[11px] font-bold text-foreground/80 truncate">
                         {getCoreSpecs() || "No core specs"}
                     </div>
-                    <div className="w-full flex items-center gap-2 overflow-x-auto no-scrollbar pb-0.5 whitespace-nowrap">
+                    <div className="w-full max-w-full flex items-center gap-2 overflow-x-auto no-scrollbar pb-0.5 whitespace-nowrap">
                         {activeAddons.length > 0 && activeAddons.map((addon) => (
                             <Badge 
                                 key={addon.id} 

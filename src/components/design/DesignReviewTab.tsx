@@ -143,17 +143,14 @@ export function DesignReviewTab({ order, onUpdateOrder, role, layout }: DesignRe
                             ))}
                         </div>
                     ) : (
-                        <div className="w-full border rounded-xl bg-card/20 overflow-hidden flex flex-col">
+                        <div className="w-full max-w-full border rounded-xl bg-card/20 overflow-hidden flex flex-col">
                             {filteredProducts.map((product) => (
                                 <DesignProductRow 
                                     key={product.id} 
                                     product={product} 
                                     isDesigner={role === 'DESIGNER'}
                                     onUpdateDesign={(data) => handleUpdateProductDesign(product.id, data)}
-                                    onOpenWorkbench={() => {
-                                        // This is handled by DesignProductCard logic if we were to wrap it, 
-                                        // but for now we'll ensure workbench triggers are stable in the Card component.
-                                    }}
+                                    onOpenWorkbench={() => {}}
                                 />
                             ))}
                         </div>
