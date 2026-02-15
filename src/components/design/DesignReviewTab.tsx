@@ -84,7 +84,7 @@ export function DesignReviewTab({ order, onUpdateOrder, role, layout }: DesignRe
                     <Filter className="h-3.5 w-3.5" />
                     <span className="text-[10px] font-black uppercase tracking-widest">Filter Items:</span>
                 </div>
-                <div className="flex items-center gap-1.5 bg-muted/40 p-1 rounded-lg border overflow-x-auto no-scrollbar">
+                <div className="flex items-center gap-1.5 bg-muted/40 p-1 rounded-lg border overflow-x-auto no-scrollbar min-w-0">
                     <FilterTab 
                         active={activeFilter === 'all'} 
                         onClick={() => setActiveFilter('all')} 
