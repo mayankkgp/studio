@@ -119,7 +119,7 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
                     </div>
                 </div>
 
-                {/* Zone C: Unified Specifications - Using explicit flex properties to force shrinkage */}
+                {/* Zone C: Unified Specifications - Fluid with min-w-0 to enable scrolling */}
                 <div className="flex-[1_1_0%] min-w-0 px-4 flex flex-col justify-center overflow-hidden">
                     <div className="text-[11px] font-bold text-foreground/80 truncate">
                         {getCoreSpecs() || "No core specs"}
