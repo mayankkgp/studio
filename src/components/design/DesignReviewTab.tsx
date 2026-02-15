@@ -77,9 +77,9 @@ export function DesignReviewTab({ order, onUpdateOrder, role, layout }: DesignRe
     }
 
     return (
-        <div className="flex flex-col h-full w-full max-w-full lg:max-w-[calc(100vw-16rem)] overflow-hidden bg-background/50 min-w-0">
+        <div className="flex flex-col h-full w-full lg:max-w-[calc(100vw-16.5rem)] overflow-hidden bg-background/50 min-w-0">
             {/* Triage Filters Bar */}
-            <div className="shrink-0 px-4 md:px-8 py-4 border-b bg-card/20 flex items-center gap-4 w-full overflow-hidden">
+            <div className="shrink-0 px-4 md:px-8 py-4 border-b bg-card/20 flex items-center gap-4 w-full overflow-hidden min-w-0">
                 <div className="flex items-center gap-2 text-muted-foreground mr-4 shrink-0">
                     <Filter className="h-3.5 w-3.5" />
                     <span className="text-[10px] font-black uppercase tracking-widest">Filter Items:</span>
@@ -121,9 +121,9 @@ export function DesignReviewTab({ order, onUpdateOrder, role, layout }: DesignRe
                 </div>
             </div>
 
-            <ScrollArea className="flex-1 w-full max-w-full lg:max-w-[calc(100vw-16rem)] overflow-hidden">
+            <ScrollArea className="flex-1 w-full lg:max-w-[calc(100vw-16.5rem)] overflow-hidden min-w-0">
                 <div className={cn(
-                    "w-full max-w-full p-4 md:p-8 space-y-12 pb-32 min-w-0 overflow-hidden",
+                    "w-full p-4 md:p-8 space-y-12 pb-32 min-w-0 overflow-hidden",
                     layout === 'table' && "md:p-0 md:space-y-0"
                 )}>
                     {filteredProducts.length === 0 ? (
@@ -143,7 +143,7 @@ export function DesignReviewTab({ order, onUpdateOrder, role, layout }: DesignRe
                             ))}
                         </div>
                     ) : (
-                        <div className="w-full max-w-full border-y rounded-xl bg-card/20 overflow-hidden flex flex-col min-w-0">
+                        <div className="w-full border-y rounded-xl bg-card/20 overflow-hidden flex flex-col min-w-0">
                             {filteredProducts.map((product) => (
                                 <DesignProductRow 
                                     key={product.id} 

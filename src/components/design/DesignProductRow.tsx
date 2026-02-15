@@ -95,19 +95,19 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
     };
 
     return (
-        <div className="group/row w-full max-w-full overflow-hidden border-b border-primary/5 min-w-0 shrink-0">
+        <div className="group/row w-full overflow-hidden border-b border-primary/5 min-w-0 shrink-0">
             <div 
                 onClick={() => setIsExpanded(!isExpanded)}
                 className={cn(
-                    "flex items-center h-16 bg-card hover:bg-muted/30 transition-all cursor-pointer relative w-full max-w-full min-w-0 overflow-hidden",
+                    "flex items-center h-16 bg-card hover:bg-muted/30 transition-all cursor-pointer relative w-full overflow-hidden min-w-0",
                     isExpanded && "bg-muted/20"
                 )}
             >
                 {/* Zone A: Status Indicator */}
                 <div className={cn("absolute left-0 top-0 bottom-0 w-1.5 transition-colors shrink-0", STATUS_CONFIG[aggregateStatus].bg)} />
 
-                {/* Zone B: Identity - Identity Clamping with Cropping */}
-                <div className="w-[18vw] min-w-[15vw] max-w-[22vw] px-6 shrink-0 flex items-center gap-3 overflow-hidden min-w-0">
+                {/* Zone B: Identity - Clamped to 12vw-18vw */}
+                <div className="w-[15vw] min-w-[12vw] max-w-[18vw] px-6 shrink-0 flex items-center gap-3 overflow-hidden min-w-0">
                     <div className="h-8 w-8 rounded bg-primary/10 flex items-center justify-center text-primary shrink-0">
                         <Package className="h-4 w-4" />
                     </div>
@@ -117,8 +117,8 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
                     </div>
                 </div>
 
-                {/* Zone C: Specifications - Rigid Clamping with Double-Lock Cropping */}
-                <div className="flex-[1_1_0px] basis-0 min-w-[25vw] max-w-[45vw] px-4 flex flex-col justify-center overflow-hidden min-w-0">
+                {/* Zone C: Specifications - Clamped to 20vw-35vw - Fluid Center */}
+                <div className="flex-[1_1_0px] basis-0 min-w-[20vw] max-w-[35vw] px-4 flex flex-col justify-center overflow-hidden min-w-0">
                     <div className="text-[11px] font-bold text-foreground/80 truncate w-full block">
                         {getCoreSpecs() || "No core specs"}
                     </div>
@@ -140,14 +140,14 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
                     </div>
                 </div>
 
-                {/* Zone D: Component Track - Clamped Heatmap */}
-                <div className="w-[20vw] min-w-[15vw] max-w-[25vw] px-4 flex items-center gap-1 overflow-x-auto no-scrollbar scroll-smooth whitespace-nowrap shrink-0 min-w-0">
+                {/* Zone D: Component Track - Clamped to 12vw-18vw */}
+                <div className="w-[15vw] min-w-[12vw] max-w-[18vw] px-4 flex items-center gap-1 overflow-x-auto no-scrollbar scroll-smooth whitespace-nowrap shrink-0 min-w-0">
                     {!designData.isStock ? (
                         designData.components.map((comp) => (
                             <div 
                                 key={comp.id}
                                 className={cn(
-                                    "h-6 px-2 rounded-md flex items-center justify-center min-w-[3rem] shrink-0 shadow-sm border transition-all",
+                                    "h-6 px-2 rounded-md flex items-center justify-center min-w-[2.5rem] shrink-0 shadow-sm border transition-all",
                                     STATUS_CONFIG[comp.status].bg,
                                     STATUS_CONFIG[comp.status].border,
                                     STATUS_CONFIG[comp.status].text
@@ -165,8 +165,8 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
                     )}
                 </div>
 
-                {/* Zone E: Actions - Clamped Anchor */}
-                <div className="w-[18vw] min-w-[15vw] max-w-[22vw] px-6 flex items-center justify-end gap-3 shrink-0 min-w-0">
+                {/* Zone E: Actions - Clamped to 12vw-18vw */}
+                <div className="w-[15vw] min-w-[12vw] max-w-[18vw] px-6 flex items-center justify-end gap-3 shrink-0 min-w-0">
                     <div className="flex items-center justify-center w-8 shrink-0">
                         {isEligibleForStock ? (
                             <Button 
@@ -192,7 +192,7 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
                     </div>
                     <Button 
                         size="sm" 
-                        className="h-8 text-[10px] font-black uppercase tracking-widest gap-1.5 shadow-sm min-w-[120px] shrink-0"
+                        className="h-8 text-[10px] font-black uppercase tracking-widest gap-1.5 shadow-sm min-w-[100px] shrink-0"
                         onClick={(e) => { e.stopPropagation(); onOpenWorkbench(); }}
                     >
                         <ExternalLink className="h-3.5 w-3.5" /> Workbench
@@ -205,9 +205,9 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
 
             {/* Zone F: Expansion Detail Panel */}
             {isExpanded && (
-                <div className="bg-muted/10 border-t border-primary/5 animate-in slide-in-from-top-2 duration-200 w-full max-w-full overflow-hidden">
-                    <div className="px-24 py-4 w-full overflow-hidden">
-                        <div className="rounded-lg border bg-background/50 overflow-hidden shadow-inner max-w-full overflow-x-auto">
+                <div className="bg-muted/10 border-t border-primary/5 animate-in slide-in-from-top-2 duration-200 w-full overflow-hidden min-w-0">
+                    <div className="px-24 py-4 w-full overflow-hidden min-w-0">
+                        <div className="rounded-lg border bg-background/50 overflow-hidden shadow-inner w-full overflow-x-auto min-w-0">
                             <table className="w-full text-left min-w-[600px]">
                                 <thead>
                                     <tr className="bg-muted/30 text-[9px] font-black uppercase tracking-widest text-muted-foreground border-b">
