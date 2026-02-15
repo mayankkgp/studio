@@ -143,7 +143,7 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
                         {product.specialRequest && (
                             <div className={cn(
                                 "text-[10px] italic font-semibold text-destructive shrink-0 ml-1",
-                                isExpanded ? "w-full mt-1" : "truncate max-w-[150px] whitespace-nowrap"
+                                isExpanded ? "" : "truncate max-w-[150px] whitespace-nowrap"
                             )}>
                                 Req: {product.specialRequest}
                             </div>
