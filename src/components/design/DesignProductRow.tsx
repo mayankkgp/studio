@@ -125,7 +125,7 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
                     <div className="text-[11px] font-bold text-foreground/80 truncate">
                         {getCoreSpecs() || "No core specs"}
                     </div>
-                    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-0.5">
+                    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-0.5 whitespace-nowrap">
                         {activeAddons.length > 0 && activeAddons.map((addon) => (
                             <Badge 
                                 key={addon.id} 
@@ -136,7 +136,7 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
                             </Badge>
                         ))}
                         {product.specialRequest && (
-                            <div className="text-[10px] italic font-semibold text-destructive truncate shrink-0 ml-1">
+                            <div className="text-[10px] italic font-semibold text-destructive whitespace-nowrap shrink-0 ml-1">
                                 Req: {product.specialRequest}
                             </div>
                         )}
@@ -144,7 +144,7 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
                 </div>
 
                 {/* Zone D: Component Track */}
-                <div className="w-72 px-4 flex items-center gap-1 overflow-x-auto no-scrollbar scroll-smooth">
+                <div className="w-72 px-4 flex items-center gap-1 overflow-x-auto no-scrollbar scroll-smooth whitespace-nowrap">
                     {!designData.isStock ? (
                         designData.components.map((comp) => (
                             <div 
