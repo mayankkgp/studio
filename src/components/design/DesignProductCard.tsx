@@ -22,7 +22,9 @@ import {
     Info,
     ChevronDown,
     ChevronUp,
-    Clock
+    Clock,
+    ChevronLeft,
+    ChevronRight
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -165,6 +167,11 @@ export function DesignProductCard({
     const [draftText, setDraftText] = useState('');
     const [isTimelineCollapsed, setIsTimelineCollapsed] = useState(false);
 
+    // Overflow Tab indicators
+    const tabScrollRef = useRef<HTMLDivElement>(null);
+    const [canScrollLeft, setCanScrollLeft] = useState(false);
+    const [canScrollRight, setCanScrollRight] = useState(false);
+
     useEffect(() => {
         if (forceOpenWorkbench) setIsFullscreen(true);
     }, [forceOpenWorkbench]);
@@ -207,6 +214,32 @@ export function DesignProductCard({
         const currentStillExists = localDesignData.components.some(c => c.id === activeCompId);
         if (!currentStillExists && localDesignData.components.length > 0) setActiveCompId(localDesignData.components[0].id);
     }, [localDesignData.components, activeCompId]);
+
+    const checkTabOverflow = () => {
+        if (tabScrollRef.current) {
+            const { scrollLeft, scrollWidth, clientWidth } = tabScrollRef.current;
+            setCanScrollLeft(scrollLeft > 2);
+            setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 2);
+        }
+    };
+
+    useEffect(() => {
+        if (isFullscreen) {
+            const timer = setTimeout(checkTabOverflow, 300);
+            window.addEventListener('resize', checkTabOverflow);
+            return () => {
+                clearTimeout(timer);
+                window.removeEventListener('resize', checkTabOverflow);
+            };
+        }
+    }, [isFullscreen, localDesignData.components]);
+
+    const scrollTabs = (direction: 'left' | 'right') => {
+        if (tabScrollRef.current) {
+            const amount = 200;
+            tabScrollRef.current.scrollBy({ left: direction === 'left' ? -amount : amount, behavior: 'smooth' });
+        }
+    };
 
     const activeComponent = localDesignData.components.find(c => c.id === activeCompId) || localDesignData.components[0];
     
@@ -564,20 +597,55 @@ export function DesignProductCard({
                                 <div className="flex-1 flex items-center gap-4 overflow-hidden">
                                     <h2 className="font-headline font-black text-sm truncate shrink-0">{product.productName}</h2>
                                     <div className="h-4 w-px bg-border shrink-0" />
-                                    <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-1 pr-4">
-                                        <Tabs value={activeCompId} onValueChange={(val) => {
-                                            handlePinSelect(null);
-                                            setActiveCompId(val);
-                                        }} className="shrink-0">
-                                            <TabsList className="bg-transparent h-10 p-0 gap-4">
-                                                {localDesignData.components.map(comp => (
-                                                    <TabsTrigger key={comp.id} value={comp.id} className="h-10 rounded-none border-b-2 border-transparent data-[state=active]:border-primary bg-transparent font-black uppercase text-[10px] tracking-widest px-0">
-                                                        {comp.name} <span className="ml-1 opacity-40 font-mono">V{(comp.versions || []).length}</span>
-                                                    </TabsTrigger>
-                                                ))}
-                                            </TabsList>
-                                        </Tabs>
-                                        <AddComponentWidget mode="workbench" onAdd={handleAddComponent} />
+                                    
+                                    <div className="relative flex-1 flex items-center overflow-hidden min-w-0 group/tabs">
+                                        {canScrollLeft && (
+                                            <>
+                                                <div className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none" />
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="icon" 
+                                                    className="absolute left-0 z-20 h-7 w-7 bg-background/80 backdrop-blur rounded-full shadow-md hover:bg-background"
+                                                    onClick={() => scrollTabs('left')}
+                                                >
+                                                    <ChevronLeft className="h-4 w-4" />
+                                                </Button>
+                                            </>
+                                        )}
+                                        
+                                        <div 
+                                            ref={tabScrollRef}
+                                            onScroll={checkTabOverflow}
+                                            className="flex-1 flex items-center gap-1 overflow-x-auto no-scrollbar py-1 pr-4"
+                                        >
+                                            <Tabs value={activeCompId} onValueChange={(val) => {
+                                                handlePinSelect(null);
+                                                setActiveCompId(val);
+                                            }} className="shrink-0">
+                                                <TabsList className="bg-transparent h-10 p-0 gap-4">
+                                                    {localDesignData.components.map(comp => (
+                                                        <TabsTrigger key={comp.id} value={comp.id} className="h-10 rounded-none border-b-2 border-transparent data-[state=active]:border-primary bg-transparent font-black uppercase text-[10px] tracking-widest px-0">
+                                                            {comp.name} <span className="ml-1 opacity-40 font-mono">V{(comp.versions || []).length}</span>
+                                                        </TabsTrigger>
+                                                    ))}
+                                                </TabsList>
+                                            </Tabs>
+                                            <AddComponentWidget mode="workbench" onAdd={handleAddComponent} />
+                                        </div>
+
+                                        {canScrollRight && (
+                                            <>
+                                                <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none" />
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="icon" 
+                                                    className="absolute right-0 z-20 h-7 w-7 bg-background/80 backdrop-blur rounded-full shadow-md hover:bg-background"
+                                                    onClick={() => scrollTabs('right')}
+                                                >
+                                                    <ChevronRight className="h-4 w-4" />
+                                                </Button>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-3 shrink-0 ml-4">
