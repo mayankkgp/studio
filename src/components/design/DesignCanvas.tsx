@@ -37,6 +37,11 @@ const PIN_COLORS: Record<DesignPinStatus, string> = {
     resolved: 'bg-green-600'
 };
 
+// Zoom Constants
+const FIT_ZOOM = 1.0; // Since we use object-contain, 1.0 is the perfect "Fit to Screen" multiplier
+const MIN_ZOOM = FIT_ZOOM * 0.9; 
+const MAX_ZOOM = 4.0;
+
 interface DesignCanvasProps {
     imageUrl: string | null;
     comparisonImageUrl?: string | null;
@@ -80,7 +85,7 @@ export function DesignCanvas({
     draftText,
     onDraftTextChange
 }: DesignCanvasProps) {
-    const [zoom, setZoom] = useState(1);
+    const [zoom, setZoom] = useState(FIT_ZOOM);
     const [showPins, setShowPins] = useState(true);
     const [showComparison, setShowComparison] = useState(false);
     const [activeTool, setActiveTool] = useState<ToolMode>('comment');
@@ -149,7 +154,8 @@ export function DesignCanvas({
                 setZoom(prev => {
                     const factor = delta > 0 ? 0.9 : 1.1;
                     const next = prev * factor;
-                    return Math.max(0.5, Math.min(next, 4));
+                    // Applying dynamic MIN_ZOOM floor
+                    return Math.max(MIN_ZOOM, Math.min(next, MAX_ZOOM));
                 });
             } else {
                 // Natural Pan (Swipes/Wheels)
@@ -258,10 +264,10 @@ export function DesignCanvas({
         }
     }, [selectedPinId, activePin, repositionKey]);
 
-    const handleZoomIn = () => setZoom(prev => Math.min(prev + 0.25, 4));
-    const handleZoomOut = () => setZoom(prev => Math.max(prev - 0.25, 0.5));
+    const handleZoomIn = () => setZoom(prev => Math.min(prev + 0.25, MAX_ZOOM));
+    const handleZoomOut = () => setZoom(prev => Math.max(prev - 0.25, MIN_ZOOM));
     const handleReset = () => {
-        setZoom(1);
+        setZoom(FIT_ZOOM);
         setPanOffset({ x: 0, y: 0 });
     };
 
