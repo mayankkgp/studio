@@ -119,9 +119,11 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
 
                 {/* Zone C: Specifications - Fluid with rigid basis-0 and VW clamping */}
                 <div className="flex-[1_1_0px] basis-0 min-w-[20vw] max-w-[30vw] px-4 flex flex-col justify-center overflow-hidden min-w-0">
-                    <div className="text-[11px] font-bold text-foreground/80 truncate w-full block">
+                    {/* Line 1: Core Specs - Scrollable */}
+                    <div className="text-[11px] font-bold text-foreground/80 whitespace-nowrap overflow-x-auto no-scrollbar scroll-smooth w-full block pb-0.5">
                         {getCoreSpecs() || "No core specs"}
                     </div>
+                    {/* Line 2: Add-ons - Scrollable */}
                     <div className="w-full flex items-center gap-2 overflow-x-auto no-scrollbar pb-0.5 whitespace-nowrap scroll-smooth min-w-0">
                         {activeAddons.length > 0 && activeAddons.map((addon) => (
                             <Badge 
