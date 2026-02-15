@@ -23,7 +23,9 @@ import {
     Layers,
     Hand,
     MousePointer2,
-    MessageSquarePlus
+    MessageSquarePlus,
+    Maximize,
+    Minimize
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -38,7 +40,7 @@ const PIN_COLORS: Record<DesignPinStatus, string> = {
 };
 
 // Zoom Constants
-const FIT_ZOOM = 1.0; // Since we use object-contain, 1.0 is the perfect "Fit to Screen" multiplier
+const FIT_ZOOM = 1.0; 
 const MIN_ZOOM = FIT_ZOOM * 0.9; 
 const MAX_ZOOM = 4.0;
 
@@ -61,6 +63,8 @@ interface DesignCanvasProps {
     isLatestDraftLocked?: boolean;
     draftText: string;
     onDraftTextChange: (text: string) => void;
+    isZenMode?: boolean;
+    onToggleZen?: () => void;
 }
 
 type ToolMode = 'pointer' | 'comment';
@@ -83,7 +87,9 @@ export function DesignCanvas({
     isWorkbench = false,
     isLatestDraftLocked = false,
     draftText,
-    onDraftTextChange
+    onDraftTextChange,
+    isZenMode = false,
+    onToggleZen
 }: DesignCanvasProps) {
     const [zoom, setZoom] = useState(FIT_ZOOM);
     const [showPins, setShowPins] = useState(true);
@@ -139,7 +145,6 @@ export function DesignCanvas({
     const activePin = useMemo(() => pins.find(p => p.id === selectedPinId), [pins, selectedPinId]);
     const activePinNumber = useMemo(() => pins.findIndex(p => p.id === selectedPinId) + 1, [pins, selectedPinId]);
 
-    // Natural Pan & Zoom Effect
     useEffect(() => {
         const container = containerRef.current;
         if (!container) return;
@@ -148,17 +153,14 @@ export function DesignCanvas({
             if (!imageUrl) return;
             e.preventDefault();
 
-            // Native Pinch-to-zoom or Ctrl+Wheel
             if (e.ctrlKey || e.metaKey) {
                 const delta = e.deltaY;
                 setZoom(prev => {
                     const factor = delta > 0 ? 0.9 : 1.1;
                     const next = prev * factor;
-                    // Applying dynamic MIN_ZOOM floor
                     return Math.max(MIN_ZOOM, Math.min(next, MAX_ZOOM));
                 });
             } else {
-                // Natural Pan (Swipes/Wheels)
                 setPanOffset(prev => ({
                     x: prev.x - e.deltaX,
                     y: prev.y - e.deltaY
@@ -170,7 +172,6 @@ export function DesignCanvas({
         return () => container.removeEventListener('wheel', handleWheel);
     }, [imageUrl]);
 
-    // Keyboard Shortcuts Listener
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             const target = e.target as HTMLElement;
@@ -274,7 +275,6 @@ export function DesignCanvas({
     const handleCanvasMouseDown = (e: React.MouseEvent) => {
         if (isDraggingSlider) return;
 
-        // Space or Middle Button triggers dragging
         if (isSpacePressed || e.button === 1) {
             if (e.button === 1) setIsMiddleMouseDown(true);
             setIsDraggingCanvas(true);
@@ -326,7 +326,6 @@ export function DesignCanvas({
 
     const handleSaveComment = () => {
         if (!selectedPinId) return;
-        
         const trimmed = draftText.trim();
         
         if (!trimmed) {
@@ -407,7 +406,6 @@ export function DesignCanvas({
         e.preventDefault();
     };
 
-    // Global Drag Logic for Popover and Slider
     useEffect(() => {
         const handleMouseMove = (e: MouseEvent) => {
             if (isDraggingPopover && dragStartRef.current && containerRef.current) {
@@ -573,6 +571,15 @@ export function DesignCanvas({
                                     <TooltipContent>Split Comparison (Before/After Wiper)</TooltipContent>
                                 </Tooltip>
                             )}
+                            <div className="w-px h-4 bg-muted-foreground/20 mx-1" />
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button variant="ghost" size="icon" className={cn("h-9 w-9 rounded-full", isZenMode && "text-primary")} onClick={onToggleZen}>
+                                        {isZenMode ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>{isZenMode ? "Exit Zen Mode (F)" : "Zen Mode (F)"}</TooltipContent>
+                            </Tooltip>
                         </TooltipProvider>
                     </div>
 
@@ -613,7 +620,6 @@ export function DesignCanvas({
                                 transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoom})` 
                             }}
                         >
-                            {/* Base Image (Before - Previous Version) */}
                             {showComparison && comparisonImageUrl && (
                                 <img 
                                     src={comparisonImageUrl} 
@@ -623,7 +629,6 @@ export function DesignCanvas({
                                 />
                             )}
 
-                            {/* Current Image (After) */}
                             {imageUrl && (
                                 <img 
                                     ref={imageRef} 
@@ -663,7 +668,6 @@ export function DesignCanvas({
                             })}
                         </div>
 
-                        {/* Split Slider Wiper System */}
                         {showComparison && comparisonImageUrl && (
                             <div className="absolute inset-0 z-[60] pointer-events-none overflow-hidden">
                                 <div 
@@ -672,7 +676,6 @@ export function DesignCanvas({
                                     onMouseDown={(e) => {
                                         e.preventDefault();
                                         setIsDraggingSlider(true);
-                                        // Jump position immediately on click
                                         const rect = containerRef.current?.getBoundingClientRect();
                                         if (rect) {
                                             const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
@@ -682,10 +685,8 @@ export function DesignCanvas({
                                         }
                                     }}
                                 >
-                                    {/* 1px High-Contrast Hairline (Sharp Transition) */}
                                     <div className="absolute inset-y-0 left-1/2 w-px bg-blue-600 pointer-events-none" />
                                     
-                                    {/* Draggable Obstruction-Free Handle */}
                                     <button
                                         className="slider-handle absolute left-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-2xl transition-transform border-4 border-background active:scale-95 pointer-events-none"
                                         style={{ top: `${sliderVerticalPosition}%` }}
@@ -693,7 +694,6 @@ export function DesignCanvas({
                                         <GripHorizontal className="h-5 w-5" />
                                     </button>
 
-                                    {/* labels at top edge to clear central vision */}
                                     <div className="absolute top-6 right-12 bg-black/80 text-white text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded border border-white/10 opacity-0 group-hover/slider:opacity-100 transition-opacity whitespace-nowrap">
                                         Before
                                     </div>

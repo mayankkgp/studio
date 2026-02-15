@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -166,6 +165,7 @@ export function DesignProductCard({
     const [newDrafts, setNewDrafts] = useState<Record<string, boolean>>({});
     const [draftText, setDraftText] = useState('');
     const [isTimelineCollapsed, setIsTimelineCollapsed] = useState(false);
+    const [isZenMode, setIsZenMode] = useState(false);
 
     // Overflow Tab indicators
     const tabScrollRef = useRef<HTMLDivElement>(null);
@@ -175,6 +175,19 @@ export function DesignProductCard({
     useEffect(() => {
         if (forceOpenWorkbench) setIsFullscreen(true);
     }, [forceOpenWorkbench]);
+
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            const target = e.target as HTMLElement;
+            const isTyping = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA';
+            
+            if (isFullscreen && !isTyping && e.key.toLowerCase() === 'f') {
+                setIsZenMode(prev => !prev);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [isFullscreen]);
 
     const lastLocalUpdateRef = useRef<number>(0);
 
@@ -245,7 +258,6 @@ export function DesignProductCard({
     
     const isEligibleForStock = useMemo(() => {
         if (localDesignData.isStock) return false;
-        // MUST be all PENDING and NO versions added
         return localDesignData.components.every(c => c.status === 'PENDING' && (!c.versions || c.versions.length === 0));
     }, [localDesignData]);
 
@@ -313,10 +325,8 @@ export function DesignProductCard({
 
     const handleDeleteComponent = (compId: string) => {
         if (!confirm("Are you sure you want to delete this component?")) return;
-        
         const updatedComponents = localDesignData.components.filter(c => c.id !== compId);
         const updatedData = { ...localDesignData, components: updatedComponents };
-        
         handleUpdateDesignInternal(updatedData, true);
     };
 
@@ -576,6 +586,7 @@ export function DesignProductCard({
                 if (!open) {
                     handlePinSelect(null);
                     setLocalDesignData(initialDesignData);
+                    setIsZenMode(false);
                     onCloseWorkbench?.();
                 }
                 setIsFullscreen(open);
@@ -588,76 +599,79 @@ export function DesignProductCard({
                         <DialogTitle>Design Workbench - {product.productName}</DialogTitle>
                         <DialogDescription>Review design proofs and feedback for {product.productName}.</DialogDescription>
                     </DialogHeader>
-                    <div className={cn("flex-1 flex overflow-hidden border-[6px] transition-colors duration-500", 
+                    <div className={cn("flex-1 flex overflow-hidden border-[6px] transition-all duration-500", 
                         activeComponent.status === 'APPROVED' ? "border-green-500/30" : 
-                        activeComponent.status === 'DRAFT' ? "border-orange-500/30" : "border-blue-500/30"
+                        activeComponent.status === 'DRAFT' ? "border-orange-500/30" : "border-blue-500/30",
+                        isZenMode && "border-0"
                     )}>
                         <div className="flex-1 relative flex flex-col min-w-0 bg-stone-950">
-                            <div className="h-14 shrink-0 flex items-center justify-between px-6 bg-background/80 backdrop-blur-xl border-b z-50">
-                                <div className="flex-1 flex items-center gap-4 overflow-hidden">
-                                    <h2 className="font-headline font-black text-sm truncate shrink-0">{product.productName}</h2>
-                                    <div className="h-4 w-px bg-border shrink-0" />
-                                    
-                                    <div className="relative flex-1 flex items-center overflow-hidden min-w-0 group/tabs">
-                                        {canScrollLeft && (
-                                            <>
-                                                <div className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none" />
-                                                <Button 
-                                                    variant="ghost" 
-                                                    size="icon" 
-                                                    className="absolute left-0 z-20 h-7 w-7 bg-background/80 backdrop-blur rounded-full shadow-md hover:bg-background"
-                                                    onClick={() => scrollTabs('left')}
-                                                >
-                                                    <ChevronLeft className="h-4 w-4" />
-                                                </Button>
-                                            </>
-                                        )}
+                            {!isZenMode && (
+                                <div className="h-14 shrink-0 flex items-center justify-between px-6 bg-background/80 backdrop-blur-xl border-b z-50">
+                                    <div className="flex-1 flex items-center gap-4 overflow-hidden">
+                                        <h2 className="font-headline font-black text-sm truncate shrink-0">{product.productName}</h2>
+                                        <div className="h-4 w-px bg-border shrink-0" />
                                         
-                                        <div 
-                                            ref={tabScrollRef}
-                                            onScroll={checkTabOverflow}
-                                            className="flex-1 flex items-center gap-1 overflow-x-auto no-scrollbar py-1 pr-4"
-                                        >
-                                            <Tabs value={activeCompId} onValueChange={(val) => {
-                                                handlePinSelect(null);
-                                                setActiveCompId(val);
-                                            }} className="shrink-0">
-                                                <TabsList className="bg-transparent h-10 p-0 gap-4">
-                                                    {localDesignData.components.map(comp => (
-                                                        <TabsTrigger key={comp.id} value={comp.id} className="h-10 rounded-none border-b-2 border-transparent data-[state=active]:border-primary bg-transparent font-black uppercase text-[10px] tracking-widest px-0">
-                                                            {comp.name} <span className="ml-1 opacity-40 font-mono">V{(comp.versions || []).length}</span>
-                                                        </TabsTrigger>
-                                                    ))}
-                                                </TabsList>
-                                            </Tabs>
-                                            <AddComponentWidget mode="workbench" onAdd={handleAddComponent} />
-                                        </div>
+                                        <div className="relative flex-1 flex items-center overflow-hidden min-w-0 group/tabs">
+                                            {canScrollLeft && (
+                                                <>
+                                                    <div className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none" />
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="icon" 
+                                                        className="absolute left-0 z-20 h-7 w-7 bg-background/80 backdrop-blur rounded-full shadow-md hover:bg-background"
+                                                        onClick={() => scrollTabs('left')}
+                                                    >
+                                                        <ChevronLeft className="h-4 w-4" />
+                                                    </Button>
+                                                </>
+                                            )}
+                                            
+                                            <div 
+                                                ref={tabScrollRef}
+                                                onScroll={checkTabOverflow}
+                                                className="flex-1 flex items-center gap-1 overflow-x-auto no-scrollbar py-1 pr-4"
+                                            >
+                                                <Tabs value={activeCompId} onValueChange={(val) => {
+                                                    handlePinSelect(null);
+                                                    setActiveCompId(val);
+                                                }} className="shrink-0">
+                                                    <TabsList className="bg-transparent h-10 p-0 gap-4">
+                                                        {localDesignData.components.map(comp => (
+                                                            <TabsTrigger key={comp.id} value={comp.id} className="h-10 rounded-none border-b-2 border-transparent data-[state=active]:border-primary bg-transparent font-black uppercase text-[10px] tracking-widest px-0">
+                                                                {comp.name} <span className="ml-1 opacity-40 font-mono">V{(comp.versions || []).length}</span>
+                                                            </TabsTrigger>
+                                                        ))}
+                                                    </TabsList>
+                                                </Tabs>
+                                                <AddComponentWidget mode="workbench" onAdd={handleAddComponent} />
+                                            </div>
 
-                                        {canScrollRight && (
-                                            <>
-                                                <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none" />
-                                                <Button 
-                                                    variant="ghost" 
-                                                    size="icon" 
-                                                    className="absolute right-0 z-20 h-7 w-7 bg-background/80 backdrop-blur rounded-full shadow-md hover:bg-background"
-                                                    onClick={() => scrollTabs('right')}
-                                                >
-                                                    <ChevronRight className="h-4 w-4" />
-                                                </Button>
-                                            </>
-                                        )}
+                                            {canScrollRight && (
+                                                <>
+                                                    <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none" />
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="icon" 
+                                                        className="absolute right-0 z-20 h-7 w-7 bg-background/80 backdrop-blur rounded-full shadow-md hover:bg-background"
+                                                        onClick={() => scrollTabs('right')}
+                                                    >
+                                                        <ChevronRight className="h-4 w-4" />
+                                                    </Button>
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3 shrink-0 ml-4">
+                                        <Badge className={cn("font-black text-[10px] px-3 h-7 tracking-widest shadow-sm", 
+                                            activeComponent.status === 'APPROVED' ? "bg-green-600 text-white" :
+                                            activeComponent.status === 'DRAFT' ? "bg-orange-500 text-white" : "bg-blue-600 text-white"
+                                        )}>
+                                            {activeComponent.status.replace('_', ' ')}
+                                        </Badge>
+                                        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full" onClick={() => setIsFullscreen(false)}><X className="h-5 w-5" /></Button>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-3 shrink-0 ml-4">
-                                    <Badge className={cn("font-black text-[10px] px-3 h-7 tracking-widest shadow-sm", 
-                                        activeComponent.status === 'APPROVED' ? "bg-green-600 text-white" :
-                                        activeComponent.status === 'DRAFT' ? "bg-orange-500 text-white" : "bg-blue-600 text-white"
-                                    )}>
-                                        {activeComponent.status.replace('_', ' ')}
-                                    </Badge>
-                                    <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full" onClick={() => setIsFullscreen(false)}><X className="h-5 w-5" /></Button>
-                                </div>
-                            </div>
+                            )}
 
                             <div className="flex-1 relative overflow-hidden">
                                 <DesignCanvas 
@@ -679,6 +693,8 @@ export function DesignProductCard({
                                     isLatestDraftLocked={isLatestDraftLocked}
                                     draftText={draftText}
                                     onDraftTextChange={setDraftText}
+                                    isZenMode={isZenMode}
+                                    onToggleZen={() => setIsZenMode(!isZenMode)}
                                 />
                             </div>
 
@@ -741,9 +757,11 @@ export function DesignProductCard({
                             )}
                         </div>
 
-                        <div className="w-[360px] md:w-[400px] flex flex-col shrink-0 bg-background shadow-2xl z-[100]">
-                            <FeedbackSidebar {...feedbackSidebarProps} />
-                        </div>
+                        {!isZenMode && (
+                            <div className="w-[360px] md:w-[400px] flex flex-col shrink-0 bg-background shadow-2xl z-[100]">
+                                <FeedbackSidebar {...feedbackSidebarProps} />
+                            </div>
+                        )}
                     </div>
                 </DialogContent>
             </Dialog>
