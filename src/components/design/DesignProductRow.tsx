@@ -106,7 +106,7 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
                 {/* Zone A: Status Indicator */}
                 <div className={cn("absolute left-0 top-0 bottom-0 w-1.5 transition-colors shrink-0", STATUS_CONFIG[aggregateStatus].bg)} />
 
-                {/* Zone B: Identity - Strictly Clamped */}
+                {/* Zone B: Identity */}
                 <div className="w-[15vw] min-w-[12vw] max-w-[15vw] px-6 shrink-0 flex items-center gap-3 overflow-hidden min-w-0">
                     <div className="h-8 w-8 rounded bg-primary/10 flex items-center justify-center text-primary shrink-0">
                         <Package className="h-4 w-4" />
@@ -117,19 +117,19 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
                     </div>
                 </div>
 
-                {/* Zone C: Specifications - Fluid with rigid basis-0 and VW clamping */}
-                <div className="flex-[1_1_0px] basis-0 min-w-[20vw] max-w-[30vw] px-4 flex flex-col justify-center overflow-hidden min-w-0">
+                {/* Zone C: Specifications - Spacing stabilized with gap-1 */}
+                <div className="flex-[1_1_0px] basis-0 min-w-[20vw] max-w-[30vw] px-4 flex flex-col justify-center overflow-hidden min-w-0 gap-1">
                     {/* Line 1: Core Specs */}
                     <div className={cn(
-                        "text-[11px] font-bold text-foreground/80 scroll-smooth w-full block pb-0.5",
+                        "text-[11px] font-bold text-foreground/80 scroll-smooth w-full block",
                         isExpanded ? "whitespace-normal" : "whitespace-nowrap overflow-x-auto no-scrollbar"
                     )}>
                         {getCoreSpecs() || "No core specs"}
                     </div>
                     {/* Line 2: Add-ons & Special Requests */}
                     <div className={cn(
-                        "w-full flex gap-2 pb-0.5 scroll-smooth min-w-0",
-                        isExpanded ? "flex-wrap mt-1" : "items-center overflow-x-auto no-scrollbar whitespace-nowrap"
+                        "w-full flex gap-2 scroll-smooth min-w-0",
+                        isExpanded ? "flex-wrap" : "items-center overflow-x-auto no-scrollbar whitespace-nowrap"
                     )}>
                         {activeAddons.length > 0 && activeAddons.map((addon) => (
                             <Badge 
@@ -151,7 +151,7 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
                     </div>
                 </div>
 
-                {/* Zone D: Component Track - Strictly Clamped */}
+                {/* Zone D: Component Track */}
                 <div className="w-[15vw] min-w-[12vw] max-w-[15vw] px-4 flex items-center gap-1 overflow-x-auto no-scrollbar scroll-smooth whitespace-nowrap shrink-0 min-w-0">
                     {!designData.isStock ? (
                         designData.components.map((comp) => (
@@ -176,7 +176,7 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
                     )}
                 </div>
 
-                {/* Zone E: Actions - Strictly Clamped */}
+                {/* Zone E: Actions */}
                 <div className="w-[15vw] min-w-[12vw] max-w-[15vw] px-6 flex items-center justify-end gap-3 shrink-0 min-w-0">
                     <div className="flex items-center justify-center w-8 shrink-0">
                         {isEligibleForStock ? (
