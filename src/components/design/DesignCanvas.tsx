@@ -150,7 +150,6 @@ export function DesignCanvas({
     const [isMistakeDraft, setIsMistakeDraft] = useState(false);
     
     const containerRef = useRef<HTMLDivElement>(null);
-    const imageRef = useRef<HTMLImageElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -304,7 +303,7 @@ export function DesignCanvas({
     };
 
     const handleCanvasClick = (e: React.MouseEvent) => {
-        if ((!imageUrl && !isLightTable) || isSpacePressed || isMiddleMouseDown || isDraggingSlider) return;
+        if (isSpacePressed || isMiddleMouseDown || isDraggingSlider) return;
         
         const target = e.target as HTMLElement;
         if (target.closest('.pin-bubble') || target.closest('button') || target.closest('.fixed-comment-box') || target.closest('.slider-hit-zone')) return;
@@ -313,17 +312,6 @@ export function DesignCanvas({
             onPinClick(null);
             return;
         }
-
-        if (!canDropPin || isLightTable) return;
-
-        e.stopPropagation();
-        e.preventDefault();
-        
-        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-        const x = ((e.clientX - rect.left - panOffset.x - (rect.width/2)) / zoom + (rect.width/2)) / rect.width * 100;
-        const y = ((e.clientY - rect.top - panOffset.y - (rect.height/2)) / zoom + (rect.height/2)) / rect.height * 100;
-        
-        onAddPin(x, y);
     };
 
     const handleSaveComment = () => {
@@ -425,11 +413,14 @@ export function DesignCanvas({
             }
 
             if (isDraggingSlider && containerRef.current) {
-                const rect = containerRef.current.getBoundingClientRect();
-                const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
-                const y = Math.max(0, Math.min(e.clientY - rect.top, rect.height));
-                setSliderPosition((x / rect.width) * 100);
-                setSliderVerticalPosition((y / rect.height) * 100);
+                const compBox = document.querySelector('.group\\/comp-container');
+                if (compBox) {
+                    const rect = compBox.getBoundingClientRect();
+                    const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
+                    const y = Math.max(0, Math.min(e.clientY - rect.top, rect.height));
+                    setSliderPosition((x / rect.width) * 100);
+                    setSliderVerticalPosition((y / rect.height) * 100);
+                }
             }
         };
 
@@ -476,42 +467,74 @@ export function DesignCanvas({
         );
     };
 
-    const renderLightTableComp = (comp: DesignComponent, type: 'after' | 'pins') => {
-        const versions = comp.versions || [];
-        const latestV = versions.length > 0 ? versions[versions.length - 1] : null;
-
+    const renderComponentContent = (comp: DesignComponent | null, imgUrl: string | null, pinsList: DesignPin[], mode: 'standard' | 'light') => {
         return (
-            <div key={comp.id} className="h-full flex flex-col items-center shrink-0 min-w-[300px]">
-                <div className={cn(
-                    "h-12 flex flex-col items-center justify-center mb-4 transition-all shrink-0",
-                    type === 'pins' && "invisible"
-                )}>
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">{comp.name}</span>
-                    <span className="text-[8px] font-bold text-white/20 uppercase tracking-widest mt-0.5">V{versions.length}</span>
-                </div>
+            <div 
+                className="relative h-[80vh] w-fit pointer-events-auto group/comp-container shadow-[0_30px_100px_rgba(0,0,0,0.5)]"
+                onClick={(e) => {
+                    if (!canDropPin) return;
+                    e.stopPropagation();
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const x = (e.clientX - rect.left) / rect.width * 100;
+                    const y = (e.clientY - rect.top) / rect.height * 100;
+                    onAddPin(x, y, comp?.id);
+                }}
+            >
+                {/* Comparison (Before) layer for standard mode */}
+                {mode === 'standard' && showComparison && comparisonImageUrl && (
+                    <img 
+                        src={comparisonImageUrl} 
+                        alt="Comparison (Before)" 
+                        className="absolute inset-0 w-full h-full object-contain" 
+                        draggable={false} 
+                    />
+                )}
 
-                <div className="relative flex-1 group/item">
-                    {type === 'after' && latestV && (
-                        <img src={latestV.imageUrl} className="h-full w-auto object-contain shadow-2xl" draggable={false} />
-                    )}
-                    {type === 'after' && !latestV && (
-                        <div className="h-full aspect-[2/3] bg-white/5 border-2 border-dashed border-white/10 flex items-center justify-center">
-                            <span className="text-[8px] font-black text-white/20 uppercase">No Proof</span>
+                {/* Latest Proof (After) layer */}
+                {imgUrl && (
+                    <img 
+                        src={imgUrl} 
+                        alt="Design Proof" 
+                        className="h-full w-auto object-contain" 
+                        style={mode === 'standard' && showComparison ? {
+                            clipPath: `inset(0 ${100 - sliderPosition}% 0 0)`
+                        } : undefined}
+                        draggable={false} 
+                    />
+                )}
+
+                {/* Comparison Slider Handle */}
+                {mode === 'standard' && showComparison && (
+                    <div className="absolute inset-0 z-[60] pointer-events-none overflow-hidden">
+                        <div 
+                            className="slider-hit-zone absolute inset-y-0 w-8 -ml-4 pointer-events-auto cursor-ew-resize group/slider"
+                            style={{ left: `${sliderPosition}%` }}
+                            onMouseDown={(e) => {
+                                e.preventDefault();
+                                setIsDraggingSlider(true);
+                            }}
+                        >
+                            <div className="absolute inset-y-0 left-1/2 w-px bg-blue-600 pointer-events-none" />
+                            
+                            <button
+                                className="slider-handle absolute left-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-2xl transition-transform border-4 border-background active:scale-95 pointer-events-none"
+                                style={{ top: `${sliderVerticalPosition}%` }}
+                            >
+                                <GripHorizontal className="h-5 w-5" />
+                            </button>
+
+                            <div className="absolute top-6 right-12 bg-black/80 text-white text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded border border-white/10 opacity-0 group-hover/slider:opacity-100 transition-opacity whitespace-nowrap">
+                                Before
+                            </div>
+                            <div className="absolute top-6 left-12 bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded opacity-0 group-hover/slider:opacity-100 transition-opacity whitespace-nowrap">
+                                After
+                            </div>
                         </div>
-                    )}
-                    {type === 'pins' && (
-                        <div className="absolute inset-0 pointer-events-auto" onClick={(e) => {
-                            if (!canDropPin) return;
-                            e.stopPropagation();
-                            const rect = e.currentTarget.getBoundingClientRect();
-                            const x = (e.clientX - rect.left) / rect.width * 100;
-                            const y = (e.clientY - rect.top) / rect.height * 100;
-                            onAddPin(x, y, comp.id);
-                        }}>
-                            {showPins && comp.pins.map(pin => renderPin(pin))}
-                        </div>
-                    )}
-                </div>
+                    </div>
+                )}
+                
+                {/* Pins Overlay */}
+                {showPins && pinsList.map(pin => renderPin(pin))}
             </div>
         );
     };
@@ -702,83 +725,26 @@ export function DesignCanvas({
                             }}
                         >
                             {isLightTable ? (
-                                <div className="relative">
-                                    {/* Unified spread of latest versions */}
-                                    <div className="flex flex-row items-center gap-32 px-64 h-[80vh]">
-                                        {allComponents.map(comp => renderLightTableComp(comp, 'after'))}
-                                    </div>
-                                    
-                                    {/* Pins Layer */}
-                                    <div className="absolute inset-0 pointer-events-none">
-                                        <div className="flex flex-row items-center gap-32 px-64 h-[80vh] pointer-events-none">
-                                            {allComponents.map(comp => renderLightTableComp(comp, 'pins'))}
-                                        </div>
-                                    </div>
+                                <div className="flex flex-row items-center gap-32 px-64 h-[80vh]">
+                                    {allComponents.map(comp => {
+                                        const latestV = comp.versions?.length > 0 ? comp.versions[comp.versions.length - 1] : null;
+                                        return (
+                                            <div key={comp.id} className="flex flex-col items-center shrink-0">
+                                                <div className="h-12 flex flex-col items-center justify-center mb-4 transition-all shrink-0">
+                                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">{comp.name}</span>
+                                                    <span className="text-[8px] font-bold text-white/20 uppercase tracking-widest mt-0.5">V{comp.versions.length}</span>
+                                                </div>
+                                                {renderComponentContent(comp, latestV?.imageUrl || null, comp.pins, 'light')}
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             ) : (
-                                <div className="absolute inset-0 pointer-events-none">
-                                    {showComparison && comparisonImageUrl && (
-                                        <img 
-                                            src={comparisonImageUrl} 
-                                            alt="Comparison (Before)" 
-                                            className="absolute inset-0 w-full h-full object-contain" 
-                                            draggable={false} 
-                                        />
-                                    )}
-
-                                    {imageUrl && (
-                                        <img 
-                                            ref={imageRef} 
-                                            src={imageUrl} 
-                                            alt="Design View" 
-                                            className="w-full h-full object-contain" 
-                                            style={showComparison ? {
-                                                clipPath: `inset(0 ${100 - sliderPosition}% 0 0)`
-                                            } : undefined}
-                                            draggable={false} 
-                                        />
-                                    )}
-                                    
-                                    {showPins && pins.map(pin => renderPin(pin))}
+                                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                    {renderComponentContent(null, imageUrl, pins, 'standard')}
                                 </div>
                             )}
                         </div>
-
-                        {showComparison && !isLightTable && (
-                            <div className="absolute inset-0 z-[60] pointer-events-none overflow-hidden">
-                                <div 
-                                    className="slider-hit-zone absolute inset-y-0 w-8 -ml-4 pointer-events-auto cursor-ew-resize group/slider"
-                                    style={{ left: `${sliderPosition}%` }}
-                                    onMouseDown={(e) => {
-                                        e.preventDefault();
-                                        setIsDraggingSlider(true);
-                                        const rect = containerRef.current?.getBoundingClientRect();
-                                        if (rect) {
-                                            const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
-                                            const y = Math.max(0, Math.min(e.clientY - rect.top, rect.height));
-                                            setSliderPosition((x / rect.width) * 100);
-                                            setSliderVerticalPosition((y / rect.height) * 100);
-                                        }
-                                    }}
-                                >
-                                    <div className="absolute inset-y-0 left-1/2 w-px bg-blue-600 pointer-events-none" />
-                                    
-                                    <button
-                                        className="slider-handle absolute left-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-2xl transition-transform border-4 border-background active:scale-95 pointer-events-none"
-                                        style={{ top: `${sliderVerticalPosition}%` }}
-                                    >
-                                        <GripHorizontal className="h-5 w-5" />
-                                    </button>
-
-                                    <div className="absolute top-6 right-12 bg-black/80 text-white text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded border border-white/10 opacity-0 group-hover/slider:opacity-100 transition-opacity whitespace-nowrap">
-                                        Before
-                                    </div>
-                                    <div className="absolute top-6 left-12 bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded opacity-0 group-hover/slider:opacity-100 transition-opacity whitespace-nowrap">
-                                        After
-                                    </div>
-                                </div>
-                            </div>
-                        )}
 
                         {selectedPinId && activePin && effectiveShowPopovers && (
                             <div 
