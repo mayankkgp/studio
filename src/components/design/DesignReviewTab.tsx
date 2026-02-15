@@ -1,9 +1,11 @@
+
 'use client';
 
 import * as React from 'react';
 import { useState, useMemo } from 'react';
 import type { Order, DesignData, DesignComponent } from '@/lib/types';
 import { DesignProductRow } from './DesignProductRow';
+import { DesignProductCard } from './DesignProductCard';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Palette, Filter, AlertCircle, Clock, CheckCircle2, Archive } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -19,6 +21,7 @@ type FilterMode = 'active' | 'needs_action' | 'waiting' | 'approved' | 'stock';
 
 export function DesignReviewTab({ order, onUpdateOrder, role }: DesignReviewTabProps) {
     const [activeFilter, setActiveFilter] = useState<FilterMode>('active');
+    const [activeWorkbenchId, setActiveWorkbenchId] = useState<string | null>(null);
 
     const handleUpdateProductDesign = (productId: string, designData: DesignData) => {
         const updatedDeliverables = order.deliverables.map(d => 
@@ -64,6 +67,10 @@ export function DesignReviewTab({ order, onUpdateOrder, role }: DesignReviewTabP
             return true;
         });
     }, [order.deliverables, activeFilter, role]);
+
+    const activeWorkbenchProduct = useMemo(() => 
+        order.deliverables.find(d => d.id === activeWorkbenchId),
+    [order.deliverables, activeWorkbenchId]);
 
     if (!order.deliverables || order.deliverables.length === 0) {
         return (
@@ -141,13 +148,26 @@ export function DesignReviewTab({ order, onUpdateOrder, role }: DesignReviewTabP
                                     product={product} 
                                     isDesigner={role === 'DESIGNER'}
                                     onUpdateDesign={(data) => handleUpdateProductDesign(product.id, data)}
-                                    onOpenWorkbench={() => {}}
+                                    onOpenWorkbench={() => setActiveWorkbenchId(product.id)}
                                 />
                             ))}
                         </div>
                     )}
                 </div>
             </ScrollArea>
+
+            {/* Modal Workbench Overlay */}
+            {activeWorkbenchProduct && (
+                <DesignProductCard 
+                    product={activeWorkbenchProduct}
+                    isDesigner={role === 'DESIGNER'}
+                    onUpdateDesign={(data) => handleUpdateProductDesign(activeWorkbenchProduct.id, data)}
+                    customerData={order.customerData}
+                    forceOpenWorkbench={true}
+                    onCloseWorkbench={() => setActiveWorkbenchId(null)}
+                    modalOnly
+                />
+            )}
         </div>
     );
 }

@@ -144,9 +144,19 @@ interface DesignProductCardProps {
     onUpdateDesign: (data: DesignData) => void;
     customerData?: CustomerData;
     forceOpenWorkbench?: boolean;
+    onCloseWorkbench?: () => void;
+    modalOnly?: boolean;
 }
 
-export function DesignProductCard({ product, isDesigner, onUpdateDesign, customerData, forceOpenWorkbench }: DesignProductCardProps) {
+export function DesignProductCard({ 
+    product, 
+    isDesigner, 
+    onUpdateDesign, 
+    customerData, 
+    forceOpenWorkbench,
+    onCloseWorkbench,
+    modalOnly = false
+}: DesignProductCardProps) {
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [newDrafts, setNewDrafts] = useState<Record<string, boolean>>({});
     const [draftText, setDraftText] = useState('');
@@ -461,72 +471,75 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
 
     return (
         <>
-            <Card className="overflow-hidden border-2 border-primary/10 shadow-lg bg-card/50 backdrop-blur-sm">
-                <CardHeader className="bg-muted/30 border-b py-3 px-4">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <div className="h-8 w-8 rounded bg-primary/10 flex items-center justify-center text-primary"><Package className="h-5 w-5" /></div>
-                            <div><CardTitle className="text-sm font-headline font-black">{product.productName}</CardTitle></div>
+            {!modalOnly && (
+                <Card className="overflow-hidden border-2 border-primary/10 shadow-lg bg-card/50 backdrop-blur-sm">
+                    <CardHeader className="bg-muted/30 border-b py-3 px-4">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="h-8 w-8 rounded bg-primary/10 flex items-center justify-center text-primary"><Package className="h-5 w-5" /></div>
+                                <div><CardTitle className="text-sm font-headline font-black">{product.productName}</CardTitle></div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                {isEligibleForStock && (
+                                    <Button variant="outline" size="sm" onClick={() => {
+                                        if(confirm("Mark this product as stock? This will hide all design tools.")) {
+                                            handleUpdateDesignInternal({ ...localDesignData, isStock: true }, true);
+                                        }
+                                    }} className="h-8 font-black uppercase text-[10px] tracking-widest"><PackageCheck className="h-3.5 w-3.5 mr-1.5" /> Stock</Button>
+                                )}
+                                <Button size="sm" onClick={() => setIsFullscreen(true)} className="h-8 font-black uppercase text-[10px] tracking-widest gap-1.5 shadow-sm"><LayoutPanelTop className="h-3.5 w-3.5" /> Workbench</Button>
+                            </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                            {isEligibleForStock && (
-                                <Button variant="outline" size="sm" onClick={() => {
-                                    if(confirm("Mark this product as stock? This will hide all design tools.")) {
-                                        handleUpdateDesignInternal({ ...localDesignData, isStock: true }, true);
-                                    }
-                                }} className="h-8 font-black uppercase text-[10px] tracking-widest"><PackageCheck className="h-3.5 w-3.5 mr-1.5" /> Stock</Button>
-                            )}
-                            <Button size="sm" onClick={() => setIsFullscreen(true)} className="h-8 font-black uppercase text-[10px] tracking-widest gap-1.5 shadow-sm"><LayoutPanelTop className="h-3.5 w-3.5" /> Workbench</Button>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                        <div className="px-4 py-2 border-b bg-muted/10 flex items-center gap-2 overflow-x-auto no-scrollbar">
+                            <Info className="h-3 w-3 text-muted-foreground shrink-0" />
+                            <div className="text-[10px] uppercase font-bold text-muted-foreground whitespace-nowrap flex items-center">
+                                {getProductSpecsSummary() || "No specs configured"}
+                            </div>
                         </div>
-                    </div>
-                </CardHeader>
-                <CardContent className="p-0">
-                    <div className="px-4 py-2 border-b bg-muted/10 flex items-center gap-2 overflow-x-auto no-scrollbar">
-                        <Info className="h-3 w-3 text-muted-foreground shrink-0" />
-                        <div className="text-[10px] uppercase font-bold text-muted-foreground whitespace-nowrap flex items-center">
-                            {getProductSpecsSummary() || "No specs configured"}
-                        </div>
-                    </div>
-                    {localDesignData.isStock ? (
-                        <div className="flex flex-col items-center justify-center h-[200px] bg-muted/5">
-                            <PackageCheck className="h-10 w-10 text-primary/40 mb-3" />
-                            <h3 className="font-headline font-black uppercase tracking-widest text-xs text-muted-foreground">Stock Item</h3>
-                            <Button variant="link" size="sm" onClick={() => handleUpdateDesignInternal({ ...localDesignData, isStock: false }, true)} className="text-[10px] uppercase font-black tracking-widest text-primary">Restore Design Tools</Button>
-                        </div>
-                    ) : (
-                        <div className="p-4 grid grid-cols-2 md:grid-cols-4 gap-4">
-                            {localDesignData.components.map(comp => (
-                                <div key={comp.id} className={cn("p-3 rounded-lg border-2 text-center space-y-1 transition-all shadow-sm relative group/comp", getStatusColor(comp.status))}>
-                                    {comp.status === 'PENDING' && (!comp.versions || comp.versions.length === 0) && (
-                                        <button 
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleDeleteComponent(comp.id);
-                                            }}
-                                            className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-destructive text-destructive-foreground opacity-0 group-hover/comp:opacity-100 transition-opacity flex items-center justify-center shadow-lg border-2 border-background z-20"
-                                            title="Delete Component"
-                                        >
-                                            <Trash2 className="h-3 w-3" />
-                                        </button>
-                                    )}
-                                    <div className="text-[10px] font-black uppercase tracking-wider truncate">{comp.name}</div>
-                                    <div className="flex items-center justify-center gap-2 text-[9px] font-bold opacity-60">
-                                        <span>V{(comp.versions || []).length}</span>
-                                        <span>•</span>
-                                        <span className="uppercase tracking-tighter">{comp.status.replace('_', ' ')}</span>
+                        {localDesignData.isStock ? (
+                            <div className="flex flex-col items-center justify-center h-[200px] bg-muted/5">
+                                <PackageCheck className="h-10 w-10 text-primary/40 mb-3" />
+                                <h3 className="font-headline font-black uppercase tracking-widest text-xs text-muted-foreground">Stock Item</h3>
+                                <Button variant="link" size="sm" onClick={() => handleUpdateDesignInternal({ ...localDesignData, isStock: false }, true)} className="text-[10px] uppercase font-black tracking-widest text-primary">Restore Design Tools</Button>
+                            </div>
+                        ) : (
+                            <div className="p-4 grid grid-cols-2 md:grid-cols-4 gap-4">
+                                {localDesignData.components.map(comp => (
+                                    <div key={comp.id} className={cn("p-3 rounded-lg border-2 text-center space-y-1 transition-all shadow-sm relative group/comp", getStatusColor(comp.status))}>
+                                        {comp.status === 'PENDING' && (!comp.versions || comp.versions.length === 0) && (
+                                            <button 
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleDeleteComponent(comp.id);
+                                                }}
+                                                className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-destructive text-destructive-foreground opacity-0 group-hover/comp:opacity-100 transition-opacity flex items-center justify-center shadow-lg border-2 border-background z-20"
+                                                title="Delete Component"
+                                            >
+                                                <Trash2 className="h-3 w-3" />
+                                            </button>
+                                        )}
+                                        <div className="text-[10px] font-black uppercase tracking-wider truncate">{comp.name}</div>
+                                        <div className="flex items-center justify-center gap-2 text-[9px] font-bold opacity-60">
+                                            <span>V{(comp.versions || []).length}</span>
+                                            <span>•</span>
+                                            <span className="uppercase tracking-tighter">{comp.status.replace('_', ' ')}</span>
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
-                            <AddComponentWidget mode="card" onAdd={handleAddComponent} />
-                        </div>
-                    )}
-                </CardContent>
-            </Card>
+                                ))}
+                                <AddComponentWidget mode="card" onAdd={handleAddComponent} />
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+            )}
 
             <Dialog open={isFullscreen} onOpenChange={(open) => {
                 if (!open) {
                     handlePinSelect(null);
                     setLocalDesignData(initialDesignData);
+                    onCloseWorkbench?.();
                 }
                 setIsFullscreen(open);
             }}>
