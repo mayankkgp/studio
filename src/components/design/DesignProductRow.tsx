@@ -169,26 +169,30 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
                 </div>
 
                 {/* Zone E: Actions */}
-                <div className="w-48 px-6 flex items-center justify-end gap-2 shrink-0">
-                    {(designData.isStock || isEligibleForStock) && (
-                        <Button 
-                            size="sm" 
-                            variant="outline" 
-                            className="h-8 text-[10px] font-black uppercase tracking-widest gap-1.5 opacity-0 group-hover/row:opacity-100 transition-opacity"
-                            onClick={handleToggleStock}
-                            title={designData.isStock ? "Restore Design Tools" : "Mark as Stock"}
-                        >
-                            {designData.isStock ? <Package className="h-3.5 w-3.5" /> : <Archive className="h-3.5 w-3.5" />}
-                        </Button>
-                    )}
+                <div className="w-64 px-6 flex items-center justify-end gap-3 shrink-0">
+                    <div className="flex items-center justify-center w-8">
+                        {(designData.isStock || isEligibleForStock) && (
+                            <Button 
+                                size="sm" 
+                                variant="outline" 
+                                className="h-8 w-8 p-0 border-primary/20 text-muted-foreground hover:text-primary opacity-0 group-hover/row:opacity-100 transition-opacity"
+                                onClick={handleToggleStock}
+                                title={designData.isStock ? "Restore Design Tools" : "Mark as Stock"}
+                            >
+                                {designData.isStock ? <Package className="h-3.5 w-3.5" /> : <Archive className="h-3.5 w-3.5" />}
+                            </Button>
+                        )}
+                    </div>
                     <Button 
                         size="sm" 
-                        className="h-8 text-[10px] font-black uppercase tracking-widest gap-1.5 shadow-sm"
+                        className="h-8 text-[10px] font-black uppercase tracking-widest gap-1.5 shadow-sm min-w-[120px]"
                         onClick={(e) => { e.stopPropagation(); onOpenWorkbench(); }}
                     >
                         <ExternalLink className="h-3.5 w-3.5" /> Workbench
                     </Button>
-                    {isExpanded ? <ChevronUp className="h-4 w-4 ml-2 opacity-30" /> : <ChevronDown className="h-4 w-4 ml-2 opacity-30" />}
+                    <div className="w-6 flex items-center justify-center">
+                        {isExpanded ? <ChevronUp className="h-4 w-4 opacity-30" /> : <ChevronDown className="h-4 w-4 opacity-30" />}
+                    </div>
                 </div>
             </div>
 
