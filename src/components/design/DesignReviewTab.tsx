@@ -124,7 +124,7 @@ export function DesignReviewTab({ order, onUpdateOrder, role, layout }: DesignRe
             <ScrollArea className="flex-1 w-full lg:max-w-[calc(100vw-16.5rem)] overflow-hidden min-w-0">
                 <div className={cn(
                     "w-full p-4 md:p-8 space-y-12 pb-32 min-w-0 overflow-hidden",
-                    layout === 'table' && "md:p-0 md:space-y-0"
+                    layout === 'table' && "md:px-8 md:py-8 md:space-y-0"
                 )}>
                     {filteredProducts.length === 0 ? (
                         <div className="py-20 text-center opacity-40 italic text-[11px] font-black uppercase tracking-widest w-full">
@@ -143,7 +143,7 @@ export function DesignReviewTab({ order, onUpdateOrder, role, layout }: DesignRe
                             ))}
                         </div>
                     ) : (
-                        <div className="w-full border-y rounded-xl bg-card/20 overflow-hidden flex flex-col min-w-0">
+                        <div className="w-full border rounded-xl bg-card/20 overflow-hidden flex flex-col min-w-0 shadow-sm">
                             {filteredProducts.map((product) => (
                                 <DesignProductRow 
                                     key={product.id} 
