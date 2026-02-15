@@ -99,8 +99,8 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
             <div 
                 onClick={() => setIsExpanded(!isExpanded)}
                 className={cn(
-                    "flex items-center bg-card hover:bg-muted/30 transition-all cursor-pointer relative w-full overflow-hidden min-w-0",
-                    isExpanded ? "bg-muted/20 min-h-[4rem] py-4" : "h-16"
+                    "flex items-center bg-card hover:bg-muted/30 transition-all cursor-pointer relative w-full overflow-hidden min-w-0 py-4 min-h-[4rem]",
+                    isExpanded ? "bg-muted/20" : ""
                 )}
             >
                 {/* Zone A: Status Indicator */}
@@ -119,14 +119,14 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
 
                 {/* Zone C: Specifications - Fluid with rigid basis-0 and VW clamping */}
                 <div className="flex-[1_1_0px] basis-0 min-w-[20vw] max-w-[30vw] px-4 flex flex-col justify-center overflow-hidden min-w-0">
-                    {/* Line 1: Core Specs - Wraps on Expansion */}
+                    {/* Line 1: Core Specs */}
                     <div className={cn(
                         "text-[11px] font-bold text-foreground/80 scroll-smooth w-full block pb-0.5",
                         isExpanded ? "whitespace-normal" : "whitespace-nowrap overflow-x-auto no-scrollbar"
                     )}>
                         {getCoreSpecs() || "No core specs"}
                     </div>
-                    {/* Line 2: Add-ons - Wraps on Expansion */}
+                    {/* Line 2: Add-ons & Special Requests */}
                     <div className={cn(
                         "w-full flex gap-2 pb-0.5 scroll-smooth min-w-0",
                         isExpanded ? "flex-wrap mt-1" : "items-center overflow-x-auto no-scrollbar whitespace-nowrap"
