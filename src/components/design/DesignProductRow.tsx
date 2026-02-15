@@ -12,7 +12,8 @@ import {
     ChevronUp, 
     ExternalLink, 
     PackageCheck,
-    Archive
+    Archive,
+    Wand2
 } from 'lucide-react';
 import { productCatalog } from '@/lib/product-data';
 import { format } from 'date-fns';
@@ -142,10 +143,11 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
                         ))}
                         {product.specialRequest && (
                             <div className={cn(
-                                "text-[10px] italic font-semibold text-destructive shrink-0 ml-1",
+                                "text-[10px] italic font-semibold text-destructive shrink-0 ml-1 flex items-center gap-1",
                                 isExpanded ? "" : "truncate max-w-[150px] whitespace-nowrap"
                             )}>
-                                Req: {product.specialRequest}
+                                <Wand2 className="h-3 w-3" />
+                                {product.specialRequest}
                             </div>
                         )}
                     </div>
