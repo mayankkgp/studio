@@ -106,8 +106,8 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
                 {/* Zone A: Status Indicator */}
                 <div className={cn("absolute left-0 top-0 bottom-0 w-1.5 transition-colors shrink-0", STATUS_CONFIG[aggregateStatus].bg)} />
 
-                {/* Zone B: Identity - Clamped to 12vw-18vw */}
-                <div className="w-[15vw] min-w-[12vw] max-w-[18vw] px-6 shrink-0 flex items-center gap-3 overflow-hidden min-w-0">
+                {/* Zone B: Identity - Strictly Clamped */}
+                <div className="w-[15vw] min-w-[12vw] max-w-[15vw] px-6 shrink-0 flex items-center gap-3 overflow-hidden min-w-0">
                     <div className="h-8 w-8 rounded bg-primary/10 flex items-center justify-center text-primary shrink-0">
                         <Package className="h-4 w-4" />
                     </div>
@@ -117,7 +117,7 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
                     </div>
                 </div>
 
-                {/* Zone C: Specifications - Clamped to 20vw-35vw - Fluid Center */}
+                {/* Zone C: Specifications - Fluid with rigid basis-0 and VW clamping */}
                 <div className="flex-[1_1_0px] basis-0 min-w-[20vw] max-w-[35vw] px-4 flex flex-col justify-center overflow-hidden min-w-0">
                     <div className="text-[11px] font-bold text-foreground/80 truncate w-full block">
                         {getCoreSpecs() || "No core specs"}
@@ -140,8 +140,8 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
                     </div>
                 </div>
 
-                {/* Zone D: Component Track - Clamped to 12vw-18vw */}
-                <div className="w-[15vw] min-w-[12vw] max-w-[18vw] px-4 flex items-center gap-1 overflow-x-auto no-scrollbar scroll-smooth whitespace-nowrap shrink-0 min-w-0">
+                {/* Zone D: Component Track - Strictly Clamped */}
+                <div className="w-[15vw] min-w-[12vw] max-w-[15vw] px-4 flex items-center gap-1 overflow-x-auto no-scrollbar scroll-smooth whitespace-nowrap shrink-0 min-w-0">
                     {!designData.isStock ? (
                         designData.components.map((comp) => (
                             <div 
@@ -165,8 +165,8 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
                     )}
                 </div>
 
-                {/* Zone E: Actions - Clamped to 12vw-18vw */}
-                <div className="w-[15vw] min-w-[12vw] max-w-[18vw] px-6 flex items-center justify-end gap-3 shrink-0 min-w-0">
+                {/* Zone E: Actions - Strictly Clamped */}
+                <div className="w-[15vw] min-w-[12vw] max-w-[15vw] px-6 flex items-center justify-end gap-3 shrink-0 min-w-0">
                     <div className="flex items-center justify-center w-8 shrink-0">
                         {isEligibleForStock ? (
                             <Button 
