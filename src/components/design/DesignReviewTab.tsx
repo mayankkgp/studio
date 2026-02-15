@@ -121,9 +121,9 @@ export function DesignReviewTab({ order, onUpdateOrder, role, layout }: DesignRe
                 </div>
             </div>
 
-            <ScrollArea className="flex-1">
+            <ScrollArea className="flex-1 w-full overflow-hidden">
                 <div className={cn(
-                    "max-w-[1600px] mx-auto p-4 md:p-8 space-y-12 pb-32",
+                    "max-w-full mx-auto p-4 md:p-8 space-y-12 pb-32 overflow-hidden",
                     layout === 'table' && "md:p-0"
                 )}>
                     {filteredProducts.length === 0 ? (
@@ -143,7 +143,7 @@ export function DesignReviewTab({ order, onUpdateOrder, role, layout }: DesignRe
                             ))}
                         </div>
                     ) : (
-                        <div className="w-full border rounded-xl bg-card/20 overflow-hidden">
+                        <div className="w-full border rounded-xl bg-card/20 overflow-hidden flex flex-col">
                             {filteredProducts.map((product) => (
                                 <DesignProductRow 
                                     key={product.id} 
@@ -151,7 +151,8 @@ export function DesignReviewTab({ order, onUpdateOrder, role, layout }: DesignRe
                                     isDesigner={role === 'DESIGNER'}
                                     onUpdateDesign={(data) => handleUpdateProductDesign(product.id, data)}
                                     onOpenWorkbench={() => {
-                                        // Triggering workbench logic
+                                        // This is handled by DesignProductCard logic if we were to wrap it, 
+                                        // but for now we'll ensure workbench triggers are stable in the Card component.
                                     }}
                                 />
                             ))}

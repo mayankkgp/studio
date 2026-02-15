@@ -97,7 +97,7 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
     };
 
     return (
-        <div className="group/row w-full max-w-full overflow-hidden">
+        <div className="group/row w-full min-w-0 overflow-hidden">
             <div 
                 onClick={() => setIsExpanded(!isExpanded)}
                 className={cn(
@@ -256,11 +256,4 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
             `}</style>
         </div>
     );
-}
-
-interface DeliverableRowProps {
-    product: ConfiguredProduct;
-    isDesigner: boolean;
-    onUpdateDesign: (data: DesignData) => void;
-    onOpenWorkbench: () => void;
 }
