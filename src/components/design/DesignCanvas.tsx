@@ -230,7 +230,7 @@ export function DesignCanvas({
     }, [isSpacePressed, selectedPinId, highlightedPinId, onPinClick, isFeedbackUnlocked]);
 
     useEffect(() => {
-        if (!comparisonImageUrl && !isLightTable) setShowComparison(false);
+        if ((!comparisonImageUrl && !isLightTable) || isLightTable) setShowComparison(false);
     }, [comparisonImageUrl, isLightTable]);
 
     useEffect(() => {
@@ -244,14 +244,8 @@ export function DesignCanvas({
             if (containerRef.current) {
                 const containerRect = containerRef.current.getBoundingClientRect();
                 
-                // In Light Table, coordinates are relative to the specific component.
-                // For simplicity in positioning the popover, we'll try to find the pin by ID 
-                // but the calculation might need to be global.
-                // For now, let's keep the standard logic which works well enough for general targeting.
-                
                 const popoverWidth = 320;
                 const popoverHeight = 250; 
-                const offset = 24;
 
                 let x = containerRect.width / 2 - 160;
                 let y = containerRect.height / 2 - 125;
@@ -320,7 +314,7 @@ export function DesignCanvas({
             return;
         }
 
-        if (!canDropPin || isLightTable) return; // Light Table handles pins via its own click layers
+        if (!canDropPin || isLightTable) return;
 
         e.stopPropagation();
         e.preventDefault();
@@ -457,7 +451,7 @@ export function DesignCanvas({
 
     const isPanModeActive = isSpacePressed || isMiddleMouseDown;
 
-    const renderPin = (pin: DesignPin, compPins?: DesignPin[]) => {
+    const renderPin = (pin: DesignPin) => {
         const pinIndex = pins.findIndex(p => p.id === pin.id) + 1;
         return (
             <button
@@ -482,14 +476,12 @@ export function DesignCanvas({
         );
     };
 
-    const renderLightTableComp = (comp: DesignComponent, type: 'before' | 'after' | 'pins') => {
+    const renderLightTableComp = (comp: DesignComponent, type: 'after' | 'pins') => {
         const versions = comp.versions || [];
         const latestV = versions.length > 0 ? versions[versions.length - 1] : null;
-        const prevV = versions.length > 1 ? versions[versions.length - 2] : null;
 
         return (
             <div key={comp.id} className="h-full flex flex-col items-center shrink-0 min-w-[300px]">
-                {/* Labels only in the visual layers */}
                 <div className={cn(
                     "h-12 flex flex-col items-center justify-center mb-4 transition-all shrink-0",
                     type === 'pins' && "invisible"
@@ -499,9 +491,6 @@ export function DesignCanvas({
                 </div>
 
                 <div className="relative flex-1 group/item">
-                    {type === 'before' && prevV && (
-                        <img src={prevV.imageUrl} className="h-full w-auto object-contain opacity-100" draggable={false} />
-                    )}
                     {type === 'after' && latestV && (
                         <img src={latestV.imageUrl} className="h-full w-auto object-contain shadow-2xl" draggable={false} />
                     )}
@@ -648,19 +637,21 @@ export function DesignCanvas({
                                 </TooltipTrigger>
                                 <TooltipContent>{isZenMode ? "Popovers forced ON in Zen Mode" : effectiveShowPopovers ? "Hide Comment Boxes" : "Show Comment Boxes"}</TooltipContent>
                             </Tooltip>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Button 
-                                        variant="ghost" 
-                                        size="icon" 
-                                        className={cn("h-9 w-9 rounded-full", showComparison && "text-primary bg-primary/10")} 
-                                        onClick={() => setShowComparison(!showComparison)}
-                                    >
-                                        <Layers className="h-4 w-4" />
-                                    </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>Split Comparison (Before/After Wiper)</TooltipContent>
-                            </Tooltip>
+                            {!isLightTable && (
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button 
+                                            variant="ghost" 
+                                            size="icon" 
+                                            className={cn("h-9 w-9 rounded-full", showComparison && "text-primary bg-primary/10")} 
+                                            onClick={() => setShowComparison(!showComparison)}
+                                        >
+                                            <Layers className="h-4 w-4" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Split Comparison (Before/After Wiper)</TooltipContent>
+                                </Tooltip>
+                            )}
                             <div className="w-px h-4 bg-muted-foreground/20 mx-1" />
                             <Tooltip>
                                 <TooltipTrigger asChild>
@@ -712,19 +703,12 @@ export function DesignCanvas({
                         >
                             {isLightTable ? (
                                 <div className="relative">
-                                    {/* Before Spread */}
+                                    {/* Unified spread of latest versions */}
                                     <div className="flex flex-row items-center gap-32 px-64 h-[80vh]">
-                                        {allComponents.map(comp => renderLightTableComp(comp, 'before'))}
+                                        {allComponents.map(comp => renderLightTableComp(comp, 'after'))}
                                     </div>
                                     
-                                    {/* After Spread (Clipped) */}
-                                    <div className="absolute inset-0" style={{ clipPath: `inset(0 ${100 - sliderPosition}% 0 0)` }}>
-                                        <div className="flex flex-row items-center gap-32 px-64 h-[80vh]">
-                                            {allComponents.map(comp => renderLightTableComp(comp, 'after'))}
-                                        </div>
-                                    </div>
-                                    
-                                    {/* Pins Layer (Not clipped) */}
+                                    {/* Pins Layer */}
                                     <div className="absolute inset-0 pointer-events-none">
                                         <div className="flex flex-row items-center gap-32 px-64 h-[80vh] pointer-events-none">
                                             {allComponents.map(comp => renderLightTableComp(comp, 'pins'))}
@@ -760,7 +744,7 @@ export function DesignCanvas({
                             )}
                         </div>
 
-                        {showComparison && (
+                        {showComparison && !isLightTable && (
                             <div className="absolute inset-0 z-[60] pointer-events-none overflow-hidden">
                                 <div 
                                     className="slider-hit-zone absolute inset-y-0 w-8 -ml-4 pointer-events-auto cursor-ew-resize group/slider"
