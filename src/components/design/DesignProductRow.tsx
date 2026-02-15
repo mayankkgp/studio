@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -53,6 +54,14 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
         if (components.some(c => c.status === 'CUSTOMER_REVIEW')) return 'CUSTOMER_REVIEW';
         if (components.every(c => c.status === 'APPROVED')) return 'APPROVED';
         return 'PENDING';
+    }, [designData]);
+
+    const isEligibleForStock = useMemo(() => {
+        if (designData.isStock) return false;
+        // MUST be all PENDING and NO versions added in any component
+        return designData.components.every(c => 
+            c.status === 'PENDING' && (!c.versions || c.versions.length === 0)
+        );
     }, [designData]);
 
     const getCoreSpecs = () => {
@@ -161,14 +170,17 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
 
                 {/* Zone E: Actions */}
                 <div className="w-48 px-6 flex items-center justify-end gap-2 shrink-0">
-                    <Button 
-                        size="sm" 
-                        variant="outline" 
-                        className="h-8 text-[10px] font-black uppercase tracking-widest gap-1.5 opacity-0 group-hover/row:opacity-100 transition-opacity"
-                        onClick={handleToggleStock}
-                    >
-                        {designData.isStock ? <Package className="h-3.5 w-3.5" /> : <Archive className="h-3.5 w-3.5" />}
-                    </Button>
+                    {(designData.isStock || isEligibleForStock) && (
+                        <Button 
+                            size="sm" 
+                            variant="outline" 
+                            className="h-8 text-[10px] font-black uppercase tracking-widest gap-1.5 opacity-0 group-hover/row:opacity-100 transition-opacity"
+                            onClick={handleToggleStock}
+                            title={designData.isStock ? "Restore Design Tools" : "Mark as Stock"}
+                        >
+                            {designData.isStock ? <Package className="h-3.5 w-3.5" /> : <Archive className="h-3.5 w-3.5" />}
+                        </Button>
+                    )}
                     <Button 
                         size="sm" 
                         className="h-8 text-[10px] font-black uppercase tracking-widest gap-1.5 shadow-sm"

@@ -119,7 +119,7 @@ function AddComponentWidget({ mode, onAdd }: AddComponentWidgetProps) {
                 <div className="space-y-4">
                     <div className="flex items-center gap-2">
                         <div className="h-5 w-5 rounded bg-primary/10 flex items-center justify-center">
-                            <Plus className="h-3 w-3 text-primary" />
+                            <Plus className="h-3.5 w-3.5 text-primary" />
                         </div>
                         <h4 className="text-[10px] font-black uppercase tracking-widest text-foreground">New Design Component</h4>
                     </div>
@@ -198,6 +198,7 @@ export function DesignProductCard({ product, isDesigner, onUpdateDesign, custome
     
     const isEligibleForStock = useMemo(() => {
         if (localDesignData.isStock) return false;
+        // MUST be all PENDING and NO versions added
         return localDesignData.components.every(c => c.status === 'PENDING' && (!c.versions || c.versions.length === 0));
     }, [localDesignData]);
 
