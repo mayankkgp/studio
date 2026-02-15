@@ -99,8 +99,8 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
             <div 
                 onClick={() => setIsExpanded(!isExpanded)}
                 className={cn(
-                    "flex items-center h-16 bg-card hover:bg-muted/30 transition-all cursor-pointer relative w-full overflow-hidden min-w-0",
-                    isExpanded && "bg-muted/20"
+                    "flex items-center bg-card hover:bg-muted/30 transition-all cursor-pointer relative w-full overflow-hidden min-w-0",
+                    isExpanded ? "bg-muted/20 min-h-[4rem] py-4" : "h-16"
                 )}
             >
                 {/* Zone A: Status Indicator */}
@@ -119,12 +119,18 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
 
                 {/* Zone C: Specifications - Fluid with rigid basis-0 and VW clamping */}
                 <div className="flex-[1_1_0px] basis-0 min-w-[20vw] max-w-[30vw] px-4 flex flex-col justify-center overflow-hidden min-w-0">
-                    {/* Line 1: Core Specs - Scrollable */}
-                    <div className="text-[11px] font-bold text-foreground/80 whitespace-nowrap overflow-x-auto no-scrollbar scroll-smooth w-full block pb-0.5">
+                    {/* Line 1: Core Specs - Wraps on Expansion */}
+                    <div className={cn(
+                        "text-[11px] font-bold text-foreground/80 scroll-smooth w-full block pb-0.5",
+                        isExpanded ? "whitespace-normal" : "whitespace-nowrap overflow-x-auto no-scrollbar"
+                    )}>
                         {getCoreSpecs() || "No core specs"}
                     </div>
-                    {/* Line 2: Add-ons - Scrollable */}
-                    <div className="w-full flex items-center gap-2 overflow-x-auto no-scrollbar pb-0.5 whitespace-nowrap scroll-smooth min-w-0">
+                    {/* Line 2: Add-ons - Wraps on Expansion */}
+                    <div className={cn(
+                        "w-full flex gap-2 pb-0.5 scroll-smooth min-w-0",
+                        isExpanded ? "flex-wrap mt-1" : "items-center overflow-x-auto no-scrollbar whitespace-nowrap"
+                    )}>
                         {activeAddons.length > 0 && activeAddons.map((addon) => (
                             <Badge 
                                 key={addon.id} 
@@ -135,7 +141,10 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
                             </Badge>
                         ))}
                         {product.specialRequest && (
-                            <div className="text-[10px] italic font-semibold text-destructive whitespace-nowrap shrink-0 ml-1 truncate max-w-[150px]">
+                            <div className={cn(
+                                "text-[10px] italic font-semibold text-destructive shrink-0 ml-1",
+                                isExpanded ? "w-full mt-1" : "truncate max-w-[150px] whitespace-nowrap"
+                            )}>
                                 Req: {product.specialRequest}
                             </div>
                         )}
@@ -226,9 +235,16 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
                                             <tr key={comp.id} className="border-b last:border-0 hover:bg-muted/20">
                                                 <td className="px-4 py-2.5 font-bold">{comp.name}</td>
                                                 <td className="px-4 py-2.5">
-                                                    <Badge variant="outline" className="h-5 rounded-md px-1.5 font-mono text-[10px] font-black">
-                                                        V{comp.versions.length}
-                                                    </Badge>
+                                                    <div 
+                                                        className={cn(
+                                                            "h-6 px-2 rounded-md flex items-center justify-center w-fit min-w-[2.5rem] shadow-sm border transition-all",
+                                                            STATUS_CONFIG[comp.status].bg,
+                                                            STATUS_CONFIG[comp.status].border,
+                                                            STATUS_CONFIG[comp.status].text
+                                                        )}
+                                                    >
+                                                        <span className="text-[10px] font-black tracking-tighter">V{comp.versions.length}</span>
+                                                    </div>
                                                 </td>
                                                 <td className="px-4 py-2.5">
                                                     <div className="flex items-center gap-2">
