@@ -19,7 +19,10 @@ import {
     Check,
     Lock,
     Trash2,
-    Info
+    Info,
+    ChevronDown,
+    ChevronUp,
+    Clock
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -160,6 +163,7 @@ export function DesignProductCard({
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [newDrafts, setNewDrafts] = useState<Record<string, boolean>>({});
     const [draftText, setDraftText] = useState('');
+    const [isTimelineCollapsed, setIsTimelineCollapsed] = useState(false);
 
     useEffect(() => {
         if (forceOpenWorkbench) setIsFullscreen(true);
@@ -611,37 +615,60 @@ export function DesignProductCard({
                             </div>
 
                             {visibleVersions.length > 0 && (
-                                <div className="h-24 shrink-0 bg-background/80 backdrop-blur-xl border-t z-50 flex items-center px-6 overflow-x-auto no-scrollbar gap-4">
-                                    <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground vertical-text shrink-0 mr-4">Timeline</div>
-                                    {visibleVersions.map((v) => {
-                                        const isThisVersionLocked = !isDesigner && activeComponent.status === 'DRAFT' && v.versionNumber === currentVersionNum;
-                                        return (
-                                            <button 
-                                                key={v.id} 
-                                                onClick={() => setSelectedVersionId(v.id)}
-                                                className={cn(
-                                                    "h-16 w-24 shrink-0 rounded-lg border-2 overflow-hidden transition-all relative group",
-                                                    selectedVersionId === v.id || (!selectedVersionId && v.versionNumber === viewedVersionNum) 
-                                                        ? "border-primary ring-4 ring-primary/10 scale-105 shadow-xl" 
-                                                        : "border-transparent opacity-60 hover:opacity-100 hover:border-primary/40"
-                                                )}
-                                            >
-                                                {isThisVersionLocked ? (
-                                                    <div className="w-full h-full bg-muted flex items-center justify-center">
-                                                        <Lock className="h-5 w-5 text-muted-foreground/40" />
-                                                    </div>
-                                                ) : (
-                                                    <img src={v.imageUrl} className="w-full h-full object-cover" alt={`Version ${v.versionNumber}`} />
-                                                )}
-                                                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <span className="text-[10px] font-black text-white font-mono">V{v.versionNumber}</span>
-                                                </div>
-                                                {(selectedVersionId === v.id || (!selectedVersionId && v.versionNumber === viewedVersionNum)) && (
-                                                    <div className="absolute bottom-0 left-0 right-0 h-1 bg-primary" />
-                                                )}
-                                            </button>
-                                        );
-                                    })}
+                                <div className={cn(
+                                    "shrink-0 bg-background/80 backdrop-blur-xl border-t z-50 flex flex-col transition-all duration-300 ease-in-out",
+                                    isTimelineCollapsed ? "h-9" : "h-32"
+                                )}>
+                                    <div className="flex items-center justify-between px-6 h-9 border-b border-primary/5 shrink-0">
+                                        <div className="flex items-center gap-3">
+                                            <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Version History</span>
+                                            <Badge variant="outline" className="h-4 px-1.5 text-[8px] font-mono border-primary/10">{visibleVersions.length}</Badge>
+                                        </div>
+                                        <Button 
+                                            variant="ghost" 
+                                            size="sm" 
+                                            className="h-6 px-2 text-[9px] font-black uppercase tracking-widest gap-1 hover:bg-primary/5"
+                                            onClick={() => setIsTimelineCollapsed(!isTimelineCollapsed)}
+                                        >
+                                            {isTimelineCollapsed ? "Show Timeline" : "Hide"}
+                                            {isTimelineCollapsed ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                                        </Button>
+                                    </div>
+                                    
+                                    {!isTimelineCollapsed && (
+                                        <div className="flex-1 flex items-center px-6 overflow-x-auto no-scrollbar gap-4 py-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                                            {visibleVersions.map((v) => {
+                                                const isThisVersionLocked = !isDesigner && activeComponent.status === 'DRAFT' && v.versionNumber === currentVersionNum;
+                                                return (
+                                                    <button 
+                                                        key={v.id} 
+                                                        onClick={() => setSelectedVersionId(v.id)}
+                                                        className={cn(
+                                                            "h-16 w-24 shrink-0 rounded-lg border-2 overflow-hidden transition-all relative group",
+                                                            selectedVersionId === v.id || (!selectedVersionId && v.versionNumber === viewedVersionNum) 
+                                                                ? "border-primary ring-4 ring-primary/10 scale-105 shadow-xl" 
+                                                                : "border-transparent opacity-60 hover:opacity-100 hover:border-primary/40"
+                                                        )}
+                                                    >
+                                                        {isThisVersionLocked ? (
+                                                            <div className="w-full h-full bg-muted flex items-center justify-center">
+                                                                <Lock className="h-5 w-5 text-muted-foreground/40" />
+                                                            </div>
+                                                        ) : (
+                                                            <img src={v.imageUrl} className="w-full h-full object-cover" alt={`Version ${v.versionNumber}`} />
+                                                        )}
+                                                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <span className="text-[10px] font-black text-white font-mono">V{v.versionNumber}</span>
+                                                        </div>
+                                                        {(selectedVersionId === v.id || (!selectedVersionId && v.versionNumber === viewedVersionNum)) && (
+                                                            <div className="absolute bottom-0 left-0 right-0 h-1 bg-primary" />
+                                                        )}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>
