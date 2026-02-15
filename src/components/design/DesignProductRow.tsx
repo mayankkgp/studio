@@ -123,7 +123,7 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
                     <div className="text-[11px] font-bold text-foreground/80 truncate w-full">
                         {getCoreSpecs() || "No core specs"}
                     </div>
-                    <div className="w-full flex items-center gap-2 overflow-x-auto no-scrollbar pb-0.5 whitespace-nowrap scroll-smooth">
+                    <div className="w-full flex items-center gap-2 overflow-x-auto no-scrollbar pb-0.5 whitespace-nowrap scroll-smooth min-w-0">
                         {activeAddons.length > 0 && activeAddons.map((addon) => (
                             <Badge 
                                 key={addon.id} 
