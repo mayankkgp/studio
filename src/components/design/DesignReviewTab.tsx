@@ -77,7 +77,7 @@ export function DesignReviewTab({ order, onUpdateOrder, role, layout }: DesignRe
     }
 
     return (
-        <div className="flex flex-col h-full overflow-hidden bg-background/50">
+        <div className="flex flex-col h-full w-full max-w-full overflow-hidden bg-background/50">
             {/* Triage Filters Bar */}
             <div className="shrink-0 px-4 md:px-8 py-4 border-b bg-card/20 flex items-center gap-4">
                 <div className="flex items-center gap-2 text-muted-foreground mr-4">
@@ -121,7 +121,7 @@ export function DesignReviewTab({ order, onUpdateOrder, role, layout }: DesignRe
                 </div>
             </div>
 
-            <ScrollArea className="flex-1 w-full overflow-hidden">
+            <ScrollArea className="flex-1 w-full max-w-full overflow-hidden">
                 <div className={cn(
                     "max-w-full mx-auto p-4 md:p-8 space-y-12 pb-32 overflow-hidden",
                     layout === 'table' && "md:p-0"

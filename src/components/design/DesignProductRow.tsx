@@ -97,11 +97,11 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
     };
 
     return (
-        <div className="group/row w-full max-w-full min-w-0 overflow-hidden">
+        <div className="group/row w-full max-w-full overflow-hidden border-b border-primary/5">
             <div 
                 onClick={() => setIsExpanded(!isExpanded)}
                 className={cn(
-                    "flex items-center h-16 bg-card hover:bg-muted/30 transition-all border-y border-primary/5 cursor-pointer relative w-full max-w-full min-w-0",
+                    "flex items-center h-16 bg-card hover:bg-muted/30 transition-all cursor-pointer relative w-full max-w-full min-w-0",
                     isExpanded && "bg-muted/20"
                 )}
             >
@@ -119,8 +119,8 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
                     </div>
                 </div>
 
-                {/* Zone C: Unified Specifications - Strict Scroll Column */}
-                <div className="flex-1 min-w-0 px-4 space-y-0.5 overflow-hidden flex flex-col justify-center">
+                {/* Zone C: Unified Specifications - Fluid with Horizontal Scroll */}
+                <div className="flex-1 min-w-0 px-4 flex flex-col justify-center overflow-hidden">
                     <div className="text-[11px] font-bold text-foreground/80 truncate">
                         {getCoreSpecs() || "No core specs"}
                     </div>
@@ -208,7 +208,7 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
 
             {/* Zone F: Expansion Detail Panel */}
             {isExpanded && (
-                <div className="bg-muted/10 border-b border-primary/5 animate-in slide-in-from-top-2 duration-200 w-full">
+                <div className="bg-muted/10 border-t border-primary/5 animate-in slide-in-from-top-2 duration-200 w-full max-w-full overflow-hidden">
                     <div className="px-24 py-4">
                         <div className="rounded-lg border bg-background/50 overflow-hidden shadow-inner">
                             <table className="w-full text-left">
