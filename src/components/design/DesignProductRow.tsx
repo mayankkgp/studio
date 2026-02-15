@@ -118,7 +118,7 @@ export function DesignProductRow({ product, isDesigner, onUpdateDesign, onOpenWo
                 </div>
 
                 {/* Zone C: Specifications - Fluid with rigid basis-0 and VW clamping */}
-                <div className="flex-[1_1_0px] basis-0 min-w-[20vw] max-w-[35vw] px-4 flex flex-col justify-center overflow-hidden min-w-0">
+                <div className="flex-[1_1_0px] basis-0 min-w-[20vw] max-w-[30vw] px-4 flex flex-col justify-center overflow-hidden min-w-0">
                     <div className="text-[11px] font-bold text-foreground/80 truncate w-full block">
                         {getCoreSpecs() || "No core specs"}
                     </div>
