@@ -356,7 +356,7 @@ export function FeedbackSidebar({
 
                 <TabsContent value="brief" className="flex-1 overflow-hidden m-0 p-0 flex flex-col !mt-0 data-[state=active]:flex outline-none">
                     <ScrollArea className="flex-1 w-full h-full">
-                        <div className="p-6 space-y-8 pb-20">
+                        <div className="p-4 space-y-8 pb-20">
                             {isBriefEmpty ? (
                                 <div className="py-20 text-center opacity-40 italic">
                                     <Sparkles className="h-10 w-10 mx-auto mb-3 opacity-20" />
