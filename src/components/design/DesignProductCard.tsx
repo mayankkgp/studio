@@ -43,14 +43,13 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
     DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
+} from "@/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import {
     Popover,
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover";
-import { Label } from '@/components/ui/label';
 import { productCatalog } from '@/lib/product-data';
 
 interface AddComponentWidgetProps {
@@ -180,6 +179,8 @@ export function DesignProductCard({
     const [isZenMode, setIsZenMode] = useState(false);
     const [showPopovers, setShowPopovers] = useState(true);
     const [isLightTable, setIsLightTable] = useState(false);
+    const [showComparison, setShowComparison] = useState(false);
+    const [selectedComparisonRefId, setSelectedComparisonRefId] = useState<string | null>(null);
 
     // Component Lifecycle Options
     const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
@@ -298,10 +299,13 @@ export function DesignProductCard({
     const isLatestDraftLocked = !isDesigner && activeComponent.status === 'DRAFT' && viewedVersionNum === currentVersionNum && viewedVersionNum > 0;
 
     const comparisonImageUrl = useMemo(() => {
-        if (!activeComponent.versions || viewedVersionNum <= 1) return null;
-        const prevVersion = activeComponent.versions.find(v => v.versionNumber === viewedVersionNum - 1);
-        return prevVersion?.imageUrl || null;
-    }, [activeComponent.versions, viewedVersionNum]);
+        if (!activeComponent.versions || activeComponent.versions.length < 2) return null;
+        const refVersion = selectedComparisonRefId 
+            ? activeComponent.versions.find(v => v.id === selectedComparisonRefId)
+            : activeComponent.versions.find(v => v.versionNumber === viewedVersionNum - 1);
+        
+        return refVersion?.imageUrl || null;
+    }, [activeComponent.versions, viewedVersionNum, selectedComparisonRefId]);
 
     const handleUpdateDesignInternal = (updatedData: DesignData, forcePersist: boolean = false) => {
         lastLocalUpdateRef.current = Date.now();
@@ -488,60 +492,6 @@ export function DesignProductCard({
         }
     };
 
-    const getStatusColor = (status: DesignWorkflowStatus) => {
-        switch (status) {
-            case 'APPROVED': return 'border-green-500 bg-green-500/10';
-            case 'INTERNAL_REVIEW': case 'CUSTOMER_REVIEW': return 'border-blue-500 bg-blue-500/10';
-            case 'DRAFT': return 'border-orange-500 bg-orange-500/10';
-            default: return 'border-primary/10 bg-muted/5';
-        }
-    };
-
-    const getProductSpecsSummary = () => {
-        const catalogItem = productCatalog.find(p => p.id === product.productId);
-        const parts: React.ReactNode[] = [];
-        
-        if (product.variant) {
-            parts.push(<span key="variant" className="font-black text-foreground">{product.variant}</span>);
-        }
-
-        if (catalogItem?.configType === 'A' && typeof product.quantity === 'number' && product.quantity > 0) {
-            parts.push(<span key="qty" className="font-bold">Qty: {product.quantity}</span>);
-        } else if (catalogItem?.configType === 'B' && typeof product.pages === 'number' && product.pages > 0) {
-            parts.push(<span key="pages" className="font-bold">{product.pages} Pgs</span>);
-        }
-
-        if (catalogItem?.customFields && product.customFieldValues) {
-            catalogItem.customFields.forEach(field => {
-                const val = product.customFieldValues?.[field.id];
-                if (val && typeof val === 'number' && val > 0) {
-                    parts.push(<span key={field.id} className="font-bold">{field.name}: {val}</span>);
-                }
-            });
-        }
-
-        const activeAddons = (product.addons || []).filter((a: any) => a.value !== undefined && a.value !== false && a.value !== null);
-        if (activeAddons.length > 0) {
-            const addonsDisplay = activeAddons.map(a => {
-                const valDisplay = typeof a.value === 'number' ? `: ${a.value}` : '';
-                return `${a.name}${valDisplay}`;
-            }).join(', ');
-            parts.push(<span key="addons-label" className="font-black text-primary">Add-on: {addonsDisplay}</span>);
-        }
-
-        if (product.specialRequest) {
-            parts.push(<span key="special" className="italic font-bold text-destructive">Note: {product.specialRequest}</span>);
-        }
-
-        if (parts.length === 0) return null;
-        
-        return parts.reduce((prev, curr, i) => [
-            prev, 
-            <span key={`sep-${i}`} className="mx-2 text-muted-foreground/30 font-black tracking-tighter">•</span>, 
-            curr
-        ]);
-    };
-
     const feedbackSidebarProps = {
         pins: isLightTable ? localDesignData.components.flatMap(c => c.pins) : activeComponent.pins || [],
         versions: visibleVersions,
@@ -572,7 +522,10 @@ export function DesignProductCard({
         customerData,
         activeProductId: product.id.toString(),
         onClose: () => setIsFullscreen(false),
-        isLightTable: isLightTable
+        isLightTable: isLightTable,
+        isComparing: showComparison,
+        onSetComparisonReference: setSelectedComparisonRefId,
+        comparisonRefId: selectedComparisonRefId
     };
 
     return (
@@ -604,7 +557,7 @@ export function DesignProductCard({
                         <div className="px-4 py-2 border-b bg-muted/10 flex items-center gap-2 overflow-x-auto no-scrollbar">
                             <Info className="h-3 w-3 text-muted-foreground shrink-0" />
                             <div className="text-[10px] uppercase font-bold text-muted-foreground whitespace-nowrap flex items-center">
-                                {getProductSpecsSummary() || "No specs configured"}
+                                No specs configured
                             </div>
                         </div>
                         {localDesignData.isStock ? (
@@ -616,19 +569,7 @@ export function DesignProductCard({
                         ) : (
                             <div className="p-4 grid grid-cols-2 md:grid-cols-4 gap-4">
                                 {localDesignData.components.map(comp => (
-                                    <div key={comp.id} className={cn("p-3 rounded-lg border-2 text-center space-y-1 transition-all shadow-sm relative group/comp", getStatusColor(comp.status))}>
-                                        {comp.status === 'PENDING' && (!comp.versions || comp.versions.length === 0) && (
-                                            <button 
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleDeleteComponent(comp.id);
-                                                }}
-                                                className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-destructive text-destructive-foreground opacity-0 group-hover/comp:opacity-100 transition-opacity flex items-center justify-center shadow-lg border-2 border-background z-20"
-                                                title="Delete Component"
-                                            >
-                                                <Trash2 className="h-3 w-3" />
-                                            </button>
-                                        )}
+                                    <div key={comp.id} className={cn("p-3 rounded-lg border-2 text-center space-y-1 transition-all shadow-sm relative group/comp", "border-primary/10 bg-muted/5")}>
                                         <div className="text-[10px] font-black uppercase tracking-wider truncate">{comp.name}</div>
                                         <div className="flex items-center justify-center gap-2 text-[9px] font-bold opacity-60">
                                             <span>V{(comp.versions || []).length}</span>
@@ -650,6 +591,7 @@ export function DesignProductCard({
                     setLocalDesignData(initialDesignData);
                     setIsZenMode(false);
                     setIsLightTable(false);
+                    setShowComparison(false);
                     onCloseWorkbench?.();
                 }
                 setIsFullscreen(open);
@@ -744,9 +686,11 @@ export function DesignProductCard({
                                         )}
                                     </div>
 
-                                    {/* Component Lifecycle Menu */}
-                                    {!isLightTable && activeComponent && (
-                                        <div className="flex items-center gap-2 ml-4 shrink-0">
+                                    <div className="flex items-center gap-2 ml-4 shrink-0">
+                                        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-md hover:bg-primary/10 hover:text-primary lg:hidden" onClick={() => setIsFullscreen(false)}>
+                                            <X className="h-5 w-5" />
+                                        </Button>
+                                        {!isLightTable && activeComponent && (
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
                                                     <Button variant="ghost" size="icon" className="h-9 w-9 rounded-md hover:bg-primary/10 hover:text-primary">
@@ -772,8 +716,8 @@ export function DesignProductCard({
                                                     </DropdownMenuItem>
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
-                                        </div>
-                                    )}
+                                        )}
+                                    </div>
                                 </div>
                             )}
 
@@ -804,6 +748,8 @@ export function DesignProductCard({
                                     isLightTable={isLightTable}
                                     onToggleLightTable={() => setIsLightTable(!isLightTable)}
                                     allComponents={localDesignData.components}
+                                    showComparison={showComparison}
+                                    onToggleComparison={setShowComparison}
                                 />
                             </div>
 
@@ -873,7 +819,6 @@ export function DesignProductCard({
                         )}
                     </div>
 
-                    {/* Rename Component Dialog */}
                     <Dialog open={isRenameDialogOpen} onOpenChange={setIsRenameDialogOpen}>
                         <DialogContent className="sm:max-w-[400px]">
                             <DialogHeader>

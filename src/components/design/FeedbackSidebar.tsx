@@ -24,8 +24,14 @@ import {
     Lock,
     CornerDownRight,
     CheckCircle2,
-    X
+    X,
+    Clock,
+    History,
+    ChevronRight,
+    Calendar,
+    UserCircle
 } from 'lucide-react';
+import { format } from 'date-fns';
 
 const PIN_COLORS: Record<DesignPinStatus, string> = {
     open: 'bg-blue-600',
@@ -53,6 +59,9 @@ interface FeedbackSidebarProps {
     activeProductId?: string;
     onClose: () => void;
     isLightTable?: boolean;
+    isComparing: boolean;
+    onSetComparisonReference: (id: string) => void;
+    comparisonRefId: string | null;
 }
 
 export function FeedbackSidebar({ 
@@ -75,7 +84,10 @@ export function FeedbackSidebar({
     customerData,
     activeProductId,
     onClose,
-    isLightTable = false
+    isLightTable = false,
+    isComparing,
+    onSetComparisonReference,
+    comparisonRefId
 }: FeedbackSidebarProps) {
     const [filter, setFilter] = useState<'all' | 'open' | 'mistakes'>('open');
     const [activeTab, setActiveTab] = useState('feedback');
@@ -212,6 +224,78 @@ export function FeedbackSidebar({
     const hasProductBrief = activeProductId && customerData?.productBriefs?.[activeProductId] && customerData.productBriefs[activeProductId].trim().length > 0;
 
     const isBriefEmpty = !hasVisual && !hasNarrative && !hasProductBrief;
+
+    if (isComparing) {
+        return (
+            <div className="flex flex-col h-full bg-background border-l border-primary/10 overflow-hidden animate-in slide-in-from-right duration-300">
+                <div className="p-4 border-b bg-muted/30 shrink-0 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="h-8 w-8 rounded-lg bg-blue-600/10 text-blue-600 flex items-center justify-center border border-blue-600/20">
+                            <History className="h-4 w-4" />
+                        </div>
+                        <div className="flex flex-col -space-y-0.5">
+                            <h3 className="font-headline font-black text-[13px] uppercase tracking-widest">Version History</h3>
+                            <span className="text-[9px] font-black uppercase text-muted-foreground">Select Reference Image</span>
+                        </div>
+                    </div>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground" onClick={onClose}>
+                        <X className="h-4 w-4" />
+                    </Button>
+                </div>
+
+                <ScrollArea className="flex-1">
+                    <div className="p-4 space-y-3 pb-20">
+                        {versions.slice().reverse().map((v) => {
+                            const isSelected = comparisonRefId === v.id || (!comparisonRefId && v.versionNumber === viewedVersion - 1);
+                            const isCurrent = v.versionNumber === viewedVersion;
+
+                            return (
+                                <button
+                                    key={v.id}
+                                    onClick={() => !isCurrent && onSetComparisonReference(v.id)}
+                                    className={cn(
+                                        "w-full text-left p-3 rounded-xl border-2 transition-all flex items-start gap-4 group",
+                                        isSelected 
+                                            ? "border-blue-600 bg-blue-600/5 shadow-md shadow-blue-600/10" 
+                                            : isCurrent 
+                                                ? "border-primary/20 bg-primary/5 opacity-60 cursor-default" 
+                                                : "border-primary/5 bg-background hover:border-blue-600/40"
+                                    )}
+                                >
+                                    <div className="h-16 w-20 shrink-0 rounded-lg overflow-hidden border border-primary/10 relative shadow-sm">
+                                        <img src={v.imageUrl} className="h-full w-full object-cover" alt={`V${v.versionNumber}`} />
+                                        <div className="absolute inset-0 bg-black/20" />
+                                        <div className="absolute bottom-1 right-1 bg-black/60 text-white text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded backdrop-blur-sm">
+                                            V{v.versionNumber}
+                                        </div>
+                                    </div>
+                                    <div className="flex-1 min-w-0 space-y-1.5 pt-0.5">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-1.5">
+                                                <UserCircle className="h-3 w-3 text-muted-foreground" />
+                                                <span className="text-[10px] font-black uppercase tracking-tighter">{v.author}</span>
+                                            </div>
+                                            {isCurrent && <Badge variant="outline" className="h-4 text-[7px] font-black uppercase border-primary/20 text-primary">Active</Badge>}
+                                        </div>
+                                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground">
+                                            <Calendar className="h-3 w-3 opacity-50" />
+                                            {format(new Date(v.timestamp), 'dd MMM, HH:mm')}
+                                        </div>
+                                        {isSelected && (
+                                            <div className="flex items-center gap-1 text-[9px] font-black uppercase text-blue-600 mt-2">
+                                                <CheckCircle2 className="h-3 w-3" /> Comparison Reference
+                                            </div>
+                                        )}
+                                    </div>
+                                    {!isCurrent && <ChevronRight className={cn("h-4 w-4 shrink-0 self-center opacity-0 group-hover:opacity-100 transition-opacity", isSelected && "opacity-100 text-blue-600")} />}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </ScrollArea>
+            </div>
+        );
+    }
 
     return (
         <div className="flex flex-col h-full bg-background border-l border-primary/10 overflow-hidden">

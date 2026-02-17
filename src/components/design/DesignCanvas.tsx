@@ -42,7 +42,6 @@ const PIN_COLORS: Record<DesignPinStatus, string> = {
     resolved: 'bg-green-600'
 };
 
-const ABSOLUTE_MIN_ZOOM = 0.01; 
 const MAX_ZOOM = 4.0;
 
 interface DesignCanvasProps {
@@ -71,6 +70,8 @@ interface DesignCanvasProps {
     isLightTable?: boolean;
     onToggleLightTable?: () => void;
     allComponents?: DesignComponent[];
+    showComparison: boolean;
+    onToggleComparison: (val: boolean) => void;
 }
 
 type ToolMode = 'pointer' | 'comment';
@@ -99,12 +100,13 @@ export function DesignCanvas({
     onTogglePopovers,
     isLightTable = false,
     onToggleLightTable,
-    allComponents = []
+    allComponents = [],
+    showComparison,
+    onToggleComparison
 }: DesignCanvasProps) {
     const [zoom, setZoom] = useState(1.0);
-    const [minFitZoom, setMinFitZoom] = useState(ABSOLUTE_MIN_ZOOM);
+    const [minFitZoom, setMinFitZoom] = useState(0.01);
     const [showPins, setShowPins] = useState(true);
-    const [showComparison, setShowComparison] = useState(false);
     const [activeTool, setActiveTool] = useState<ToolMode>('comment');
     
     const [sliderPosition, setSliderPosition] = useState(50);
@@ -155,23 +157,25 @@ export function DesignCanvas({
         const Vw = rect.width;
         const Vh = rect.height;
 
+        // Ensure the design center stays within the viewport boundaries (50% visibility rule)
+        const limitX = Vw / 2;
+        const limitY = Vh / 2;
+
         if (isLightTable) {
             const spreadEl = containerRef.current.querySelector('.flex-row');
             const spreadWidth = spreadEl ? spreadEl.getBoundingClientRect().width : 0;
-            const limitX = (Vw / 2) + (spreadWidth / 2) - 100;
-            const limitY = Vh / 2;
+            // Extend horizontal boundary for Light Table traverse
+            const spreadLimitX = (Vw / 2) + (spreadWidth / 2) - 100;
             return {
-                x: Math.max(-limitX, Math.min(offset.x, limitX)),
-                y: Math.max(-limitY, Math.min(offset.y, limitY))
-            };
-        } else {
-            const limitX = Vw / 2;
-            const limitY = Vh / 2;
-            return {
-                x: Math.max(-limitX, Math.min(offset.x, limitX)),
+                x: Math.max(-spreadLimitX, Math.min(offset.x, spreadLimitX)),
                 y: Math.max(-limitY, Math.min(offset.y, limitY))
             };
         }
+
+        return {
+            x: Math.max(-limitX, Math.min(offset.x, limitX)),
+            y: Math.max(-limitY, Math.min(offset.y, limitY))
+        };
     }, [isLightTable]);
 
     const calculateFitZoom = useCallback(() => {
@@ -187,40 +191,44 @@ export function DesignCanvas({
         if (!contentEl) return 1.0;
 
         const contentRect = contentEl.getBoundingClientRect();
-        const unscaledCw = contentRect.width / zoom;
-        const unscaledCh = contentRect.height / zoom;
+        const currentScale = zoom;
+        const unscaledCw = contentRect.width / currentScale;
+        const unscaledCh = contentRect.height / currentScale;
 
         if (unscaledCw === 0 || unscaledCh === 0) return 1.0;
 
         const scaleX = Vw / unscaledCw;
         const scaleY = Vh / unscaledCh;
+        
+        // 95% safety factor for breathable margins
         return Math.min(scaleX, scaleY) * 0.95;
     }, [isLightTable, zoom]);
 
     const handleReset = useCallback(() => {
         const fitScale = calculateFitZoom();
-        const finalZoom = Math.max(ABSOLUTE_MIN_ZOOM, Math.min(fitScale, MAX_ZOOM));
-        setZoom(finalZoom);
-        setMinFitZoom(finalZoom);
+        setZoom(fitScale);
+        setMinFitZoom(fitScale);
         setPanOffset({ x: 0, y: 0 });
     }, [calculateFitZoom]);
 
+    // Apply default fit-zoom on load
     useEffect(() => {
         const timer = setTimeout(handleReset, 100);
         return () => clearTimeout(timer);
     }, [imageUrl, isLightTable, handleReset]);
 
+    // Recalculate zoom floor on resize
     useEffect(() => {
         const updateThreshold = () => {
             const fit = calculateFitZoom();
-            const newMin = Math.max(ABSOLUTE_MIN_ZOOM, fit);
-            setMinFitZoom(newMin);
-            setZoom(prev => Math.max(prev, newMin));
+            setMinFitZoom(fit);
+            setZoom(prev => Math.max(prev, fit));
         };
         window.addEventListener('resize', updateThreshold);
         return () => window.removeEventListener('resize', updateThreshold);
     }, [calculateFitZoom]);
 
+    // Auto-clamp pan when zoom/fit changes
     useEffect(() => {
         setPanOffset(prev => getConstrainedPan(prev));
     }, [zoom, isLightTable, getConstrainedPan]);
@@ -238,6 +246,7 @@ export function DesignCanvas({
                 setZoom(prev => {
                     const factor = delta > 0 ? 0.9 : 1.1;
                     const next = prev * factor;
+                    // Strict clamp: never zoom out more than "Fit to Screen"
                     return Math.max(minFitZoom, Math.min(next, MAX_ZOOM));
                 });
             } else {
@@ -295,8 +304,8 @@ export function DesignCanvas({
     }, [isSpacePressed, selectedPinId, highlightedPinId, onPinClick, isFeedbackUnlocked, handleReset]);
 
     useEffect(() => {
-        if (!comparisonImageUrl && !isLightTable) setShowComparison(false);
-    }, [comparisonImageUrl, isLightTable]);
+        if (!comparisonImageUrl && !isLightTable) onToggleComparison(false);
+    }, [comparisonImageUrl, isLightTable, onToggleComparison]);
 
     useEffect(() => {
         const isFreshSelection = selectedPinId !== lastSelectionId.current || repositionKey !== lastRepositionKey.current;
@@ -520,7 +529,7 @@ export function DesignCanvas({
 
             {(imageUrl || isLightTable) && (
                 <>
-                    <div className="absolute left-0 top-1/2 -translate-y-1/2 z-50 flex flex-col gap-1.5 p-1 bg-background/90 backdrop-blur-xl border border-primary/20 rounded-r-xl shadow-2xl overflow-hidden">
+                    <div className="absolute left-0 top-1/2 -translate-y-1/2 z-50 flex flex-col p-1 bg-background/90 backdrop-blur-xl border border-primary/20 rounded-r-xl shadow-2xl overflow-hidden">
                         <TooltipProvider>
                             <div className="flex flex-col items-center gap-1 p-1">
                                 {isFeedbackUnlocked ? (
@@ -541,8 +550,8 @@ export function DesignCanvas({
                                 {onToggleLightTable && (
                                     <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className={cn("h-9 w-9 rounded-md", isLightTable && "bg-primary/10 text-primary")} onClick={onToggleLightTable}><LayoutGrid className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent side="right">Light Table</TooltipContent></Tooltip>
                                 )}
-                                {!isLightTable && (
-                                    <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className={cn("h-9 w-9 rounded-md", showComparison && "bg-primary/10 text-primary")} onClick={() => setShowComparison(!showComparison)}><Layers className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent side="right">Comparison Mode</TooltipContent></Tooltip>
+                                {!isLightTable && comparisonImageUrl && (
+                                    <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className={cn("h-9 w-9 rounded-md", showComparison && "bg-primary/10 text-primary")} onClick={() => onToggleComparison(!showComparison)}><Layers className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent side="right">Comparison Mode</TooltipContent></Tooltip>
                                 )}
                                 <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className={cn("h-9 w-9 rounded-md", isZenMode && "text-primary")} onClick={onToggleZen}>{isZenMode ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}</Button></TooltipTrigger><TooltipContent side="right">Zen Mode (F)</TooltipContent></Tooltip>
                             </div>
@@ -621,7 +630,10 @@ export function DesignCanvas({
                                             <div className={cn("h-5 w-5 rounded flex items-center justify-center text-[10px] font-black text-white", PIN_COLORS[activePin.status || 'open'])}>{activePinNumber}</div>
                                             <div className="flex flex-col -space-y-0.5">
                                                 <span className="text-[10px] font-black uppercase tracking-widest">{activePin.author}</span>
-                                                <div className="flex items-center gap-1.5"><span className="text-[8px] font-black uppercase text-primary">{activePin.status}</span>{activePin.isMistake && <span className="text-[8px] font-black uppercase text-destructive">• MISTAKE</span>}</div>
+                                                <div className="flex items-center gap-1.5">
+                                                    <span className="text-[8px] font-black uppercase text-primary">{activePin.status}</span>
+                                                    {activePin.isMistake && <span className="text-[8px] font-black uppercase text-destructive">• MISTAKE</span>}
+                                                </div>
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2">
