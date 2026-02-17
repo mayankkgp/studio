@@ -228,7 +228,7 @@ export function FeedbackSidebar({
             </div>
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
-                <TabsList className="grid w-full grid-cols-2 rounded-none bg-muted/20 border-b h-12">
+                <TabsList className="grid w-full grid-cols-2 rounded-none bg-muted/20 border-b h-12 shrink-0">
                     <TabsTrigger value="feedback" className="data-[state=active]:bg-background rounded-none border-b-2 border-transparent data-[state=active]:border-primary font-black uppercase text-[10px] tracking-widest">
                         <MessageSquare className="h-3.5 w-3.5 mr-2" /> Feedback
                     </TabsTrigger>
@@ -237,7 +237,7 @@ export function FeedbackSidebar({
                     </TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="feedback" className="flex-1 overflow-hidden m-0 p-0 flex flex-col">
+                <TabsContent value="feedback" className="flex-1 overflow-hidden m-0 p-0 flex flex-col !mt-0 data-[state=active]:flex outline-none">
                     <div className="p-3 border-b flex gap-1 bg-muted/5 shrink-0">
                         {(['all', 'open', 'mistakes'] as const).map((f) => (
                             <button key={f} onClick={() => setFilter(f)} className={cn("flex-1 text-[9px] font-black uppercase tracking-widest h-7 rounded transition-all", filter === f ? "bg-background text-primary shadow-sm" : "text-muted-foreground hover:text-foreground")}>{f}</button>
@@ -354,8 +354,8 @@ export function FeedbackSidebar({
                     </ScrollArea>
                 </TabsContent>
 
-                <TabsContent value="brief" className="flex-1 overflow-hidden m-0 p-0 flex flex-col">
-                    <ScrollArea className="flex-1">
+                <TabsContent value="brief" className="flex-1 overflow-hidden m-0 p-0 flex flex-col !mt-0 data-[state=active]:flex outline-none">
+                    <ScrollArea className="flex-1 w-full h-full">
                         <div className="p-6 space-y-8 pb-20">
                             {isBriefEmpty ? (
                                 <div className="py-20 text-center opacity-40 italic">
