@@ -165,6 +165,7 @@ export function DesignCanvas({
             const spreadEl = containerRef.current.querySelector('.flex-row');
             const spreadWidth = spreadEl ? spreadEl.getBoundingClientRect().width : 0;
             
+            // Allow panning across the full horizontal spread, keeping at least 1 component partially visible
             const limitX = (Vw / 2) + (spreadWidth / 2) - 100;
             const limitY = Vh / 2;
 
@@ -173,6 +174,7 @@ export function DesignCanvas({
                 y: Math.max(-limitY, Math.min(offset.y, limitY))
             };
         } else {
+            // Standard View: Don't allow the center of the image to leave the viewport (50% rule)
             const limitX = Vw / 2;
             const limitY = Vh / 2;
 
@@ -538,11 +540,12 @@ export function DesignCanvas({
                             >
                                 <GripHorizontal className="h-5 w-5" />
                             </button>
-                            <div className="absolute top-6 right-12 bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded border border-white/10 opacity-0 group-hover/slider:opacity-100 transition-opacity whitespace-nowrap">
-                                Before
-                            </div>
-                            <div className="absolute top-6 left-12 bg-black/80 text-white text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded opacity-0 group-hover/slider:opacity-100 transition-opacity whitespace-nowrap">
+                            {/* Corrected Labels: After (New) on Left, Before (Old) on Right */}
+                            <div className="absolute top-6 right-12 bg-black/80 text-white text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded opacity-0 group-hover/slider:opacity-100 transition-opacity whitespace-nowrap">
                                 After
+                            </div>
+                            <div className="absolute top-6 left-12 bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded border border-white/10 opacity-0 group-hover/slider:opacity-100 transition-opacity whitespace-nowrap">
+                                Before
                             </div>
                         </div>
                     </div>
@@ -590,8 +593,9 @@ export function DesignCanvas({
 
             {(imageUrl || isLightTable) && (
                 <>
-                    <div className="absolute left-2 top-1/2 -translate-y-1/2 z-50 flex flex-col gap-1 p-1 bg-background/90 backdrop-blur-xl border border-primary/20 rounded-full shadow-2xl">
+                    <div className="absolute left-0 top-1/2 -translate-y-1/2 z-50 flex flex-col gap-1 p-1 bg-background/90 backdrop-blur-xl border border-primary/20 rounded-r-xl shadow-2xl">
                         <TooltipProvider>
+                            {/* Group 1: Annotation Tools */}
                             <div className="flex flex-col items-center gap-1 px-1 pt-1">
                                 {isFeedbackUnlocked ? (
                                     <>
@@ -627,13 +631,8 @@ export function DesignCanvas({
 
                             <div className="w-4 h-px bg-muted-foreground/20 mx-auto my-1" />
 
+                            {/* Group 2: View Toggles */}
                             <div className="flex flex-col items-center gap-1 px-1">
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full" onClick={handleReset}><Scaling className="h-4 w-4" /></Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent side="right">Fit to Screen (R)</TooltipContent>
-                                </Tooltip>
                                 <Tooltip>
                                     <TooltipTrigger asChild>
                                         <Button variant="ghost" size="icon" className={cn("h-9 w-9 rounded-full", !showPins && "text-primary")} onClick={() => setShowPins(!showPins)}>{showPins ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}</Button>
@@ -674,7 +673,14 @@ export function DesignCanvas({
 
                             <div className="w-4 h-px bg-muted-foreground/20 mx-auto my-1" />
 
+                            {/* Group 3: Navigation Group */}
                             <div className="flex flex-col items-center gap-1 px-1 pb-1">
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full" onClick={handleReset}><Scaling className="h-4 w-4" /></Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="right">Fit to Screen (R)</TooltipContent>
+                                </Tooltip>
                                 <Tooltip>
                                     <TooltipTrigger asChild>
                                         <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full" onClick={handleZoomIn}><ZoomIn className="h-4 w-4" /></Button>
@@ -741,44 +747,75 @@ export function DesignCanvas({
                                                 <div className="flex items-center gap-1.5"><span className="text-[8px] font-black uppercase tracking-widest text-primary">{activePin.status}</span>{activePin.isMistake && <span className="text-[8px] font-black uppercase tracking-widest text-destructive">• MISTAKE</span>}</div>
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-2"><span className="text-[9px] font-bold text-muted-foreground uppercase opacity-60">V{activePin.version}</span><Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:bg-destructive/10 hover:text-destructive" onClick={() => onPinClick(null)}><X className="h-3.5 w-3.5" /></Button></div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-[9px] font-bold text-muted-foreground uppercase opacity-60">V{activePin.version}</span>
+                                            <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:bg-destructive/10 hover:text-destructive" onClick={() => onPinClick(null)}>
+                                                <X className="h-3.5 w-3.5" />
+                                            </Button>
+                                        </div>
                                     </div>
                                     <div className="p-4 space-y-4 max-h-[400px] overflow-y-auto custom-scrollbar">
                                         {activePin.isDraft ? (
                                             <div className="space-y-3">
                                                 <Textarea ref={textareaRef} placeholder="Enter feedback details..." className="min-h-[80px] text-xs font-semibold leading-relaxed" value={draftText} onChange={(e) => onDraftTextChange(e.target.value)} onKeyDown={(e) => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); handleSaveComment(); } }} />
-                                                <div className="flex items-center justify-between">{!isDesigner && (<div className="flex items-center space-x-2"><Checkbox id={`fixed-mistake-${activePin.id}`} checked={isMistakeDraft} onCheckedChange={(val) => setIsMistakeDraft(!!val)} /><Label htmlFor={`fixed-mistake-${activePin.id}`} className="text-[9px] font-black uppercase tracking-wider text-destructive cursor-pointer">Mistake</Label></div>)}<Button size="sm" className="h-7 text-[10px] font-black uppercase px-3 ml-auto shadow-md" onClick={handleSaveComment}>Save Feedback</Button></div>
+                                                <div className="flex items-center justify-between">
+                                                    {!isDesigner && (
+                                                        <div className="flex items-center space-x-2">
+                                                            <Checkbox id={`fixed-mistake-${activePin.id}`} checked={isMistakeDraft} onCheckedChange={(val) => setIsMistakeDraft(!!val)} />
+                                                            <Label htmlFor={`fixed-mistake-${activePin.id}`} className="text-[9px] font-black uppercase tracking-wider text-destructive cursor-pointer">Mistake</Label>
+                                                        </div>
+                                                    )}
+                                                    <Button size="sm" className="h-7 text-[10px] font-black uppercase px-3 ml-auto shadow-md" onClick={handleSaveComment}>Save Feedback</Button>
+                                                </div>
                                             </div>
                                         ) : (
                                             <div className="space-y-4">
                                                 <p className="text-xs font-semibold leading-relaxed text-foreground/90">{activePin.text || <span className="italic opacity-50">No description provided</span>}</p>
-                                                {activePin.replies && activePin.replies.length > 0 && (<div className="space-y-2 pt-2 border-t border-primary/5">{activePin.replies.map((reply, i) => (<div key={i} className="pl-3 border-l-2 border-primary/10 space-y-0.5"><div className="flex items-center gap-1.5 text-[8px] font-black uppercase text-muted-foreground"><CornerDownRight className="h-3 w-3" /> {reply.author}</div><p className="text-[10px] font-medium leading-relaxed bg-muted/40 p-1.5 rounded-md">{reply.text}</p></div>))}</div>)}
+                                                {activePin.replies && activePin.replies.length > 0 && (
+                                                    <div className="space-y-2 pt-2 border-t border-primary/5">
+                                                        {activePin.replies.map((reply, i) => (
+                                                            <div key={i} className="pl-3 border-l-2 border-primary/10 space-y-0.5">
+                                                                <div className="flex items-center gap-1.5 text-[8px] font-black uppercase text-muted-foreground"><CornerDownRight className="h-3 w-3" /> {reply.author}</div>
+                                                                <p className="text-[10px] font-medium leading-relaxed bg-muted/40 p-1.5 rounded-md">{reply.text}</p>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
                                                 {isReplyMode ? (
-                                                    <div className="space-y-2 pt-2 border-t"><Textarea ref={textareaRef} placeholder="Write a reply..." className="min-h-[60px] text-[10px] font-semibold" value={replyText} onChange={(e) => setReplyText(e.target.value)} onKeyDown={(e) => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); handleAddReply(activePin.id); } }} /><div className="flex justify-end gap-2"><Button variant="ghost" size="sm" className="h-6 text-[9px] font-black uppercase" onClick={() => setIsReplyMode(false)}>Cancel</Button><Button size="sm" className="h-6 text-[9px] font-black uppercase" onClick={() => handleAddReply(activePin.id)}>Reply</Button></div></div>
+                                                    <div className="space-y-2 pt-2 border-t">
+                                                        <Textarea ref={textareaRef} placeholder="Write a reply..." className="min-h-[60px] text-[10px] font-semibold" value={replyText} onChange={(e) => setReplyText(e.target.value)} onKeyDown={(e) => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); handleAddReply(activePin.id); } }} />
+                                                        <div className="flex justify-end gap-2">
+                                                            <Button variant="ghost" size="sm" className="h-6 text-[9px] font-black uppercase" onClick={() => setIsReplyMode(false)}>Cancel</Button>
+                                                            <Button size="sm" className="h-6 text-[9px] font-black uppercase" onClick={() => handleAddReply(activePin.id)}>Reply</Button>
+                                                        </div>
+                                                    </div>
                                                 ) : (
                                                     <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-primary/5">
                                                         <Button variant="outline" size="sm" className="h-7 text-[9px] font-black uppercase px-2" onClick={() => setIsReplyMode(true)}>
                                                             <Send className="h-3 w-3 mr-1" /> Reply
                                                         </Button>
-                                                        {!isDesigner && activePin.status !== 'resolved' && (
+                                                        {!isDesigner && (
                                                             <>
-                                                                <Button variant="outline" size="sm" className="h-6 text-[9px] font-black uppercase px-2 border-green-600 text-green-600 hover:bg-green-50" onClick={() => handleStatusUpdate(activePin.id, 'resolved')}>
-                                                                    <CheckCircle2 className="h-3 w-3 mr-1" /> Resolve
-                                                                </Button>
-                                                                <Button 
-                                                                    variant="outline" 
-                                                                    size="sm" 
-                                                                    className={cn("h-6 text-[9px] font-black uppercase px-2", activePin.isMistake ? "border-primary text-primary" : "border-destructive text-destructive")} 
-                                                                    onClick={() => handleMistakeToggle(activePin.id)}
-                                                                >
-                                                                    <AlertCircle className="h-3 w-3 mr-1" /> {activePin.isMistake ? 'Unmark Mistake' : 'Mark Mistake'}
-                                                                </Button>
+                                                                {activePin.status !== 'resolved' ? (
+                                                                    <>
+                                                                        <Button variant="outline" size="sm" className="h-6 text-[9px] font-black uppercase px-2 border-green-600 text-green-600 hover:bg-green-50" onClick={() => handleStatusUpdate(activePin.id, 'resolved')}>
+                                                                            <CheckCircle2 className="h-3 w-3 mr-1" /> Resolve
+                                                                        </Button>
+                                                                        <Button 
+                                                                            variant="outline" 
+                                                                            size="sm" 
+                                                                            className={cn("h-6 text-[9px] font-black uppercase px-2", activePin.isMistake ? "border-primary text-primary" : "border-destructive text-destructive")} 
+                                                                            onClick={() => handleMistakeToggle(activePin.id)}
+                                                                        >
+                                                                            <AlertCircle className="h-3 w-3 mr-1" /> {activePin.isMistake ? 'Unmark Mistake' : 'Mark Mistake'}
+                                                                        </Button>
+                                                                    </>
+                                                                ) : (
+                                                                    <Button variant="outline" size="sm" className="h-7 text-[9px] font-black uppercase px-2 border-primary text-primary hover:bg-primary/5" onClick={() => handleStatusUpdate(activePin.id, 'open')}>
+                                                                        <RotateCcw className="h-3 w-3 mr-1" /> Re-open
+                                                                    </Button>
+                                                                )}
                                                             </>
-                                                        )}
-                                                        {!isDesigner && activePin.status === 'resolved' && (
-                                                            <Button variant="outline" size="sm" className="h-7 text-[9px] font-black uppercase px-2 border-primary text-primary hover:bg-primary/5" onClick={() => handleStatusUpdate(activePin.id, 'open')}>
-                                                                <RotateCcw className="h-3 w-3 mr-1" /> Re-open
-                                                            </Button>
                                                         )}
                                                         <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive ml-auto" onClick={(e) => handleDeletePin(e, activePin.id)}>
                                                             <Trash2 className="h-3.5 w-3.5" />
