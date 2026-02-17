@@ -28,7 +28,8 @@ import {
     Maximize,
     Minimize,
     LayoutGrid,
-    Upload
+    Upload,
+    RefreshCcw
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -43,7 +44,7 @@ const PIN_COLORS: Record<DesignPinStatus, string> = {
 
 // Zoom Constants
 const FIT_ZOOM = 1.0; 
-const MIN_ZOOM_FLOOR = 0.05; 
+const ABSOLUTE_MIN_ZOOM = 0.01; 
 const MAX_ZOOM = 4.0;
 
 interface DesignCanvasProps {
@@ -103,6 +104,7 @@ export function DesignCanvas({
     allComponents = []
 }: DesignCanvasProps) {
     const [zoom, setZoom] = useState(FIT_ZOOM);
+    const [minFitZoom, setMinFitZoom] = useState(ABSOLUTE_MIN_ZOOM);
     const [showPins, setShowPins] = useState(true);
     const [showComparison, setShowComparison] = useState(false);
     const [activeTool, setActiveTool] = useState<ToolMode>('comment');
@@ -164,20 +166,15 @@ export function DesignCanvas({
         if (isLightTable) {
             const spreadEl = containerRef.current.querySelector('.flex-row');
             const spreadWidth = spreadEl ? spreadEl.getBoundingClientRect().width : 0;
-            
-            // Allow panning across the full horizontal spread, keeping at least 1 component partially visible
             const limitX = (Vw / 2) + (spreadWidth / 2) - 100;
             const limitY = Vh / 2;
-
             return {
                 x: Math.max(-limitX, Math.min(offset.x, limitX)),
                 y: Math.max(-limitY, Math.min(offset.y, limitY))
             };
         } else {
-            // Standard View: Don't allow the center of the image to leave the viewport (50% rule)
             const limitX = Vw / 2;
             const limitY = Vh / 2;
-
             return {
                 x: Math.max(-limitX, Math.min(offset.x, limitX)),
                 y: Math.max(-limitY, Math.min(offset.y, limitY))
@@ -185,9 +182,8 @@ export function DesignCanvas({
         }
     }, [isLightTable]);
 
-    const handleReset = useCallback(() => {
-        if (!containerRef.current) return;
-        
+    const calculateFitZoom = useCallback(() => {
+        if (!containerRef.current) return FIT_ZOOM;
         const viewportRect = containerRef.current.getBoundingClientRect();
         const Vw = viewportRect.width;
         const Vh = viewportRect.height;
@@ -196,23 +192,41 @@ export function DesignCanvas({
             ? containerRef.current.querySelector('.flex-row') 
             : containerRef.current.querySelector('.group\\/comp-container');
 
-        if (!contentEl) {
-            setZoom(FIT_ZOOM);
-            setPanOffset({ x: 0, y: 0 });
-            return;
-        }
+        if (!contentEl) return FIT_ZOOM;
 
         const contentRect = contentEl.getBoundingClientRect();
+        // zoom is safe to use here because we just want the intrinsic ratio
         const unscaledCw = contentRect.width / zoom;
         const unscaledCh = contentRect.height / zoom;
 
         const scaleX = Vw / unscaledCw;
         const scaleY = Vh / unscaledCh;
-        const fitScale = Math.min(scaleX, scaleY) * 0.95;
-
-        setZoom(Math.max(MIN_ZOOM_FLOOR, Math.min(fitScale, MAX_ZOOM)));
-        setPanOffset({ x: 0, y: 0 });
+        return Math.min(scaleX, scaleY) * 0.95;
     }, [isLightTable, zoom]);
+
+    const handleReset = useCallback(() => {
+        const fitScale = calculateFitZoom();
+        const finalZoom = Math.max(ABSOLUTE_MIN_ZOOM, Math.min(fitScale, MAX_ZOOM));
+        setZoom(finalZoom);
+        setMinFitZoom(finalZoom); // Ensure min zoom is locked to this level
+        setPanOffset({ x: 0, y: 0 });
+    }, [calculateFitZoom]);
+
+    useEffect(() => {
+        const updateThreshold = () => {
+            const fit = calculateFitZoom();
+            const newMin = Math.max(ABSOLUTE_MIN_ZOOM, fit);
+            setMinFitZoom(newMin);
+            if (zoom < newMin) setZoom(newMin);
+        };
+
+        const timer = setTimeout(updateThreshold, 150);
+        window.addEventListener('resize', updateThreshold);
+        return () => {
+            clearTimeout(timer);
+            window.removeEventListener('resize', updateThreshold);
+        };
+    }, [calculateFitZoom, imageUrl, isLightTable]);
 
     useEffect(() => {
         setPanOffset(prev => getConstrainedPan(prev, zoom));
@@ -231,7 +245,7 @@ export function DesignCanvas({
                 setZoom(prev => {
                     const factor = delta > 0 ? 0.9 : 1.1;
                     const next = prev * factor;
-                    return Math.max(MIN_ZOOM_FLOOR, Math.min(next, MAX_ZOOM));
+                    return Math.max(minFitZoom, Math.min(next, MAX_ZOOM));
                 });
             } else {
                 setPanOffset(prev => {
@@ -246,7 +260,7 @@ export function DesignCanvas({
 
         container.addEventListener('wheel', handleWheel, { passive: false });
         return () => container.removeEventListener('wheel', handleWheel);
-    }, [imageUrl, isLightTable, zoom, getConstrainedPan]);
+    }, [imageUrl, isLightTable, zoom, getConstrainedPan, minFitZoom]);
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -330,7 +344,7 @@ export function DesignCanvas({
     }, [selectedPinId, activePin, repositionKey, effectiveShowPopovers]);
 
     const handleZoomIn = () => setZoom(prev => Math.min(prev + 0.25, MAX_ZOOM));
-    const handleZoomOut = () => setZoom(prev => Math.max(prev - 0.25, MIN_ZOOM_FLOOR));
+    const handleZoomOut = () => setZoom(prev => Math.max(prev - 0.25, minFitZoom));
 
     const handleCanvasMouseDown = (e: React.MouseEvent) => {
         if (isDraggingSlider) return;
@@ -540,17 +554,90 @@ export function DesignCanvas({
                             >
                                 <GripHorizontal className="h-5 w-5" />
                             </button>
-                            {/* Corrected Labels: After (New) on Left, Before (Old) on Right */}
-                            <div className="absolute top-6 right-12 bg-black/80 text-white text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded opacity-0 group-hover/slider:opacity-100 transition-opacity whitespace-nowrap">
+                            <div className="absolute top-6 left-12 bg-black/80 text-white text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded opacity-0 group-hover/slider:opacity-100 transition-opacity whitespace-nowrap">
                                 After
                             </div>
-                            <div className="absolute top-6 left-12 bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded border border-white/10 opacity-0 group-hover/slider:opacity-100 transition-opacity whitespace-nowrap">
+                            <div className="absolute top-6 right-12 bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded border border-white/10 opacity-0 group-hover/slider:opacity-100 transition-opacity whitespace-nowrap">
                                 Before
                             </div>
                         </div>
                     </div>
                 )}
                 {showPins && pinsList.map(pin => renderPin(pin))}
+            </div>
+        );
+    };
+
+    const renderPopoverContent = () => {
+        if (!activePin) return null;
+
+        if (activePin.isDraft) {
+            return (
+                <div className="space-y-3">
+                    <Textarea 
+                        ref={textareaRef} 
+                        placeholder="Enter feedback details..." 
+                        className="min-h-[80px] text-xs font-semibold leading-relaxed" 
+                        value={draftText} 
+                        onChange={(e) => onDraftTextChange(e.target.value)} 
+                        onKeyDown={(e) => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); handleSaveComment(); } }} 
+                    />
+                    <div className="flex items-center justify-between">
+                        {!isDesigner && (
+                            <div className="flex items-center space-x-2">
+                                <Checkbox id={`fixed-mistake-${activePin.id}`} checked={isMistakeDraft} onCheckedChange={(val) => setIsMistakeDraft(!!val)} />
+                                <Label htmlFor={`fixed-mistake-${activePin.id}`} className="text-[9px] font-black uppercase tracking-wider text-destructive cursor-pointer">Mistake</Label>
+                            </div>
+                        )}
+                        <Button size="sm" className="h-7 text-[10px] font-black uppercase px-3 ml-auto shadow-md" onClick={handleSaveComment}>Save Feedback</Button>
+                    </div>
+                </div>
+            );
+        }
+
+        return (
+            <div className="space-y-4">
+                <p className="text-xs font-semibold leading-relaxed text-foreground/90">{activePin.text || <span className="italic opacity-50">No description provided</span>}</p>
+                {activePin.replies && activePin.replies.length > 0 && (
+                    <div className="space-y-2 pt-2 border-t border-primary/5">
+                        {activePin.replies.map((reply, i) => (
+                            <div key={i} className="pl-3 border-l-2 border-primary/10 space-y-0.5">
+                                <div className="flex items-center gap-1.5 text-[8px] font-black uppercase text-muted-foreground"><CornerDownRight className="h-3 w-3" /> {reply.author}</div>
+                                <p className="text-[10px] font-medium leading-relaxed bg-muted/40 p-1.5 rounded-md">{reply.text}</p>
+                            </div>
+                        ))}
+                    </div>
+                )}
+                {isReplyMode ? (
+                    <div className="space-y-2 pt-2 border-t">
+                        <Textarea ref={textareaRef} placeholder="Write a reply..." className="min-h-[60px] text-[10px] font-semibold" value={replyText} onChange={(e) => setReplyText(e.target.value)} onKeyDown={(e) => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); handleAddReply(activePin.id); } }} />
+                        <div className="flex justify-end gap-2">
+                            <Button variant="ghost" size="sm" className="h-6 text-[9px] font-black uppercase" onClick={() => setIsReplyMode(false)}>Cancel</Button>
+                            <Button size="sm" className="h-6 text-[9px] font-black uppercase" onClick={() => handleAddReply(activePin.id)}>Reply</Button>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-primary/5">
+                        <Button variant="outline" size="sm" className="h-7 text-[9px] font-black uppercase px-2" onClick={() => setIsReplyMode(true)}><Send className="h-3 w-3 mr-1" /> Reply</Button>
+                        {!isDesigner && activePin.status !== 'resolved' && (
+                            <>
+                                <Button variant="outline" size="sm" className="h-6 text-[9px] font-black uppercase px-2 border-green-600 text-green-600 hover:bg-green-50" onClick={() => handleStatusUpdate(activePin.id, 'resolved')}><CheckCircle2 className="h-3 w-3 mr-1" /> Resolve</Button>
+                                <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    className={cn("h-6 text-[9px] font-black uppercase px-2", activePin.isMistake ? "border-primary text-primary" : "border-destructive text-destructive")} 
+                                    onClick={() => handleMistakeToggle(activePin.id)}
+                                >
+                                    <AlertCircle className="h-3 w-3 mr-1" /> {activePin.isMistake ? 'Unmark Mistake' : 'Mark Mistake'}
+                                </Button>
+                            </>
+                        )}
+                        {!isDesigner && activePin.status === 'resolved' && (
+                            <Button variant="outline" size="sm" className="h-7 text-[9px] font-black uppercase px-2 border-primary text-primary hover:bg-primary/5" onClick={() => handleStatusUpdate(activePin.id, 'open')}><RotateCcw className="h-3 w-3 mr-1" /> Re-open</Button>
+                        )}
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive ml-auto" onClick={(e) => handleDeletePin(e, activePin.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                    </div>
+                )}
             </div>
         );
     };
@@ -595,7 +682,6 @@ export function DesignCanvas({
                 <>
                     <div className="absolute left-0 top-1/2 -translate-y-1/2 z-50 flex flex-col gap-1 p-1 bg-background/90 backdrop-blur-xl border border-primary/20 rounded-r-xl shadow-2xl">
                         <TooltipProvider>
-                            {/* Group 1: Annotation Tools */}
                             <div className="flex flex-col items-center gap-1 px-1 pt-1">
                                 {isFeedbackUnlocked ? (
                                     <>
@@ -623,7 +709,7 @@ export function DesignCanvas({
                                             <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full text-muted-foreground opacity-50 cursor-not-allowed"><Lock className="h-4 w-4" /></Button>
                                         </TooltipTrigger>
                                         <TooltipContent side="right">
-                                            {!isDesigner && (status === 'DRAFT' || status === 'PENDING') ? "Manager feedback locked during draft" : isLatest || isLightTable ? "Locked" : "Viewing History"}
+                                            {!isDesigner && (status === 'DRAFT' || status === 'PENDING') ? "Feedback locked during draft" : isLatest || isLightTable ? "Locked" : "Viewing History"}
                                         </TooltipContent>
                                     </Tooltip>
                                 )}
@@ -631,7 +717,6 @@ export function DesignCanvas({
 
                             <div className="w-4 h-px bg-muted-foreground/20 mx-auto my-1" />
 
-                            {/* Group 2: View Toggles */}
                             <div className="flex flex-col items-center gap-1 px-1">
                                 <Tooltip>
                                     <TooltipTrigger asChild>
@@ -643,14 +728,14 @@ export function DesignCanvas({
                                     <TooltipTrigger asChild>
                                         <Button variant="ghost" size="icon" className={cn("h-9 w-9 rounded-full", !effectiveShowPopovers && "text-primary")} onClick={onTogglePopovers} disabled={isZenMode}>{effectiveShowPopovers ? <MessageSquare className="h-4 w-4" /> : <MessageSquareOff className="h-4 w-4" />}</Button>
                                     </TooltipTrigger>
-                                    <TooltipContent side="right">{isZenMode ? "Popovers forced ON in Zen Mode" : effectiveShowPopovers ? "Hide Comment Boxes" : "Show Comment Boxes"}</TooltipContent>
+                                    <TooltipContent side="right">{isZenMode ? "Popovers forced ON" : effectiveShowPopovers ? "Hide Comments" : "Show Comments"}</TooltipContent>
                                 </Tooltip>
                                 {onToggleLightTable && (
                                     <Tooltip>
                                         <TooltipTrigger asChild>
                                             <Button variant="ghost" size="icon" className={cn("h-9 w-9 rounded-full", isLightTable && "text-primary bg-primary/10")} onClick={onToggleLightTable}><LayoutGrid className="h-4 w-4" /></Button>
                                         </TooltipTrigger>
-                                        <TooltipContent side="right">Light Table (Multi-View)</TooltipContent>
+                                        <TooltipContent side="right">Light Table</TooltipContent>
                                     </Tooltip>
                                 )}
                                 {!isLightTable && (
@@ -658,7 +743,7 @@ export function DesignCanvas({
                                         <TooltipTrigger asChild>
                                             <Button variant="ghost" size="icon" className={cn("h-9 w-9 rounded-full", showComparison && "text-primary bg-primary/10")} onClick={() => setShowComparison(!showComparison)}><Layers className="h-4 w-4" /></Button>
                                         </TooltipTrigger>
-                                        <TooltipContent side="right">Split Comparison (Layers)</TooltipContent>
+                                        <TooltipContent side="right">Compare Versions</TooltipContent>
                                     </Tooltip>
                                 )}
                                 <Tooltip>
@@ -667,19 +752,18 @@ export function DesignCanvas({
                                             {isZenMode ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
                                         </Button>
                                     </TooltipTrigger>
-                                    <TooltipContent side="right">{isZenMode ? "Exit Zen Mode (F)" : "Zen Mode (F)"}</TooltipContent>
+                                    <TooltipContent side="right">{isZenMode ? "Exit Zen Mode" : "Zen Mode (F)"}</TooltipContent>
                                 </Tooltip>
                             </div>
 
                             <div className="w-4 h-px bg-muted-foreground/20 mx-auto my-1" />
 
-                            {/* Group 3: Navigation Group */}
                             <div className="flex flex-col items-center gap-1 px-1 pb-1">
                                 <Tooltip>
                                     <TooltipTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full" onClick={handleReset}><Scaling className="h-4 w-4" /></Button>
+                                        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full" onClick={handleReset}><RefreshCcw className="h-4 w-4" /></Button>
                                     </TooltipTrigger>
-                                    <TooltipContent side="right">Fit to Screen (R)</TooltipContent>
+                                    <TooltipContent side="right">Reset View / Fit (R)</TooltipContent>
                                 </Tooltip>
                                 <Tooltip>
                                     <TooltipTrigger asChild>
@@ -689,7 +773,7 @@ export function DesignCanvas({
                                 </Tooltip>
                                 <Tooltip>
                                     <TooltipTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full" onClick={handleZoomOut}><ZoomOut className="h-4 w-4" /></Button>
+                                        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full" onClick={handleZoomOut} disabled={zoom <= minFitZoom}><ZoomOut className="h-4 w-4" /></Button>
                                     </TooltipTrigger>
                                     <TooltipContent side="right">Zoom Out</TooltipContent>
                                 </Tooltip>
@@ -755,75 +839,7 @@ export function DesignCanvas({
                                         </div>
                                     </div>
                                     <div className="p-4 space-y-4 max-h-[400px] overflow-y-auto custom-scrollbar">
-                                        {activePin.isDraft ? (
-                                            <div className="space-y-3">
-                                                <Textarea ref={textareaRef} placeholder="Enter feedback details..." className="min-h-[80px] text-xs font-semibold leading-relaxed" value={draftText} onChange={(e) => onDraftTextChange(e.target.value)} onKeyDown={(e) => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); handleSaveComment(); } }} />
-                                                <div className="flex items-center justify-between">
-                                                    {!isDesigner && (
-                                                        <div className="flex items-center space-x-2">
-                                                            <Checkbox id={`fixed-mistake-${activePin.id}`} checked={isMistakeDraft} onCheckedChange={(val) => setIsMistakeDraft(!!val)} />
-                                                            <Label htmlFor={`fixed-mistake-${activePin.id}`} className="text-[9px] font-black uppercase tracking-wider text-destructive cursor-pointer">Mistake</Label>
-                                                        </div>
-                                                    )}
-                                                    <Button size="sm" className="h-7 text-[10px] font-black uppercase px-3 ml-auto shadow-md" onClick={handleSaveComment}>Save Feedback</Button>
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <div className="space-y-4">
-                                                <p className="text-xs font-semibold leading-relaxed text-foreground/90">{activePin.text || <span className="italic opacity-50">No description provided</span>}</p>
-                                                {activePin.replies && activePin.replies.length > 0 && (
-                                                    <div className="space-y-2 pt-2 border-t border-primary/5">
-                                                        {activePin.replies.map((reply, i) => (
-                                                            <div key={i} className="pl-3 border-l-2 border-primary/10 space-y-0.5">
-                                                                <div className="flex items-center gap-1.5 text-[8px] font-black uppercase text-muted-foreground"><CornerDownRight className="h-3 w-3" /> {reply.author}</div>
-                                                                <p className="text-[10px] font-medium leading-relaxed bg-muted/40 p-1.5 rounded-md">{reply.text}</p>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                                {isReplyMode ? (
-                                                    <div className="space-y-2 pt-2 border-t">
-                                                        <Textarea ref={textareaRef} placeholder="Write a reply..." className="min-h-[60px] text-[10px] font-semibold" value={replyText} onChange={(e) => setReplyText(e.target.value)} onKeyDown={(e) => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); handleAddReply(activePin.id); } }} />
-                                                        <div className="flex justify-end gap-2">
-                                                            <Button variant="ghost" size="sm" className="h-6 text-[9px] font-black uppercase" onClick={() => setIsReplyMode(false)}>Cancel</Button>
-                                                            <Button size="sm" className="h-6 text-[9px] font-black uppercase" onClick={() => handleAddReply(activePin.id)}>Reply</Button>
-                                                        </div>
-                                                    </div>
-                                                ) : (
-                                                    <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-primary/5">
-                                                        <Button variant="outline" size="sm" className="h-7 text-[9px] font-black uppercase px-2" onClick={() => setIsReplyMode(true)}>
-                                                            <Send className="h-3 w-3 mr-1" /> Reply
-                                                        </Button>
-                                                        {!isDesigner && (
-                                                            <>
-                                                                {activePin.status !== 'resolved' ? (
-                                                                    <>
-                                                                        <Button variant="outline" size="sm" className="h-6 text-[9px] font-black uppercase px-2 border-green-600 text-green-600 hover:bg-green-50" onClick={() => handleStatusUpdate(activePin.id, 'resolved')}>
-                                                                            <CheckCircle2 className="h-3 w-3 mr-1" /> Resolve
-                                                                        </Button>
-                                                                        <Button 
-                                                                            variant="outline" 
-                                                                            size="sm" 
-                                                                            className={cn("h-6 text-[9px] font-black uppercase px-2", activePin.isMistake ? "border-primary text-primary" : "border-destructive text-destructive")} 
-                                                                            onClick={() => handleMistakeToggle(activePin.id)}
-                                                                        >
-                                                                            <AlertCircle className="h-3 w-3 mr-1" /> {activePin.isMistake ? 'Unmark Mistake' : 'Mark Mistake'}
-                                                                        </Button>
-                                                                    </>
-                                                                ) : (
-                                                                    <Button variant="outline" size="sm" className="h-7 text-[9px] font-black uppercase px-2 border-primary text-primary hover:bg-primary/5" onClick={() => handleStatusUpdate(activePin.id, 'open')}>
-                                                                        <RotateCcw className="h-3 w-3 mr-1" /> Re-open
-                                                                    </Button>
-                                                                )}
-                                                            </>
-                                                        )}
-                                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive ml-auto" onClick={(e) => handleDeletePin(e, activePin.id)}>
-                                                            <Trash2 className="h-3.5 w-3.5" />
-                                                        </Button>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
+                                        {renderPopoverContent()}
                                     </div>
                                 </div>
                             </div>
