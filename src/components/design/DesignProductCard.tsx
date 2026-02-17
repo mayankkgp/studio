@@ -24,7 +24,9 @@ import {
     Clock,
     ChevronLeft,
     ChevronRight,
-    LayoutGrid
+    LayoutGrid,
+    MoreVertical,
+    Pencil
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -33,13 +35,22 @@ import {
     DialogHeader,
     DialogTitle,
     DialogDescription,
+    DialogFooter,
 } from "@/components/ui/dialog";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+    DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import {
     Popover,
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover";
+import { Label } from '@/components/ui/label';
 import { productCatalog } from '@/lib/product-data';
 
 interface AddComponentWidgetProps {
@@ -169,6 +180,11 @@ export function DesignProductCard({
     const [isZenMode, setIsZenMode] = useState(false);
     const [showPopovers, setShowPopovers] = useState(true);
     const [isLightTable, setIsLightTable] = useState(false);
+
+    // Component Lifecycle Options
+    const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
+    const [compToRename, setCompToRename] = useState<{ id: string; name: string } | null>(null);
+    const [newNameValue, setNewNameValue] = useState('');
 
     // Overflow Tab indicators
     const tabScrollRef = useRef<HTMLDivElement>(null);
@@ -327,10 +343,23 @@ export function DesignProductCard({
     };
 
     const handleDeleteComponent = (compId: string) => {
-        if (!confirm("Are you sure you want to delete this component?")) return;
+        if (localDesignData.components.length <= 1) {
+            alert("A product must have at least one component.");
+            return;
+        }
+
+        if (!confirm("Are you sure you want to delete this component? This will remove all associated versions and feedback.")) return;
         const updatedComponents = localDesignData.components.filter(c => c.id !== compId);
         const updatedData = { ...localDesignData, components: updatedComponents };
         handleUpdateDesignInternal(updatedData, true);
+    };
+
+    const handleRenameComponent = (compId: string, newName: string) => {
+        if (!newName.trim()) return;
+        const updatedComponents = localDesignData.components.map(c => 
+            c.id === compId ? { ...c, name: newName.trim() } : c
+        );
+        handleUpdateDesignInternal({ ...localDesignData, components: updatedComponents }, true);
     };
 
     const handleUpload = (file: File) => {
@@ -448,8 +477,6 @@ export function DesignProductCard({
         if (isLightTable) {
             const updatedComponents = localDesignData.components.map(c => {
                 const componentPins = newPins.filter(p => c.pins.some(cp => cp.id === p.id));
-                // Handle new pins that might have been added to this component but aren't in newPins yet?
-                // Actually newPins should be the source of truth if passed back correctly.
                 return { ...c, pins: componentPins };
             });
             handleUpdateDesignInternal({ ...localDesignData, components: updatedComponents });
@@ -716,6 +743,37 @@ export function DesignProductCard({
                                             </>
                                         )}
                                     </div>
+
+                                    {/* Component Lifecycle Menu */}
+                                    {!isLightTable && activeComponent && (
+                                        <div className="flex items-center gap-2 ml-4 shrink-0">
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="h-9 w-9 rounded-md hover:bg-primary/10 hover:text-primary">
+                                                        <MoreVertical className="h-4 w-4" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end" className="w-48">
+                                                    <DropdownMenuItem onClick={() => {
+                                                        setCompToRename({ id: activeComponent.id, name: activeComponent.name });
+                                                        setNewNameValue(activeComponent.name);
+                                                        setIsRenameDialogOpen(true);
+                                                    }}>
+                                                        <Pencil className="mr-2 h-4 w-4" />
+                                                        <span>Rename Component</span>
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuSeparator />
+                                                    <DropdownMenuItem 
+                                                        className="text-destructive focus:text-destructive"
+                                                        onClick={() => handleDeleteComponent(activeComponent.id)}
+                                                    >
+                                                        <Trash2 className="mr-2 h-4 w-4" />
+                                                        <span>Delete Component</span>
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </div>
+                                    )}
                                 </div>
                             )}
 
@@ -814,6 +872,40 @@ export function DesignProductCard({
                             </div>
                         )}
                     </div>
+
+                    {/* Rename Component Dialog */}
+                    <Dialog open={isRenameDialogOpen} onOpenChange={setIsRenameDialogOpen}>
+                        <DialogContent className="sm:max-w-[400px]">
+                            <DialogHeader>
+                                <DialogTitle className="font-headline font-black uppercase tracking-widest text-sm">Rename Component</DialogTitle>
+                                <DialogDescription className="text-xs font-bold text-muted-foreground">
+                                    Enter a new display name for "{compToRename?.name}".
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className="py-4">
+                                <Input
+                                    autoFocus
+                                    placeholder="Component name..."
+                                    value={newNameValue}
+                                    onChange={(e) => setNewNameValue(e.target.value)}
+                                    className="h-10 font-bold"
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            handleRenameComponent(compToRename?.id || '', newNameValue);
+                                            setIsRenameDialogOpen(false);
+                                        }
+                                    }}
+                                />
+                            </div>
+                            <DialogFooter className="gap-2 sm:gap-0">
+                                <Button variant="ghost" size="sm" className="font-black uppercase text-[10px] tracking-widest" onClick={() => setIsRenameDialogOpen(false)}>Cancel</Button>
+                                <Button size="sm" className="font-black uppercase text-[10px] tracking-widest" onClick={() => {
+                                    handleRenameComponent(compToRename?.id || '', newNameValue);
+                                    setIsRenameDialogOpen(false);
+                                }}>Update Name</Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
                 </DialogContent>
             </Dialog>
 
