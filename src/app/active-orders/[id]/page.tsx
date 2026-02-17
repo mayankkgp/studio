@@ -409,9 +409,29 @@ export default function ActiveOrderCommandCenter() {
                             {activeTab === 'customer' && (
                                 <div className="flex items-center gap-2">
                                     {!isCustomerEditMode ? (
-                                        <Button variant="outline" size="sm" onClick={() => setIsCustomerEditMode(true)} className="h-8 font-bold gap-2 text-[11px] uppercase tracking-widest"><Pencil className="h-3.5 w-3.5" /> Edit Brief</Button>
+                                        <Button 
+                                            key="btn-edit-brief"
+                                            type="button"
+                                            variant="outline" 
+                                            size="sm" 
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                setIsCustomerEditMode(true);
+                                            }} 
+                                            className="h-8 font-bold gap-2 text-[11px] uppercase tracking-widest"
+                                        >
+                                            <Pencil className="h-3.5 w-3.5" /> Edit Brief
+                                        </Button>
                                     ) : (
-                                        <Button ref={headerButtonRef} size="sm" type="submit" form="creative-brief-form" disabled={isSavingBrief} className={cn("h-8 font-bold gap-2", shakeHeaderButton && "animate-shake")}>
+                                        <Button 
+                                            key="btn-save-brief"
+                                            ref={headerButtonRef} 
+                                            size="sm" 
+                                            type="submit" 
+                                            form="creative-brief-form" 
+                                            disabled={isSavingBrief} 
+                                            className={cn("h-8 font-bold gap-2", shakeHeaderButton && "animate-shake")}
+                                        >
                                             {isSavingBrief ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Save Brief
                                         </Button>
                                     )}

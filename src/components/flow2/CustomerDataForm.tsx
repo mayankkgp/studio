@@ -218,7 +218,6 @@ export function CustomerDataForm({
     });
   }, [isEditMode, visibleDeliverables, watchedValues.productBriefs, focusedFields]);
 
-  // Ensure selection stays valid - moved above conditional return to fix Rules of Hooks violation
   React.useEffect(() => {
     if (visibleDeliverables.length > 0) {
       const stillVisible = visibleDeliverables.some(d => d.id === selectedProductId);
@@ -230,20 +229,7 @@ export function CustomerDataForm({
     }
   }, [visibleDeliverables, selectedProductId, isEditMode]);
 
-  // Overall empty state for View Mode
-  if (!isEditMode && !isGenericDataVisible && !isProductBriefsSectionVisible) {
-    return (
-      <div className="flex flex-col items-center justify-center py-32 text-muted-foreground animate-in fade-in zoom-in-95 duration-500">
-        <div className="h-20 w-20 rounded-full bg-muted/20 flex items-center justify-center mb-6 border-2 border-dashed border-muted/50">
-          <Sparkles className="h-10 w-10 opacity-30" />
-        </div>
-        <h3 className="text-xl font-headline text-muted-foreground font-black uppercase tracking-[0.2em] mb-3">No Data Recorded</h3>
-        <p className="text-sm font-semibold text-center max-w-sm leading-relaxed px-4">
-          The creative brief is currently empty. Switch to <button type="button" onClick={onEnterEditMode} className="text-primary font-black uppercase tracking-wider hover:underline focus:outline-none">EDIT MODE</button> to begin building the narrative.
-        </p>
-      </div>
-    );
-  }
+  const isEmptyState = !isEditMode && !isGenericDataVisible && !isProductBriefsSectionVisible;
 
   const getProductSpecsSummary = (item: ConfiguredProduct) => {
     const product = productCatalog.find(p => p.id === item.productId);
@@ -290,264 +276,279 @@ export function CustomerDataForm({
 
   return (
     <div className="pb-24 max-w-6xl mx-auto relative animate-in fade-in duration-500">
-      {/* Masonry Layout for General Sections */}
-      {isGenericDataVisible && (
-        <section className={cn(
-          "columns-1 md:columns-2 gap-8 space-y-8",
-          isEditMode ? "mt-12" : "mt-4"
-        )}>
-          {isVisualVisible && (
-            <div className="break-inside-avoid">
-              <SectionHeader title="Visual Identity" icon={Palette} />
-              <EditableField 
-                id="mood"
-                label="Mood & Style Reference"
-                register={register}
-                registerKey="visualIdentity.moodStyle"
-                value={watchedValues.visualIdentity?.moodStyle || ''}
-                isEditMode={isEditMode}
-                onFocusChange={handleFocusChange}
-              />
-              <EditableField 
-                id="colors"
-                label="Color Palette & Typography"
-                register={register}
-                registerKey="visualIdentity.colorTypography"
-                value={watchedValues.visualIdentity?.colorTypography || ''}
-                isEditMode={isEditMode}
-                onFocusChange={handleFocusChange}
-              />
-              <EditableField 
-                id="dislikes"
-                label="Design Dislikes"
-                register={register}
-                registerKey="visualIdentity.designDislikes"
-                value={watchedValues.visualIdentity?.designDislikes || ''}
-                isEditMode={isEditMode}
-                onFocusChange={handleFocusChange}
-              />
-            </div>
-          )}
-
-          {isCultureVisible && (
-            <div className="break-inside-avoid">
-              <SectionHeader title="Culture & Symbols" icon={Globe} />
-              <EditableField 
-                id="icons"
-                label="Mandatory Icons & Motifs"
-                register={register}
-                registerKey="cultureSymbols.mandatoryIcons"
-                value={watchedValues.cultureSymbols?.mandatoryIcons || ''}
-                isEditMode={isEditMode}
-                onFocusChange={handleFocusChange}
-              />
-              <EditableField 
-                id="nuances"
-                label="Regional Nuances"
-                register={register}
-                registerKey="cultureSymbols.regionalNuances"
-                value={watchedValues.cultureSymbols?.regionalNuances || ''}
-                isEditMode={isEditMode}
-                onFocusChange={handleFocusChange}
-              />
-            </div>
-          )}
-
-          {isNarrativeVisible && (
-            <div className="break-inside-avoid">
-              <SectionHeader title="The Narrative" icon={BookOpen} />
-              <EditableField 
-                id="timeline"
-                label="Relationship Timeline"
-                register={register}
-                registerKey="narrative.timeline"
-                value={watchedValues.narrative?.timeline || ''}
-                isEditMode={isEditMode}
-                onFocusChange={handleFocusChange}
-              />
-              <EditableField 
-                id="couple"
-                label="The Couple's World"
-                register={register}
-                registerKey="narrative.coupleWorld"
-                value={watchedValues.narrative?.coupleWorld || ''}
-                isEditMode={isEditMode}
-                onFocusChange={handleFocusChange}
-              />
-              <EditableField 
-                id="eggs"
-                label="Easter Eggs"
-                register={register}
-                registerKey="narrative.easterEggs"
-                value={watchedValues.narrative?.easterEggs || ''}
-                isEditMode={isEditMode}
-                onFocusChange={handleFocusChange}
-              />
-            </div>
-          )}
-
-          {isAtmosphereVisible && (
-            <div className="break-inside-avoid">
-              <SectionHeader title="Atmosphere & Extras" icon={Sparkles} />
-              <EditableField 
-                id="personality"
-                label="Venue Personality"
-                register={register}
-                registerKey="atmosphereExtras.venuePersonality"
-                value={watchedValues.atmosphereExtras?.venuePersonality || ''}
-                isEditMode={isEditMode}
-                onFocusChange={handleFocusChange}
-              />
-              <EditableField 
-                id="other"
-                label="Other Details"
-                register={register}
-                registerKey="atmosphereExtras.otherDetails"
-                value={watchedValues.atmosphereExtras?.otherDetails || ''}
-                isEditMode={isEditMode}
-                onFocusChange={handleFocusChange}
-              />
-            </div>
-          )}
-        </section>
-      )}
-
-      {/* Master-Detail View for Product Briefs */}
-      {isProductBriefsSectionVisible && (
-        <section className={cn(
-          isGenericDataVisible ? "mt-16 pt-16 border-t border-primary/10" : "mt-8"
-        )}>
-          <SectionHeader title="Product Specific Briefs" icon={Box} />
-          
-          <div className="flex flex-col md:flex-row h-[600px] border border-primary/10 rounded-xl overflow-hidden bg-card/5 shadow-sm">
-            {/* Master List (Left) */}
-            <aside className="w-full md:w-80 border-b md:border-b-0 md:border-r border-primary/10 overflow-hidden bg-card/20 shrink-0 flex flex-col">
-              <div className="p-3 border-b border-primary/10 bg-background/50">
-                <div className="relative">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input 
-                    placeholder="Filter products..." 
-                    className="h-9 pl-9 text-[11px] bg-background border-primary/20 focus-visible:ring-primary/20 font-bold uppercase tracking-widest"
-                    value={productSearchQuery}
-                    onChange={(e) => setProductSearchQuery(e.target.value)}
+      {isEmptyState ? (
+        <div className="flex flex-col items-center justify-center py-32 text-muted-foreground">
+          <div className="h-20 w-20 rounded-full bg-muted/20 flex items-center justify-center mb-6 border-2 border-dashed border-muted/50">
+            <Sparkles className="h-10 w-10 opacity-30" />
+          </div>
+          <h3 className="text-xl font-headline text-muted-foreground font-black uppercase tracking-[0.2em] mb-3">No Data Recorded</h3>
+          <p className="text-sm font-semibold text-center max-w-sm leading-relaxed px-4">
+            The creative brief is currently empty. Switch to <button type="button" onClick={onEnterEditMode} className="text-primary font-black uppercase tracking-wider hover:underline focus:outline-none">EDIT MODE</button> to begin building the narrative.
+          </p>
+        </div>
+      ) : (
+        <>
+          {/* Masonry Layout for General Sections */}
+          {isGenericDataVisible && (
+            <section className={cn(
+              "columns-1 md:columns-2 gap-8 space-y-8",
+              isEditMode ? "mt-12" : "mt-4"
+            )}>
+              {isVisualVisible && (
+                <div className="break-inside-avoid">
+                  <SectionHeader title="Visual Identity" icon={Palette} />
+                  <EditableField 
+                    id="mood"
+                    label="Mood & Style Reference"
+                    register={register}
+                    registerKey="visualIdentity.moodStyle"
+                    value={watchedValues.visualIdentity?.moodStyle || ''}
+                    isEditMode={isEditMode}
+                    onFocusChange={handleFocusChange}
                   />
-                  {productSearchQuery && (
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground hover:text-foreground"
-                      onClick={() => setProductSearchQuery('')}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-              </div>
-              <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-1">
-                {visibleDeliverables.length === 0 ? (
-                  <div className="py-12 text-center text-[11px] text-muted-foreground font-black uppercase tracking-[0.15em] opacity-40 italic">
-                    No matching results
-                  </div>
-                ) : (
-                  visibleDeliverables.map((item) => {
-                    const brief = (watchedValues.productBriefs as any)?.[item.id];
-                    const isFocused = focusedFields[`productBriefs.${item.id}`];
-                    const hasData = (brief && brief.trim().length > 0) || isFocused;
-                    const isActive = selectedProductId === item.id;
-                    const hasAddons = (item.addons || []).some((a: any) => a.value !== undefined && a.value !== false && a.value !== null);
-                    const hasSpecial = item.specialRequest && item.specialRequest.trim().length > 0;
-                    
-                    const tags = [];
-                    if (item.variant) tags.push(item.variant);
-                    if (hasAddons) tags.push("Add-on");
-                    if (hasSpecial) tags.push("Special Request");
-                    const tagsDisplay = tags.join(" • ");
-
-                    return (
-                      <button
-                        key={item.id}
-                        type="button"
-                        onClick={() => setSelectedProductId(item.id)}
-                        className={cn(
-                          "w-full text-left px-4 py-3 rounded-lg transition-all flex items-center justify-between group",
-                          isActive 
-                            ? "bg-primary text-white shadow-md shadow-primary/20" 
-                            : "hover:bg-primary/5 text-foreground"
-                        )}
-                      >
-                        <div className="flex-1 min-w-0 mr-3">
-                          <div className={cn(
-                            "font-headline font-black text-xs uppercase tracking-tight truncate",
-                            isActive ? "text-white" : "text-foreground"
-                          )}>
-                            {item.productName}
-                          </div>
-                          {tagsDisplay && (
-                            <div className={cn(
-                              "text-[10px] font-black uppercase truncate mt-0.5 tracking-[0.05em]",
-                              isActive ? "text-white/80" : "text-muted-foreground"
-                            )}>
-                              {tagsDisplay}
-                            </div>
-                          )}
-                        </div>
-                        <div className="shrink-0">
-                          {hasData ? (
-                            <div className={cn(
-                              "h-3.5 w-3.5 rounded-full bg-green-600 transition-colors ring-offset-background",
-                              isActive && "ring-2 ring-white shadow-sm ring-offset-0"
-                            )} />
-                          ) : (
-                            <Circle className={cn(
-                              "h-3.5 w-3.5 transition-colors opacity-30", 
-                              isActive ? "text-white/50" : "text-muted-foreground"
-                            )} />
-                          )}
-                        </div>
-                      </button>
-                    );
-                  })
-                )}
-              </div>
-            </aside>
-
-            {/* Detail View (Right) */}
-            <main className="flex-1 pt-2 px-8 pb-8 overflow-y-auto custom-scrollbar bg-background/50">
-              {selectedItem ? (
-                <div className="space-y-2">
-                  <div className="flex flex-wrap items-center text-[11px] font-black text-muted-foreground uppercase tracking-[0.1em]">
-                    {getProductSpecsSummary(selectedItem)}
-                  </div>
-
-                  <div className={cn(
-                    "relative group focus-within:z-10 bg-background rounded-xl shadow-sm border border-primary/10 transition-all",
-                    isEditMode && "focus-within:border-primary/40 focus-within:ring-8 focus-within:ring-primary/5"
-                  )}>
-                    <AutoGrowingTextarea 
-                      placeholder={isEditMode ? "Add detailed creative requirements for this product..." : "No brief provided"}
-                      {...register(`productBriefs.${selectedItem.id}` as any)}
-                      readOnly={!isEditMode}
-                      minRows={4}
-                      onFocus={() => handleFocusChange(`productBriefs.${selectedItem.id}`, true)}
-                      onBlur={() => handleFocusChange(`productBriefs.${selectedItem.id}`, false)}
-                      className={cn(
-                        "font-semibold bg-transparent text-foreground min-h-[350px] p-6 text-[14px] leading-relaxed",
-                        !isEditMode && "cursor-default",
-                        "placeholder:italic placeholder:font-normal placeholder:text-muted-foreground placeholder:text-[13px] placeholder:opacity-70"
-                      )}
-                    />
-                  </div>
-                </div>
-              ) : (
-                <div className="h-full flex flex-col items-center justify-center text-muted-foreground text-[11px] font-black uppercase tracking-[0.2em] italic">
-                  Select a product to view brief
+                  <EditableField 
+                    id="colors"
+                    label="Color Palette & Typography"
+                    register={register}
+                    registerKey="visualIdentity.colorTypography"
+                    value={watchedValues.visualIdentity?.colorTypography || ''}
+                    isEditMode={isEditMode}
+                    onFocusChange={handleFocusChange}
+                  />
+                  <EditableField 
+                    id="dislikes"
+                    label="Design Dislikes"
+                    register={register}
+                    registerKey="visualIdentity.designDislikes"
+                    value={watchedValues.visualIdentity?.designDislikes || ''}
+                    isEditMode={isEditMode}
+                    onFocusChange={handleFocusChange}
+                  />
                 </div>
               )}
-            </main>
-          </div>
-        </section>
+
+              {isCultureVisible && (
+                <div className="break-inside-avoid">
+                  <SectionHeader title="Culture & Symbols" icon={Globe} />
+                  <EditableField 
+                    id="icons"
+                    label="Mandatory Icons & Motifs"
+                    register={register}
+                    registerKey="cultureSymbols.mandatoryIcons"
+                    value={watchedValues.cultureSymbols?.mandatoryIcons || ''}
+                    isEditMode={isEditMode}
+                    onFocusChange={handleFocusChange}
+                  />
+                  <EditableField 
+                    id="nuances"
+                    label="Regional Nuances"
+                    register={register}
+                    registerKey="cultureSymbols.regionalNuances"
+                    value={watchedValues.cultureSymbols?.regionalNuances || ''}
+                    isEditMode={isEditMode}
+                    onFocusChange={handleFocusChange}
+                  />
+                </div>
+              )}
+
+              {isNarrativeVisible && (
+                <div className="break-inside-avoid">
+                  <SectionHeader title="The Narrative" icon={BookOpen} />
+                  <EditableField 
+                    id="timeline"
+                    label="Relationship Timeline"
+                    register={register}
+                    registerKey="narrative.timeline"
+                    value={watchedValues.narrative?.timeline || ''}
+                    isEditMode={isEditMode}
+                    onFocusChange={handleFocusChange}
+                  />
+                  <EditableField 
+                    id="couple"
+                    label="The Couple's World"
+                    register={register}
+                    registerKey="narrative.coupleWorld"
+                    value={watchedValues.narrative?.coupleWorld || ''}
+                    isEditMode={isEditMode}
+                    onFocusChange={handleFocusChange}
+                  />
+                  <EditableField 
+                    id="eggs"
+                    label="Easter Eggs"
+                    register={register}
+                    registerKey="narrative.easterEggs"
+                    value={watchedValues.narrative?.easterEggs || ''}
+                    isEditMode={isEditMode}
+                    onFocusChange={handleFocusChange}
+                  />
+                </div>
+              )}
+
+              {isAtmosphereVisible && (
+                <div className="break-inside-avoid">
+                  <SectionHeader title="Atmosphere & Extras" icon={Sparkles} />
+                  <EditableField 
+                    id="personality"
+                    label="Venue Personality"
+                    register={register}
+                    registerKey="atmosphereExtras.venuePersonality"
+                    value={watchedValues.atmosphereExtras?.venuePersonality || ''}
+                    isEditMode={isEditMode}
+                    onFocusChange={handleFocusChange}
+                  />
+                  <EditableField 
+                    id="other"
+                    label="Other Details"
+                    register={register}
+                    registerKey="atmosphereExtras.otherDetails"
+                    value={watchedValues.atmosphereExtras?.otherDetails || ''}
+                    isEditMode={isEditMode}
+                    onFocusChange={handleFocusChange}
+                  />
+                </div>
+              )}
+            </section>
+          )}
+
+          {/* Master-Detail View for Product Briefs */}
+          {isProductBriefsSectionVisible && (
+            <section className={cn(
+              isGenericDataVisible ? "mt-16 pt-16 border-t border-primary/10" : "mt-8"
+            )}>
+              <SectionHeader title="Product Specific Briefs" icon={Box} />
+              
+              <div className="flex flex-col md:flex-row h-[600px] border border-primary/10 rounded-xl overflow-hidden bg-card/5 shadow-sm">
+                {/* Master List (Left) */}
+                <aside className="w-full md:w-80 border-b md:border-b-0 md:border-r border-primary/10 overflow-hidden bg-card/20 shrink-0 flex flex-col">
+                  <div className="p-3 border-b border-primary/10 bg-background/50">
+                    <div className="relative">
+                      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input 
+                        placeholder="Filter products..." 
+                        className="h-9 pl-9 text-[11px] bg-background border-primary/20 focus-visible:ring-primary/20 font-bold uppercase tracking-widest"
+                        value={productSearchQuery}
+                        onChange={(e) => setProductSearchQuery(e.target.value)}
+                      />
+                      {productSearchQuery && (
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground hover:text-foreground"
+                          onClick={() => setProductSearchQuery('')}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-1">
+                    {visibleDeliverables.length === 0 ? (
+                      <div className="py-12 text-center text-[11px] text-muted-foreground font-black uppercase tracking-[0.15em] opacity-40 italic">
+                        No matching results
+                      </div>
+                    ) : (
+                      visibleDeliverables.map((item) => {
+                        const brief = (watchedValues.productBriefs as any)?.[item.id];
+                        const isFocused = focusedFields[`productBriefs.${item.id}`];
+                        const hasData = (brief && brief.trim().length > 0) || isFocused;
+                        const isActive = selectedProductId === item.id;
+                        const hasAddons = (item.addons || []).some((a: any) => a.value !== undefined && a.value !== false && a.value !== null);
+                        const hasSpecial = item.specialRequest && item.specialRequest.trim().length > 0;
+                        
+                        const tags = [];
+                        if (item.variant) tags.push(item.variant);
+                        if (hasAddons) tags.push("Add-on");
+                        if (hasSpecial) tags.push("Special Request");
+                        const tagsDisplay = tags.join(" • ");
+
+                        return (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => setSelectedProductId(item.id)}
+                            className={cn(
+                              "w-full text-left px-4 py-3 rounded-lg transition-all flex items-center justify-between group",
+                              isActive 
+                                ? "bg-primary text-white shadow-md shadow-primary/20" 
+                                : "hover:bg-primary/5 text-foreground"
+                            )}
+                          >
+                            <div className="flex-1 min-w-0 mr-3">
+                              <div className={cn(
+                                "font-headline font-black text-xs uppercase tracking-tight truncate",
+                                isActive ? "text-white" : "text-foreground"
+                              )}>
+                                {item.productName}
+                              </div>
+                              {tagsDisplay && (
+                                <div className={cn(
+                                  "text-[10px] font-black uppercase truncate mt-0.5 tracking-[0.05em]",
+                                  isActive ? "text-white/80" : "text-muted-foreground"
+                                )}>
+                                  {tagsDisplay}
+                                </div>
+                              )}
+                            </div>
+                            <div className="shrink-0">
+                              {hasData ? (
+                                <div className={cn(
+                                  "h-3.5 w-3.5 rounded-full bg-green-600 transition-colors ring-offset-background",
+                                  isActive && "ring-2 ring-white shadow-sm ring-offset-0"
+                                )} />
+                              ) : (
+                                <Circle className={cn(
+                                  "h-3.5 w-3.5 transition-colors opacity-30", 
+                                  isActive ? "text-white/50" : "text-muted-foreground"
+                                )} />
+                              )}
+                            </div>
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
+                </aside>
+
+                {/* Detail View (Right) */}
+                <main className="flex-1 pt-2 px-8 pb-8 overflow-y-auto custom-scrollbar bg-background/50">
+                  {selectedItem ? (
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap items-center text-[11px] font-black text-muted-foreground uppercase tracking-[0.1em]">
+                        {getProductSpecsSummary(selectedItem)}
+                      </div>
+
+                      <div className={cn(
+                        "relative group focus-within:z-10 bg-background rounded-xl shadow-sm border border-primary/10 transition-all",
+                        isEditMode && "focus-within:border-primary/40 focus-within:ring-8 focus-within:ring-primary/5"
+                      )}>
+                        <AutoGrowingTextarea 
+                          placeholder={isEditMode ? "Add detailed creative requirements for this product..." : "No brief provided"}
+                          {...register(`productBriefs.${selectedItem.id}` as any)}
+                          readOnly={!isEditMode}
+                          minRows={4}
+                          onFocus={() => handleFocusChange(`productBriefs.${selectedItem.id}`, true)}
+                          onBlur={() => handleFocusChange(`productBriefs.${selectedItem.id}`, false)}
+                          className={cn(
+                            "font-semibold bg-transparent text-foreground min-h-[350px] p-6 text-[14px] leading-relaxed",
+                            !isEditMode && "cursor-default",
+                            "placeholder:italic placeholder:font-normal placeholder:text-muted-foreground placeholder:text-[13px] placeholder:opacity-70"
+                          )}
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="h-full flex flex-col items-center justify-center text-muted-foreground text-[11px] font-black uppercase tracking-[0.2em] italic">
+                      Select a product to view brief
+                    </div>
+                  )}
+                </main>
+              </div>
+            </section>
+          )}
+        </>
       )}
 
+      {/* Persistent form tag to keep context stable */}
       <form id="creative-brief-form" onSubmit={handleSubmit(onSave)} className="hidden" />
       
       <style jsx global>{`
