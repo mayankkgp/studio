@@ -71,6 +71,7 @@ interface DesignCanvasProps {
     showPopovers: boolean;
     onTogglePopovers: () => void;
     isLightTable?: boolean;
+    onToggleLightTable?: () => void;
     allComponents?: DesignComponent[];
 }
 
@@ -100,6 +101,7 @@ export function DesignCanvas({
     showPopovers,
     onTogglePopovers,
     isLightTable = false,
+    onToggleLightTable,
     allComponents = []
 }: DesignCanvasProps) {
     const [zoom, setZoom] = useState(FIT_ZOOM);
@@ -660,6 +662,21 @@ export function DesignCanvas({
                                 </TooltipTrigger>
                                 <TooltipContent>{isZenMode ? "Popovers forced ON in Zen Mode" : effectiveShowPopovers ? "Hide Comment Boxes" : "Show Comment Boxes"}</TooltipContent>
                             </Tooltip>
+                            {onToggleLightTable && (
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button 
+                                            variant="ghost" 
+                                            size="icon" 
+                                            className={cn("h-9 w-9 rounded-full", isLightTable && "text-primary bg-primary/10")} 
+                                            onClick={onToggleLightTable}
+                                        >
+                                            <LayoutGrid className="h-4 w-4" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Light Table (Multi-View)</TooltipContent>
+                                </Tooltip>
+                            )}
                             {!isLightTable && (
                                 <Tooltip>
                                     <TooltipTrigger asChild>

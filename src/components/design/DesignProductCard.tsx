@@ -644,15 +644,6 @@ export function DesignProductCard({
                                     <div className="flex-1 flex items-center gap-4 overflow-hidden">
                                         <div className="flex items-center gap-2 shrink-0">
                                             <h2 className="font-headline font-black text-sm truncate">{product.productName}</h2>
-                                            <Button 
-                                                variant={isLightTable ? "default" : "ghost"} 
-                                                size="sm" 
-                                                onClick={() => setIsLightTable(!isLightTable)}
-                                                className="h-7 px-2 gap-1.5 text-[9px] font-black uppercase tracking-widest shadow-sm"
-                                            >
-                                                <LayoutGrid className="h-3 w-3" />
-                                                Light Table
-                                            </Button>
                                         </div>
                                         
                                         {!isLightTable && (
@@ -674,8 +665,8 @@ export function DesignProductCard({
                                                     )}
                                                     
                                                     <div 
-                                                        ref={tabScrollRef}
                                                         onScroll={checkTabOverflow}
+                                                        ref={tabScrollRef}
                                                         className="flex-1 flex items-center gap-1 overflow-x-auto no-scrollbar py-1 pr-4"
                                                     >
                                                         <Tabs value={activeCompId} onValueChange={(val) => {
@@ -747,6 +738,7 @@ export function DesignProductCard({
                                     showPopovers={showPopovers}
                                     onTogglePopovers={() => setShowPopovers(!showPopovers)}
                                     isLightTable={isLightTable}
+                                    onToggleLightTable={() => setIsLightTable(!isLightTable)}
                                     allComponents={localDesignData.components}
                                 />
                             </div>
@@ -795,7 +787,7 @@ export function DesignProductCard({
                                                         ) : (
                                                             <img src={v.imageUrl} className="w-full h-full object-cover" alt={`Version ${v.versionNumber}`} />
                                                         )}
-                                                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover/opacity-100 transition-opacity">
                                                             <span className="text-[10px] font-black text-white font-mono">V{v.versionNumber}</span>
                                                         </div>
                                                         {(selectedVersionId === v.id || (!selectedVersionId && v.versionNumber === viewedVersionNum)) && (
