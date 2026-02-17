@@ -515,6 +515,7 @@ export function DesignCanvas({
                                 e.preventDefault();
                                 setIsDraggingSlider(true);
                             }}
+                            onClick={(e) => e.stopPropagation()}
                         >
                             <div className="absolute inset-y-0 left-1/2 w-px bg-blue-600 pointer-events-none" />
                             
@@ -775,6 +776,7 @@ export function DesignCanvas({
                                     <div 
                                         className="p-3 border-b bg-muted/20 flex items-center justify-between cursor-grab active:cursor-grabbing group/header"
                                         onMouseDown={handlePopoverMouseDown}
+                                        onClick={(e) => e.stopPropagation()}
                                     >
                                         <div className="flex items-center gap-2">
                                             <div className="flex flex-col gap-0.5 opacity-30 group-hover/header:opacity-60 transition-opacity">
