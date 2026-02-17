@@ -164,22 +164,42 @@ export function DesignCanvas({
         if (!containerRef.current) return offset;
         const rect = containerRef.current.getBoundingClientRect();
         
-        // We want to ensure at least 50% of the artwork remains visible.
-        // A robust boundary: don't let the center of the artwork move 
-        // more than 80% of its zoomed dimensions away from screen center.
-        const limitX = rect.width * currentZoom * 0.8;
-        const limitY = rect.height * currentZoom * 0.8;
+        // Viewport dimensions
+        const Vw = rect.width;
+        const Vh = rect.height;
 
-        return {
-            x: Math.max(-limitX, Math.min(offset.x, limitX)),
-            y: Math.max(-limitY, Math.min(offset.y, limitY))
-        };
-    }, []);
+        if (isLightTable) {
+            // Light Mode: allow panning till at least 1 design component is slightly visible.
+            // We'll allow a very generous horizontal range based on components
+            const componentCount = allComponents.length || 1;
+            // Estimated width: 800px per component (zoomed) + gaps
+            const estimatedSpreadWidth = componentCount * 800 * currentZoom;
+            const limitX = (Vw / 2) + (estimatedSpreadWidth / 2) - 100; // Keep at least 100px visible
+            
+            // Vertical: 50% visibility constraint (center at edge)
+            const limitY = Vh / 2;
 
-    // Effect to re-clamp pan when zoom changes
+            return {
+                x: Math.max(-limitX, Math.min(offset.x, limitX)),
+                y: Math.max(-limitY, Math.min(offset.y, limitY))
+            };
+        } else {
+            // Standard Mode: 50% artwork visibility constraint.
+            // Center of artwork at edge of viewport = exactly 50% visible.
+            const limitX = Vw / 2;
+            const limitY = Vh / 2;
+
+            return {
+                x: Math.max(-limitX, Math.min(offset.x, limitX)),
+                y: Math.max(-limitY, Math.min(offset.y, limitY))
+            };
+        }
+    }, [isLightTable, allComponents]);
+
+    // Effect to re-clamp pan when zoom changes or mode changes
     useEffect(() => {
         setPanOffset(prev => getConstrainedPan(prev, zoom));
-    }, [zoom, getConstrainedPan]);
+    }, [zoom, isLightTable, getConstrainedPan]);
 
     useEffect(() => {
         const container = containerRef.current;
@@ -547,10 +567,10 @@ export function DesignCanvas({
                                 <GripHorizontal className="h-5 w-5" />
                             </button>
 
-                            <div className="absolute top-6 right-12 bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded opacity-0 group-hover/slider:opacity-100 transition-opacity whitespace-nowrap">
+                            <div className="absolute top-6 left-12 bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded opacity-0 group-hover/slider:opacity-100 transition-opacity whitespace-nowrap">
                                 After
                             </div>
-                            <div className="absolute top-6 left-12 bg-black/80 text-white text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded border border-white/10 opacity-0 group-hover/slider:opacity-100 transition-opacity whitespace-nowrap">
+                            <div className="absolute top-6 right-12 bg-black/80 text-white text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded border border-white/10 opacity-0 group-hover/slider:opacity-100 transition-opacity whitespace-nowrap">
                                 Before
                             </div>
                         </div>
@@ -717,7 +737,7 @@ export function DesignCanvas({
                             <div className="w-px h-4 bg-muted-foreground/20 mx-1" />
                             <Tooltip>
                                 <TooltipTrigger asChild>
-                                    <Button variant="ghost" size="icon" className={cn("h-9 w-9 rounded-full", isZenMode && "text-primary")} onClick={onToggleZen}>
+                                    <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full", isZenMode && "text-primary")} onClick={onToggleZen}>
                                         {isZenMode ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
                                     </Button>
                                 </TooltipTrigger>
