@@ -176,7 +176,7 @@ export function FeedbackSidebar({
     };
 
     const BriefSection = ({ title, icon: Icon, content }: { title: string, icon: any, content?: string }) => {
-        if (!content) return null;
+        if (!content || content.trim().length === 0) return null;
         return (
             <div className="space-y-2 mb-6 last:mb-0">
                 <div className="flex items-center gap-2 text-primary">
@@ -187,6 +187,26 @@ export function FeedbackSidebar({
             </div>
         );
     };
+
+    const isSectionActive = (fields: (string | undefined)[]) => {
+        return fields.some(f => f && f.trim().length > 0);
+    };
+
+    const hasVisual = isSectionActive([
+        customerData?.visualIdentity?.moodStyle,
+        customerData?.visualIdentity?.colorTypography,
+        customerData?.visualIdentity?.designDislikes
+    ]);
+
+    const hasNarrative = isSectionActive([
+        customerData?.narrative?.timeline,
+        customerData?.narrative?.coupleWorld,
+        customerData?.narrative?.easterEggs
+    ]);
+
+    const hasProductBrief = activeProductId && customerData?.productBriefs?.[activeProductId] && customerData.productBriefs[activeProductId].trim().length > 0;
+
+    const isBriefEmpty = !hasVisual && !hasNarrative && !hasProductBrief;
 
     return (
         <div className="flex flex-col h-full bg-background border-l border-primary/10 overflow-hidden">
@@ -334,28 +354,41 @@ export function FeedbackSidebar({
                     </ScrollArea>
                 </TabsContent>
 
-                <TabsContent value="brief" className="flex-1 overflow-hidden m-0 p-0">
-                    <ScrollArea className="h-full">
-                        <div className="p-6 space-y-8">
-                            <div>
-                                <h3 className="font-headline font-black text-sm uppercase tracking-widest text-foreground border-b-2 border-primary/10 pb-2 mb-6">Visual Identity</h3>
-                                <BriefSection title="Mood & Style" icon={Palette} content={customerData?.visualIdentity?.moodStyle} />
-                                <BriefSection title="Palette & Type" icon={Palette} content={customerData?.visualIdentity?.colorTypography} />
-                                <BriefSection title="Dislikes" icon={AlertCircle} content={customerData?.visualIdentity?.designDislikes} />
-                            </div>
-
-                            <div>
-                                <h3 className="font-headline font-black text-sm uppercase tracking-widest text-foreground border-b-2 border-primary/10 pb-2 mb-6">Narrative</h3>
-                                <BriefSection title="Timeline" icon={BookOpen} content={customerData?.narrative?.timeline} />
-                                <BriefSection title="Couple's World" icon={Globe} content={customerData?.narrative?.coupleWorld} />
-                                <BriefSection title="Easter Eggs" icon={Sparkles} content={customerData?.narrative?.easterEggs} />
-                            </div>
-
-                            {activeProductId && customerData?.productBriefs?.[activeProductId] && (
-                                <div>
-                                    <h3 className="font-headline font-black text-sm uppercase tracking-widest text-foreground border-b-2 border-primary/10 pb-2 mb-6">Product Specific</h3>
-                                    <BriefSection title="Product Brief" icon={Sparkles} content={customerData.productBriefs[activeProductId]} />
+                <TabsContent value="brief" className="flex-1 overflow-hidden m-0 p-0 flex flex-col">
+                    <ScrollArea className="flex-1">
+                        <div className="p-6 space-y-8 pb-20">
+                            {isBriefEmpty ? (
+                                <div className="py-20 text-center opacity-40 italic">
+                                    <Sparkles className="h-10 w-10 mx-auto mb-3 opacity-20" />
+                                    <p className="text-[11px] font-black uppercase tracking-widest px-8">No creative brief data recorded for this product.</p>
                                 </div>
+                            ) : (
+                                <>
+                                    {hasVisual && (
+                                        <div>
+                                            <h3 className="font-headline font-black text-sm uppercase tracking-widest text-foreground border-b-2 border-primary/10 pb-2 mb-6">Visual Identity</h3>
+                                            <BriefSection title="Mood & Style" icon={Palette} content={customerData?.visualIdentity?.moodStyle} />
+                                            <BriefSection title="Palette & Type" icon={Palette} content={customerData?.visualIdentity?.colorTypography} />
+                                            <BriefSection title="Dislikes" icon={AlertCircle} content={customerData?.visualIdentity?.designDislikes} />
+                                        </div>
+                                    )}
+
+                                    {hasNarrative && (
+                                        <div>
+                                            <h3 className="font-headline font-black text-sm uppercase tracking-widest text-foreground border-b-2 border-primary/10 pb-2 mb-6">Narrative</h3>
+                                            <BriefSection title="Timeline" icon={BookOpen} content={customerData?.narrative?.timeline} />
+                                            <BriefSection title="Couple's World" icon={Globe} content={customerData?.narrative?.coupleWorld} />
+                                            <BriefSection title="Easter Eggs" icon={Sparkles} content={customerData?.narrative?.easterEggs} />
+                                        </div>
+                                    )}
+
+                                    {hasProductBrief && (
+                                        <div>
+                                            <h3 className="font-headline font-black text-sm uppercase tracking-widest text-foreground border-b-2 border-primary/10 pb-2 mb-6">Product Specific</h3>
+                                            <BriefSection title="Product Brief" icon={Sparkles} content={customerData?.productBriefs?.[activeProductId!]} />
+                                        </div>
+                                    )}
+                                </>
                             )}
                         </div>
                     </ScrollArea>
