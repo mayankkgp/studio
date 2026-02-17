@@ -543,7 +543,9 @@ export function DesignProductCard({
         hasNewDraft: !!newDrafts[activeCompId],
         onUpload: handleUpload,
         customerData,
-        activeProductId: product.id.toString()
+        activeProductId: product.id.toString(),
+        onClose: () => setIsFullscreen(false),
+        isLightTable: isLightTable
     };
 
     return (
@@ -639,6 +641,19 @@ export function DesignProductCard({
                         isZenMode && "border-0"
                     )}>
                         <div className="flex-1 relative flex flex-col min-w-0 bg-stone-950">
+                            {isZenMode && (
+                                <div className="absolute top-4 right-4 z-[200]">
+                                    <Button 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        className="h-10 w-10 rounded-full bg-background/50 backdrop-blur-xl border border-primary/20 shadow-2xl hover:bg-background"
+                                        onClick={() => setIsFullscreen(false)}
+                                    >
+                                        <X className="h-5 w-5" />
+                                    </Button>
+                                </div>
+                            )}
+
                             {!isZenMode && (
                                 <div className="h-14 shrink-0 flex items-center justify-between px-6 bg-background/80 backdrop-blur-xl border-b z-50">
                                     <div className="flex-1 flex items-center gap-4 overflow-hidden">
@@ -700,15 +715,6 @@ export function DesignProductCard({
                                                 </div>
                                             </>
                                         )}
-                                    </div>
-                                    <div className="flex items-center gap-3 shrink-0 ml-4">
-                                        <Badge className={cn("font-black text-[10px] px-3 h-7 tracking-widest shadow-sm", 
-                                            activeComponent.status === 'APPROVED' ? "bg-green-600 text-white" :
-                                            activeComponent.status === 'DRAFT' ? "bg-orange-500 text-white" : "bg-blue-600 text-white"
-                                        )}>
-                                            {isLightTable ? 'MULTI-VIEW' : activeComponent.status.replace('_', ' ')}
-                                        </Badge>
-                                        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full" onClick={() => setIsFullscreen(false)}><X className="h-5 w-5" /></Button>
                                     </div>
                                 </div>
                             )}

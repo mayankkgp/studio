@@ -23,7 +23,8 @@ import {
     Trash2,
     Lock,
     CornerDownRight,
-    CheckCircle2
+    CheckCircle2,
+    X
 } from 'lucide-react';
 
 const PIN_COLORS: Record<DesignPinStatus, string> = {
@@ -50,6 +51,8 @@ interface FeedbackSidebarProps {
     viewedVersion: number;
     customerData?: CustomerData;
     activeProductId?: string;
+    onClose: () => void;
+    isLightTable?: boolean;
 }
 
 export function FeedbackSidebar({ 
@@ -70,7 +73,9 @@ export function FeedbackSidebar({
     currentVersion,
     viewedVersion,
     customerData,
-    activeProductId
+    activeProductId,
+    onClose,
+    isLightTable = false
 }: FeedbackSidebarProps) {
     const [filter, setFilter] = useState<'all' | 'open' | 'mistakes'>('open');
     const [activeTab, setActiveTab] = useState('feedback');
@@ -214,15 +219,17 @@ export function FeedbackSidebar({
 
             <div className="p-4 border-b bg-muted/30 shrink-0">
                 <div className="flex items-center justify-between mb-4">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Status</span>
                     <Badge className={cn(
-                        "font-black text-[10px]",
-                        status === 'APPROVED' ? "bg-green-600" :
-                        status === 'INTERNAL_REVIEW' ? "bg-amber-500" :
-                        status === 'CUSTOMER_REVIEW' ? "bg-blue-600" : "bg-muted text-muted-foreground"
+                        "font-black text-[10px] px-3 h-7 tracking-widest shadow-sm",
+                        status === 'APPROVED' ? "bg-green-600 text-white" :
+                        status === 'INTERNAL_REVIEW' ? "bg-amber-500 text-white" :
+                        status === 'CUSTOMER_REVIEW' ? "bg-blue-600 text-white" : "bg-muted text-muted-foreground"
                     )}>
-                        {status.replace('_', ' ')}
+                        {isLightTable ? 'MULTI-VIEW' : status.replace('_', ' ')}
                     </Badge>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full -mr-2 text-muted-foreground hover:text-foreground" onClick={onClose}>
+                        <X className="h-4 w-4" />
+                    </Button>
                 </div>
                 {renderActions()}
             </div>
@@ -290,7 +297,7 @@ export function FeedbackSidebar({
                                                 </div>
                                             </div>
                                             
-                                            <p className="text-[11px] font-semibold leading-relaxed text-foreground/90">{pin.text || <span className="italic opacity-50">No description provided</span>}</p>
+                                            <p className="text-xs font-semibold leading-relaxed text-foreground/90">{pin.text || <span className="italic opacity-50">No description provided</span>}</p>
                                             
                                             {pin.replies && pin.replies.map((reply, i) => (
                                                 <div key={i} className="pl-3 border-l-2 border-primary/10 mt-3 space-y-0.5">
@@ -354,9 +361,9 @@ export function FeedbackSidebar({
                     </ScrollArea>
                 </TabsContent>
 
-                <TabsContent value="brief" className="flex-1 overflow-hidden m-0 p-0 flex flex-col !mt-0 data-[state=active]:flex outline-none">
+                <TabsContent value="brief" className="flex-1 overflow-hidden m-0 p-4 flex flex-col !mt-0 data-[state=active]:flex outline-none">
                     <ScrollArea className="flex-1 w-full h-full">
-                        <div className="p-4 space-y-8 pb-20">
+                        <div className="space-y-8 pb-20">
                             {isBriefEmpty ? (
                                 <div className="py-20 text-center opacity-40 italic">
                                     <Sparkles className="h-10 w-10 mx-auto mb-3 opacity-20" />
