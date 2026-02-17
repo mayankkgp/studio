@@ -170,13 +170,9 @@ export function DesignCanvas({
 
         if (isLightTable) {
             // Light Mode: allow panning till at least 1 design component is slightly visible.
-            // We'll allow a very generous horizontal range based on components
             const componentCount = allComponents.length || 1;
-            // Estimated width: 800px per component (zoomed) + gaps
             const estimatedSpreadWidth = componentCount * 800 * currentZoom;
-            const limitX = (Vw / 2) + (estimatedSpreadWidth / 2) - 100; // Keep at least 100px visible
-            
-            // Vertical: 50% visibility constraint (center at edge)
+            const limitX = (Vw / 2) + (estimatedSpreadWidth / 2) - 100;
             const limitY = Vh / 2;
 
             return {
@@ -185,7 +181,6 @@ export function DesignCanvas({
             };
         } else {
             // Standard Mode: 50% artwork visibility constraint.
-            // Center of artwork at edge of viewport = exactly 50% visible.
             const limitX = Vw / 2;
             const limitY = Vh / 2;
 
@@ -196,7 +191,6 @@ export function DesignCanvas({
         }
     }, [isLightTable, allComponents]);
 
-    // Effect to re-clamp pan when zoom changes or mode changes
     useEffect(() => {
         setPanOffset(prev => getConstrainedPan(prev, zoom));
     }, [zoom, isLightTable, getConstrainedPan]);
@@ -523,7 +517,6 @@ export function DesignCanvas({
                     onAddPin(x, y, comp?.id);
                 }}
             >
-                {/* Comparison (Before) layer for standard mode */}
                 {mode === 'standard' && showComparison && comparisonImageUrl && (
                     <img 
                         src={comparisonImageUrl} 
@@ -533,7 +526,6 @@ export function DesignCanvas({
                     />
                 )}
 
-                {/* Latest Proof (After) layer */}
                 {imgUrl && (
                     <img 
                         src={imgUrl} 
@@ -546,7 +538,6 @@ export function DesignCanvas({
                     />
                 )}
 
-                {/* Comparison Slider Handle */}
                 {mode === 'standard' && showComparison && (
                     <div className="absolute inset-0 z-[60] pointer-events-none overflow-hidden">
                         <div 
@@ -567,17 +558,16 @@ export function DesignCanvas({
                                 <GripHorizontal className="h-5 w-5" />
                             </button>
 
-                            <div className="absolute top-6 left-12 bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded opacity-0 group-hover/slider:opacity-100 transition-opacity whitespace-nowrap">
+                            <div className="absolute top-6 right-12 bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded opacity-0 group-hover/slider:opacity-100 transition-opacity whitespace-nowrap">
                                 After
                             </div>
-                            <div className="absolute top-6 right-12 bg-black/80 text-white text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded border border-white/10 opacity-0 group-hover/slider:opacity-100 transition-opacity whitespace-nowrap">
+                            <div className="absolute top-6 left-12 bg-black/80 text-white text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded border border-white/10 opacity-0 group-hover/slider:opacity-100 transition-opacity whitespace-nowrap">
                                 Before
                             </div>
                         </div>
                     </div>
                 )}
                 
-                {/* Pins Overlay */}
                 {showPins && pinsList.map(pin => renderPin(pin))}
             </div>
         );
@@ -627,9 +617,11 @@ export function DesignCanvas({
 
             {(imageUrl || isLightTable) && (
                 <>
-                    <div className="absolute top-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-1.5 p-1.5 bg-background/90 backdrop-blur-xl border border-primary/20 rounded-full shadow-2xl scale-110">
+                    {/* Unified Vertical Control Dock (Left Edge) */}
+                    <div className="absolute left-6 top-1/2 -translate-y-1/2 z-50 flex flex-col gap-1.5 p-1.5 bg-background/90 backdrop-blur-xl border border-primary/20 rounded-full shadow-2xl scale-110">
                         <TooltipProvider>
-                            <div className="flex items-center px-1.5 gap-1.5">
+                            {/* Group 1: Annotation Tools */}
+                            <div className="flex flex-col items-center gap-1.5 px-1.5">
                                 {isFeedbackUnlocked ? (
                                     <>
                                         <Tooltip>
@@ -643,7 +635,7 @@ export function DesignCanvas({
                                                     <MousePointer2 className="h-4 w-4" />
                                                 </Button>
                                             </TooltipTrigger>
-                                            <TooltipContent>Select Tool (V)</TooltipContent>
+                                            <TooltipContent side="right">Select Tool (V)</TooltipContent>
                                         </Tooltip>
                                         <Tooltip>
                                             <TooltipTrigger asChild>
@@ -656,113 +648,120 @@ export function DesignCanvas({
                                                     <MessageSquarePlus className="h-4 w-4" />
                                                 </Button>
                                             </TooltipTrigger>
-                                            <TooltipContent>Comment Tool (C)</TooltipContent>
+                                            <TooltipContent side="right">Comment Tool (C)</TooltipContent>
                                         </Tooltip>
                                     </>
                                 ) : isPanModeActive ? (
-                                    <div className="flex items-center px-3 gap-2">
+                                    <div className="flex flex-col items-center py-2 gap-2">
                                         <Hand className="h-3 w-3 text-primary animate-pulse" />
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-primary">Pan Mode</span>
+                                        <span className="text-[8px] font-black uppercase tracking-widest text-primary vertical-text">Pan Mode</span>
                                     </div>
                                 ) : (
-                                    <div className="flex items-center px-3 gap-2">
-                                        <Lock className="h-3 w-3 text-muted-foreground" />
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full text-muted-foreground opacity-50 cursor-not-allowed">
+                                                <Lock className="h-4 w-4" />
+                                            </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent side="right">
                                             {!isDesigner && (status === 'DRAFT' || status === 'PENDING') 
                                                 ? "Manager feedback locked during draft" 
                                                 : isLatest || isLightTable ? "Locked" : "Viewing History"}
-                                        </span>
-                                    </div>
+                                        </TooltipContent>
+                                    </Tooltip>
                                 )}
                             </div>
-                            <div className="w-px h-4 bg-muted-foreground/20 mx-1" />
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full" onClick={handleReset}><Scaling className="h-4 w-4" /></Button>
-                                </TooltipTrigger>
-                                <TooltipContent>Fit to Screen (R)</TooltipContent>
-                            </Tooltip>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Button variant="ghost" size="icon" className={cn("h-9 w-9 rounded-full", !showPins && "text-primary")} onClick={() => setShowPins(!showPins)}>
-                                        {showPins ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-                                    </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>{showPins ? "Hide Pins" : "Show Pins"}</TooltipContent>
-                            </Tooltip>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Button 
-                                        variant="ghost" 
-                                        size="icon" 
-                                        className={cn("h-9 w-9 rounded-full", !effectiveShowPopovers && "text-primary")} 
-                                        onClick={onTogglePopovers}
-                                        disabled={isZenMode}
-                                    >
-                                        {effectiveShowPopovers ? <MessageSquare className="h-4 w-4" /> : <MessageSquareOff className="h-4 w-4" />}
-                                    </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>{isZenMode ? "Popovers forced ON in Zen Mode" : effectiveShowPopovers ? "Hide Comment Boxes" : "Show Comment Boxes"}</TooltipContent>
-                            </Tooltip>
-                            {onToggleLightTable && (
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <Button 
-                                            variant="ghost" 
-                                            size="icon" 
-                                            className={cn("h-9 w-9 rounded-full", isLightTable && "text-primary bg-primary/10")} 
-                                            onClick={onToggleLightTable}
-                                        >
-                                            <LayoutGrid className="h-4 w-4" />
-                                        </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>Light Table (Multi-View)</TooltipContent>
-                                </Tooltip>
-                            )}
-                            {!isLightTable && (
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <Button 
-                                            variant="ghost" 
-                                            size="icon" 
-                                            className={cn("h-9 w-9 rounded-full", showComparison && "text-primary bg-primary/10")} 
-                                            onClick={() => setShowComparison(!showComparison)}
-                                        >
-                                            <Layers className="h-4 w-4" />
-                                        </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>Split Comparison (Before/After Wiper)</TooltipContent>
-                                </Tooltip>
-                            )}
-                            <div className="w-px h-4 bg-muted-foreground/20 mx-1" />
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Button variant="ghost" size="icon" className={cn("h-9 w-9 rounded-full", isZenMode && "text-primary")} onClick={onToggleZen}>
-                                        {isZenMode ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
-                                    </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>{isZenMode ? "Exit Zen Mode (F)" : "Zen Mode (F)"}</TooltipContent>
-                            </Tooltip>
-                        </TooltipProvider>
-                    </div>
 
-                    <div className="absolute top-6 right-6 z-50 flex flex-col gap-2">
-                        <div className="bg-background/90 backdrop-blur-md border border-primary/20 rounded-lg p-1 shadow-xl flex flex-col gap-1">
-                            <TooltipProvider>
+                            <div className="w-4 h-px bg-muted-foreground/20 mx-auto my-1" />
+
+                            {/* Group 2: View Toggles */}
+                            <div className="flex flex-col items-center gap-1.5">
                                 <Tooltip>
                                     <TooltipTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleZoomIn}><ZoomIn className="h-4 w-4" /></Button>
+                                        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full" onClick={handleReset}><Scaling className="h-4 w-4" /></Button>
                                     </TooltipTrigger>
-                                    <TooltipContent side="left">Zoom In</TooltipContent>
+                                    <TooltipContent side="right">Fit to Screen (R)</TooltipContent>
                                 </Tooltip>
                                 <Tooltip>
                                     <TooltipTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleZoomOut}><ZoomOut className="h-4 w-4" /></Button>
+                                        <Button variant="ghost" size="icon" className={cn("h-9 w-9 rounded-full", !showPins && "text-primary")} onClick={() => setShowPins(!showPins)}>
+                                            {showPins ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                                        </Button>
                                     </TooltipTrigger>
-                                    <TooltipContent side="left">Zoom Out</TooltipContent>
+                                    <TooltipContent side="right">{showPins ? "Hide Pins" : "Show Pins"}</TooltipContent>
                                 </Tooltip>
-                            </TooltipProvider>
-                        </div>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button 
+                                            variant="ghost" 
+                                            size="icon" 
+                                            className={cn("h-9 w-9 rounded-full", !effectiveShowPopovers && "text-primary")} 
+                                            onClick={onTogglePopovers}
+                                            disabled={isZenMode}
+                                        >
+                                            {effectiveShowPopovers ? <MessageSquare className="h-4 w-4" /> : <MessageSquareOff className="h-4 w-4" />}
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="right">{isZenMode ? "Popovers forced ON in Zen Mode" : effectiveShowPopovers ? "Hide Comment Boxes" : "Show Comment Boxes"}</TooltipContent>
+                                </Tooltip>
+                                {onToggleLightTable && (
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <Button 
+                                                variant="ghost" 
+                                                size="icon" 
+                                                className={cn("h-9 w-9 rounded-full", isLightTable && "text-primary bg-primary/10")} 
+                                                onClick={onToggleLightTable}
+                                            >
+                                                <LayoutGrid className="h-4 w-4" />
+                                            </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent side="right">Light Table (Multi-View)</TooltipContent>
+                                    </Tooltip>
+                                )}
+                                {!isLightTable && (
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <Button 
+                                                variant="ghost" 
+                                                size="icon" 
+                                                className={cn("h-9 w-9 rounded-full", showComparison && "text-primary bg-primary/10")} 
+                                                onClick={() => setShowComparison(!showComparison)}
+                                            >
+                                                <Layers className="h-4 w-4" />
+                                            </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent side="right">Split Comparison (Layers)</TooltipContent>
+                                    </Tooltip>
+                                )}
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button variant="ghost" size="icon" className={cn("h-9 w-9 rounded-full", isZenMode && "text-primary")} onClick={onToggleZen}>
+                                            {isZenMode ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="right">{isZenMode ? "Exit Zen Mode (F)" : "Zen Mode (F)"}</TooltipContent>
+                                </Tooltip>
+                            </div>
+
+                            <div className="w-4 h-px bg-muted-foreground/20 mx-auto my-1" />
+
+                            {/* Group 3: Navigation (Zoom) */}
+                            <div className="flex flex-col items-center gap-1.5">
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full" onClick={handleZoomIn}><ZoomIn className="h-4 w-4" /></Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="right">Zoom In</TooltipContent>
+                                </Tooltip>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full" onClick={handleZoomOut}><ZoomOut className="h-4 w-4" /></Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="right">Zoom Out</TooltipContent>
+                                </Tooltip>
+                            </div>
+                        </TooltipProvider>
                     </div>
 
                     <div 
@@ -907,7 +906,7 @@ export function DesignCanvas({
                                                         />
                                                         <div className="flex justify-end gap-2">
                                                             <Button variant="ghost" size="sm" className="h-6 text-[9px] font-black uppercase" onClick={() => setIsReplyMode(false)}>Cancel</Button>
-                                                            <Button size="sm" className="h-6 text-[9px] font-black uppercase" onClick={() => handleAddReply(pinId)}>Reply</Button>
+                                                            <Button size="sm" className="h-6 text-[9px] font-black uppercase" onClick={() => handleAddReply(activePin.id)}>Reply</Button>
                                                         </div>
                                                     </div>
                                                 ) : (
