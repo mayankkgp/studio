@@ -43,7 +43,7 @@ const PIN_COLORS: Record<DesignPinStatus, string> = {
 
 // Zoom Constants
 const FIT_ZOOM = 1.0; 
-const MIN_ZOOM_FLOOR = 0.9; 
+const MIN_ZOOM_FLOOR = 0.05; // Lowered to support Fit-to-Screen for wide Light Tables
 const MAX_ZOOM = 4.0;
 
 interface DesignCanvasProps {
@@ -191,6 +191,41 @@ export function DesignCanvas({
         }
     }, [isLightTable, allComponents]);
 
+    // High-precision "Fit to Screen" calculation
+    const handleReset = useCallback(() => {
+        if (!containerRef.current) return;
+        
+        // 1. Get Viewport Dimensions
+        const viewportRect = containerRef.current.getBoundingClientRect();
+        const Vw = viewportRect.width;
+        const Vh = viewportRect.height;
+
+        // 2. Identify the content container based on mode
+        const contentEl = isLightTable 
+            ? containerRef.current.querySelector('.flex-row') 
+            : containerRef.current.querySelector('.group\\/comp-container');
+
+        if (!contentEl) {
+            setZoom(FIT_ZOOM);
+            setPanOffset({ x: 0, y: 0 });
+            return;
+        }
+
+        // 3. Get intrinsic (unscaled) content dimensions
+        const contentRect = contentEl.getBoundingClientRect();
+        const unscaledCw = contentRect.width / zoom;
+        const unscaledCh = contentRect.height / zoom;
+
+        // 4. Calculate best-fit ratio with 0.95 safety margin
+        const scaleX = Vw / unscaledCw;
+        const scaleY = Vh / unscaledCh;
+        const fitScale = Math.min(scaleX, scaleY) * 0.95;
+
+        // 5. Apply clamped zoom and center the spread
+        setZoom(Math.max(MIN_ZOOM_FLOOR, Math.min(fitScale, MAX_ZOOM)));
+        setPanOffset({ x: 0, y: 0 });
+    }, [isLightTable, zoom]);
+
     useEffect(() => {
         setPanOffset(prev => getConstrainedPan(prev, zoom));
     }, [zoom, isLightTable, getConstrainedPan]);
@@ -242,12 +277,18 @@ export function DesignCanvas({
                 }
             }
 
-            if (!isTyping && isFeedbackUnlocked) {
-                if (e.key.toLowerCase() === 'c') {
-                    setActiveTool('comment');
+            if (!isTyping) {
+                if (e.key.toLowerCase() === 'r') {
+                    handleReset();
                 }
-                if (e.key.toLowerCase() === 'v') {
-                    setActiveTool('pointer');
+                
+                if (isFeedbackUnlocked) {
+                    if (e.key.toLowerCase() === 'c') {
+                        setActiveTool('comment');
+                    }
+                    if (e.key.toLowerCase() === 'v') {
+                        setActiveTool('pointer');
+                    }
                 }
             }
         };
@@ -265,7 +306,7 @@ export function DesignCanvas({
             window.removeEventListener('keydown', handleKeyDown);
             window.removeEventListener('keyup', handleKeyUp);
         };
-    }, [isSpacePressed, selectedPinId, highlightedPinId, onPinClick, isFeedbackUnlocked]);
+    }, [isSpacePressed, selectedPinId, highlightedPinId, onPinClick, isFeedbackUnlocked, handleReset]);
 
     useEffect(() => {
         if ((!comparisonImageUrl && !isLightTable) || isLightTable) setShowComparison(false);
@@ -305,10 +346,6 @@ export function DesignCanvas({
 
     const handleZoomIn = () => setZoom(prev => Math.min(prev + 0.25, MAX_ZOOM));
     const handleZoomOut = () => setZoom(prev => Math.max(prev - 0.25, MIN_ZOOM_FLOOR));
-    const handleReset = () => {
-        setZoom(FIT_ZOOM);
-        setPanOffset({ x: 0, y: 0 });
-    };
 
     const handleCanvasMouseDown = (e: React.MouseEvent) => {
         if (isDraggingSlider) return;
