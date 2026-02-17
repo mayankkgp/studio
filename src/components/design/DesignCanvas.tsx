@@ -538,11 +538,11 @@ export function DesignCanvas({
                             >
                                 <GripHorizontal className="h-5 w-5" />
                             </button>
-                            <div className="absolute top-6 right-12 bg-black/80 text-white text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded border border-white/10 opacity-0 group-hover/slider:opacity-100 transition-opacity whitespace-nowrap">
-                                After
-                            </div>
-                            <div className="absolute top-6 left-12 bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded opacity-0 group-hover/slider:opacity-100 transition-opacity whitespace-nowrap">
+                            <div className="absolute top-6 right-12 bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded border border-white/10 opacity-0 group-hover/slider:opacity-100 transition-opacity whitespace-nowrap">
                                 Before
+                            </div>
+                            <div className="absolute top-6 left-12 bg-black/80 text-white text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded opacity-0 group-hover/slider:opacity-100 transition-opacity whitespace-nowrap">
+                                After
                             </div>
                         </div>
                     </div>
@@ -630,6 +630,12 @@ export function DesignCanvas({
                             <div className="flex flex-col items-center gap-1 px-1">
                                 <Tooltip>
                                     <TooltipTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full" onClick={handleReset}><Scaling className="h-4 w-4" /></Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="right">Fit to Screen (R)</TooltipContent>
+                                </Tooltip>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
                                         <Button variant="ghost" size="icon" className={cn("h-9 w-9 rounded-full", !showPins && "text-primary")} onClick={() => setShowPins(!showPins)}>{showPins ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}</Button>
                                     </TooltipTrigger>
                                     <TooltipContent side="right">{showPins ? "Hide Pins" : "Show Pins"}</TooltipContent>
@@ -658,7 +664,9 @@ export function DesignCanvas({
                                 )}
                                 <Tooltip>
                                     <TooltipTrigger asChild>
-                                        <Button variant="ghost" size="icon" className={cn("h-9 w-9 rounded-full", isZenMode && "text-primary")} onClick={onToggleZen}>{isZenMode ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}</Button>
+                                        <Button variant="ghost" size="icon" className={cn("h-9 w-9 rounded-full", isZenMode && "text-primary")} onClick={onToggleZen}>
+                                            {isZenMode ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
+                                        </Button>
                                     </TooltipTrigger>
                                     <TooltipContent side="right">{isZenMode ? "Exit Zen Mode (F)" : "Zen Mode (F)"}</TooltipContent>
                                 </Tooltip>
@@ -667,12 +675,6 @@ export function DesignCanvas({
                             <div className="w-4 h-px bg-muted-foreground/20 mx-auto my-1" />
 
                             <div className="flex flex-col items-center gap-1 px-1 pb-1">
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full" onClick={handleReset}><Scaling className="h-4 w-4" /></Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent side="right">Fit to Screen (R)</TooltipContent>
-                                </Tooltip>
                                 <Tooltip>
                                     <TooltipTrigger asChild>
                                         <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full" onClick={handleZoomIn}><ZoomIn className="h-4 w-4" /></Button>
@@ -754,7 +756,34 @@ export function DesignCanvas({
                                                 {isReplyMode ? (
                                                     <div className="space-y-2 pt-2 border-t"><Textarea ref={textareaRef} placeholder="Write a reply..." className="min-h-[60px] text-[10px] font-semibold" value={replyText} onChange={(e) => setReplyText(e.target.value)} onKeyDown={(e) => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); handleAddReply(activePin.id); } }} /><div className="flex justify-end gap-2"><Button variant="ghost" size="sm" className="h-6 text-[9px] font-black uppercase" onClick={() => setIsReplyMode(false)}>Cancel</Button><Button size="sm" className="h-6 text-[9px] font-black uppercase" onClick={() => handleAddReply(activePin.id)}>Reply</Button></div></div>
                                                 ) : (
-                                                    <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-primary/5"><Button variant="outline" size="sm" className="h-7 text-[9px] font-black uppercase px-2" onClick={() => setIsReplyMode(true)}><Send className="h-3 w-3 mr-1" /> Reply</Button>{!isDesigner && (<>{activePin.status !== 'resolved' ? (<><Button variant="outline" size="sm" className="h-6 text-[9px] font-black uppercase px-2 border-green-600 text-green-600 hover:bg-green-50" onClick={() => handleStatusUpdate(activePin.id, 'resolved')}><CheckCircle2 className="h-3 w-3 mr-1" /> Resolve</><Button variant="outline" size="sm" className={cn("h-6 text-[9px] font-black uppercase px-2", activePin.isMistake ? "border-primary text-primary" : "border-destructive text-destructive")} onClick={() => handleMistakeToggle(activePin.id)}><AlertCircle className="h-3 w-3 mr-1" /> {activePin.isMistake ? 'Unmark Mistake' : 'Mark Mistake'}</Button></>) : (<Button variant="outline" size="sm" className="h-7 text-[9px] font-black uppercase px-2 border-primary text-primary hover:bg-primary/5" onClick={() => handleStatusUpdate(activePin.id, 'open')}><RotateCcw className="h-3 w-3 mr-1" /> Re-open</Button>)}</>)}<Button variant="ghost" size="icon" className="h-7 w-7 text-destructive ml-auto" onClick={(e) => handleDeletePin(e, activePin.id)}><Trash2 className="h-3.5 w-3.5" /></Button></div>
+                                                    <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-primary/5">
+                                                        <Button variant="outline" size="sm" className="h-7 text-[9px] font-black uppercase px-2" onClick={() => setIsReplyMode(true)}>
+                                                            <Send className="h-3 w-3 mr-1" /> Reply
+                                                        </Button>
+                                                        {!isDesigner && activePin.status !== 'resolved' && (
+                                                            <>
+                                                                <Button variant="outline" size="sm" className="h-6 text-[9px] font-black uppercase px-2 border-green-600 text-green-600 hover:bg-green-50" onClick={() => handleStatusUpdate(activePin.id, 'resolved')}>
+                                                                    <CheckCircle2 className="h-3 w-3 mr-1" /> Resolve
+                                                                </Button>
+                                                                <Button 
+                                                                    variant="outline" 
+                                                                    size="sm" 
+                                                                    className={cn("h-6 text-[9px] font-black uppercase px-2", activePin.isMistake ? "border-primary text-primary" : "border-destructive text-destructive")} 
+                                                                    onClick={() => handleMistakeToggle(activePin.id)}
+                                                                >
+                                                                    <AlertCircle className="h-3 w-3 mr-1" /> {activePin.isMistake ? 'Unmark Mistake' : 'Mark Mistake'}
+                                                                </Button>
+                                                            </>
+                                                        )}
+                                                        {!isDesigner && activePin.status === 'resolved' && (
+                                                            <Button variant="outline" size="sm" className="h-7 text-[9px] font-black uppercase px-2 border-primary text-primary hover:bg-primary/5" onClick={() => handleStatusUpdate(activePin.id, 'open')}>
+                                                                <RotateCcw className="h-3 w-3 mr-1" /> Re-open
+                                                            </Button>
+                                                        )}
+                                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive ml-auto" onClick={(e) => handleDeletePin(e, activePin.id)}>
+                                                            <Trash2 className="h-3.5 w-3.5" />
+                                                        </Button>
+                                                    </div>
                                                 )}
                                             </div>
                                         )}
