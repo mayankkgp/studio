@@ -737,7 +737,7 @@ export function DesignCanvas({
                             <div className="w-px h-4 bg-muted-foreground/20 mx-1" />
                             <Tooltip>
                                 <TooltipTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full", isZenMode && "text-primary")} onClick={onToggleZen}>
+                                    <Button variant="ghost" size="icon" className={cn("h-9 w-9 rounded-full", isZenMode && "text-primary")} onClick={onToggleZen}>
                                         {isZenMode ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
                                     </Button>
                                 </TooltipTrigger>
@@ -907,7 +907,7 @@ export function DesignCanvas({
                                                         />
                                                         <div className="flex justify-end gap-2">
                                                             <Button variant="ghost" size="sm" className="h-6 text-[9px] font-black uppercase" onClick={() => setIsReplyMode(false)}>Cancel</Button>
-                                                            <Button size="sm" className="h-6 text-[9px] font-black uppercase" onClick={() => handleAddReply(activePin.id)}>Reply</Button>
+                                                            <Button size="sm" className="h-6 text-[9px] font-black uppercase" onClick={() => handleAddReply(pinId)}>Reply</Button>
                                                         </div>
                                                     </div>
                                                 ) : (
