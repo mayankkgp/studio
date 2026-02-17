@@ -559,10 +559,10 @@ export function DesignCanvas({
                             </button>
 
                             <div className="absolute top-6 right-12 bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded opacity-0 group-hover/slider:opacity-100 transition-opacity whitespace-nowrap">
-                                After
+                                Before
                             </div>
                             <div className="absolute top-6 left-12 bg-black/80 text-white text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded border border-white/10 opacity-0 group-hover/slider:opacity-100 transition-opacity whitespace-nowrap">
-                                Before
+                                After
                             </div>
                         </div>
                     </div>
@@ -618,10 +618,10 @@ export function DesignCanvas({
             {(imageUrl || isLightTable) && (
                 <>
                     {/* Unified Vertical Control Dock (Left Edge) */}
-                    <div className="absolute left-6 top-1/2 -translate-y-1/2 z-50 flex flex-col gap-1.5 p-1.5 bg-background/90 backdrop-blur-xl border border-primary/20 rounded-full shadow-2xl scale-110">
+                    <div className="absolute left-2 top-1/2 -translate-y-1/2 z-50 flex flex-col gap-1 p-1 bg-background/90 backdrop-blur-xl border border-primary/20 rounded-full shadow-2xl">
                         <TooltipProvider>
                             {/* Group 1: Annotation Tools */}
-                            <div className="flex flex-col items-center gap-1.5 px-1.5">
+                            <div className="flex flex-col items-center gap-1 px-1 pt-1">
                                 {isFeedbackUnlocked ? (
                                     <>
                                         <Tooltip>
@@ -629,7 +629,7 @@ export function DesignCanvas({
                                                 <Button 
                                                     variant={activeTool === 'pointer' ? 'default' : 'ghost'} 
                                                     size="icon" 
-                                                    className={cn("h-9 w-9 rounded-full transition-all", activeTool === 'pointer' && "shadow-lg scale-105")}
+                                                    className={cn("h-9 w-9 rounded-full transition-all", activeTool === 'pointer' && "shadow-lg")}
                                                     onClick={() => setActiveTool('pointer')}
                                                 >
                                                     <MousePointer2 className="h-4 w-4" />
@@ -642,7 +642,7 @@ export function DesignCanvas({
                                                 <Button 
                                                     variant={activeTool === 'comment' ? 'default' : 'ghost'} 
                                                     size="icon" 
-                                                    className={cn("h-9 w-9 rounded-full transition-all", activeTool === 'comment' && "shadow-lg scale-105")}
+                                                    className={cn("h-9 w-9 rounded-full transition-all", activeTool === 'comment' && "shadow-lg")}
                                                     onClick={() => setActiveTool('comment')}
                                                 >
                                                     <MessageSquarePlus className="h-4 w-4" />
@@ -675,7 +675,7 @@ export function DesignCanvas({
                             <div className="w-4 h-px bg-muted-foreground/20 mx-auto my-1" />
 
                             {/* Group 2: View Toggles */}
-                            <div className="flex flex-col items-center gap-1.5">
+                            <div className="flex flex-col items-center gap-1 px-1">
                                 <Tooltip>
                                     <TooltipTrigger asChild>
                                         <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full" onClick={handleReset}><Scaling className="h-4 w-4" /></Button>
@@ -747,7 +747,7 @@ export function DesignCanvas({
                             <div className="w-4 h-px bg-muted-foreground/20 mx-auto my-1" />
 
                             {/* Group 3: Navigation (Zoom) */}
-                            <div className="flex flex-col items-center gap-1.5">
+                            <div className="flex flex-col items-center gap-1 px-1 pb-1">
                                 <Tooltip>
                                     <TooltipTrigger asChild>
                                         <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full" onClick={handleZoomIn}><ZoomIn className="h-4 w-4" /></Button>
