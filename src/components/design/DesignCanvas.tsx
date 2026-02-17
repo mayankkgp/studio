@@ -14,7 +14,6 @@ import {
     RotateCcw,
     GripHorizontal,
     Layers,
-    Hand,
     MousePointer2,
     MessageSquarePlus,
     MessageSquare,
@@ -27,7 +26,10 @@ import {
     Send,
     CheckCircle2,
     AlertCircle,
-    CornerDownRight
+    CornerDownRight,
+    Lock,
+    Unlock,
+    Scale
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -40,7 +42,6 @@ const PIN_COLORS: Record<DesignPinStatus, string> = {
     resolved: 'bg-green-600'
 };
 
-const FIT_ZOOM = 1.0; 
 const ABSOLUTE_MIN_ZOOM = 0.01; 
 const MAX_ZOOM = 4.0;
 
@@ -100,7 +101,7 @@ export function DesignCanvas({
     onToggleLightTable,
     allComponents = []
 }: DesignCanvasProps) {
-    const [zoom, setZoom] = useState(FIT_ZOOM);
+    const [zoom, setZoom] = useState(1.0);
     const [minFitZoom, setMinFitZoom] = useState(ABSOLUTE_MIN_ZOOM);
     const [showPins, setShowPins] = useState(true);
     const [showComparison, setShowComparison] = useState(false);
@@ -151,14 +152,12 @@ export function DesignCanvas({
     const getConstrainedPan = useCallback((offset: { x: number; y: number }) => {
         if (!containerRef.current) return offset;
         const rect = containerRef.current.getBoundingClientRect();
-        
         const Vw = rect.width;
         const Vh = rect.height;
 
         if (isLightTable) {
             const spreadEl = containerRef.current.querySelector('.flex-row');
             const spreadWidth = spreadEl ? spreadEl.getBoundingClientRect().width : 0;
-            // Bound so at least one side of the spread is visible
             const limitX = (Vw / 2) + (spreadWidth / 2) - 100;
             const limitY = Vh / 2;
             return {
@@ -166,7 +165,6 @@ export function DesignCanvas({
                 y: Math.max(-limitY, Math.min(offset.y, limitY))
             };
         } else {
-            // Standard View: Keep center of artwork within viewport
             const limitX = Vw / 2;
             const limitY = Vh / 2;
             return {
@@ -177,7 +175,7 @@ export function DesignCanvas({
     }, [isLightTable]);
 
     const calculateFitZoom = useCallback(() => {
-        if (!containerRef.current) return FIT_ZOOM;
+        if (!containerRef.current) return 1.0;
         const viewportRect = containerRef.current.getBoundingClientRect();
         const Vw = viewportRect.width;
         const Vh = viewportRect.height;
@@ -186,14 +184,13 @@ export function DesignCanvas({
             ? containerRef.current.querySelector('.flex-row') 
             : containerRef.current.querySelector('.group\\/comp-container');
 
-        if (!contentEl) return FIT_ZOOM;
+        if (!contentEl) return 1.0;
 
         const contentRect = contentEl.getBoundingClientRect();
-        // Zoom-independent calculation
         const unscaledCw = contentRect.width / zoom;
         const unscaledCh = contentRect.height / zoom;
 
-        if (unscaledCw === 0 || unscaledCh === 0) return FIT_ZOOM;
+        if (unscaledCw === 0 || unscaledCh === 0) return 1.0;
 
         const scaleX = Vw / unscaledCw;
         const scaleY = Vh / unscaledCh;
@@ -208,14 +205,11 @@ export function DesignCanvas({
         setPanOffset({ x: 0, y: 0 });
     }, [calculateFitZoom]);
 
-    // Force default zoom to fit-to-screen on load or mode change
     useEffect(() => {
-        // Short delay to ensure DOM layout has stabilized
         const timer = setTimeout(handleReset, 100);
         return () => clearTimeout(timer);
     }, [imageUrl, isLightTable, handleReset]);
 
-    // Handle Resize Thresholds
     useEffect(() => {
         const updateThreshold = () => {
             const fit = calculateFitZoom();
@@ -223,7 +217,6 @@ export function DesignCanvas({
             setMinFitZoom(newMin);
             setZoom(prev => Math.max(prev, newMin));
         };
-
         window.addEventListener('resize', updateThreshold);
         return () => window.removeEventListener('resize', updateThreshold);
     }, [calculateFitZoom]);
@@ -279,7 +272,6 @@ export function DesignCanvas({
 
             if (!isTyping) {
                 if (e.key.toLowerCase() === 'r') handleReset();
-                
                 if (isFeedbackUnlocked) {
                     if (e.key.toLowerCase() === 'c') setActiveTool('comment');
                     if (e.key.toLowerCase() === 'v') setActiveTool('pointer');
@@ -338,7 +330,6 @@ export function DesignCanvas({
 
     const handleCanvasMouseDown = (e: React.MouseEvent) => {
         if (isDraggingSlider) return;
-
         if (isSpacePressed || e.button === 1) {
             if (e.button === 1) setIsMiddleMouseDown(true);
             setIsDraggingCanvas(true);
@@ -529,9 +520,8 @@ export function DesignCanvas({
 
             {(imageUrl || isLightTable) && (
                 <>
-                    <div className="absolute left-0 top-1/2 -translate-y-1/2 z-50 flex flex-col gap-1 p-1 bg-background/90 backdrop-blur-xl border border-primary/20 rounded-r-xl shadow-2xl overflow-hidden left-0">
+                    <div className="absolute left-0 top-1/2 -translate-y-1/2 z-50 flex flex-col gap-1 p-1 bg-background/90 backdrop-blur-xl border border-primary/20 rounded-r-xl shadow-2xl overflow-hidden">
                         <TooltipProvider>
-                            {/* Annotation Group */}
                             <div className="flex flex-col items-center gap-1 p-1">
                                 {isFeedbackUnlocked ? (
                                     <>
@@ -545,7 +535,6 @@ export function DesignCanvas({
 
                             <div className="w-6 h-px bg-primary/10 mx-auto my-1" />
 
-                            {/* View Group */}
                             <div className="flex flex-col items-center gap-1 p-1">
                                 <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className={cn("h-9 w-9 rounded-md", !showPins && "text-primary")} onClick={() => setShowPins(!showPins)}>{showPins ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}</Button></TooltipTrigger><TooltipContent side="right">Toggle Pins</TooltipContent></Tooltip>
                                 <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className={cn("h-9 w-9 rounded-md", !effectiveShowPopovers && "text-primary")} onClick={onTogglePopovers}>{effectiveShowPopovers ? <MessageSquare className="h-4 w-4" /> : <MessageSquareOff className="h-4 w-4" />}</Button></TooltipTrigger><TooltipContent side="right">Toggle Comments</TooltipContent></Tooltip>
@@ -560,7 +549,6 @@ export function DesignCanvas({
 
                             <div className="w-6 h-px bg-primary/10 mx-auto my-1" />
 
-                            {/* Navigation Group */}
                             <div className="flex flex-col items-center gap-1 p-1">
                                 <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-9 w-9 rounded-md" onClick={handleReset}><RefreshCcw className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent side="right">Reset View (R)</TooltipContent></Tooltip>
                                 <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-9 w-9 rounded-md" onClick={handleZoomIn}><ZoomIn className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent side="right">Zoom In</TooltipContent></Tooltip>
@@ -613,8 +601,8 @@ export function DesignCanvas({
                                                 <div className="slider-hit-zone absolute inset-y-0 w-8 -ml-4 pointer-events-auto cursor-ew-resize" style={{ left: `${sliderPosition}%` }} onMouseDown={(e) => { e.preventDefault(); setIsDraggingSlider(true); }} onClick={(e) => e.stopPropagation()}>
                                                     <div className="absolute inset-y-0 left-1/2 w-px bg-blue-600" />
                                                     <button className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-2xl border-4 border-background" style={{ top: `${sliderVerticalPosition}%` }}><GripHorizontal className="h-5 w-5" /></button>
-                                                    <div className="absolute top-6 right-12 bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded border border-white/10 whitespace-nowrap">Before</div>
                                                     <div className="absolute top-6 left-12 bg-black/80 text-white text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded whitespace-nowrap">After</div>
+                                                    <div className="absolute top-6 right-12 bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded border border-white/10 whitespace-nowrap">Before</div>
                                                 </div>
                                             </div>
                                         )}
