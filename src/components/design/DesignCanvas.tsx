@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import type { DesignPin, DesignPinStatus, DesignWorkflowStatus, DesignReply, DesignComponent } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { 
@@ -43,7 +43,7 @@ const PIN_COLORS: Record<DesignPinStatus, string> = {
 
 // Zoom Constants
 const FIT_ZOOM = 1.0; 
-const MIN_ZOOM = FIT_ZOOM * 0.9; 
+const MIN_ZOOM_FLOOR = 0.9; 
 const MAX_ZOOM = 4.0;
 
 interface DesignCanvasProps {
@@ -159,6 +159,28 @@ export function DesignCanvas({
     // ZEN MODE OVERRIDE: If sidebar is hidden, popovers must be ON to read feedback
     const effectiveShowPopovers = isZenMode ? true : showPopovers;
 
+    // Helper to constrain pan offset
+    const getConstrainedPan = useCallback((offset: { x: number; y: number }, currentZoom: number) => {
+        if (!containerRef.current) return offset;
+        const rect = containerRef.current.getBoundingClientRect();
+        
+        // We want to ensure at least 50% of the artwork remains visible.
+        // A robust boundary: don't let the center of the artwork move 
+        // more than 80% of its zoomed dimensions away from screen center.
+        const limitX = rect.width * currentZoom * 0.8;
+        const limitY = rect.height * currentZoom * 0.8;
+
+        return {
+            x: Math.max(-limitX, Math.min(offset.x, limitX)),
+            y: Math.max(-limitY, Math.min(offset.y, limitY))
+        };
+    }, []);
+
+    // Effect to re-clamp pan when zoom changes
+    useEffect(() => {
+        setPanOffset(prev => getConstrainedPan(prev, zoom));
+    }, [zoom, getConstrainedPan]);
+
     useEffect(() => {
         const container = containerRef.current;
         if (!container) return;
@@ -172,19 +194,22 @@ export function DesignCanvas({
                 setZoom(prev => {
                     const factor = delta > 0 ? 0.9 : 1.1;
                     const next = prev * factor;
-                    return Math.max(MIN_ZOOM, Math.min(next, MAX_ZOOM));
+                    return Math.max(MIN_ZOOM_FLOOR, Math.min(next, MAX_ZOOM));
                 });
             } else {
-                setPanOffset(prev => ({
-                    x: prev.x - e.deltaX,
-                    y: prev.y - e.deltaY
-                }));
+                setPanOffset(prev => {
+                    const next = {
+                        x: prev.x - e.deltaX,
+                        y: prev.y - e.deltaY
+                    };
+                    return getConstrainedPan(next, zoom);
+                });
             }
         };
 
         container.addEventListener('wheel', handleWheel, { passive: false });
         return () => container.removeEventListener('wheel', handleWheel);
-    }, [imageUrl, isLightTable]);
+    }, [imageUrl, isLightTable, zoom, getConstrainedPan]);
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -265,7 +290,7 @@ export function DesignCanvas({
     }, [selectedPinId, activePin, repositionKey, effectiveShowPopovers]);
 
     const handleZoomIn = () => setZoom(prev => Math.min(prev + 0.25, MAX_ZOOM));
-    const handleZoomOut = () => setZoom(prev => Math.max(prev - 0.25, MIN_ZOOM));
+    const handleZoomOut = () => setZoom(prev => Math.max(prev - 0.25, MIN_ZOOM_FLOOR));
     const handleReset = () => {
         setZoom(FIT_ZOOM);
         setPanOffset({ x: 0, y: 0 });
@@ -287,10 +312,11 @@ export function DesignCanvas({
         if (isDraggingCanvas && dragStartMousePos.current) {
             const dx = e.clientX - dragStartMousePos.current.x;
             const dy = e.clientY - dragStartMousePos.current.y;
-            setPanOffset({
+            const targetOffset = {
                 x: initialPanOffset.current.x + dx,
                 y: initialPanOffset.current.y + dy
-            });
+            };
+            setPanOffset(getConstrainedPan(targetOffset, zoom));
         }
     };
 
@@ -871,11 +897,11 @@ export function DesignCanvas({
                                                             <>
                                                                 {activePin.status !== 'resolved' ? (
                                                                     <>
-                                                                        <Button variant="outline" size="sm" className="h-7 text-[9px] font-black uppercase px-2 border-green-600 text-green-600 hover:bg-green-50" onClick={() => handleStatusUpdate(activePin.id, 'resolved')}><CheckCircle2 className="h-3 w-3 mr-1" /> Resolve</Button>
+                                                                        <Button variant="outline" size="sm" className="h-6 text-[9px] font-black uppercase px-2 border-green-600 text-green-600 hover:bg-green-50" onClick={() => handleStatusUpdate(activePin.id, 'resolved')}><CheckCircle2 className="h-3 w-3 mr-1" /> Resolve</Button>
                                                                         <Button 
                                                                             variant="outline" 
                                                                             size="sm" 
-                                                                            className={cn("h-7 text-[9px] font-black uppercase px-2", activePin.isMistake ? "border-primary text-primary" : "border-destructive text-destructive")} 
+                                                                            className={cn("h-6 text-[9px] font-black uppercase px-2", activePin.isMistake ? "border-primary text-primary" : "border-destructive text-destructive")} 
                                                                             onClick={() => handleMistakeToggle(activePin.id)}
                                                                         >
                                                                             <AlertCircle className="h-3 w-3 mr-1" /> {activePin.isMistake ? 'Unmark Mistake' : 'Mark Mistake'}
