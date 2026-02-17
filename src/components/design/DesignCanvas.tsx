@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { 
     ZoomIn, 
     ZoomOut, 
-    Upload, 
     X, 
     Trash2,
     Eye,
@@ -28,14 +27,14 @@ import {
     MessageSquareOff,
     Maximize,
     Minimize,
-    LayoutGrid
+    LayoutGrid,
+    Upload
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Badge } from '@/components/ui/badge';
 
 const PIN_COLORS: Record<DesignPinStatus, string> = {
     open: 'bg-blue-600',
@@ -92,7 +91,6 @@ export function DesignCanvas({
     currentVersion,
     status,
     hasNewDraft = false,
-    isWorkbench = false,
     isLatestDraftLocked = false,
     draftText,
     onDraftTextChange,
@@ -245,9 +243,6 @@ export function DesignCanvas({
             if (containerRef.current) {
                 const containerRect = containerRef.current.getBoundingClientRect();
                 
-                const popoverWidth = 320;
-                const popoverHeight = 250; 
-
                 let x = containerRect.width / 2 - 160;
                 let y = containerRect.height / 2 - 125;
 
@@ -526,11 +521,11 @@ export function DesignCanvas({
                                 <GripHorizontal className="h-5 w-5" />
                             </button>
 
-                            <div className="absolute top-6 right-12 bg-black/80 text-white text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded border border-white/10 opacity-0 group-hover/slider:opacity-100 transition-opacity whitespace-nowrap">
-                                Before
-                            </div>
-                            <div className="absolute top-6 left-12 bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded opacity-0 group-hover/slider:opacity-100 transition-opacity whitespace-nowrap">
+                            <div className="absolute top-6 right-12 bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded opacity-0 group-hover/slider:opacity-100 transition-opacity whitespace-nowrap">
                                 After
+                            </div>
+                            <div className="absolute top-6 left-12 bg-black/80 text-white text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded border border-white/10 opacity-0 group-hover/slider:opacity-100 transition-opacity whitespace-nowrap">
+                                Before
                             </div>
                         </div>
                     </div>
