@@ -8,7 +8,6 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
-import { Textarea } from '@/components/ui/textarea';
 import { 
     MessageSquare, 
     AlertCircle, 
@@ -25,18 +24,13 @@ import {
     CornerDownRight,
     CheckCircle2,
     X,
-    Clock,
     History,
     ChevronRight,
     Calendar,
     UserCircle
 } from 'lucide-react';
 import { format } from 'date-fns';
-
-const PIN_COLORS: Record<DesignPinStatus, string> = {
-    open: 'bg-blue-600',
-    resolved: 'bg-green-600'
-};
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
 interface FeedbackSidebarProps {
     pins: DesignPin[];
@@ -123,13 +117,11 @@ export function FeedbackSidebar({
     };
 
     const handleStatusUpdate = (pinId: string, newStatus: DesignPinStatus) => {
-        const updatedPins = pins.map(p => p.id === pinId ? { ...p, status: newStatus } : p);
-        onUpdatePins(updatedPins);
+        onUpdatePins(pins.map(p => p.id === pinId ? { ...p, status: newStatus } : p));
     };
 
     const handleMistakeToggle = (pinId: string) => {
-        const updatedPins = pins.map(p => p.id === pinId ? { ...p, isMistake: !p.isMistake } : p);
-        onUpdatePins(updatedPins);
+        onUpdatePins(pins.map(p => p.id === pinId ? { ...p, isMistake: !p.isMistake } : p));
     };
 
     const handleAddReply = (pinId: string) => {
@@ -139,8 +131,7 @@ export function FeedbackSidebar({
             text: replyText.trim(),
             timestamp: new Date().toISOString()
         };
-        const updatedPins = pins.map(p => p.id === pinId ? { ...p, replies: [...(p.replies || []), newReply] } : p);
-        onUpdatePins(updatedPins);
+        onUpdatePins(pins.map(p => p.id === pinId ? { ...p, replies: [...(p.replies || []), newReply] } : p));
         setReplyText('');
         setActiveReplyId(null);
     };
@@ -151,46 +142,7 @@ export function FeedbackSidebar({
         }
     };
 
-    const renderActions = () => {
-        if (isDesigner) {
-            switch (status) {
-                case 'PENDING':
-                    return <Button className="w-full h-10 font-black uppercase tracking-widest gap-2" onClick={() => onStatusChange('DRAFT')}><Play className="h-4 w-4" /> Start Design</Button>;
-                case 'DRAFT':
-                    if (!hasNewDraft) return (
-                        <div className="flex flex-col gap-2">
-                            <Button className="w-full h-10 font-black uppercase tracking-widest gap-2" onClick={() => fileInputRef.current?.click()}><Upload className="h-4 w-4" /> Upload Design</Button>
-                            <Button variant="ghost" className="w-full h-8 text-[10px] font-black uppercase tracking-widest text-muted-foreground" onClick={() => onStatusChange('PENDING')}>Stop Work</Button>
-                        </div>
-                    );
-                    return (
-                        <div className="flex flex-col gap-2">
-                            <Button className="w-full h-10 font-black uppercase tracking-widest gap-2 bg-green-600 hover:bg-green-700" onClick={() => onStatusChange('INTERNAL_REVIEW')}><Send className="h-4 w-4" /> Submit for Review</Button>
-                            <Button variant="ghost" className="w-full h-8 text-[10px] font-black uppercase tracking-widest text-destructive" onClick={() => onDeleteDraft?.()}><Trash2 className="h-3 w-3 mr-1.5" /> Delete Draft</Button>
-                        </div>
-                    );
-                default:
-                    return <div className="flex items-center justify-center p-3 bg-muted/20 rounded-lg text-muted-foreground gap-2 font-black uppercase text-[10px] tracking-widest"><Lock className="h-3 w-3" /> Design Locked</div>;
-            }
-        } else {
-            switch (status) {
-                case 'PENDING': case 'DRAFT': return <div className="p-3 border-2 border-dashed rounded-lg text-center text-muted-foreground text-[10px] font-black uppercase tracking-widest">Waiting for designer...</div>;
-                case 'INTERNAL_REVIEW': return (
-                    <div className="grid grid-cols-2 gap-2">
-                        <Button variant="destructive" className="h-10 text-[10px] font-black uppercase tracking-widest" onClick={() => onStatusChange('PENDING')}>Changes</Button>
-                        <Button className="h-10 text-[10px] font-black uppercase tracking-widest bg-green-600 hover:bg-green-700" disabled={hasOpenItems} onClick={() => onStatusChange('CUSTOMER_REVIEW')}>Approve</Button>
-                    </div>
-                );
-                case 'CUSTOMER_REVIEW': return (
-                    <div className="grid grid-cols-2 gap-2">
-                        <Button variant="outline" className="h-10 text-[10px] font-black uppercase tracking-widest border-destructive text-destructive" onClick={() => onStatusChange('PENDING')}>Rejected</Button>
-                        <Button className="h-10 text-[10px] font-black uppercase tracking-widest" onClick={() => onStatusChange('APPROVED')}>Mark Final</Button>
-                    </div>
-                );
-                case 'APPROVED': return <Button variant="outline" className="w-full h-10 text-[10px] font-black uppercase tracking-widest border-primary text-primary" onClick={() => onStatusChange('INTERNAL_REVIEW')}><RotateCcw className="h-3.5 w-3.5 mr-2" /> Re-open</Button>;
-            }
-        }
-    };
+    const getInitials = (name: string) => name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
 
     const BriefSection = ({ title, icon: Icon, content }: { title: string, icon: any, content?: string }) => {
         if (!content || content.trim().length === 0) return null;
@@ -205,89 +157,44 @@ export function FeedbackSidebar({
         );
     };
 
-    const isSectionActive = (fields: (string | undefined)[]) => {
-        return fields.some(f => f && f.trim().length > 0);
-    };
+    const isSectionActive = (fields: (string | undefined)[]) => fields.some(f => f && f.trim().length > 0);
 
-    const hasVisual = isSectionActive([
-        customerData?.visualIdentity?.moodStyle,
-        customerData?.visualIdentity?.colorTypography,
-        customerData?.visualIdentity?.designDislikes
-    ]);
-
-    const hasNarrative = isSectionActive([
-        customerData?.narrative?.timeline,
-        customerData?.narrative?.coupleWorld,
-        customerData?.narrative?.easterEggs
-    ]);
-
+    const hasVisual = isSectionActive([customerData?.visualIdentity?.moodStyle, customerData?.visualIdentity?.colorTypography, customerData?.visualIdentity?.designDislikes]);
+    const hasNarrative = isSectionActive([customerData?.narrative?.timeline, customerData?.narrative?.coupleWorld, customerData?.narrative?.easterEggs]);
     const hasProductBrief = activeProductId && customerData?.productBriefs?.[activeProductId] && customerData.productBriefs[activeProductId].trim().length > 0;
-
-    const isBriefEmpty = !hasVisual && !hasNarrative && !hasProductBrief;
 
     if (isComparing) {
         return (
             <div className="flex flex-col h-full bg-background border-l border-primary/10 overflow-hidden animate-in slide-in-from-right duration-300">
                 <div className="p-4 border-b bg-muted/30 shrink-0 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-lg bg-blue-600/10 text-blue-600 flex items-center justify-center border border-blue-600/20">
-                            <History className="h-4 w-4" />
-                        </div>
+                        <div className="h-8 w-8 rounded-lg bg-blue-600/10 text-blue-600 flex items-center justify-center border border-blue-600/20"><History className="h-4 w-4" /></div>
                         <div className="flex flex-col -space-y-0.5">
                             <h3 className="font-headline font-black text-[13px] uppercase tracking-widest">Version History</h3>
-                            <span className="text-[9px] font-black uppercase text-muted-foreground">Select Reference Image</span>
+                            <span className="text-[9px] font-black uppercase text-muted-foreground">Select Reference</span>
                         </div>
                     </div>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground" onClick={onClose}>
-                        <X className="h-4 w-4" />
-                    </Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={onClose}><X className="h-4 w-4" /></Button>
                 </div>
-
                 <ScrollArea className="flex-1">
                     <div className="p-4 space-y-3 pb-20">
                         {versions.slice().reverse().map((v) => {
                             const isSelected = comparisonRefId === v.id || (!comparisonRefId && v.versionNumber === viewedVersion - 1);
                             const isCurrent = v.versionNumber === viewedVersion;
-
                             return (
-                                <button
-                                    key={v.id}
-                                    onClick={() => !isCurrent && onSetComparisonReference(v.id)}
-                                    className={cn(
-                                        "w-full text-left p-3 rounded-xl border-2 transition-all flex items-start gap-4 group",
-                                        isSelected 
-                                            ? "border-blue-600 bg-blue-600/5 shadow-md shadow-blue-600/10" 
-                                            : isCurrent 
-                                                ? "border-primary/20 bg-primary/5 opacity-60 cursor-default" 
-                                                : "border-primary/5 bg-background hover:border-blue-600/40"
-                                    )}
-                                >
-                                    <div className="h-16 w-20 shrink-0 rounded-lg overflow-hidden border border-primary/10 relative shadow-sm">
+                                <button key={v.id} onClick={() => !isCurrent && onSetComparisonReference(v.id)} className={cn("w-full text-left p-3 rounded-xl border-2 transition-all flex items-start gap-4", isSelected ? "border-blue-600 bg-blue-600/5" : isCurrent ? "opacity-60 cursor-default" : "border-primary/5 hover:border-blue-600/40")}>
+                                    <div className="h-16 w-20 shrink-0 rounded-lg overflow-hidden border border-primary/10 relative">
                                         <img src={v.imageUrl} className="h-full w-full object-cover" alt={`V${v.versionNumber}`} />
-                                        <div className="absolute inset-0 bg-black/20" />
-                                        <div className="absolute bottom-1 right-1 bg-black/60 text-white text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded backdrop-blur-sm">
-                                            V{v.versionNumber}
-                                        </div>
+                                        <div className="absolute bottom-1 right-1 bg-black/60 text-white text-[8px] font-black px-1.5 py-0.5 rounded">V{v.versionNumber}</div>
                                     </div>
-                                    <div className="flex-1 min-w-0 space-y-1.5 pt-0.5">
+                                    <div className="flex-1 min-w-0 space-y-1 pt-0.5">
                                         <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-1.5">
-                                                <UserCircle className="h-3 w-3 text-muted-foreground" />
-                                                <span className="text-[10px] font-black uppercase tracking-tighter">{v.author}</span>
-                                            </div>
-                                            {isCurrent && <Badge variant="outline" className="h-4 text-[7px] font-black uppercase border-primary/20 text-primary">Active</Badge>}
+                                            <span className="text-[10px] font-black uppercase">{v.author}</span>
+                                            {isCurrent && <Badge variant="outline" className="h-4 text-[7px] uppercase">Active</Badge>}
                                         </div>
-                                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground">
-                                            <Calendar className="h-3 w-3 opacity-50" />
-                                            {format(new Date(v.timestamp), 'dd MMM, HH:mm')}
-                                        </div>
-                                        {isSelected && (
-                                            <div className="flex items-center gap-1 text-[9px] font-black uppercase text-blue-600 mt-2">
-                                                <CheckCircle2 className="h-3 w-3" /> Comparison Reference
-                                            </div>
-                                        )}
+                                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground"><Calendar className="h-3 w-3 opacity-50" /> {format(new Date(v.timestamp), 'dd MMM, HH:mm')}</div>
+                                        {isSelected && <div className="text-[9px] font-black text-blue-600 mt-2 flex items-center gap-1"><CheckCircle2 className="h-3 w-3" /> Selected</div>}
                                     </div>
-                                    {!isCurrent && <ChevronRight className={cn("h-4 w-4 shrink-0 self-center opacity-0 group-hover:opacity-100 transition-opacity", isSelected && "opacity-100 text-blue-600")} />}
                                 </button>
                             );
                         })}
@@ -300,32 +207,22 @@ export function FeedbackSidebar({
     return (
         <div className="flex flex-col h-full bg-background border-l border-primary/10 overflow-hidden">
             <input type="file" ref={fileInputRef} onChange={handleFileSelect} className="hidden" accept="image/*" />
-
-            <div className="p-4 border-b bg-muted/30 shrink-0">
-                <div className="flex items-center justify-between mb-4">
-                    <Badge className={cn(
-                        "font-black text-[10px] px-3 h-7 tracking-widest shadow-sm",
-                        status === 'APPROVED' ? "bg-green-600 text-white" :
-                        status === 'INTERNAL_REVIEW' ? "bg-amber-500 text-white" :
-                        status === 'CUSTOMER_REVIEW' ? "bg-blue-600 text-white" : "bg-muted text-muted-foreground"
-                    )}>
-                        {isLightTable ? 'MULTI-VIEW' : status.replace('_', ' ')}
-                    </Badge>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full -mr-2 text-muted-foreground hover:text-foreground" onClick={onClose}>
-                        <X className="h-4 w-4" />
-                    </Button>
+            <div className="p-4 border-b bg-muted/30 shrink-0 flex items-center justify-between">
+                <Badge className={cn("font-black text-[10px] px-3 h-7 tracking-widest shadow-sm", status === 'APPROVED' ? "bg-green-600 text-white" : status === 'INTERNAL_REVIEW' ? "bg-amber-500 text-white" : status === 'CUSTOMER_REVIEW' ? "bg-blue-600 text-white" : "bg-muted text-muted-foreground")}>
+                    {isLightTable ? 'MULTI-VIEW' : status.replace('_', ' ')}
+                </Badge>
+                <div className="flex items-center gap-2">
+                    {isDesigner && status === 'DRAFT' && hasNewDraft && (
+                        <Button size="sm" className="h-7 text-[9px] font-black uppercase bg-green-600 hover:bg-green-700" onClick={() => onStatusChange('INTERNAL_REVIEW')}><Send className="h-3 w-3 mr-1.5" /> Submit</Button>
+                    )}
+                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={onClose}><X className="h-4 w-4" /></Button>
                 </div>
-                {renderActions()}
             </div>
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
                 <TabsList className="grid w-full grid-cols-2 rounded-none bg-muted/20 border-b h-12 shrink-0">
-                    <TabsTrigger value="feedback" className="data-[state=active]:bg-background rounded-none border-b-2 border-transparent data-[state=active]:border-primary font-black uppercase text-[10px] tracking-widest">
-                        <MessageSquare className="h-3.5 w-3.5 mr-2" /> Feedback
-                    </TabsTrigger>
-                    <TabsTrigger value="brief" className="data-[state=active]:bg-background rounded-none border-b-2 border-transparent data-[state=active]:border-primary font-black uppercase text-[10px] tracking-widest">
-                        <BookOpen className="h-3.5 w-3.5 mr-2" /> The Brief
-                    </TabsTrigger>
+                    <TabsTrigger value="feedback" className="data-[state=active]:bg-background rounded-none border-b-2 border-transparent data-[state=active]:border-primary font-black uppercase text-[10px] tracking-widest"><MessageSquare className="h-3.5 w-3.5 mr-2" /> Feedback</TabsTrigger>
+                    <TabsTrigger value="brief" className="data-[state=active]:bg-background rounded-none border-b-2 border-transparent data-[state=active]:border-primary font-black uppercase text-[10px] tracking-widest"><BookOpen className="h-3.5 w-3.5 mr-2" /> The Brief</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="feedback" className="flex-1 overflow-hidden m-0 p-0 flex flex-col !mt-0 data-[state=active]:flex outline-none">
@@ -337,148 +234,44 @@ export function FeedbackSidebar({
                     <ScrollArea className="flex-1">
                         <div className="p-4 space-y-4 pb-20">
                             {filteredPins.length === 0 ? (
-                                <div className="py-12 text-center opacity-30">
-                                    <MessageSquare className="h-8 w-8 mx-auto mb-2" />
-                                    <p className="text-[10px] font-black uppercase tracking-widest">No Feedback</p>
-                                </div>
+                                <div className="py-12 text-center opacity-30"><MessageSquare className="h-8 w-8 mx-auto mb-2" /><p className="text-[10px] font-black uppercase tracking-widest">No Feedback</p></div>
                             ) : (
-                                filteredPins.map((pin) => {
-                                    const pinNumber = pins.findIndex(p => p.id === pin.id) + 1;
-                                    const isHighlighted = highlightedPinId === pin.id;
-                                    const isReplying = activeReplyId === pin.id;
-                                    const canDelete = !isDesigner || (status === 'DRAFT' && pin.version === currentVersion);
-
-                                    return (
-                                        <div 
-                                            key={pin.id} id={`comment-${pin.id}`} onClick={() => onPinSelect(pin.id)}
-                                            className={cn(
-                                                "p-3 rounded-xl border-2 transition-all relative cursor-pointer", 
-                                                isHighlighted ? "border-primary bg-primary/5 shadow-lg" : "border-primary/5 bg-background hover:border-primary/20", 
-                                                pin.isMistake && "ring-4 ring-destructive/20 bg-destructive/5 border-destructive/30",
-                                                pin.status === 'resolved' && "opacity-60 grayscale-[0.5]"
-                                            )}
-                                        >
-                                            <div className="flex items-center justify-between mb-2">
-                                                <div className="flex items-center gap-2">
-                                                    <div className={cn("h-5 w-5 rounded flex items-center justify-center text-[10px] font-black text-white", PIN_COLORS[pin.status || 'open'])}>{pinNumber}</div>
-                                                    <span className="text-[10px] font-black uppercase tracking-tighter">{pin.author}</span>
-                                                    <div className="flex items-center gap-1">
-                                                        <Badge variant="outline" className="text-[8px] h-4 font-black uppercase px-1 border-primary/20 bg-primary/5 text-primary">
-                                                            {pin.status}
-                                                        </Badge>
-                                                        {pin.isMistake && (
-                                                            <Badge variant="destructive" className="text-[8px] h-4 font-black uppercase px-1 shadow-sm">
-                                                                MISTAKE
-                                                            </Badge>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-[9px] font-bold text-muted-foreground uppercase opacity-60">V{pin.version}</span>
-                                                    {canDelete && (
-                                                        <button onClick={(e) => { e.stopPropagation(); handleDeletePin(pin.id); }} className="text-muted-foreground hover:text-destructive"><Trash2 className="h-3 w-3" /></button>
-                                                    )}
-                                                </div>
+                                filteredPins.map((pin) => (
+                                    <div key={pin.id} id={`comment-${pin.id}`} onClick={() => onPinSelect(pin.id)} className={cn("p-3 rounded-xl border-2 transition-all relative cursor-pointer", highlightedPinId === pin.id ? "border-primary bg-primary/5" : "border-primary/5 bg-background", pin.status === 'resolved' && "opacity-60 grayscale-[0.5]")}>
+                                        <div className="flex items-center justify-between mb-2">
+                                            <div className="flex items-center gap-2">
+                                                <Avatar className="h-5 w-5 border border-white/10 shadow-sm">
+                                                    <AvatarFallback className={cn("text-[8px] font-black", pin.author === 'Designer' ? "bg-purple-600 text-white" : "bg-blue-600 text-white")}>{getInitials(pin.author)}</AvatarFallback>
+                                                </Avatar>
+                                                <span className="text-[10px] font-black uppercase tracking-tighter">{pin.author}</span>
+                                                <Badge variant="outline" className="text-[7px] h-3.5 px-1 uppercase">{pin.status}</Badge>
                                             </div>
-                                            
-                                            <p className="text-xs font-semibold leading-relaxed text-foreground/90">{pin.text || <span className="italic opacity-50">No description provided</span>}</p>
-                                            
-                                            {pin.replies && pin.replies.map((reply, i) => (
-                                                <div key={i} className="pl-3 border-l-2 border-primary/10 mt-3 space-y-0.5">
-                                                    <div className="flex items-center gap-1.5 text-[8px] font-black uppercase text-muted-foreground"><CornerDownRight className="h-3 w-3" /> {reply.author}</div>
-                                                    <p className="text-[10px] font-medium leading-relaxed">{reply.text}</p>
-                                                </div>
-                                            ))}
-
-                                            <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-primary/5 pt-3">
-                                                {!isReplying ? (
-                                                    <>
-                                                        <Button variant="ghost" size="sm" className="h-6 text-[9px] font-black uppercase px-2" onClick={(e) => { e.stopPropagation(); setActiveReplyId(pin.id); setReplyText(''); }}>Reply</Button>
-                                                        {!isDesigner && (
-                                                            <>
-                                                                {pin.status !== 'resolved' ? (
-                                                                    <>
-                                                                        <Button variant="outline" size="sm" className="h-6 text-[9px] font-black uppercase px-2 border-green-600 text-green-600 hover:bg-green-50" onClick={(e) => { e.stopPropagation(); handleStatusUpdate(pin.id, 'resolved'); }}><CheckCircle2 className="h-3 w-3 mr-1" /> Resolve</Button>
-                                                                        <Button 
-                                                                            variant="outline" 
-                                                                            size="sm" 
-                                                                            className={cn("h-6 text-[9px] font-black uppercase px-2", pin.isMistake ? "border-primary text-primary" : "border-destructive text-destructive")} 
-                                                                            onClick={(e) => { e.stopPropagation(); handleMistakeToggle(pin.id); }}
-                                                                        >
-                                                                            <AlertCircle className="h-3 w-3 mr-1" /> {pin.isMistake ? 'Unmark Mistake' : 'Mark Mistake'}
-                                                                        </Button>
-                                                                    </>
-                                                                ) : (
-                                                                    <Button variant="outline" size="sm" className="h-6 text-[9px] font-black uppercase px-2 border-primary text-primary hover:bg-primary/5" onClick={(e) => { e.stopPropagation(); handleStatusUpdate(pin.id, 'open'); }}><RotateCcw className="h-3 w-3 mr-1" /> Re-open</Button>
-                                                                )}
-                                                            </>
-                                                        )}
-                                                    </>
-                                                ) : (
-                                                    <div className="w-full space-y-2">
-                                                        <Textarea 
-                                                            autoFocus
-                                                            placeholder="Write a reply..." 
-                                                            className="min-h-[60px] text-[10px] font-semibold"
-                                                            value={replyText}
-                                                            onChange={(e) => setReplyText(e.target.value)}
-                                                            onClick={(e) => e.stopPropagation()}
-                                                            onKeyDown={(e) => {
-                                                                if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-                                                                    e.preventDefault();
-                                                                    handleAddReply(pin.id);
-                                                                }
-                                                            }}
-                                                        />
-                                                        <div className="flex justify-end gap-2">
-                                                            <Button variant="ghost" size="sm" className="h-6 text-[9px] font-black uppercase" onClick={(e) => { e.stopPropagation(); setActiveReplyId(null); }}>Cancel</Button>
-                                                            <Button size="sm" className="h-6 text-[9px] font-black uppercase" onClick={(e) => { e.stopPropagation(); handleAddReply(pin.id); }}>Send</Button>
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
+                                            <span className="text-[9px] font-bold opacity-40">V{pin.version}</span>
                                         </div>
-                                    );
-                                })
+                                        <p className="text-[11px] font-medium leading-relaxed opacity-90">{pin.text || <span className="italic opacity-50">Empty comment</span>}</p>
+                                        {pin.replies?.map((r, i) => (
+                                            <div key={i} className="pl-3 border-l border-primary/10 mt-2 space-y-0.5">
+                                                <div className="text-[8px] font-black uppercase opacity-50">{r.author}</div>
+                                                <p className="text-[10px] opacity-80">{r.text}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ))
                             )}
                         </div>
                     </ScrollArea>
                 </TabsContent>
 
                 <TabsContent value="brief" className="flex-1 overflow-hidden m-0 p-4 flex flex-col !mt-0 data-[state=active]:flex outline-none">
-                    <ScrollArea className="flex-1 w-full h-full">
+                    <ScrollArea className="flex-1">
                         <div className="space-y-8 pb-20">
-                            {isBriefEmpty ? (
-                                <div className="py-20 text-center opacity-40 italic">
-                                    <Sparkles className="h-10 w-10 mx-auto mb-3 opacity-20" />
-                                    <p className="text-[11px] font-black uppercase tracking-widest px-8">No creative brief data recorded for this product.</p>
-                                </div>
+                            {!hasVisual && !hasNarrative && !hasProductBrief ? (
+                                <div className="py-20 text-center opacity-40 italic"><Sparkles className="h-10 w-10 mx-auto mb-3" /><p className="text-[11px] font-black uppercase tracking-widest px-8">Creative brief is empty.</p></div>
                             ) : (
                                 <>
-                                    {hasVisual && (
-                                        <div>
-                                            <h3 className="font-headline font-black text-sm uppercase tracking-widest text-foreground border-b-2 border-primary/10 pb-2 mb-6">Visual Identity</h3>
-                                            <BriefSection title="Mood & Style" icon={Palette} content={customerData?.visualIdentity?.moodStyle} />
-                                            <BriefSection title="Palette & Type" icon={Palette} content={customerData?.visualIdentity?.colorTypography} />
-                                            <BriefSection title="Dislikes" icon={AlertCircle} content={customerData?.visualIdentity?.designDislikes} />
-                                        </div>
-                                    )}
-
-                                    {hasNarrative && (
-                                        <div>
-                                            <h3 className="font-headline font-black text-sm uppercase tracking-widest text-foreground border-b-2 border-primary/10 pb-2 mb-6">Narrative</h3>
-                                            <BriefSection title="Timeline" icon={BookOpen} content={customerData?.narrative?.timeline} />
-                                            <BriefSection title="Couple's World" icon={Globe} content={customerData?.narrative?.coupleWorld} />
-                                            <BriefSection title="Easter Eggs" icon={Sparkles} content={customerData?.narrative?.easterEggs} />
-                                        </div>
-                                    )}
-
-                                    {hasProductBrief && (
-                                        <div>
-                                            <h3 className="font-headline font-black text-sm uppercase tracking-widest text-foreground border-b-2 border-primary/10 pb-2 mb-6">Product Specific</h3>
-                                            <BriefSection title="Product Brief" icon={Sparkles} content={customerData?.productBriefs?.[activeProductId!]} />
-                                        </div>
-                                    )}
+                                    {hasVisual && (<div><h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground border-b border-primary/10 pb-1 mb-4">Visual Identity</h3><BriefSection title="Mood & Style" icon={Palette} content={customerData?.visualIdentity?.moodStyle} /><BriefSection title="Palette & Type" icon={Palette} content={customerData?.visualIdentity?.colorTypography} /><BriefSection title="Dislikes" icon={AlertCircle} content={customerData?.visualIdentity?.designDislikes} /></div>)}
+                                    {hasNarrative && (<div><h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground border-b border-primary/10 pb-1 mb-4">Narrative</h3><BriefSection title="Timeline" icon={BookOpen} content={customerData?.narrative?.timeline} /><BriefSection title="Couple's World" icon={Globe} content={customerData?.narrative?.coupleWorld} /><BriefSection title="Easter Eggs" icon={Sparkles} content={customerData?.narrative?.easterEggs} /></div>)}
+                                    {hasProductBrief && (<div><h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground border-b border-primary/10 pb-1 mb-4">Product Brief</h3><BriefSection title="Product Specific" icon={Sparkles} content={customerData?.productBriefs?.[activeProductId!]} /></div>)}
                                 </>
                             )}
                         </div>
