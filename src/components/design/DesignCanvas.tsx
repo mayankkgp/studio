@@ -36,6 +36,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 
 const MAX_ZOOM = 4.0;
 
@@ -128,7 +129,7 @@ export function DesignCanvas({
         return status !== 'PENDING' && status !== 'DRAFT';
     }, [imageUrl, isLatest, isDesigner, status, hasNewDraft, isSpacePressed, isMiddleMouseDown, isDraggingSlider, isLightTable]);
 
-    const canDropPin = isFeedbackLocked && activeTool === 'comment';
+    const canDropPin = !isFeedbackLocked && activeTool === 'comment';
     
     const [replyText, setReplyText] = useState('');
     const [isReplyMode, setIsReplyMode] = useState(false);
@@ -140,12 +141,15 @@ export function DesignCanvas({
     const getConstrainedPan = useCallback((offset: { x: number; y: number }) => {
         if (!containerRef.current) return offset;
         const rect = containerRef.current.getBoundingClientRect();
+        
+        // Boundaries: 50% of the artwork must remain visible
         const limitX = rect.width / 2;
         const limitY = rect.height / 2;
 
         if (isLightTable) {
             const spreadEl = containerRef.current.querySelector('.flex-row');
             const spreadWidth = spreadEl ? spreadEl.getBoundingClientRect().width : 0;
+            // Extend horizontal limits for Light Table spread
             const spreadLimitX = (rect.width / 2) + (spreadWidth / 2) - 100;
             return {
                 x: Math.max(-spreadLimitX, Math.min(offset.x, spreadLimitX)),
@@ -169,6 +173,7 @@ export function DesignCanvas({
         if (!contentEl) return 1.0;
 
         const contentRect = contentEl.getBoundingClientRect();
+        // Since contentEl is scaled by 'zoom', we need unscaled dimensions
         const unscaledCw = contentRect.width / zoom;
         const unscaledCh = contentRect.height / zoom;
 
@@ -176,6 +181,8 @@ export function DesignCanvas({
 
         const scaleX = viewportRect.width / unscaledCw;
         const scaleY = viewportRect.height / unscaledCh;
+        
+        // Safety Factor: 0.95 (95%) to leave a 5% margin
         return Math.min(scaleX, scaleY) * 0.95;
     }, [isLightTable, zoom]);
 
@@ -186,11 +193,13 @@ export function DesignCanvas({
         setPanOffset({ x: 0, y: 0 });
     }, [calculateFitZoom]);
 
+    // Apply Fit to Screen on load
     useEffect(() => {
         const timer = setTimeout(handleReset, 100);
         return () => clearTimeout(timer);
     }, [imageUrl, isLightTable, handleReset]);
 
+    // Recalculate zoom floor on resize
     useEffect(() => {
         const updateThreshold = () => {
             const fit = calculateFitZoom();
@@ -213,6 +222,7 @@ export function DesignCanvas({
                 setZoom(prev => {
                     const factor = e.deltaY > 0 ? 0.9 : 1.1;
                     const next = prev * factor;
+                    // Strict Clamp: Don't allow zooming out past "Fit to Screen"
                     return Math.max(minFitZoom, Math.min(next, MAX_ZOOM));
                 });
             } else {
@@ -234,7 +244,7 @@ export function DesignCanvas({
             if (e.key === 'Escape') onPinClick(null);
             if (!isTyping) {
                 if (e.key.toLowerCase() === 'r') handleReset();
-                if (isFeedbackLocked) {
+                if (!isFeedbackLocked) {
                     if (e.key.toLowerCase() === 'c') setActiveTool('comment');
                     if (e.key.toLowerCase() === 'v') setActiveTool('pointer');
                 }
@@ -246,13 +256,25 @@ export function DesignCanvas({
         return () => { window.removeEventListener('keydown', handleKeyDown); window.removeEventListener('keyup', handleKeyUp); };
     }, [isSpacePressed, onPinClick, isFeedbackLocked, handleReset]);
 
+    // Handle auto-growing textarea logic
+    const adjustTextareaHeight = (element: HTMLTextAreaElement | null) => {
+        if (!element) return;
+        element.style.height = 'auto';
+        element.style.height = `${element.scrollHeight}px`;
+    };
+
     useEffect(() => {
         if (selectedPinId && activePin) {
             setReplyText('');
             setIsReplyMode(false);
             setIsMistakeDraft(!!activePin.isMistake);
             if (effectiveShowPopovers) {
-                setTimeout(() => textareaRef.current?.focus(), 150);
+                setTimeout(() => {
+                    if (textareaRef.current) {
+                        textareaRef.current.focus();
+                        adjustTextareaHeight(textareaRef.current);
+                    }
+                }, 150);
             }
         }
     }, [selectedPinId, activePin, effectiveShowPopovers]);
@@ -358,7 +380,7 @@ export function DesignCanvas({
                             
                             {selectedPinId === pin.id && effectiveShowPopovers && (
                                 <div className={cn(
-                                    "fixed-comment-box absolute z-[100] w-64 bg-black/70 backdrop-blur-xl border border-white/10 rounded-xl p-4 shadow-2xl text-white animate-in zoom-in-95 duration-200",
+                                    "fixed-comment-box absolute z-[100] w-64 bg-black/70 backdrop-blur-xl border border-white/10 rounded-xl p-4 shadow-2xl text-white text-left animate-in zoom-in-95 duration-200",
                                     getQuadrantStyle(pin.x, pin.y)
                                 )} style={{ transform: `scale(${1})` }} onClick={e => e.stopPropagation()}>
                                     <div className="space-y-3">
@@ -375,8 +397,10 @@ export function DesignCanvas({
                                                 <textarea 
                                                     ref={textareaRef}
                                                     placeholder="Add feedback..."
-                                                    className="w-full bg-transparent border-b border-white/20 focus:border-primary outline-none text-xs py-1 min-h-[60px] resize-none"
+                                                    rows={1}
+                                                    className="w-full bg-transparent border-b border-white/20 focus:border-primary outline-none text-xs py-1 min-h-[24px] resize-none overflow-hidden"
                                                     value={draftText}
+                                                    onInput={e => adjustTextareaHeight(e.currentTarget)}
                                                     onChange={e => onDraftTextChange(e.target.value)}
                                                 />
                                                 <div className="flex items-center justify-between">
@@ -404,8 +428,10 @@ export function DesignCanvas({
                                                             <textarea 
                                                                 autoFocus
                                                                 placeholder="Write a reply..."
-                                                                className="w-full bg-transparent border-b border-white/20 focus:border-primary outline-none text-[10px] py-1 resize-none"
+                                                                rows={1}
+                                                                className="w-full bg-transparent border-b border-white/20 focus:border-primary outline-none text-[10px] py-1 resize-none overflow-hidden min-h-[20px]"
                                                                 value={replyText}
+                                                                onInput={e => adjustTextareaHeight(e.currentTarget)}
                                                                 onChange={e => setReplyText(e.target.value)}
                                                             />
                                                             <div className="flex justify-end gap-2">
@@ -467,13 +493,13 @@ export function DesignCanvas({
                     <div className="absolute left-0 top-1/2 -translate-y-1/2 z-[200] flex flex-col p-1 bg-background/90 backdrop-blur-xl border-y border-r border-primary/20 rounded-r-xl shadow-2xl overflow-hidden">
                         <TooltipProvider>
                             <div className="flex flex-col items-center gap-1 p-1">
-                                {isFeedbackLocked ? (
+                                {!isFeedbackLocked ? (
                                     <>
                                         <Tooltip><TooltipTrigger asChild><Button variant={activeTool === 'pointer' ? 'default' : 'ghost'} size="icon" className="h-9 w-9 rounded-md" onClick={() => setActiveTool('pointer')}><MousePointer2 className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent side="right">Select Tool (V)</TooltipContent></Tooltip>
                                         <Tooltip><TooltipTrigger asChild><Button variant={activeTool === 'comment' ? 'default' : 'ghost'} size="icon" className="h-9 w-9 rounded-md" onClick={() => setActiveTool('comment')}><MessageSquarePlus className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent side="right">Comment Tool (C)</TooltipContent></Tooltip>
                                     </>
                                 ) : (
-                                    <Tooltip><TooltipTrigger asChild><div className="h-9 w-9 flex items-center justify-center opacity-30"><LockIcon className="h-4 w-4" /></div></TooltipTrigger><TooltipContent side="right">Design Locked</TooltipContent></Tooltip>
+                                    <Tooltip><TooltipTrigger asChild><div className="h-9 w-9 flex items-center justify-center opacity-30"><LockIcon className="h-4 w-4" /></div></TooltipTrigger><TooltipContent side="right">Feedback Locked</TooltipContent></Tooltip>
                                 )}
                             </div>
                             <div className="w-6 h-px bg-primary/10 mx-auto my-1" />
