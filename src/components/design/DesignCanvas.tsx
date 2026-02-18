@@ -31,7 +31,8 @@ import {
     Scale as ScaleIcon,
     User,
     Check,
-    MoreHorizontal
+    MoreHorizontal,
+    Reply
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -113,6 +114,7 @@ export function DesignCanvas({
     const [minFitZoom, setMinFitZoom] = useState(0.01);
     const [showPins, setShowPins] = useState(true);
     const [activeTool, setActiveTool] = useState<ToolMode>('comment');
+    const [replyExpandedPinId, setReplyExpandedPinId] = useState<string | null>(null);
     
     const [sliderPosition, setSliderPosition] = useState(50);
     const [sliderVerticalPosition, setSliderVerticalPosition] = useState(50);
@@ -124,6 +126,7 @@ export function DesignCanvas({
     const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
     const dragStartMousePos = useRef<{ x: number; y: number } | null>(null);
     const initialPanOffset = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+    const lastFittedIdRef = useRef<string | null>(null);
 
     const containerRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -201,8 +204,12 @@ export function DesignCanvas({
     }, [calculateFitZoom]);
 
     useEffect(() => {
-        const timer = setTimeout(handleReset, 150);
-        return () => clearTimeout(timer);
+        const fitId = isLightTable ? 'light-table' : (imageUrl || 'no-image');
+        if (fitId !== lastFittedIdRef.current) {
+            const timer = setTimeout(handleReset, 150);
+            lastFittedIdRef.current = fitId;
+            return () => clearTimeout(timer);
+        }
     }, [imageUrl, isLightTable, handleReset]);
 
     useEffect(() => {
@@ -270,6 +277,7 @@ export function DesignCanvas({
         if (selectedPinId && activePin) {
             setReplyText('');
             setIsMistakeDraft(!!activePin.isMistake);
+            setReplyExpandedPinId(null);
             if (effectiveShowPopovers) {
                 setTimeout(() => {
                     if (textareaRef.current) {
@@ -335,6 +343,7 @@ export function DesignCanvas({
         const newReply: DesignReply = { author: isDesigner ? 'Designer' : 'Manager', text: replyText.trim(), timestamp: new Date().toISOString() };
         onUpdatePins(pins.map(p => p.id === pinId ? { ...p, replies: [...(p.replies || []), newReply] } : p));
         setReplyText('');
+        setReplyExpandedPinId(null);
     };
     
     const handleDeletePin = (e: React.MouseEvent, pinId: string) => { 
@@ -406,6 +415,27 @@ export function DesignCanvas({
                                             </div>
                                             
                                             <div className="flex items-center gap-0.5 shrink-0">
+                                                {!pin.isDraft && (
+                                                    <TooltipProvider>
+                                                        <Tooltip delayDuration={100}>
+                                                            <TooltipTrigger asChild>
+                                                                <Button 
+                                                                    variant="ghost" 
+                                                                    size="icon" 
+                                                                    className={cn(
+                                                                        "h-6 w-6 rounded-md hover:bg-white/10 text-white/40 transition-colors",
+                                                                        replyExpandedPinId === pin.id && "text-primary bg-primary/10 opacity-100"
+                                                                    )}
+                                                                    onClick={(e) => { e.stopPropagation(); setReplyExpandedPinId(replyExpandedPinId === pin.id ? null : pin.id); }}
+                                                                >
+                                                                    <Reply className="h-3.5 w-3.5" />
+                                                                </Button>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent side="top" className="bg-black text-white border-white/10 text-[9px] font-black uppercase">Reply to Thread</TooltipContent>
+                                                        </Tooltip>
+                                                    </TooltipProvider>
+                                                )}
+
                                                 {!isDesigner && pin.status !== 'resolved' && !pin.isDraft && (
                                                     <TooltipProvider>
                                                         <Tooltip delayDuration={100}>
@@ -485,7 +515,14 @@ export function DesignCanvas({
                                             </div>
                                         ) : (
                                             <div className="space-y-2.5">
-                                                <p className="text-[11px] font-medium leading-tight opacity-90">{pin.text}</p>
+                                                <button 
+                                                    className="w-full text-left focus:outline-none group/comment-body"
+                                                    onClick={() => setReplyExpandedPinId(pin.id)}
+                                                >
+                                                    <p className="text-[11px] font-medium leading-tight opacity-90 group-hover/comment-body:opacity-100 transition-opacity">
+                                                        {pin.text}
+                                                    </p>
+                                                </button>
                                                 
                                                 {pin.replies && pin.replies.length > 0 && (
                                                     <div className="space-y-2 mt-1 max-h-[120px] overflow-y-auto no-scrollbar pr-1">
@@ -500,28 +537,30 @@ export function DesignCanvas({
                                                     </div>
                                                 )}
 
-                                                <div className="relative group/reply pt-1">
-                                                    <Textarea 
-                                                        placeholder="Reply..."
-                                                        className="w-full bg-stone-800/30 border-white/5 focus:border-primary/30 text-[10px] py-1.5 pr-8 min-h-[28px] resize-none overflow-hidden rounded-md leading-tight"
-                                                        value={replyText}
-                                                        onInput={e => adjustTextareaHeight(e.currentTarget)}
-                                                        onChange={e => setReplyText(e.target.value)}
-                                                        onKeyDown={e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') handleAddReply(pin.id); }}
-                                                    />
-                                                    <Button 
-                                                        size="icon" 
-                                                        variant="ghost"
-                                                        disabled={!replyText.trim()}
-                                                        className={cn(
-                                                            "absolute right-1 bottom-1 h-5 w-5 transition-all",
-                                                            replyText.trim() ? "text-primary opacity-100" : "text-white/20 opacity-0 pointer-events-none"
-                                                        )}
-                                                        onClick={() => handleAddReply(pin.id)}
-                                                    >
-                                                        <Send className="h-3 w-3" />
-                                                    </Button>
-                                                </div>
+                                                {replyExpandedPinId === pin.id && (
+                                                    <div className="relative group/reply pt-1 animate-in fade-in slide-in-from-top-1 duration-200">
+                                                        <Textarea 
+                                                            placeholder="Reply..."
+                                                            className="w-full bg-stone-800/30 border-white/5 focus:border-primary/30 text-[10px] py-1.5 pr-8 min-h-[28px] resize-none overflow-hidden rounded-md leading-tight"
+                                                            value={replyText}
+                                                            onInput={e => adjustTextareaHeight(e.currentTarget)}
+                                                            onChange={e => setReplyText(e.target.value)}
+                                                            onKeyDown={e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') handleAddReply(pin.id); }}
+                                                        />
+                                                        <Button 
+                                                            size="icon" 
+                                                            variant="ghost"
+                                                            disabled={!replyText.trim()}
+                                                            className={cn(
+                                                                "absolute right-1 bottom-1 h-5 w-5 transition-all",
+                                                                replyText.trim() ? "text-primary opacity-100" : "text-white/20 opacity-0 pointer-events-none"
+                                                            )}
+                                                            onClick={() => handleAddReply(pin.id)}
+                                                        >
+                                                            <Send className="h-3 w-3" />
+                                                        </Button>
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
                                     </div>
