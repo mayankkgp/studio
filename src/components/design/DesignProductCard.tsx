@@ -175,7 +175,7 @@ export function DesignProductCard({
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [newDrafts, setNewDrafts] = useState<Record<string, boolean>>({});
     const [draftText, setDraftText] = useState('');
-    const [isTimelineCollapsed, setIsTimelineCollapsed] = useState(false);
+    const [isTimelineCollapsed, setIsTimelineCollapsed] = useState(true);
     const [isZenMode, setIsZenMode] = useState(false);
     const [showPopovers, setShowPopovers] = useState(true);
     const [isLightTable, setIsLightTable] = useState(false);
