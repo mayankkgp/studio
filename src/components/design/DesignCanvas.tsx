@@ -126,7 +126,10 @@ export function DesignCanvas({
     const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
     const dragStartMousePos = useRef<{ x: number; y: number } | null>(null);
     const initialPanOffset = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
-    const lastFittedIdRef = useRef<string | null>(null);
+    
+    // Safety Ref to prevent zoom reset loops
+    const lastInitializedImageUrl = useRef<string | null>(null);
+    const lastInitializedMode = useRef<boolean>(false);
 
     const containerRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -192,7 +195,7 @@ export function DesignCanvas({
         const scaleX = viewportRect.width / unscaledCw;
         const scaleY = viewportRect.height / unscaledCh;
         
-        // 95% of fit as requested
+        // 95% of fit
         return Math.min(scaleX, scaleY) * 0.95;
     }, [isLightTable]);
 
@@ -203,20 +206,23 @@ export function DesignCanvas({
         setPanOffset({ x: 0, y: 0 });
     }, [calculateFitZoom]);
 
+    // Initial Fit logic
     useEffect(() => {
-        const fitId = isLightTable ? 'light-table' : (imageUrl || 'no-image');
-        if (fitId !== lastFittedIdRef.current) {
-            // Slight delay to ensure DOM layout has finalized
+        const currentId = isLightTable ? 'light-table' : imageUrl;
+        if (currentId !== lastInitializedImageUrl.current || isLightTable !== lastInitializedMode.current) {
             const timer = setTimeout(handleReset, 150);
-            lastFittedIdRef.current = fitId;
+            lastInitializedImageUrl.current = currentId;
+            lastInitializedMode.current = isLightTable;
             return () => clearTimeout(timer);
         }
     }, [imageUrl, isLightTable, handleReset]);
 
+    // Resize Threshold Update
     useEffect(() => {
         const updateThreshold = () => {
             const fit = calculateFitZoom();
             setMinFitZoom(fit);
+            // Clamp current zoom to new floor
             setZoom(prev => Math.max(prev, fit));
         };
         window.addEventListener('resize', updateThreshold);
@@ -272,7 +278,9 @@ export function DesignCanvas({
     const adjustTextareaHeight = (element: HTMLTextAreaElement | null) => {
         if (!element) return;
         element.style.height = 'auto';
-        element.style.height = `${element.scrollHeight}px`;
+        // Max height clamp for ~4 lines is approx 120px
+        const newHeight = Math.min(element.scrollHeight, 120);
+        element.style.height = `${newHeight}px`;
     };
 
     useEffect(() => {
@@ -403,7 +411,7 @@ export function DesignCanvas({
                             
                             {selectedPinId === pin.id && effectiveShowPopovers && (
                                 <div className={cn(
-                                    "fixed-comment-box absolute z-[100] w-64 bg-black/60 backdrop-blur-xl border border-white/10 rounded-xl p-3 shadow-2xl text-white text-left animate-in zoom-in-95 duration-200",
+                                    "fixed-comment-box absolute z-[100] w-64 bg-stone-900 border border-white/10 rounded-xl p-3 shadow-[0_20px_50px_rgba(0,0,0,0.5)] text-white text-left animate-in zoom-in-95 duration-200",
                                     getQuadrantStyle(pin.x, pin.y)
                                 )} style={{ transform: `scale(${1})` }} onClick={e => e.stopPropagation()}>
                                     <div className="space-y-2.5">
@@ -482,7 +490,7 @@ export function DesignCanvas({
                                                 <Textarea 
                                                     ref={textareaRef}
                                                     placeholder="Add feedback..."
-                                                    className="w-full bg-stone-800/50 border-white/10 focus:border-primary/50 text-xs py-2 pr-8 min-h-[32px] resize-none overflow-hidden rounded-lg leading-tight"
+                                                    className="w-full bg-stone-800 border-white/10 focus:border-primary/50 text-xs py-2 pr-8 min-h-[32px] max-h-[120px] resize-none overflow-y-auto rounded-lg leading-tight"
                                                     value={draftText}
                                                     onInput={e => adjustTextareaHeight(e.currentTarget)}
                                                     onChange={e => onDraftTextChange(e.target.value)}
@@ -513,7 +521,7 @@ export function DesignCanvas({
                                                 </button>
                                                 
                                                 {pin.replies && pin.replies.length > 0 && (
-                                                    <div className="space-y-2 mt-1 max-h-[120px] overflow-y-auto no-scrollbar pr-1">
+                                                    <div className="space-y-2 mt-1 max-h-[120px] overflow-y-auto custom-scrollbar-mini pr-1">
                                                         {pin.replies.map((r, i) => (
                                                             <div key={i} className="pl-2.5 border-l border-white/10 space-y-0.5">
                                                                 <div className="flex items-center gap-1.5 text-[8px] font-black uppercase opacity-50">
@@ -529,7 +537,7 @@ export function DesignCanvas({
                                                     <div className="relative group/reply pt-1 animate-in fade-in slide-in-from-top-1 duration-200">
                                                         <Textarea 
                                                             placeholder="Reply..."
-                                                            className="w-full bg-stone-800/30 border-white/5 focus:border-primary/30 text-[10px] py-1.5 pr-8 min-h-[28px] resize-none overflow-hidden rounded-md leading-tight"
+                                                            className="w-full bg-stone-800 border-white/5 focus:border-primary/30 text-[10px] py-1.5 pr-8 min-h-[28px] max-h-[120px] resize-none overflow-y-auto rounded-md leading-tight"
                                                             value={replyText}
                                                             onInput={e => adjustTextareaHeight(e.currentTarget)}
                                                             onChange={e => setReplyText(e.target.value)}
@@ -655,7 +663,7 @@ export function DesignCanvas({
                                                 <div className="absolute inset-y-0 w-8 -ml-4 pointer-events-auto cursor-ew-resize" style={{ left: `${sliderPosition}%` }} onMouseDown={e => { e.preventDefault(); setIsDraggingSlider(true); }} onClick={e => e.stopPropagation()}>
                                                     <div className="absolute inset-y-0 left-1/2 w-px bg-blue-600" />
                                                     <div className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-2xl border-4 border-background" style={{ top: `${sliderVerticalPosition}%` }}><RefreshCcw className="h-5 w-5" /></div>
-                                                    <div className="absolute top-6 left-12 bg-black/80 text-white text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded whitespace-nowrap border border-white/10 shadow-xl">After</div>
+                                                    <div className="absolute top-6 left-12 bg-black text-white text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded whitespace-nowrap border border-white/10 shadow-xl">After</div>
                                                     <div className="absolute top-6 right-12 bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded border border-white/10 whitespace-nowrap shadow-xl">Before</div>
                                                 </div>
                                             </div>
@@ -668,6 +676,12 @@ export function DesignCanvas({
                     </div>
                 </>
             )}
+            <style jsx global>{`
+                .custom-scrollbar-mini::-webkit-scrollbar { width: 3px; }
+                .custom-scrollbar-mini::-webkit-scrollbar-track { background: transparent; }
+                .custom-scrollbar-mini::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+                .custom-scrollbar-mini::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+            `}</style>
         </div>
     );
 }
