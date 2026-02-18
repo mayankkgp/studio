@@ -16,7 +16,7 @@ import {
     LayoutPanelTop,
     Plus,
     Check,
-    Lock,
+    Lock as LockIcon,
     Trash2,
     Info,
     ChevronDown,
@@ -43,7 +43,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
     DropdownMenuSeparator,
-} from "@/dropdown-menu";
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import {
     Popover,
@@ -792,7 +792,7 @@ export function DesignProductCard({
                                                     >
                                                         {isThisVersionLocked ? (
                                                             <div className="w-full h-full bg-muted flex items-center justify-center">
-                                                                <Lock className="h-5 w-5 text-muted-foreground/40" />
+                                                                <LockIcon className="h-5 w-5 text-muted-foreground/40" />
                                                             </div>
                                                         ) : (
                                                             <img src={v.imageUrl} className="w-full h-full object-cover" alt={`Version ${v.versionNumber}`} />

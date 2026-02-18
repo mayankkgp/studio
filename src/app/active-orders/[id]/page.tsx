@@ -18,8 +18,8 @@ import {
     MapPin, 
     Users,
     TrendingUp,
-    Lock,
-    Unlock,
+    Lock as LockIcon,
+    Unlock as UnlockIcon,
     CheckCircle2,
     Receipt,
     WalletCards,
@@ -403,7 +403,7 @@ export default function ActiveOrderCommandCenter() {
                             <h1 className="font-bold text-base md:text-lg font-headline truncate">{headerSummary}</h1>
                             {activeTab === 'overview' && (
                                 <Button ref={headerButtonRef} variant={isEditMode ? "default" : "outline"} size="sm" onClick={handleToggleEditMode} className={cn("h-8 font-bold gap-2", isEditMode && shakeHeaderButton && "animate-shake")}>
-                                    {isEditMode ? <><CheckCircle2 className="h-4 w-4" /> Done Editing</> : <><Unlock className="h-4 w-4" /> Modify Order</>}
+                                    {isEditMode ? <><CheckCircle2 className="h-4 w-4" /> Done Editing</> : <><UnlockIcon className="h-4 w-4" /> Modify Order</>}
                                 </Button>
                             )}
                             {activeTab === 'customer' && (

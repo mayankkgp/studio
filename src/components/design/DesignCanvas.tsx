@@ -622,7 +622,7 @@ export function DesignCanvas({
                         </div>
 
                         {selectedPinId && activePin && effectiveShowPopovers && (
-                            <div className={cn("absolute z-[100] w-80 animate-in slide-in-from-bottom-4 duration-300 pointer-events-auto fixed-comment-box", isDraggingPopover && "scale-[1.02] shadow-2xl")} style={popoverPos ? { left: `${popoverPos.x}px`, top: `${popoverPos.y}px` } : { bottom: '24px', right: '24px' }}>
+                            <div className={cn("absolute z-[100] w-80 animate-in slide-in-from-bottom-4 duration-300 pointer-events-auto fixed-comment-box", isDraggingPopover ? "scale-[1.02] shadow-2xl" : "")} style={popoverPos ? { left: `${popoverPos.x}px`, top: `${popoverPos.y}px` } : { bottom: '24px', right: '24px' }}>
                                 <div className="bg-background rounded-xl shadow-2xl border-2 border-primary/20 overflow-hidden">
                                     <div className="p-3 border-b bg-muted/20 flex items-center justify-between cursor-grab active:cursor-grabbing group/header" onMouseDown={handlePopoverMouseDown} onClick={(e) => e.stopPropagation()}>
                                         <div className="flex items-center gap-2">
@@ -680,32 +680,29 @@ export function DesignCanvas({
                                                         </div>
                                                     </div>
                                                 ) : (
-                                                    <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-primary/5">
-                                                        <Button variant="outline" size="sm" className="h-7 text-[9px] font-black uppercase px-2" onClick={() => setIsReplyMode(true)}>
+                                                    <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-primary/10">
+                                                        <Button variant="outline" size="sm" className="h-7 text-[10px] font-bold uppercase px-2" onClick={() => setIsReplyMode(true)}>
                                                             <Send className="h-3 w-3 mr-1" /> Reply
                                                         </Button>
-                                                        {!isDesigner && (
+                                                        {!isDesigner && activePin.status !== 'resolved' && (
                                                             <>
-                                                                {activePin.status !== 'resolved' ? (
-                                                                    <>
-                                                                        <Button variant="outline" size="sm" className="h-6 text-[9px] font-black uppercase px-2 border-green-600 text-green-600 hover:bg-green-50" onClick={() => handleStatusUpdate(activePin.id, 'resolved')}>
-                                                                            <CheckCircle2 className="h-3 w-3 mr-1" /> Resolve
-                                                                        </Button>
-                                                                        <Button 
-                                                                            variant="outline" 
-                                                                            size="sm" 
-                                                                            className={cn("h-6 text-[9px] font-black uppercase px-2", activePin.isMistake ? "border-primary text-primary" : "border-destructive text-destructive")} 
-                                                                            onClick={() => handleMistakeToggle(activePin.id)}
-                                                                        >
-                                                                            <AlertCircle className="h-3 w-3 mr-1" /> {activePin.isMistake ? 'Unmark Mistake' : 'Mark Mistake'}
-                                                                        </Button>
-                                                                    </>
-                                                                ) : (
-                                                                    <Button variant="outline" size="sm" className="h-7 text-[9px] font-black uppercase px-2 border-primary text-primary hover:bg-primary/5" onClick={() => handleStatusUpdate(activePin.id, 'open')}>
-                                                                        <RotateCcw className="h-3 w-3 mr-1" /> Re-open
-                                                                    </Button>
-                                                                )}
+                                                                <Button variant="outline" size="sm" className="h-7 text-[10px] font-bold uppercase px-2 border-green-600 text-green-600 hover:bg-green-50" onClick={() => handleStatusUpdate(activePin.id, 'resolved')}>
+                                                                    <CheckCircle2 className="h-3 w-3 mr-1" /> Resolve
+                                                                </Button>
+                                                                <Button 
+                                                                    variant="outline" 
+                                                                    size="sm" 
+                                                                    className={cn("h-7 text-[10px] font-bold uppercase px-2", activePin.isMistake ? "border-primary text-primary" : "border-destructive text-destructive")} 
+                                                                    onClick={() => handleMistakeToggle(activePin.id)}
+                                                                >
+                                                                    <AlertCircle className="h-3 w-3 mr-1" /> {activePin.isMistake ? 'Fix' : 'Mark Mistake'}
+                                                                </Button>
                                                             </>
+                                                        )}
+                                                        {!isDesigner && activePin.status === 'resolved' && (
+                                                            <Button variant="outline" size="sm" className="h-7 text-[10px] font-bold uppercase px-2 border-primary text-primary hover:bg-primary/5" onClick={() => handleStatusUpdate(activePin.id, 'open')}>
+                                                                <RotateCcw className="h-3 w-3 mr-1" /> Re-open
+                                                            </Button>
                                                         )}
                                                         <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive ml-auto" onClick={(e) => handleDeletePin(e, activePin.id)}>
                                                             <Trash2 className="h-3.5 w-3.5" />
