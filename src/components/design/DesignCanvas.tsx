@@ -127,7 +127,6 @@ export function DesignCanvas({
     const dragStartMousePos = useRef<{ x: number; y: number } | null>(null);
     const initialPanOffset = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
     
-    // Safety Ref to prevent zoom reset loops
     const lastInitializedImageUrl = useRef<string | null>(null);
     const lastInitializedMode = useRef<boolean>(false);
 
@@ -195,7 +194,7 @@ export function DesignCanvas({
         const scaleX = viewportRect.width / unscaledCw;
         const scaleY = viewportRect.height / unscaledCh;
         
-        // 95% of fit
+        // Target 95% of available space for the "Reset" and default zoom
         return Math.min(scaleX, scaleY) * 0.95;
     }, [isLightTable]);
 
@@ -206,7 +205,6 @@ export function DesignCanvas({
         setPanOffset({ x: 0, y: 0 });
     }, [calculateFitZoom]);
 
-    // Initial Fit logic
     useEffect(() => {
         const currentId = isLightTable ? 'light-table' : imageUrl;
         if (currentId !== lastInitializedImageUrl.current || isLightTable !== lastInitializedMode.current) {
@@ -217,12 +215,10 @@ export function DesignCanvas({
         }
     }, [imageUrl, isLightTable, handleReset]);
 
-    // Resize Threshold Update
     useEffect(() => {
         const updateThreshold = () => {
             const fit = calculateFitZoom();
             setMinFitZoom(fit);
-            // Clamp current zoom to new floor
             setZoom(prev => Math.max(prev, fit));
         };
         window.addEventListener('resize', updateThreshold);
@@ -241,7 +237,7 @@ export function DesignCanvas({
                 setZoom(prev => {
                     const factor = e.deltaY > 0 ? 0.9 : 1.1;
                     const next = prev * factor;
-                    // Strict clamp to minFitZoom
+                    // Clamp to minFitZoom (0.95 fit)
                     return Math.max(minFitZoom, Math.min(next, MAX_ZOOM));
                 });
             } else {
