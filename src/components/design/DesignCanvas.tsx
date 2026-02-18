@@ -144,7 +144,6 @@ export function DesignCanvas({
     const canDropPin = !isFeedbackLocked && activeTool === 'comment';
     
     const [replyText, setReplyText] = useState('');
-    const [isMistakeDraft, setIsMistakeDraft] = useState(false);
     
     const activePin = useMemo(() => pins.find(p => p.id === selectedPinId), [pins, selectedPinId]);
     const effectiveShowPopovers = isZenMode ? true : showPopovers;
@@ -193,6 +192,7 @@ export function DesignCanvas({
         const scaleX = viewportRect.width / unscaledCw;
         const scaleY = viewportRect.height / unscaledCh;
         
+        // 95% of fit as requested
         return Math.min(scaleX, scaleY) * 0.95;
     }, [isLightTable]);
 
@@ -206,6 +206,7 @@ export function DesignCanvas({
     useEffect(() => {
         const fitId = isLightTable ? 'light-table' : (imageUrl || 'no-image');
         if (fitId !== lastFittedIdRef.current) {
+            // Slight delay to ensure DOM layout has finalized
             const timer = setTimeout(handleReset, 150);
             lastFittedIdRef.current = fitId;
             return () => clearTimeout(timer);
@@ -234,6 +235,7 @@ export function DesignCanvas({
                 setZoom(prev => {
                     const factor = e.deltaY > 0 ? 0.9 : 1.1;
                     const next = prev * factor;
+                    // Strict clamp to minFitZoom
                     return Math.max(minFitZoom, Math.min(next, MAX_ZOOM));
                 });
             } else {
@@ -276,7 +278,6 @@ export function DesignCanvas({
     useEffect(() => {
         if (selectedPinId && activePin) {
             setReplyText('');
-            setIsMistakeDraft(!!activePin.isMistake);
             setReplyExpandedPinId(null);
             if (effectiveShowPopovers) {
                 setTimeout(() => {
@@ -323,10 +324,10 @@ export function DesignCanvas({
     };
 
     const handleSaveComment = () => {
-        if (!selectedPinId) return;
+        if (!selectedPinId || !activePin) return;
         const trimmed = draftText.trim();
         if (!trimmed) { onUpdatePins(pins.filter(p => p.id !== selectedPinId)); onPinClick(null); return; }
-        onUpdatePins(pins.map(p => p.id === selectedPinId ? { ...p, text: trimmed, status: 'open', isMistake: isMistakeDraft, isDraft: false } as DesignPin : p));
+        onUpdatePins(pins.map(p => p.id === selectedPinId ? { ...p, text: trimmed, status: 'open', isDraft: false } as DesignPin : p));
         onPinClick(null);
     };
 
@@ -335,7 +336,8 @@ export function DesignCanvas({
     };
 
     const handleMistakeToggle = (pinId: string) => { 
-        onUpdatePins(pins.map(p => p.id === pinId ? { ...p, isMistake: !p.isMistake } : p)); 
+        const pin = pins.find(p => p.id === pinId);
+        if (pin) onUpdatePins(pins.map(p => p.id === pinId ? { ...p, isMistake: !p.isMistake } : p)); 
     };
     
     const handleAddReply = (pinId: string) => {
@@ -416,42 +418,28 @@ export function DesignCanvas({
                                             
                                             <div className="flex items-center gap-0.5 shrink-0">
                                                 {!pin.isDraft && (
-                                                    <TooltipProvider>
-                                                        <Tooltip delayDuration={100}>
-                                                            <TooltipTrigger asChild>
-                                                                <Button 
-                                                                    variant="ghost" 
-                                                                    size="icon" 
-                                                                    className={cn(
-                                                                        "h-6 w-6 rounded-md hover:bg-white/10 text-white/40 transition-colors",
-                                                                        replyExpandedPinId === pin.id && "text-primary bg-primary/10 opacity-100"
-                                                                    )}
-                                                                    onClick={(e) => { e.stopPropagation(); setReplyExpandedPinId(replyExpandedPinId === pin.id ? null : pin.id); }}
-                                                                >
-                                                                    <Reply className="h-3.5 w-3.5" />
-                                                                </Button>
-                                                            </TooltipTrigger>
-                                                            <TooltipContent side="top" className="bg-black text-white border-white/10 text-[9px] font-black uppercase">Reply to Thread</TooltipContent>
-                                                        </Tooltip>
-                                                    </TooltipProvider>
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="icon" 
+                                                        className={cn(
+                                                            "h-6 w-6 rounded-md hover:bg-white/10 text-white/40 transition-colors",
+                                                            replyExpandedPinId === pin.id && "text-primary bg-primary/10 opacity-100"
+                                                        )}
+                                                        onClick={(e) => { e.stopPropagation(); setReplyExpandedPinId(replyExpandedPinId === pin.id ? null : pin.id); }}
+                                                    >
+                                                        <Reply className="h-3.5 w-3.5" />
+                                                    </Button>
                                                 )}
 
                                                 {!isDesigner && pin.status !== 'resolved' && !pin.isDraft && (
-                                                    <TooltipProvider>
-                                                        <Tooltip delayDuration={100}>
-                                                            <TooltipTrigger asChild>
-                                                                <Button 
-                                                                    variant="ghost" 
-                                                                    size="icon" 
-                                                                    className="h-6 w-6 rounded-md hover:bg-green-500/20 hover:text-green-400 text-white/40 transition-colors"
-                                                                    onClick={(e) => { e.stopPropagation(); handleStatusUpdate(pin.id, 'resolved'); onPinClick(null); }}
-                                                                >
-                                                                    <Check className="h-3.5 w-3.5" />
-                                                                </Button>
-                                                            </TooltipTrigger>
-                                                            <TooltipContent side="top" className="bg-black text-white border-white/10 text-[9px] font-black uppercase">Resolve Thread</TooltipContent>
-                                                        </Tooltip>
-                                                    </TooltipProvider>
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="icon" 
+                                                        className="h-6 w-6 rounded-md hover:bg-green-500/20 hover:text-green-400 text-white/40 transition-colors"
+                                                        onClick={(e) => { e.stopPropagation(); handleStatusUpdate(pin.id, 'resolved'); onPinClick(null); }}
+                                                    >
+                                                        <Check className="h-3.5 w-3.5" />
+                                                    </Button>
                                                 )}
                                                 
                                                 <DropdownMenu>
