@@ -37,6 +37,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
 
 const MAX_ZOOM = 4.0;
 
@@ -125,8 +126,8 @@ export function DesignCanvas({
     const isFeedbackLocked = useMemo(() => {
         if (!isLatest || isSpacePressed || isMiddleMouseDown || isDraggingSlider) return false;
         if (!isLightTable && !imageUrl) return false;
-        if (isDesigner) return status === 'DRAFT' && hasNewDraft;
-        return status !== 'PENDING' && status !== 'DRAFT';
+        if (isDesigner) return status !== 'DRAFT' || hasNewDraft;
+        return status === 'APPROVED';
     }, [imageUrl, isLatest, isDesigner, status, hasNewDraft, isSpacePressed, isMiddleMouseDown, isDraggingSlider, isLightTable]);
 
     const canDropPin = !isFeedbackLocked && activeTool === 'comment';
@@ -142,14 +143,12 @@ export function DesignCanvas({
         if (!containerRef.current) return offset;
         const rect = containerRef.current.getBoundingClientRect();
         
-        // Boundaries: 50% of the artwork must remain visible
         const limitX = rect.width / 2;
         const limitY = rect.height / 2;
 
         if (isLightTable) {
             const spreadEl = containerRef.current.querySelector('.flex-row');
             const spreadWidth = spreadEl ? spreadEl.getBoundingClientRect().width : 0;
-            // Extend horizontal limits for Light Table spread
             const spreadLimitX = (rect.width / 2) + (spreadWidth / 2) - 100;
             return {
                 x: Math.max(-spreadLimitX, Math.min(offset.x, spreadLimitX)),
@@ -172,19 +171,21 @@ export function DesignCanvas({
 
         if (!contentEl) return 1.0;
 
-        const contentRect = contentEl.getBoundingClientRect();
-        // Since contentEl is scaled by 'zoom', we need unscaled dimensions
-        const unscaledCw = contentRect.width / zoom;
-        const unscaledCh = contentRect.height / zoom;
+        const rect = contentEl.getBoundingClientRect();
+        const style = window.getComputedStyle(contentEl);
+        const matrix = new DOMMatrix(style.transform);
+        const currentScale = matrix.a || 1;
+
+        const unscaledCw = rect.width / currentScale;
+        const unscaledCh = rect.height / currentScale;
 
         if (unscaledCw === 0 || unscaledCh === 0) return 1.0;
 
         const scaleX = viewportRect.width / unscaledCw;
         const scaleY = viewportRect.height / unscaledCh;
         
-        // Safety Factor: 0.95 (95%) to leave a 5% margin
         return Math.min(scaleX, scaleY) * 0.95;
-    }, [isLightTable, zoom]);
+    }, [isLightTable]);
 
     const handleReset = useCallback(() => {
         const fitScale = calculateFitZoom();
@@ -193,13 +194,11 @@ export function DesignCanvas({
         setPanOffset({ x: 0, y: 0 });
     }, [calculateFitZoom]);
 
-    // Apply Fit to Screen on load
     useEffect(() => {
-        const timer = setTimeout(handleReset, 100);
+        const timer = setTimeout(handleReset, 150);
         return () => clearTimeout(timer);
-    }, [imageUrl, isLightTable, handleReset]);
+    }, [imageUrl, isLightTable]);
 
-    // Recalculate zoom floor on resize
     useEffect(() => {
         const updateThreshold = () => {
             const fit = calculateFitZoom();
@@ -222,7 +221,6 @@ export function DesignCanvas({
                 setZoom(prev => {
                     const factor = e.deltaY > 0 ? 0.9 : 1.1;
                     const next = prev * factor;
-                    // Strict Clamp: Don't allow zooming out past "Fit to Screen"
                     return Math.max(minFitZoom, Math.min(next, MAX_ZOOM));
                 });
             } else {
@@ -256,7 +254,6 @@ export function DesignCanvas({
         return () => { window.removeEventListener('keydown', handleKeyDown); window.removeEventListener('keyup', handleKeyUp); };
     }, [isSpacePressed, onPinClick, isFeedbackLocked, handleReset]);
 
-    // Handle auto-growing textarea logic
     const adjustTextareaHeight = (element: HTMLTextAreaElement | null) => {
         if (!element) return;
         element.style.height = 'auto';
@@ -322,6 +319,7 @@ export function DesignCanvas({
 
     const handleStatusUpdate = (pinId: string, newStatus: DesignPinStatus) => { onUpdatePins(pins.map(p => p.id === pinId ? { ...p, status: newStatus } : p)); };
     const handleMistakeToggle = (pinId: string) => { onUpdatePins(pins.map(p => p.id === pinId ? { ...p, isMistake: !p.isMistake } : p)); };
+    
     const handleAddReply = (pinId: string) => {
         if (!replyText.trim()) return;
         const newReply: DesignReply = { author: isDesigner ? 'Designer' : 'Manager', text: replyText.trim(), timestamp: new Date().toISOString() };
@@ -329,6 +327,7 @@ export function DesignCanvas({
         setReplyText('');
         setIsReplyMode(false);
     };
+    
     const handleDeletePin = (e: React.MouseEvent, pinId: string) => { e.stopPropagation(); onUpdatePins(pins.filter(p => p.id !== pinId)); onPinClick(null); };
 
     useEffect(() => {
@@ -394,10 +393,9 @@ export function DesignCanvas({
 
                                         {pin.isDraft ? (
                                             <div className="space-y-3">
-                                                <textarea 
+                                                <Textarea 
                                                     ref={textareaRef}
                                                     placeholder="Add feedback..."
-                                                    rows={1}
                                                     className="w-full bg-transparent border-b border-white/20 focus:border-primary outline-none text-xs py-1 min-h-[24px] resize-none overflow-hidden"
                                                     value={draftText}
                                                     onInput={e => adjustTextareaHeight(e.currentTarget)}
@@ -422,35 +420,33 @@ export function DesignCanvas({
                                                         <p className="text-[10px] opacity-80">{r.text}</p>
                                                     </div>
                                                 ))}
-                                                <div className="pt-2 border-t border-white/5 space-y-2">
-                                                    {isReplyMode ? (
-                                                        <div className="space-y-2">
-                                                            <textarea 
-                                                                autoFocus
-                                                                placeholder="Write a reply..."
-                                                                rows={1}
-                                                                className="w-full bg-transparent border-b border-white/20 focus:border-primary outline-none text-[10px] py-1 resize-none overflow-hidden min-h-[20px]"
-                                                                value={replyText}
-                                                                onInput={e => adjustTextareaHeight(e.currentTarget)}
-                                                                onChange={e => setReplyText(e.target.value)}
-                                                            />
-                                                            <div className="flex justify-end gap-2">
-                                                                <button className="text-[8px] font-black uppercase opacity-50 hover:opacity-100" onClick={() => setIsReplyMode(false)}>Cancel</button>
-                                                                <button className="text-[8px] font-black uppercase text-primary hover:underline" onClick={() => handleAddReply(pin.id)}>Send</button>
-                                                            </div>
+                                                
+                                                {isReplyMode ? (
+                                                    <div className="space-y-2 pt-2 border-t border-white/5">
+                                                        <Textarea 
+                                                            autoFocus
+                                                            placeholder="Write a reply..."
+                                                            className="w-full bg-transparent border-b border-white/20 focus:border-primary outline-none text-[10px] py-1 resize-none overflow-hidden min-h-[20px]"
+                                                            value={replyText}
+                                                            onInput={e => adjustTextareaHeight(e.currentTarget)}
+                                                            onChange={e => setReplyText(e.target.value)}
+                                                        />
+                                                        <div className="flex justify-end gap-2">
+                                                            <button className="text-[8px] font-black uppercase opacity-50 hover:opacity-100" onClick={() => setIsReplyMode(false)}>Cancel</button>
+                                                            <button className="text-[8px] font-black uppercase text-primary hover:underline" onClick={() => handleAddReply(pin.id)}>Send</button>
                                                         </div>
-                                                    ) : (
-                                                        <div className="flex items-center justify-between">
-                                                            <button className="text-[9px] font-black uppercase text-primary hover:underline flex items-center gap-1" onClick={() => setIsReplyMode(true)}><Send className="h-2.5 w-2.5" /> Reply</button>
-                                                            <div className="flex items-center gap-3">
-                                                                {!isDesigner && pin.status !== 'resolved' && (
-                                                                    <button className="text-[9px] font-black uppercase text-green-500 hover:underline" onClick={() => handleStatusUpdate(pin.id, 'resolved')}>Resolve</button>
-                                                                )}
-                                                                <button className="text-white/30 hover:text-destructive transition-colors" onClick={e => handleDeletePin(e, pin.id)}><Trash2 className="h-3 w-3" /></button>
-                                                            </div>
+                                                    </div>
+                                                ) : (
+                                                    <div className="pt-2 border-t border-white/5 flex items-center justify-between">
+                                                        <button className="text-[9px] font-black uppercase text-primary hover:underline flex items-center gap-1" onClick={() => setIsReplyMode(true)}><Send className="h-2.5 w-2.5" /> Reply</button>
+                                                        <div className="flex items-center gap-3">
+                                                            {!isDesigner && pin.status !== 'resolved' && (
+                                                                <button className="text-[9px] font-black uppercase text-green-500 hover:underline" onClick={() => handleStatusUpdate(pin.id, 'resolved')}>Resolve</button>
+                                                            )}
+                                                            <button className="text-white/30 hover:text-destructive transition-colors" onClick={e => handleDeletePin(e, pin.id)}><Trash2 className="h-3 w-3" /></button>
                                                         </div>
-                                                    )}
-                                                </div>
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
                                     </div>
@@ -512,7 +508,7 @@ export function DesignCanvas({
                             </div>
                             <div className="w-6 h-px bg-primary/10 mx-auto my-1" />
                             <div className="flex flex-col items-center gap-1 p-1">
-                                <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-9 w-9 rounded-md" onClick={handleReset}><ScaleIcon className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent side="right">Fit to Screen (R)</TooltipContent></Tooltip>
+                                <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-9 w-9 rounded-md" onClick={handleReset}><RefreshCcw className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent side="right">Fit to Screen (R)</TooltipContent></Tooltip>
                                 <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-9 w-9 rounded-md" onClick={handleZoomIn}><ZoomIn className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent side="right">Zoom In</TooltipContent></Tooltip>
                                 <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-9 w-9 rounded-md" onClick={handleZoomOut} disabled={zoom <= minFitZoom}><ZoomOut className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent side="right">Zoom Out</TooltipContent></Tooltip>
                             </div>
@@ -557,8 +553,8 @@ export function DesignCanvas({
                                                 <div className="absolute inset-y-0 w-8 -ml-4 pointer-events-auto cursor-ew-resize" style={{ left: `${sliderPosition}%` }} onMouseDown={e => { e.preventDefault(); setIsDraggingSlider(true); }} onClick={e => e.stopPropagation()}>
                                                     <div className="absolute inset-y-0 left-1/2 w-px bg-blue-600" />
                                                     <div className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-2xl border-4 border-background" style={{ top: `${sliderVerticalPosition}%` }}><RefreshCcw className="h-5 w-5" /></div>
-                                                    <div className="absolute top-6 left-12 bg-black/80 text-white text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded whitespace-nowrap border border-white/10">After</div>
-                                                    <div className="absolute top-6 right-12 bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded border border-white/10 whitespace-nowrap">Before</div>
+                                                    <div className="absolute top-6 left-12 bg-black/80 text-white text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded whitespace-nowrap border border-white/10 shadow-xl">After</div>
+                                                    <div className="absolute top-6 right-12 bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded border border-white/10 whitespace-nowrap shadow-xl">Before</div>
                                                 </div>
                                             </div>
                                         )}

@@ -182,12 +182,10 @@ export function DesignProductCard({
     const [showComparison, setShowComparison] = useState(false);
     const [selectedComparisonRefId, setSelectedComparisonRefId] = useState<string | null>(null);
 
-    // Component Lifecycle Options
     const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
     const [compToRename, setCompToRename] = useState<{ id: string; name: string } | null>(null);
     const [newNameValue, setNewNameValue] = useState('');
 
-    // Overflow Tab indicators
     const tabScrollRef = useRef<HTMLDivElement>(null);
     const [canScrollLeft, setCanScrollLeft] = useState(false);
     const [canScrollRight, setCanScrollRight] = useState(false);
@@ -477,7 +475,6 @@ export function DesignProductCard({
     };
 
     const handleUpdatePins = (newPins: DesignPin[]) => {
-        // If Light Table, update pins for individual components correctly
         if (isLightTable) {
             const updatedComponents = localDesignData.components.map(c => {
                 const componentPins = newPins.filter(p => c.pins.some(cp => cp.id === p.id));
