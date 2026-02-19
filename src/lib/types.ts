@@ -64,6 +64,7 @@ export type DesignPin = {
   id: string;
   x: number; // percentage
   y: number; // percentage
+  zoom?: number; // POV Zoom level
   status: DesignPinStatus;
   isMistake?: boolean;
   author: string;

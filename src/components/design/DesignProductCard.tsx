@@ -438,7 +438,7 @@ export function DesignProductCard({
         }
     };
 
-    const handleAddPin = (x: number, y: number, componentId?: string) => {
+    const handleAddPin = (x: number, y: number, componentId?: string, viewportZoom?: number) => {
         const newPinId = `pin-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
         const targetVNum = isLightTable && componentId 
             ? (localDesignData.components.find(c => c.id === componentId)?.versions.length || 0)
@@ -448,6 +448,7 @@ export function DesignProductCard({
             id: newPinId, 
             x, 
             y, 
+            zoom: viewportZoom,
             status: 'open',
             isMistake: false,
             author: isDesigner ? 'Designer' : 'Manager', 

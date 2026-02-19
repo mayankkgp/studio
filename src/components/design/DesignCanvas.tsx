@@ -57,7 +57,7 @@ interface DesignCanvasProps {
     pins: DesignPin[];
     highlightedPinId: string | null;
     selectedPinId: string | null;
-    onAddPin: (x: number, y: number, componentId?: string) => void;
+    onAddPin: (x: number, y: number, componentId?: string, zoom?: number) => void;
     onPinClick: (id: string | null) => void;
     onUpdatePins: (pins: DesignPin[]) => void;
     onUpload?: (file: File) => void;
@@ -116,6 +116,7 @@ export function DesignCanvas({
     const [showPins, setShowPins] = useState(true);
     const [activeTool, setActiveTool] = useState<ToolMode>('comment');
     const [replyExpandedPinId, setReplyExpandedPinId] = useState<string | null>(null);
+    const [isAnimating, setIsAnimating] = useState(false);
     
     const [sliderPosition, setSliderPosition] = useState(50);
     const [sliderVerticalPosition, setSliderVerticalPosition] = useState(50);
@@ -200,9 +201,11 @@ export function DesignCanvas({
 
     const handleReset = useCallback(() => {
         const fitScale = calculateFitZoom();
+        setIsAnimating(true);
         setZoom(fitScale);
         setMinFitZoom(fitScale);
         setPanOffset({ x: 0, y: 0 });
+        setTimeout(() => setIsAnimating(false), 500);
     }, [calculateFitZoom]);
 
     useEffect(() => {
@@ -232,6 +235,7 @@ export function DesignCanvas({
         const handleWheel = (e: WheelEvent) => {
             if (!imageUrl && !isLightTable) return;
             e.preventDefault();
+            setIsAnimating(false);
 
             if (e.ctrlKey || e.metaKey) {
                 setZoom(prev => {
@@ -250,6 +254,38 @@ export function DesignCanvas({
         container.addEventListener('wheel', handleWheel, { passive: false });
         return () => container.removeEventListener('wheel', handleWheel);
     }, [imageUrl, isLightTable, zoom, getConstrainedPan, minFitZoom]);
+
+    // POV Centering Logic
+    useEffect(() => {
+        if (!selectedPinId || isDraggingCanvas || isDraggingSlider || isLightTable) return;
+        
+        const pin = pins.find(p => p.id === selectedPinId);
+        if (!pin) return;
+
+        const contentEl = containerRef.current?.querySelector('.group\\/comp-container') as HTMLElement;
+        if (!contentEl) return;
+
+        const rect = contentEl.getBoundingClientRect();
+        const style = window.getComputedStyle(contentEl);
+        const matrix = new DOMMatrix(style.transform);
+        const currentScale = matrix.a || 1;
+        const cw = rect.width / currentScale;
+        const ch = rect.height / currentScale;
+
+        const targetZoom = pin.zoom || zoom;
+        const px = (pin.x / 100) * cw;
+        const py = (pin.y / 100) * ch;
+
+        const newPanX = -(px - cw / 2) * targetZoom;
+        const newPanY = -(py - ch / 2) * targetZoom;
+
+        setIsAnimating(true);
+        setZoom(targetZoom);
+        setPanOffset(getConstrainedPan({ x: newPanX, y: newPanY }));
+        
+        const timer = setTimeout(() => setIsAnimating(false), 500);
+        return () => clearTimeout(timer);
+    }, [selectedPinId, pins, getConstrainedPan, isLightTable]);
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -292,12 +328,13 @@ export function DesignCanvas({
         }
     }, [selectedPinId, activePin, effectiveShowPopovers]);
 
-    const handleZoomIn = () => setZoom(prev => Math.min(prev + 0.25, MAX_ZOOM));
-    const handleZoomOut = () => setZoom(prev => Math.max(prev - 0.25, minFitZoom));
+    const handleZoomIn = () => { setIsAnimating(false); setZoom(prev => Math.min(prev + 0.25, MAX_ZOOM)); };
+    const handleZoomOut = () => { setIsAnimating(false); setZoom(prev => Math.max(prev - 0.25, minFitZoom)); };
 
     const handleCanvasMouseDown = (e: React.MouseEvent) => {
         if (isDraggingSlider) return;
         if (isSpacePressed || e.button === 1) {
+            setIsAnimating(false);
             if (e.button === 1) setIsMiddleMouseDown(true);
             setIsDraggingCanvas(true);
             dragStartMousePos.current = { x: e.clientX, y: e.clientY };
@@ -651,7 +688,13 @@ export function DesignCanvas({
                         onMouseLeave={handleCanvasMouseUp}
                         onClick={handleCanvasClick}
                     >
-                        <div className="absolute inset-0 origin-center pointer-events-none transition-transform duration-75 ease-out" style={{ transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoom})` }}>
+                        <div 
+                            className={cn(
+                                "absolute inset-0 origin-center pointer-events-none transition-transform",
+                                isAnimating ? "duration-500 ease-in-out" : "duration-75 ease-out"
+                            )} 
+                            style={{ transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoom})` }}
+                        >
                             {isLightTable ? (
                                 <div className="flex flex-row items-center gap-32 px-64 h-[80vh]">
                                     {allComponents.map(comp => {
@@ -662,7 +705,7 @@ export function DesignCanvas({
                                                     <span className="text-[10px] font-black uppercase tracking-widest text-white/40">{comp.name}</span>
                                                     <span className="text-[8px] font-bold text-white/20 uppercase mt-0.5">V{comp.versions.length}</span>
                                                 </div>
-                                                <div className="relative h-[80vh] w-fit pointer-events-auto group/comp-container shadow-[0_30px_100px_rgba(0,0,0,0.5)]" onClick={e => { if (!canDropPin) return; e.stopPropagation(); const rect = e.currentTarget.getBoundingClientRect(); onAddPin((e.clientX - rect.left) / rect.width * 100, (e.clientY - rect.top) / rect.height * 100, comp.id); }}>
+                                                <div className="relative h-[80vh] w-fit pointer-events-auto group/comp-container shadow-[0_30px_100px_rgba(0,0,0,0.5)]" onClick={e => { if (!canDropPin) return; e.stopPropagation(); const rect = e.currentTarget.getBoundingClientRect(); onAddPin((e.clientX - rect.left) / rect.width * 100, (e.clientY - rect.top) / rect.height * 100, comp.id, zoom); }}>
                                                     {latestV?.imageUrl && <img src={latestV.imageUrl} alt={comp.name} className="h-full w-auto object-contain" draggable={false} />}
                                                     {showPins && comp.pins.map(pin => renderPin(pin))}
                                                 </div>
@@ -672,7 +715,7 @@ export function DesignCanvas({
                                 </div>
                             ) : (
                                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                    <div className="relative h-[80vh] w-fit pointer-events-auto group/comp-container shadow-[0_30px_100px_rgba(0,0,0,0.5)]" onClick={e => { if (!canDropPin) return; e.stopPropagation(); const rect = e.currentTarget.getBoundingClientRect(); onAddPin((e.clientX - rect.left) / rect.width * 100, (e.clientY - rect.top) / rect.height * 100); }}>
+                                    <div className="relative h-[80vh] w-fit pointer-events-auto group/comp-container shadow-[0_30px_100px_rgba(0,0,0,0.5)]" onClick={e => { if (!canDropPin) return; e.stopPropagation(); const rect = e.currentTarget.getBoundingClientRect(); onAddPin((e.clientX - rect.left) / rect.width * 100, (e.clientY - rect.top) / rect.height * 100, undefined, zoom); }}>
                                         {showComparison && comparisonImageUrl && <img src={comparisonImageUrl} alt="Old Version" className="absolute inset-0 w-full h-full object-contain" draggable={false} />}
                                         {imageUrl && <img src={imageUrl} alt="Current Proof" className="h-full w-auto object-contain" style={showComparison ? { clipPath: `inset(0 ${100 - sliderPosition}% 0 0)` } : undefined} draggable={false} />}
                                         {showComparison && (
