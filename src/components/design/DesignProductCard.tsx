@@ -21,9 +21,17 @@ import {
     Unlock as UnlockIcon,
     Scale as ScaleIcon,
     User,
-    Check as CheckIcon,
     MoreHorizontal,
-    Reply
+    Reply,
+    MoreVertical,
+    Pencil,
+    Trash2,
+    Clock,
+    ChevronLeft,
+    ChevronRight,
+    ChevronUp,
+    ChevronDown,
+    Info
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
