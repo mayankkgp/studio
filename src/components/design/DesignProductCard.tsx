@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -17,16 +18,12 @@ import {
     Plus,
     Check,
     Lock as LockIcon,
-    Trash2,
-    Info,
-    ChevronDown,
-    ChevronUp,
-    Clock,
-    ChevronLeft,
-    ChevronRight,
-    LayoutGrid,
-    MoreVertical,
-    Pencil
+    Unlock as UnlockIcon,
+    Scale as ScaleIcon,
+    User,
+    Check as CheckIcon,
+    MoreHorizontal,
+    Reply
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {

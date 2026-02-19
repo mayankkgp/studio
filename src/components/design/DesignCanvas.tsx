@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -472,7 +473,9 @@ export function DesignCanvas({
                                                 {pin.isDraft && (
                                                     <Tooltip>
                                                         <TooltipTrigger asChild>
-                                                            <button 
+                                                            <Button 
+                                                                variant="ghost"
+                                                                size="icon"
                                                                 className={cn(
                                                                     "h-6 w-6 rounded-md flex items-center justify-center transition-all",
                                                                     pin.isMistake ? "text-destructive bg-destructive/10" : "text-white/40 hover:bg-white/10"
@@ -480,7 +483,7 @@ export function DesignCanvas({
                                                                 onClick={(e) => { e.stopPropagation(); handleMistakeToggle(pin.id); }}
                                                             >
                                                                 <AlertTriangle className={cn("h-3.5 w-3.5", pin.isMistake && "fill-destructive")} />
-                                                            </button>
+                                                            </Button>
                                                         </TooltipTrigger>
                                                         <TooltipContent side="top" className="bg-stone-800 text-white border-white/10 text-[10px] font-black uppercase tracking-widest">
                                                             {pin.isMistake ? "Mark as Comment" : "Mark as Mistake"}
