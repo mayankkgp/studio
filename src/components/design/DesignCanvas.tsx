@@ -113,7 +113,7 @@ export function DesignCanvas({
     onToggleComparison
 }: DesignCanvasProps) {
     const [zoom, setZoom] = useState(1.0);
-    const [minFitZoom, setMinFitZoom] = useState(0.01);
+    const [minFitZoom, setMinFitZoom] = useState(0.1);
     const [showPins, setShowPins] = useState(true);
     const [activeTool, setActiveTool] = useState<ToolMode>('comment');
     const [replyExpandedPinId, setReplyExpandedPinId] = useState<string | null>(null);
@@ -186,13 +186,17 @@ export function DesignCanvas({
 
         const rect = contentEl.getBoundingClientRect();
         const style = window.getComputedStyle(contentEl);
-        const matrix = new DOMMatrix(style.transform);
-        const currentScale = matrix.a || 1;
+        const transform = style.transform;
+        let currentScale = 1;
+        if (transform && transform !== 'none') {
+            const matrix = new DOMMatrix(transform);
+            currentScale = matrix.a;
+        }
 
         const unscaledCw = rect.width / currentScale;
         const unscaledCh = rect.height / currentScale;
 
-        if (unscaledCw === 0 || unscaledCh === 0) return 1.0;
+        if (unscaledCw <= 0 || unscaledCh <= 0) return 1.0;
 
         const scaleX = viewportRect.width / unscaledCw;
         const scaleY = viewportRect.height / unscaledCh;
@@ -213,7 +217,7 @@ export function DesignCanvas({
     useEffect(() => {
         const currentId = isLightTable ? 'light-table' : imageUrl;
         if (currentId !== lastInitializedImageUrl.current || isLightTable !== lastInitializedMode.current) {
-            const timer = setTimeout(handleReset, 150);
+            const timer = setTimeout(handleReset, 200);
             lastInitializedImageUrl.current = currentId;
             lastInitializedMode.current = isLightTable;
             return () => clearTimeout(timer);
@@ -244,6 +248,7 @@ export function DesignCanvas({
                 setZoom(prev => {
                     const factor = e.deltaY > 0 ? 0.9 : 1.1;
                     const next = prev * factor;
+                    // Strict clamp to 95% fit floor
                     return Math.max(minFitZoom, Math.min(next, MAX_ZOOM));
                 });
             } else {
@@ -269,8 +274,13 @@ export function DesignCanvas({
 
         const rect = contentEl.getBoundingClientRect();
         const style = window.getComputedStyle(contentEl);
-        const matrix = new DOMMatrix(style.transform);
-        const currentScale = matrix.a || 1;
+        const transform = style.transform;
+        let currentScale = 1;
+        if (transform && transform !== 'none') {
+            const matrix = new DOMMatrix(transform);
+            currentScale = matrix.a;
+        }
+        
         const cw = rect.width / currentScale;
         const ch = rect.height / currentScale;
 
