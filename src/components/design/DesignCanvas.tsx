@@ -143,7 +143,6 @@ export function DesignCanvas({
         if (!isLatest || isSpacePressed || isMiddleMouseDown || isDraggingSlider) return true;
         if (!isLightTable && !imageUrl) return true;
         if (isDesigner) return status !== 'DRAFT' || hasNewDraft;
-        // Reviewers (Managers) should be able to comment during review stages.
         return status === 'APPROVED';
     }, [imageUrl, isLatest, isDesigner, status, hasNewDraft, isSpacePressed, isMiddleMouseDown, isDraggingSlider, isLightTable]);
 
@@ -275,7 +274,7 @@ export function DesignCanvas({
         const cw = rect.width / currentScale;
         const ch = rect.height / currentScale;
 
-        const targetZoom = pin.zoom || zoom;
+        const targetZoom = Math.max(pin.zoom || zoom, minFitZoom);
         const px = (pin.x / 100) * cw;
         const py = (pin.y / 100) * ch;
 
@@ -288,7 +287,7 @@ export function DesignCanvas({
         
         const timer = setTimeout(() => setIsAnimating(false), 500);
         return () => clearTimeout(timer);
-    }, [selectedPinId, pins, getConstrainedPan, isLightTable]);
+    }, [selectedPinId, pins, getConstrainedPan, isLightTable, minFitZoom]);
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
