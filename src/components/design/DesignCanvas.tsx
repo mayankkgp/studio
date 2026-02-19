@@ -142,7 +142,7 @@ export function DesignCanvas({
         if (!isLatest || isSpacePressed || isMiddleMouseDown || isDraggingSlider) return true;
         if (!isLightTable && !imageUrl) return true;
         if (isDesigner) return status !== 'DRAFT' || hasNewDraft;
-        return status === 'APPROVED';
+        return status === 'APPROVED' || status === 'INTERNAL_REVIEW' || status === 'CUSTOMER_REVIEW';
     }, [imageUrl, isLatest, isDesigner, status, hasNewDraft, isSpacePressed, isMiddleMouseDown, isDraggingSlider, isLightTable]);
 
     const canDropPin = !isFeedbackLocked && activeTool === 'comment';
@@ -262,7 +262,7 @@ export function DesignCanvas({
         if (!selectedPinId || isDraggingCanvas || isDraggingSlider || isLightTable) return;
         
         const pin = pins.find(p => p.id === selectedPinId);
-        // FIX: Do not auto-center on newly placed draft pins to avoid jumping upon creation
+        // Do not auto-center on newly placed draft pins to avoid jumping upon creation
         if (!pin || pin.isDraft) return;
 
         const contentEl = containerRef.current?.querySelector('.group\\/comp-container') as HTMLElement;
@@ -426,9 +426,11 @@ export function DesignCanvas({
             <TooltipProvider key={pin.id}>
                 <Tooltip delayDuration={100}>
                     <TooltipTrigger asChild>
-                        <button
+                        <div
+                            role="button"
+                            tabIndex={0}
                             className={cn(
-                                "pin-bubble absolute transition-all pointer-events-auto transform -translate-x-1/2 -translate-y-1/2 group",
+                                "pin-bubble absolute transition-all pointer-events-auto transform -translate-x-1/2 -translate-y-1/2 group outline-none",
                                 "h-8 w-8 rounded-full border-2 border-white shadow-xl bg-background/80 backdrop-blur-sm",
                                 pin.status === 'resolved' ? "opacity-40 grayscale-[0.5]" : "opacity-80 hover:opacity-100",
                                 selectedPinId === pin.id ? "ring-4 ring-primary scale-110 opacity-100 z-50" : "z-10",
@@ -436,6 +438,13 @@ export function DesignCanvas({
                             )}
                             style={{ left: `${pin.x}%`, top: `${pin.y}%`, transform: `translate(-50%, -50%) scale(${1/zoom})` }}
                             onClick={(e) => { e.stopPropagation(); onPinClick(pin.id); }}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    onPinClick(pin.id);
+                                }
+                            }}
                         >
                             <Avatar className="h-full w-full pointer-events-none">
                                 <AvatarFallback className={cn("text-[9px] font-black", pin.author === 'Designer' ? "bg-purple-600 text-white" : "bg-blue-600 text-white")}>
@@ -445,7 +454,7 @@ export function DesignCanvas({
                             
                             {selectedPinId === pin.id && effectiveShowPopovers && (
                                 <div className={cn(
-                                    "fixed-comment-box absolute z-[100] w-64 bg-stone-900 border rounded-xl p-3 shadow-[0_20px_50px_rgba(0,0,0,0.5)] text-white text-left animate-in zoom-in-95 duration-200",
+                                    "fixed-comment-box absolute z-[100] w-64 bg-stone-900 border rounded-xl p-3 shadow-[0_20px_50px_rgba(0,0,0,0.5)] text-white text-left animate-in zoom-in-95 duration-200 cursor-default",
                                     pin.isMistake ? "border-destructive border-2" : "border-white/10",
                                     getQuadrantStyle(pin.x, pin.y)
                                 )} style={{ transform: `scale(${1})` }} onClick={e => e.stopPropagation()}>
@@ -619,7 +628,7 @@ export function DesignCanvas({
                                     </div>
                                 </div>
                             )}
-                        </button>
+                        </div>
                     </TooltipTrigger>
                     {!selectedPinId && (
                         <TooltipContent side="top" className="bg-black/80 text-white border-white/10 px-2 py-1">
