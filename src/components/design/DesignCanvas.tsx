@@ -25,6 +25,7 @@ import {
     Send,
     CheckCircle2,
     AlertCircle,
+    AlertTriangle,
     CornerDownRight,
     Lock as LockIcon,
     Unlock as UnlockIcon,
@@ -194,7 +195,6 @@ export function DesignCanvas({
         const scaleX = viewportRect.width / unscaledCw;
         const scaleY = viewportRect.height / unscaledCh;
         
-        // Target 95% of available space for the "Reset" and default zoom
         return Math.min(scaleX, scaleY) * 0.95;
     }, [isLightTable]);
 
@@ -237,7 +237,6 @@ export function DesignCanvas({
                 setZoom(prev => {
                     const factor = e.deltaY > 0 ? 0.9 : 1.1;
                     const next = prev * factor;
-                    // Clamp to minFitZoom (0.95 fit)
                     return Math.max(minFitZoom, Math.min(next, MAX_ZOOM));
                 });
             } else {
@@ -274,7 +273,6 @@ export function DesignCanvas({
     const adjustTextareaHeight = (element: HTMLTextAreaElement | null) => {
         if (!element) return;
         element.style.height = 'auto';
-        // Max height clamp for ~4 lines is approx 120px
         const newHeight = Math.min(element.scrollHeight, 120);
         element.style.height = `${newHeight}px`;
     };
@@ -407,7 +405,8 @@ export function DesignCanvas({
                             
                             {selectedPinId === pin.id && effectiveShowPopovers && (
                                 <div className={cn(
-                                    "fixed-comment-box absolute z-[100] w-64 bg-stone-900 border border-white/10 rounded-xl p-3 shadow-[0_20px_50px_rgba(0,0,0,0.5)] text-white text-left animate-in zoom-in-95 duration-200",
+                                    "fixed-comment-box absolute z-[100] w-64 bg-stone-900 border rounded-xl p-3 shadow-[0_20px_50px_rgba(0,0,0,0.5)] text-white text-left animate-in zoom-in-95 duration-200",
+                                    pin.isMistake ? "border-destructive border-2" : "border-white/10",
                                     getQuadrantStyle(pin.x, pin.y)
                                 )} style={{ transform: `scale(${1})` }} onClick={e => e.stopPropagation()}>
                                     <div className="space-y-2.5">
@@ -421,6 +420,25 @@ export function DesignCanvas({
                                             </div>
                                             
                                             <div className="flex items-center gap-0.5 shrink-0">
+                                                {pin.isDraft && (
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <button 
+                                                                className={cn(
+                                                                    "h-6 w-6 rounded-md flex items-center justify-center transition-all",
+                                                                    pin.isMistake ? "text-destructive bg-destructive/10" : "text-white/40 hover:bg-white/10"
+                                                                )}
+                                                                onClick={(e) => { e.stopPropagation(); handleMistakeToggle(pin.id); }}
+                                                            >
+                                                                <AlertTriangle className={cn("h-3.5 w-3.5", pin.isMistake && "fill-destructive")} />
+                                                            </button>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent side="top" className="bg-stone-800 text-white border-white/10 text-[10px] font-black uppercase tracking-widest">
+                                                            {pin.isMistake ? "Mark as Comment" : "Mark as Mistake"}
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                )}
+
                                                 {!pin.isDraft && (
                                                     <Button 
                                                         variant="ghost" 
@@ -458,7 +476,7 @@ export function DesignCanvas({
                                                                 onClick={() => handleMistakeToggle(pin.id)}
                                                                 className="text-[10px] font-black uppercase tracking-widest focus:bg-white/10 focus:text-white"
                                                             >
-                                                                <AlertCircle className="h-3 w-3 mr-2" />
+                                                                <AlertTriangle className="h-3 w-3 mr-2" />
                                                                 {pin.isMistake ? 'Unmark Mistake' : 'Mark Mistake'}
                                                             </DropdownMenuItem>
                                                         )}
@@ -486,7 +504,10 @@ export function DesignCanvas({
                                                 <Textarea 
                                                     ref={textareaRef}
                                                     placeholder="Add feedback..."
-                                                    className="w-full bg-stone-800 border-white/10 focus:border-primary/50 text-xs py-2 pr-8 min-h-[32px] max-h-[120px] resize-none overflow-y-auto rounded-lg leading-tight"
+                                                    className={cn(
+                                                        "w-full bg-stone-800 border-white/10 text-xs py-2 pr-8 min-h-[32px] max-h-[120px] resize-none overflow-y-auto rounded-lg leading-tight transition-all",
+                                                        pin.isMistake ? "focus:border-destructive/50 ring-destructive/20 focus:ring-4" : "focus:border-primary/50"
+                                                    )}
                                                     value={draftText}
                                                     onInput={e => adjustTextareaHeight(e.currentTarget)}
                                                     onChange={e => onDraftTextChange(e.target.value)}
