@@ -196,14 +196,15 @@ export function DesignCanvas({
         const scaleX = viewportRect.width / unscaledCw;
         const scaleY = viewportRect.height / unscaledCh;
         
-        return Math.min(scaleX, scaleY) * 0.95;
+        return Math.min(scaleX, scaleY);
     }, [isLightTable]);
 
     const handleReset = useCallback(() => {
         const fitScale = calculateFitZoom();
+        const resetScale = fitScale * 0.95;
         setIsAnimating(true);
-        setZoom(fitScale);
-        setMinFitZoom(fitScale);
+        setZoom(resetScale);
+        setMinFitZoom(resetScale);
         setPanOffset({ x: 0, y: 0 });
         setTimeout(() => setIsAnimating(false), 500);
     }, [calculateFitZoom]);
@@ -221,8 +222,9 @@ export function DesignCanvas({
     useEffect(() => {
         const updateThreshold = () => {
             const fit = calculateFitZoom();
-            setMinFitZoom(fit);
-            setZoom(prev => Math.max(prev, fit));
+            const resetScale = fit * 0.95;
+            setMinFitZoom(resetScale);
+            setZoom(prev => Math.max(prev, resetScale));
         };
         window.addEventListener('resize', updateThreshold);
         return () => window.removeEventListener('resize', updateThreshold);
@@ -260,7 +262,8 @@ export function DesignCanvas({
         if (!selectedPinId || isDraggingCanvas || isDraggingSlider || isLightTable) return;
         
         const pin = pins.find(p => p.id === selectedPinId);
-        if (!pin) return;
+        // FIX: Do not auto-center on newly placed draft pins to avoid jumping upon creation
+        if (!pin || pin.isDraft) return;
 
         const contentEl = containerRef.current?.querySelector('.group\\/comp-container') as HTMLElement;
         if (!contentEl) return;
@@ -569,7 +572,7 @@ export function DesignCanvas({
                                                     className="w-full text-left focus:outline-none group/comment-body"
                                                     onClick={() => setReplyExpandedPinId(pin.id)}
                                                 >
-                                                    <p className="text-[11px] font-medium leading-tight opacity-90 group-hover/comment-body:opacity-100 transition-opacity">
+                                                    <p className="text-[11px] font-medium leading-relaxed opacity-90 group-hover/comment-body:opacity-100 transition-opacity">
                                                         {pin.text}
                                                     </p>
                                                 </button>
