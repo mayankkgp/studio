@@ -143,7 +143,8 @@ export function DesignCanvas({
         if (!isLatest || isSpacePressed || isMiddleMouseDown || isDraggingSlider) return true;
         if (!isLightTable && !imageUrl) return true;
         if (isDesigner) return status !== 'DRAFT' || hasNewDraft;
-        return status === 'APPROVED' || status === 'INTERNAL_REVIEW' || status === 'CUSTOMER_REVIEW';
+        // Reviewers (Managers) should be able to comment during review stages.
+        return status === 'APPROVED';
     }, [imageUrl, isLatest, isDesigner, status, hasNewDraft, isSpacePressed, isMiddleMouseDown, isDraggingSlider, isLightTable]);
 
     const canDropPin = !isFeedbackLocked && activeTool === 'comment';
@@ -258,12 +259,10 @@ export function DesignCanvas({
         return () => container.removeEventListener('wheel', handleWheel);
     }, [imageUrl, isLightTable, zoom, getConstrainedPan, minFitZoom]);
 
-    // POV Centering Logic
     useEffect(() => {
         if (!selectedPinId || isDraggingCanvas || isDraggingSlider || isLightTable) return;
         
         const pin = pins.find(p => p.id === selectedPinId);
-        // Do not auto-center on newly placed draft pins to avoid jumping upon creation
         if (!pin || pin.isDraft) return;
 
         const contentEl = containerRef.current?.querySelector('.group\\/comp-container') as HTMLElement;
@@ -470,7 +469,7 @@ export function DesignCanvas({
                                             </div>
                                             
                                             <div className="flex items-center gap-0.5 shrink-0">
-                                                {pin.isDraft && (
+                                                {pin.isDraft ? (
                                                     <Tooltip>
                                                         <TooltipTrigger asChild>
                                                             <Button 
@@ -489,9 +488,7 @@ export function DesignCanvas({
                                                             {pin.isMistake ? "Mark as Comment" : "Mark as Mistake"}
                                                         </TooltipContent>
                                                     </Tooltip>
-                                                )}
-
-                                                {!pin.isDraft && (
+                                                ) : (
                                                     <Button 
                                                         variant="ghost" 
                                                         size="icon" 
